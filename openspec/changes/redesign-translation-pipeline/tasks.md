@@ -2151,7 +2151,7 @@ screen recommends a model by memory, and every model picker gets a name filter (
     Down and a hidden choice kept.
   - **Done when:** acceptance (b) and the tests are green.
 
-- [ ] 15.6 Complete Settings › Models — the verdict, what the program reports engine by engine, the structured answers
+- [x] 15.6 Complete Settings › Models — the verdict, what the program reports engine by engine, the structured answers
   per call kind and the context window with who sets it — and delete `ModelAdvice` and the old model notes, so one
   source of model facts drives the tab. → :ui, :llm
   - **Satisfies:** "Report what the program says about a model, engine by engine" (settings), REMOVED "Report what the program says about a model" (settings), "Set a model's context window and answer length" (settings; read-only where the engine sets the window, and the ignored-cap note)

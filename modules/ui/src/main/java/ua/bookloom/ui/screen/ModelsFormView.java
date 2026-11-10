@@ -37,6 +37,7 @@ final class ModelsFormView {
     private final ModelReportRows rows;
     private final Label verdict = Wrapped.label("", "hint");
     private final Banner found = new Banner("models-found", Tone.INFO, "i", "", "");
+    private final Label structured = Wrapped.label("", "hint");
     private final ModelTemperatureSection temperature;
     private final ModelThinkingSection thinking;
     private final ModelSamplingSection sampling;
@@ -53,6 +54,7 @@ final class ModelsFormView {
         this.messages = Objects.requireNonNull(messages, "messages");
         rows = new ModelReportRows(messages);
         verdict.setId("models-verdict");
+        structured.setId("models-found-structured");
         temperature = new ModelTemperatureSection(form, messages);
         thinking = new ModelThinkingSection(form, messages);
         sampling = new ModelSamplingSection(form, messages);
@@ -63,7 +65,15 @@ final class ModelsFormView {
         errors.getStyleClass().add("form-errors");
         errorsText.setId("models-errors-text");
         errorsText.setWrapText(true);
-        root.getChildren().addAll(verdict, found, temperature.node(), thinking.node(), sampling.node(), refused.node());
+        root.getChildren()
+                .addAll(
+                        verdict,
+                        found,
+                        structured,
+                        temperature.node(),
+                        thinking.node(),
+                        sampling.node(),
+                        refused.node());
         root.getChildren().addAll(limits.node(), advanced.node(), errors);
         root.disableProperty().bind(form.reading());
         // The listeners below are weak, so the node (which the scene keeps) holds this view for as long as it is shown.
@@ -85,6 +95,7 @@ final class ModelsFormView {
 
     private void showRefused() {
         refused.show();
+        showFound(form.facts().get());
     }
 
     private void showAll() {
@@ -104,19 +115,13 @@ final class ModelsFormView {
         Visibility.show(verdict, !verdictText.isEmpty());
         if (facts.loading()) {
             found.setText(messages.get(MessageKey.SETTINGS_MODELS_FOUND_LOADING));
+            structured.setText("");
             return;
         }
         final @Nullable ModelEntry entry = form.selected().get();
         final String window = entry == null ? "" : rows.context(entry, facts);
-        found.setText(messages.get(MessageKey.SETTINGS_MODELS_FOUND, window, structured(facts)));
-    }
-
-    private String structured(final ModelFacts facts) {
-        final Boolean answered = facts.structured();
-        if (answered == null) {
-            return messages.get(MessageKey.SETTINGS_MODELS_FOUND_UNCHECKED);
-        }
-        return messages.get(answered ? MessageKey.SETTINGS_MODELS_FOUND_YES : MessageKey.SETTINGS_MODELS_FOUND_NO);
+        found.setText(messages.get(MessageKey.SETTINGS_MODELS_FOUND, window));
+        structured.setText(String.join("\n", rows.structured(facts, form.refused())));
     }
 
     private void showErrors() {

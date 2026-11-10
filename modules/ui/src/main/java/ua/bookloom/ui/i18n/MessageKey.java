@@ -641,7 +641,7 @@ public enum MessageKey {
     SETTINGS_MODELS_LISTING("settings.models.listing"),
     /** Models tab: No models yet. Add a provider on the Providers tab. */
     SETTINGS_MODELS_EMPTY("settings.models.empty"),
-    /** Models tab: Found out from the program: &#123;0&#125; · structured answers: &#123;1&#125;. */
+    /** Models tab: Found out from the program: &#123;0&#125;. */
     SETTINGS_MODELS_FOUND("settings.models.found"),
     /** Models tab: it can read &#123;0, plural, one &#123;# token&#125; other &#123;# tokens&#125;&#125; at once */
     SETTINGS_MODELS_FOUND_READ("settings.models.found.read"),
@@ -649,12 +649,12 @@ public enum MessageKey {
     SETTINGS_MODELS_FOUND_LOADED("settings.models.found.loaded"),
     /** Models tab: it did not say how much it can read at once */
     SETTINGS_MODELS_FOUND_UNKNOWN("settings.models.found.unknown"),
-    /** Models tab: yes */
-    SETTINGS_MODELS_FOUND_YES("settings.models.found.yes"),
-    /** Models tab: no */
-    SETTINGS_MODELS_FOUND_NO("settings.models.found.no"),
-    /** Models tab: not checked yet — Test inference on the Providers tab checks it */
+    /** Models tab: structured answers: not checked yet — Test inference on the Providers tab checks it */
     SETTINGS_MODELS_FOUND_UNCHECKED("settings.models.found.unchecked"),
+    /** Models tab: one call kind's structured answer, as schema or plain JSON. */
+    SETTINGS_MODELS_FOUND_STRUCTURED_ROW("settings.models.found.structured.row"),
+    /** Models tab: the short name of a call kind in the structured-answers rows. */
+    SETTINGS_MODELS_FOUND_STRUCTURED_KIND("settings.models.found.structured.kind"),
     /** Models tab: Asking the program about this model… */
     SETTINGS_MODELS_FOUND_LOADING("settings.models.found.loading"),
     /** Models tab: BookLoom's verdict: &#123;0, select, ...&#125; */
@@ -795,6 +795,8 @@ public enum MessageKey {
     SETTINGS_MODELS_CONTEXT("settings.models.context"),
     /** Models tab: Sets how many tokens one request may hold for this model. */
     SETTINGS_MODELS_CONTEXT_TIP("settings.models.context.tip"),
+    /** Models tab: who sets the window where the engine does, so the field is read-only. */
+    SETTINGS_MODELS_CONTEXT_ENGINE("settings.models.context.engine"),
     /** Models tab: How much text one request may hold. Filled in from what the program loaded; larger is slower and uses more memory. */
     SETTINGS_MODELS_CONTEXT_HINT("settings.models.context.hint"),
     /** Models tab: num_ctx (Ollama) */
@@ -807,6 +809,8 @@ public enum MessageKey {
     SETTINGS_MODELS_LIMIT_TIP("settings.models.limit.tip"),
     /** Models tab: Off (recommended): each request is limited by its expected length. */
     SETTINGS_MODELS_LIMIT_HINT("settings.models.limit.hint"),
+    /** Models tab: the server ignored the answer-length limit on the last Advanced features check. */
+    SETTINGS_MODELS_LIMIT_IGNORED("settings.models.limit.ignored"),
     /** Models tab: max output tokens */
     SETTINGS_MODELS_LIMIT_TECH("settings.models.limit.tech"),
     /** Models tab: Advanced */

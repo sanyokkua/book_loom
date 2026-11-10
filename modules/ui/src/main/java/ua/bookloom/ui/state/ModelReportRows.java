@@ -1,11 +1,16 @@
 package ua.bookloom.ui.state;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.ModelReport;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -18,6 +23,11 @@ public final class ModelReportRows {
 
     private static final String NO_WARNINGS = "none";
     private static final String WARNING_SEPARATOR = " · ";
+    private static final String SCHEMA_SETTING = "response_format";
+    private static final List<String> DEFAULT_KINDS = List.of("draft", "term-reading");
+    private static final String SCHEMA = "schema";
+    private static final String PLAIN_JSON = "plainJson";
+    private static final String UNCHECKED = "unchecked";
 
     private final Messages messages;
 
@@ -78,6 +88,53 @@ public final class ModelReportRows {
                 };
         log.debug("context row: engine {}, window {}, loaded {}", entry.engine(), facts.contextLength(), loaded);
         return line;
+    }
+
+    /**
+     * How the model answers each call kind that asks for a structured answer: the schema, or plain JSON.
+     *
+     * @param facts what the program says about the model; its session answer is the last inference test's
+     * @param refused what the model refused, whose answer-schema refusals name the kinds that fell back
+     * @return one line per kind, Translate and Name reading first; one line saying nothing was checked when no kind is
+     *     known; never empty
+     */
+    public List<String> structured(final ModelFacts facts, final List<RefusedSetting> refused) {
+        Objects.requireNonNull(facts, "facts");
+        Objects.requireNonNull(refused, "refused");
+        final List<String> kinds = new ArrayList<>(DEFAULT_KINDS);
+        refused.stream()
+                .filter(setting -> SCHEMA_SETTING.equals(setting.name()) && setting.scope() != null)
+                .map(RefusedSetting::scope)
+                .filter(scope -> !kinds.contains(scope))
+                .forEach(kinds::add);
+        final List<String> lines = new ArrayList<>();
+        boolean anyKnown = false;
+        for (final String kind : kinds) {
+            final String answer = answerFor(kind, facts, refused).orElse(UNCHECKED);
+            anyKnown |= !UNCHECKED.equals(answer);
+            lines.add(messages.get(
+                    MessageKey.SETTINGS_MODELS_FOUND_STRUCTURED_ROW,
+                    messages.get(MessageKey.SETTINGS_MODELS_FOUND_STRUCTURED_KIND, kind.replace('-', '_'), kind),
+                    answer));
+        }
+        log.debug("structured rows: {} kind(s), any known {}", kinds.size(), anyKnown);
+        return anyKnown ? lines : List.of(messages.get(MessageKey.SETTINGS_MODELS_FOUND_UNCHECKED));
+    }
+
+    private static Optional<String> answerFor(
+            final String kind, final ModelFacts facts, final List<RefusedSetting> refused) {
+        final boolean fellBack = refused.stream()
+                .anyMatch(setting -> SCHEMA_SETTING.equals(setting.name())
+                        && (setting.scope() == null || kind.equals(setting.scope())));
+        if (fellBack) {
+            return Optional.of(PLAIN_JSON);
+        }
+        final ProbeVerdicts.Verdict checked = facts.verdicts().answerSchema();
+        if (Boolean.TRUE.equals(facts.structured())
+                || (checked != null && checked.outcome() == ProbeVerdicts.Outcome.HONOURED)) {
+            return Optional.of(SCHEMA);
+        }
+        return checked == null && facts.structured() == null ? Optional.empty() : Optional.of(PLAIN_JSON);
     }
 
     private String nativeOllama(final ModelFacts facts) {

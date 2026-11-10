@@ -2,6 +2,8 @@ package ua.bookloom.ui.state;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 import org.jspecify.annotations.Nullable;
@@ -9,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import ua.bookloom.api.llm.ModelReport;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.i18n.Messages;
@@ -134,5 +137,68 @@ class ModelReportRowsTest {
                         entry(ProviderKind.OPENAI_COMPATIBLE, ServerEngine.LM_STUDIO), facts(131072, 8192, null)))
                 .contains("LM Studio")
                 .contains("8 192");
+    }
+
+    private static ModelFacts withVerdicts(final ProbeVerdicts verdicts, final @Nullable Boolean session) {
+        return new ModelFacts(null, null, null, List.of(), verdicts, session, false, null);
+    }
+
+    private static ProbeVerdicts schema(final ProbeVerdicts.Outcome outcome) {
+        return new ProbeVerdicts(
+                new ProbeVerdicts.Verdict(outcome, "test", Instant.parse("2026-10-02T00:00:00Z")), null, null, null);
+    }
+
+    private static RefusedSetting schemaRefusal(final @Nullable String scope) {
+        return new RefusedSetting("response_format", LocalDate.of(2026, 10, 2), "plain JSON", scope);
+    }
+
+    // IF one refused kind turned every kind to plain JSON, THEN Translate would be reported worse than it is.
+    @Test
+    void structured_gptOss20b_translateSchemaNameReadingPlainJson() {
+        assertThat(english.structured(
+                        withVerdicts(schema(ProbeVerdicts.Outcome.HONOURED), null),
+                        List.of(schemaRefusal("term-reading"))))
+                .containsExactly("Translate: schema", "Name reading: plain JSON");
+    }
+
+    @Test
+    void structured_refusalWithNoScope_isPlainJsonForEveryKind() {
+        assertThat(english.structured(
+                        withVerdicts(schema(ProbeVerdicts.Outcome.HONOURED), true), List.of(schemaRefusal(null))))
+                .containsExactly("Translate: plain JSON", "Name reading: plain JSON");
+    }
+
+    @Test
+    void structured_otherRefusedScope_getsItsOwnLine() {
+        assertThat(english.structured(
+                        withVerdicts(schema(ProbeVerdicts.Outcome.HONOURED), null), List.of(schemaRefusal("summary"))))
+                .containsExactly("Translate: schema", "Name reading: schema", "summary: plain JSON");
+    }
+
+    @Test
+    void structured_sessionAnswerTrue_isSchema() {
+        assertThat(english.structured(withVerdicts(ProbeVerdicts.none(), true), List.of()))
+                .containsExactly("Translate: schema", "Name reading: schema");
+    }
+
+    @Test
+    void structured_checkRefused_isPlainJson() {
+        assertThat(english.structured(withVerdicts(schema(ProbeVerdicts.Outcome.REFUSED), null), List.of()))
+                .containsExactly("Translate: plain JSON", "Name reading: plain JSON");
+    }
+
+    // IF nothing known read as plain JSON, THEN a never-tested model would look like one that refused.
+    @Test
+    void structured_nothingKnown_notCheckedYetNamesTheTest() {
+        assertThat(english.structured(ModelFacts.NONE, List.of()))
+                .containsExactly("structured answers: not checked yet — Test inference on the Providers tab checks it");
+    }
+
+    @Test
+    void structured_ukrainian_isWrittenInUkrainian() {
+        assertThat(ukrainian.structured(
+                        withVerdicts(schema(ProbeVerdicts.Outcome.HONOURED), null),
+                        List.of(schemaRefusal("term-reading"))))
+                .containsExactly("Переклад: схема", "Читання імен: простий JSON");
     }
 }

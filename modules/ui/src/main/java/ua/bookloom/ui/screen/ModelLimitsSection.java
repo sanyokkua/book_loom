@@ -8,13 +8,17 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import org.controlsfx.control.ToggleSwitch;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ModelDraft;
 import ua.bookloom.ui.state.ModelEntry;
+import ua.bookloom.ui.state.ModelFacts;
 import ua.bookloom.ui.state.ModelForm;
 import ua.bookloom.ui.state.TechnicalDetails;
 
@@ -33,6 +37,8 @@ final class ModelLimitsSection {
     private final TextField context;
     private final Label contextTech;
     private final Label contextOpenAi;
+    private final Label contextEngine;
+    private final Label limitIgnored;
     private final ToggleSwitch limitOn = new ToggleSwitch();
     private final TextField limit;
     private final Label limitTech;
@@ -48,6 +54,8 @@ final class ModelLimitsSection {
         limit = number("models-limit", MessageKey.SETTINGS_MODELS_LIMIT_TIP);
         contextTech = note("models-context-tech", MessageKey.SETTINGS_MODELS_CONTEXT_TECH, "tech-note");
         contextOpenAi = note("models-context-openai", MessageKey.SETTINGS_MODELS_CONTEXT_OPENAI, "hint");
+        contextEngine = note("models-context-engine", MessageKey.SETTINGS_MODELS_CONTEXT_TECH, "hint");
+        limitIgnored = note("models-limit-ignored", MessageKey.SETTINGS_MODELS_LIMIT_IGNORED, "hint");
         limitTech = note("models-limit-tech", MessageKey.SETTINGS_MODELS_LIMIT_TECH, "tech-note");
         contextOn.setId("models-context-on");
         contextOn.setText(messages.get(MessageKey.SETTINGS_MODELS_CONTEXT));
@@ -67,8 +75,10 @@ final class ModelLimitsSection {
                                 contextTech,
                                 "models-context-hint",
                                 MessageKey.SETTINGS_MODELS_CONTEXT_HINT),
+                        contextEngine,
                         contextOpenAi,
-                        block(limitOn, limit, limitTech, "models-limit-hint", MessageKey.SETTINGS_MODELS_LIMIT_HINT));
+                        block(limitOn, limit, limitTech, "models-limit-hint", MessageKey.SETTINGS_MODELS_LIMIT_HINT),
+                        limitIgnored);
     }
 
     VBox node() {
@@ -82,15 +92,60 @@ final class ModelLimitsSection {
         try {
             contextOn.setSelected(draft.contextOn());
             limitOn.setSelected(draft.limitOn());
-            final Integer loaded = form.facts().get().loaded();
-            replace(context, draft.contextOn() ? draft.contextText() : Objects.toString(loaded, ""));
+            showWindow(draft);
             replace(limit, draft.limitText());
-            context.setDisable(!draft.contextOn());
             limit.setDisable(!draft.limitOn());
         } finally {
             drawing = false;
         }
         showNames(form.selected().get());
+        Visibility.show(
+                limitIgnored,
+                form.facts().get().verdicts().capField() != null
+                        && form.facts().get().verdicts().capField().outcome() == ProbeVerdicts.Outcome.IGNORED);
+    }
+
+    // The engines that load the model with their own window; native Ollama takes BookLoom's num_ctx, so it is not here.
+    private static @Nullable ServerEngine windowSetBy(final @Nullable ModelEntry entry) {
+        if (entry == null || entry.kind() == ProviderKind.OLLAMA) {
+            return null;
+        }
+        return switch (entry.engine()) {
+            case LM_STUDIO, LLAMA_CPP, OLLAMA -> entry.engine();
+            case GENERIC, OPENROUTER, UNSLOTH -> null;
+        };
+    }
+
+    private void showEngine(final @Nullable ServerEngine setBy) {
+        Visibility.show(contextEngine, setBy != null);
+        if (setBy != null) {
+            contextEngine.setText(messages.get(MessageKey.SETTINGS_MODELS_CONTEXT_ENGINE, engineToken(setBy)));
+        }
+    }
+
+    private static String engineToken(final ServerEngine engine) {
+        return switch (engine) {
+            case LM_STUDIO -> "lmStudio";
+            case LLAMA_CPP -> "llamaServer";
+            case OLLAMA -> "ollama";
+            case GENERIC, OPENROUTER, UNSLOTH -> "other";
+        };
+    }
+
+    private void showWindow(final ModelDraft draft) {
+        final ModelFacts facts = form.facts().get();
+        final @Nullable ServerEngine setBy = windowSetBy(form.selected().get());
+        final @Nullable Integer loaded = facts.loaded();
+        final String text;
+        if (setBy == null) {
+            text = draft.contextOn() ? draft.contextText() : Objects.toString(loaded, "");
+        } else {
+            text = Objects.toString(loaded != null ? loaded : facts.contextLength(), "");
+        }
+        replace(context, text);
+        context.setDisable(setBy != null || !draft.contextOn());
+        contextOn.setDisable(setBy != null);
+        showEngine(setBy);
     }
 
     private void showNames(final ModelEntry entry) {

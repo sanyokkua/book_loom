@@ -92,10 +92,8 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
 
         openModels();
 
-        assertThat(shown("models-found-text"))
-                .contains("131,072 tokens")
-                .contains("16,384 loaded now")
-                .contains("structured answers: not checked yet");
+        assertThat(shown("models-found-text")).contains("131,072 tokens").contains("16,384 loaded now");
+        assertThat(shown("models-found-structured")).contains("structured answers: not checked yet");
     }
 
     // IF "not checked yet" named nothing to do, THEN a person could not learn how to get the answer.
@@ -103,7 +101,7 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
     void found_noInferenceTestThisSession_saysNotCheckedYetAndNamesTheTest() throws TimeoutException {
         openModels();
 
-        assertThat(shown("models-found-text"))
+        assertThat(shown("models-found-structured"))
                 .contains("not checked yet")
                 .contains("Test inference on the Providers tab");
     }
@@ -115,7 +113,7 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
 
         openModels();
 
-        assertThat(shown("models-found-text"))
+        assertThat(shown("models-found-structured"))
                 .contains(
                         "\u00ab\u041f\u0435\u0440\u0435\u0432\u0456\u0440\u0438\u0442\u0438 \u0432\u0456\u0434\u043f\u043e\u0432\u0456\u0434\u044c\u00bb");
     }
