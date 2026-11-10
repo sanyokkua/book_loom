@@ -2805,7 +2805,7 @@ public enum MessageKey {
     /** Placeholder of the field that narrows a model list by name. */
     MODEL_FILTER_PROMPT("model.filter.prompt"),
     /** Hover explanation of the model-name filter field. */
-    MODEL_FILTER_TIP("model.filter.tip"),
+    MODEL_FILTER_TIP("model.filter.prompt.tip"),
     /** Sentence shown when the typed filter hides every model: the typed text. */
     MODEL_FILTER_NONE("model.filter.none"),
     /** Title of the question asked when a book is chosen while a project is open. */
