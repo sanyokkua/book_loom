@@ -18,6 +18,7 @@ import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.RecommendationLine;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.LocalModelProbe;
@@ -69,7 +70,7 @@ final class ProjectsEmptyView {
 
     Node build() {
         log.debug("building the projects first-launch card");
-        final Label title = new Label(messages.get(MessageKey.PROJECTS_EMPTY_TITLE));
+        final Label title = Wrapped.wholeLines(new Label(messages.get(MessageKey.PROJECTS_EMPTY_TITLE)));
         title.getStyleClass().add("projects-empty-title");
         final VBox steps = new VBox(STEP_SPACING);
         steps.setMaxWidth(STEPS_WIDTH);
