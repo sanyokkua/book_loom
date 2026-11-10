@@ -15,6 +15,7 @@ import javafx.scene.control.TitledPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.ui.MemorySource;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.control.Wrapped;
@@ -57,13 +58,14 @@ final class ProviderFormView {
             final ProviderForm form,
             final ProviderEngine engine,
             final Messages messages,
-            final ProviderTestDialog dialog) {
+            final ProviderTestDialog dialog,
+            final MemorySource memory) {
         this.form = Objects.requireNonNull(form, "form");
         this.messages = Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(viewModel, "viewModel");
         connection = new ProviderConnectionSection(form, engine, messages);
         extras = new ProviderExtrasSection(viewModel, form, messages);
-        model = new ModelField(viewModel, form, messages);
+        model = new ModelField(viewModel, form, messages, memory);
         privacy = new ProviderPrivacyLines(form, messages);
         buildFold(new ProviderChecks(viewModel, messages, dialog), variantLine(engine));
         root.getChildren()

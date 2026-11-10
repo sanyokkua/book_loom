@@ -21,6 +21,7 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.ui.MemorySource;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.control.Wrapped;
@@ -68,6 +69,7 @@ public final class SettingsController {
 
     // Set while this controller moves the tab selection itself, so the change is not taken for a person's click.
     private boolean movingTab;
+    private final MemorySource memory;
     private ProviderFormView formView;
 
     @FXML
@@ -132,6 +134,7 @@ public final class SettingsController {
      * @param activities the model work under way, which keeps the provider in use from being deleted
      * @param guards what Use this one does, what asks before a move would drop typing, what entering a tab reads
      *     again, and whether the open provider is the one the translation run uses
+     * @param memory this computer's memory, which the model advice under the Model entry is read from
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -142,7 +145,8 @@ public final class SettingsController {
             final Messages messages,
             final ConfirmPrompt confirm,
             final ActivityTracker activities,
-            final ProviderGuards guards) {
+            final ProviderGuards guards,
+            final MemorySource memory) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.form = Objects.requireNonNull(parts, "parts").form();
         this.engine = parts.engine();
@@ -154,12 +158,13 @@ public final class SettingsController {
         this.guard = guards.guard();
         this.tabEntries = guards.tabEntries();
         this.inUse = guards.inUse();
+        this.memory = Objects.requireNonNull(memory, "memory");
     }
 
     @FXML
     void initialize() {
         log.debug("building the settings screen");
-        formView = new ProviderFormView(viewModel, form, engine, messages, testDialog);
+        formView = new ProviderFormView(viewModel, form, engine, messages, testDialog, memory);
         rowList = new ProviderRowList(viewModel, messages, providerList, this::open);
         formBody.getChildren().setAll(formView.node());
         installTips();

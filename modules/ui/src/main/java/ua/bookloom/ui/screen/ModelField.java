@@ -16,7 +16,9 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.ui.MemorySource;
 import ua.bookloom.ui.control.ModelFilterField;
+import ua.bookloom.ui.control.RecommendationLine;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.control.Wrapped;
@@ -38,6 +40,7 @@ final class ModelField {
     private final SettingsViewModel viewModel;
     private final ProviderForm form;
     private final Messages messages;
+    private final MemorySource memory;
     private final ComboBox<String> combo = new ComboBox<>();
     private final ModelFilterField filter;
     private static final int MAX_VISIBLE_ROWS = 10;
@@ -51,10 +54,15 @@ final class ModelField {
     // for a person typing or picking; FX thread only.
     private boolean applying;
 
-    ModelField(final SettingsViewModel viewModel, final ProviderForm form, final Messages messages) {
+    ModelField(
+            final SettingsViewModel viewModel,
+            final ProviderForm form,
+            final Messages messages,
+            final MemorySource memory) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.form = Objects.requireNonNull(form, "form");
         this.messages = Objects.requireNonNull(messages, "messages");
+        this.memory = Objects.requireNonNull(memory, "memory");
         this.filter = new ModelFilterField(
                 messages, "settings-model-filter", "settings-model-filter-none", this::onFilterTyped, this::openList);
         build();
@@ -101,6 +109,7 @@ final class ModelField {
                                 listing.noListObtained()),
                         refusal(listing),
                         Wrapped.label(messages.get(MessageKey.SETTINGS_FORM_MODEL_HINT), "hint"));
+        box.getChildren().addAll(RecommendationLine.nodes(messages, memory, "settings-model"));
     }
 
     private void configureCombo(final ModelListing listing) {

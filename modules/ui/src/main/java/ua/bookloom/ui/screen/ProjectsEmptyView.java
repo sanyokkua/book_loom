@@ -13,8 +13,10 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.ui.MemorySource;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.control.RecommendationLine;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -47,6 +49,7 @@ final class ProjectsEmptyView {
     private final Navigator navigator;
     private final RunStateSource runState;
     private final LocalModelProbe probe;
+    private final MemorySource memory;
     private final HBox modelLine = new HBox(MODEL_SPACING);
     private final ChangeListener<ModelChoice> onModel = (observed, was, now) -> showModel();
     private final ChangeListener<ProbeOutcome> onOutcome = (observed, was, now) -> showModel();
@@ -55,11 +58,13 @@ final class ProjectsEmptyView {
             final Messages messages,
             final Navigator navigator,
             final RunStateSource runState,
-            final LocalModelProbe probe) {
+            final LocalModelProbe probe,
+            final MemorySource memory) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.runState = Objects.requireNonNull(runState, "runState");
         this.probe = Objects.requireNonNull(probe, "probe");
+        this.memory = Objects.requireNonNull(memory, "memory");
     }
 
     Node build() {
@@ -80,7 +85,9 @@ final class ProjectsEmptyView {
         runState.model().addListener(new WeakChangeListener<>(onModel));
         probe.outcome().addListener(new WeakChangeListener<>(onOutcome));
         showModel();
-        card.getChildren().addAll(modelLine, start());
+        card.getChildren().add(modelLine);
+        card.getChildren().addAll(RecommendationLine.nodes(messages, memory, "projects-empty"));
+        card.getChildren().add(start());
         card.setId("projects-empty-card");
         card.getStyleClass().add("card");
         return card;

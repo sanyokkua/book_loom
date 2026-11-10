@@ -7,6 +7,7 @@ import java.util.Locale;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Button;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.ui.MemorySource;
 import ua.bookloom.ui.RecordingModelCatalog;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.ViewNames;
@@ -35,6 +36,8 @@ class ProjectsModelLineTest extends ProjectsScreenTestBase {
                 .engine(engine)
                 .catalog(catalog)
                 .modelPickPrompt(pick)
+                // The memory advice names model tags too; this test is about the probe's model line alone.
+                .memory(new MemorySource.Unknown())
                 .gated()
                 .build();
     }

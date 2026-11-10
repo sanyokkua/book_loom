@@ -50,6 +50,7 @@ import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.dialog.TranslateIntoPrompt;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.state.FileRevealer;
+import ua.bookloom.ui.state.FixedMemory;
 import ua.bookloom.ui.state.ProjectActions;
 import ua.bookloom.ui.state.RowOpener;
 import ua.bookloom.ui.theme.ThemeBlock;
@@ -106,6 +107,7 @@ public final class UiTestInjector {
         private final ReplacementQuestions replacements = new ReplacementQuestions();
         private @Nullable ExecutorService backgroundExecutor;
         private boolean gated;
+        private MemorySource memory = new FixedMemory(16);
         private Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         private SettingsRepository settings = new MemorySettings();
         private FileRevealer revealer = new RecordingFileRevealer();
@@ -116,6 +118,12 @@ public final class UiTestInjector {
 
         private Builder(final Locale locale) {
             this.locale = locale;
+        }
+
+        /** How much memory the graph's computer has; by default 16 GB, whatever the machine running the test has. */
+        public Builder memory(final MemorySource value) {
+            memory = Objects.requireNonNull(value, "memory");
+            return this;
         }
 
         /** What the graph's {@link Clock} is; by default one standing at {@link #NOW}. */
@@ -384,6 +392,7 @@ public final class UiTestInjector {
                 bind(EnvironmentVariables.class).toInstance(name -> environment.contains(name));
                 bind(ProviderVerifier.class).toInstance(verifier);
                 bind(ModelCatalog.class).toInstance(catalog);
+                bind(MemorySource.class).toInstance(memory);
                 bind(ModelCapabilities.class).toInstance(capabilities);
                 bind(ChatModelFactory.class).toInstance(models);
                 bind(TranslationEngine.class).toInstance(engine);

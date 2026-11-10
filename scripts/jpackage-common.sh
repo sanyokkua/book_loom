@@ -139,7 +139,7 @@ JPACKAGE_ARGS=(
 # `requires` by name: Guava (guice's dependency, an explicit module an automatic module does not pull in) and the
 # other jars the root module reaches only reflectively.
 RUNTIME_MODULES="java.base,java.compiler,java.desktop,java.logging,java.naming,java.net.http,java.prefs,java.scripting,java.sql,java.sql.rowset,java.xml,\
-jdk.charsets,jdk.crypto.ec,jdk.jfr,jdk.localedata,jdk.unsupported"
+jdk.charsets,jdk.crypto.ec,jdk.jfr,jdk.localedata,jdk.management,jdk.unsupported"
 
 build_runtime() {
     rm -rf "${RUNTIME_DIR}"

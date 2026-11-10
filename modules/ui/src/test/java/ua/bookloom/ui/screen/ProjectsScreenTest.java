@@ -340,7 +340,7 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
         showEmptyListing();
 
         assertThat(textOf("projects-empty-card"))
-                .contains("Translate a book on your own computer")
+                .contains("Translate a book. Private when you use a local AI model.")
                 .contains("Choose a book (EPUB, FB2, Markdown or plain text).")
                 .contains("Check the languages. The rest is filled in for you.")
                 .contains("Let it translate. A book takes hours; you can stop and continue at any time.")

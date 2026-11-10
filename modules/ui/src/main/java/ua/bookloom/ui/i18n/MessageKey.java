@@ -3381,6 +3381,10 @@ public enum MessageKey {
     PROJECTS_NEW("projects.new"),
     /** Hover explanation of the new-translation buttons. */
     PROJECTS_NEW_TIP("projects.new.tip"),
+    /** The model advice for this computer's memory: gigabytes, tag, pull command. */
+    MODEL_RECOMMEND_LINE("model.recommend.line"),
+    /** The larger model offered as an option: tag, pull command. */
+    MODEL_RECOMMEND_OPTIN("model.recommend.optin"),
     /** Title of the first-launch card. */
     PROJECTS_EMPTY_TITLE("projects.empty.title"),
     /** First step of how it works. */

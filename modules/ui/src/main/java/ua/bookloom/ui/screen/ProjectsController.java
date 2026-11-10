@@ -9,6 +9,7 @@ import javafx.scene.Node;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.ui.MemorySource;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -49,6 +50,7 @@ public final class ProjectsController {
      * @param lastOpened the words for when a project was last opened
      * @param runState the chosen AI model the first-launch card names
      * @param probe the look for a local AI program the card shows and can repeat
+     * @param memory this computer's memory, which the card's model advice is read from
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -59,12 +61,13 @@ public final class ProjectsController {
             final Navigator navigator,
             final LastOpened lastOpened,
             final RunStateSource runState,
-            final LocalModelProbe probe) {
+            final LocalModelProbe probe,
+            final MemorySource memory) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.list = new ProjectsListView(messages, viewModel, lastOpened);
-        this.empty = new ProjectsEmptyView(messages, navigator, runState, Objects.requireNonNull(probe, "probe"));
+        this.empty = new ProjectsEmptyView(messages, navigator, runState, probe, memory);
     }
 
     @FXML

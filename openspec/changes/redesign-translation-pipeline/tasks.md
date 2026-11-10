@@ -2176,7 +2176,7 @@ screen recommends a model by memory, and every model picker gets a name filter (
     LM Studio window field read-only; the ignored-cap note after a stored `cap-ignored` verdict.
   - **Done when:** no `ModelAdvice` reference remains and the tests are green.
 
-- [ ] 15.7 Recommend a model by the computer's memory on the empty Projects screen, under the model chooser and at
+- [x] 15.7 Recommend a model by the computer's memory on the empty Projects screen, under the model chooser and at
   Start, so a new user picks a model that fits. → :ui, :app
   - **Satisfies:** "Recommend a model by the computer's memory where models are chosen" (settings), "Name the recommended model on the empty Projects screen" (app-shell), "Show a first-launch state on Projects when none exist" (app-shell; the privacy tagline and the recommended-model line)
   - **Depends on:** 15.6

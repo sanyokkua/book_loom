@@ -12,9 +12,11 @@ import javafx.scene.control.RadioButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.ui.MemorySource;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.Literal;
 import ua.bookloom.ui.control.ModelFilterField;
+import ua.bookloom.ui.control.RecommendationLine;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.control.Wrapped;
@@ -39,17 +41,20 @@ public final class ModelPickDialog implements ModelPickPrompt {
 
     private final ModalHost modalHost;
     private final Messages messages;
+    private final MemorySource memory;
 
     /**
      * Creates the dialog.
      *
      * @param modalHost the shared overlay the card is shown in
      * @param messages the catalogue every word of the card comes from
+     * @param memory this computer's memory, which the card's model advice is read from
      */
     @Inject
-    public ModelPickDialog(final ModalHost modalHost, final Messages messages) {
+    public ModelPickDialog(final ModalHost modalHost, final Messages messages, final MemorySource memory) {
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
         this.messages = Objects.requireNonNull(messages, "messages");
+        this.memory = Objects.requireNonNull(memory, "memory");
     }
 
     @Override
@@ -68,16 +73,15 @@ public final class ModelPickDialog implements ModelPickPrompt {
         final ModelFilterField filter = filterAbove(options);
         final FormCard card = new FormCard(
                 modalHost, messages, CARD_ID, ModalCard.Size.DIALOG, messages.get(MessageKey.DIALOG_MODEL_PICK_TITLE));
-        card.card()
-                .setContent(new VBox(
-                        LIST_SPACING * 2,
-                        Wrapped.label(
-                                messages.get(
-                                        MessageKey.DIALOG_MODEL_PICK_BODY,
-                                        ProviderNames.displayName(messages, providerId)),
-                                "dialog-text"),
-                        filter.node(),
-                        options));
+        final VBox content = new VBox(
+                LIST_SPACING * 2,
+                Wrapped.label(
+                        messages.get(
+                                MessageKey.DIALOG_MODEL_PICK_BODY, ProviderNames.displayName(messages, providerId)),
+                        "dialog-text"));
+        content.getChildren().addAll(RecommendationLine.nodes(messages, memory, "model-pick"));
+        content.getChildren().addAll(filter.node(), options);
+        card.card().setContent(content);
         wire(card, group, use, notNow, filter);
         card.show();
     }
