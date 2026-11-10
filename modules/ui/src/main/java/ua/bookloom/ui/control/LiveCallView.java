@@ -15,6 +15,7 @@ import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.CallState;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.CallTimings;
 import ua.bookloom.ui.state.SectionMemory;
 
 /**
@@ -32,6 +33,7 @@ public final class LiveCallView extends VBox {
 
     private final Messages messages;
     private final Label tokens = new FigureLabel();
+    private final Label timings = new FigureLabel();
     private final InputPane input;
     private final Label replyNote = new Label();
     private final ReplyView reply;
@@ -41,7 +43,7 @@ public final class LiveCallView extends VBox {
     /**
      * Builds a hidden block.
      *
-     * @param id the block's node id; its parts are named {@code <id>-tokens}, {@code -input}, {@code -reply-note},
+     * @param id the block's node id; its parts are named {@code <id>-tokens}, {@code -timings}, {@code -input}, {@code -reply-note},
      *     {@code -reply} and {@code -prompt}
      * @param messages the catalogue the block is worded from
      */
@@ -56,13 +58,15 @@ public final class LiveCallView extends VBox {
         getStyleClass().add("live-call");
         tokens.setId(id + "-tokens");
         tokens.getStyleClass().add("muted");
+        timings.setId(id + "-timings");
+        timings.getStyleClass().add("muted");
         replyNote.setId(id + "-reply-note");
         replyNote.getStyleClass().addAll("live-body", "live-placeholder");
         replyNote.setWrapText(true);
         replyNote.setMinHeight(Region.USE_PREF_SIZE);
         final VBox replyColumn = new VBox(SPACING, replyNote, reply);
         // Prompt | reply side by side, stacked in a compact window (L6), as the mockup's pair.
-        getChildren().addAll(tokens, input, new TwoColumns(prompt, replyColumn, LayoutClass.Width.REGULAR));
+        getChildren().addAll(tokens, timings, input, new TwoColumns(prompt, replyColumn, LayoutClass.Width.REGULAR));
         show(null);
     }
 
@@ -94,6 +98,10 @@ public final class LiveCallView extends VBox {
         tokens.setText(usage == null ? "" : tokensText(usage));
         tokens.setVisible(usage != null);
         tokens.setManaged(usage != null);
+        final boolean answered = call.state() == CallState.ANSWERED;
+        timings.setText(answered ? CallTimings.line(messages, usage) : "");
+        timings.setVisible(answered);
+        timings.setManaged(answered);
         input.show(call.segments().isEmpty() ? call.sent() : null);
         showReplyNote(call);
         reply.show(call.reply(), call.items(), segmentLocators(call));

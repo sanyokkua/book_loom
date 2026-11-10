@@ -313,4 +313,26 @@ class ProviderTestLiveCardScreenTest extends SettingsScreenTestBase {
                 new ProbeCall(AdvancedCheck.THINKING, "{}", "{}", "", 400, Duration.ofMillis(800), null),
                 new ProbeCall(AdvancedCheck.THINKING, "{}", "{}", "41", 200, Duration.ofMillis(950), 20.0));
     }
+
+    private String firstTokenCell(final Result<VerificationReport> report) throws Exception {
+        verifier.respondWith(report);
+        openSettings();
+        onFx(() -> viewModel().draftModel().set(MODEL));
+        onFx(() -> button("settings-test-inference-details").fire());
+        awaitFx(() -> !viewModel().tests().checking().get() && optionalNode("test-metric-firstToken") != null);
+        return shown("test-metric-firstToken");
+    }
+
+    // IF a route that reports no first-token time showed 0, THEN Ollama's OpenAI-compatible route would look instant.
+    @Test
+    void firstTokenCell_ollamaOpenAiRoute_readsDash() throws Exception {
+        assertThat(firstTokenCell(ProviderReports.allPassedWithTimings(null, 12, null)))
+                .isEqualTo("–");
+    }
+
+    @Test
+    void firstTokenCell_mlxWithCachedPrompt_saysUncachedWithTheShare() throws Exception {
+        assertThat(firstTokenCell(ProviderReports.allPassedWithTimings(1200L, 600, 200)))
+                .isEqualTo("1.2 s · uncached · 33 %");
+    }
 }

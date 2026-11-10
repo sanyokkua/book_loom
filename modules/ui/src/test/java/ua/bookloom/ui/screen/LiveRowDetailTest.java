@@ -9,6 +9,7 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallSegment;
 import ua.bookloom.api.pipeline.CallSnapshot;
@@ -207,5 +208,29 @@ class LiveRowDetailTest extends LiveCardTestBase {
         assertThat(TooltipProbe.tipText(required("translating-live-mode-simple")))
                 .isEqualTo("Simple: segments and their translation. Detailed: adds the technical figures, what was"
                         + " sent and the reply.");
+    }
+
+    private void showAnsweredCall(final TokenUsage usage) {
+        final CallSnapshot call = call42().answered("{\"items\":[]}", usage, Duration.ofSeconds(7));
+        final LiveRow inCall =
+                new LiveRow("s-5", "ch2 · p05", "Source text 5", "Дощ.", Stage.ACCEPTED, null, List.of(), 42L);
+        showLive(LiveRowFixtures.calls(call, List.of(inCall)));
+        chooseMode(true);
+    }
+
+    // IF a missing time to first token read 0 ms, THEN a server that reports none would look instant.
+    @Test
+    void detailedDetail_callWithoutFirstTokenTime_readsDashes() {
+        showAnsweredCall(new TokenUsage(100, 50, null, null, null, null));
+
+        assertThat(labelText("translating-live-call-timings")).isEqualTo("first token – · speed – · cached –");
+    }
+
+    @Test
+    void detailedDetail_callWithReportedFigures_showsThem() {
+        showAnsweredCall(new TokenUsage(600, 50, Duration.ofSeconds(2), Duration.ofMillis(210), 200, null));
+
+        assertThat(labelText("translating-live-call-timings"))
+                .isEqualTo("first token 210 ms · speed 25.0 tok/s · cached 33 %");
     }
 }

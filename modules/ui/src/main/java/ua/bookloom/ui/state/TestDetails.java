@@ -316,14 +316,8 @@ public final class TestDetails {
                         MessageKey.SETTINGS_TEST_METRIC_LOAD,
                         CheckSentences.durationText(messages, Duration.ofMillis(load))));
             }
-            final @Nullable Long firstToken = exchange == null ? null : exchange.firstTokenMs();
             final @Nullable Double speed = exchange == null ? null : exchange.tokensPerSecond();
-            figures.add(metric(
-                    "firstToken",
-                    MessageKey.SETTINGS_TEST_METRIC_FIRST_TOKEN,
-                    firstToken == null
-                            ? none()
-                            : CheckSentences.durationText(messages, Duration.ofMillis(firstToken))));
+            figures.add(metric("firstToken", MessageKey.SETTINGS_TEST_METRIC_FIRST_TOKEN, firstToken()));
             figures.add(metric(
                     "speed",
                     MessageKey.SETTINGS_TEST_METRIC_SPEED,
@@ -336,6 +330,21 @@ public final class TestDetails {
                             exchange != null && exchange.structured()
                                     ? MessageKey.SETTINGS_TEST_METRIC_YES
                                     : MessageKey.SETTINGS_TEST_METRIC_NO)));
+        }
+
+        // A server that read the prompt from a cache reports the time of the part it had to read: the cell says so and
+        // gives the share beside it; a route that reports no time at all is a dash, never 0.
+        private String firstToken() {
+            final @Nullable VerificationExchange sent = exchange;
+            final @Nullable Long firstToken = sent == null ? null : sent.firstTokenMs();
+            if (sent == null || firstToken == null) {
+                return none();
+            }
+            final String time = CheckSentences.durationText(messages, Duration.ofMillis(firstToken));
+            final @Nullable Integer share = CallTimings.cachedShare(sent.promptTokens(), sent.cachedPromptTokens());
+            return share == null
+                    ? time
+                    : messages.get(MessageKey.SETTINGS_TEST_METRIC_UNCACHED, time, share.toString());
         }
 
         private String tokens() {

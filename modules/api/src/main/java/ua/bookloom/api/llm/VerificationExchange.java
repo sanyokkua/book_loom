@@ -26,6 +26,8 @@ import org.jspecify.annotations.Nullable;
  * @param shownResponseBody the reply laid out for reading (indented when it is JSON)
  * @param loadMs milliseconds the server spent loading the model before it answered, or null when it did not say;
  *     only Ollama reports it
+ * @param cachedPromptTokens how many prompt tokens the server says it served from its cache, or null when it did not
+ *     say
  * @param calls the calls of a stage that made several (the Advanced features checks), in the order sent; empty for a
  *     stage of one request
  */
@@ -44,7 +46,44 @@ public record VerificationExchange(
         String shownRequestBody,
         String shownResponseBody,
         @Nullable Long loadMs,
+        @Nullable Integer cachedPromptTokens,
         List<ProbeCall> calls) {
+
+    /** The form with no cached prompt count. */
+    public VerificationExchange(
+            String method,
+            String url,
+            String requestBody,
+            String responseBody,
+            int httpStatus,
+            @Nullable Long firstTokenMs,
+            @Nullable Double tokensPerSecond,
+            boolean structured,
+            String requestHeaders,
+            @Nullable Integer promptTokens,
+            @Nullable Integer completionTokens,
+            String shownRequestBody,
+            String shownResponseBody,
+            @Nullable Long loadMs,
+            List<ProbeCall> calls) {
+        this(
+                method,
+                url,
+                requestBody,
+                responseBody,
+                httpStatus,
+                firstTokenMs,
+                tokensPerSecond,
+                structured,
+                requestHeaders,
+                promptTokens,
+                completionTokens,
+                shownRequestBody,
+                shownResponseBody,
+                loadMs,
+                null,
+                calls);
+    }
 
     /** The form whose bodies are shown as they are, with no load time and no separate calls. */
     public VerificationExchange(
@@ -73,6 +112,7 @@ public record VerificationExchange(
                 completionTokens,
                 requestBody,
                 responseBody,
+                null,
                 null,
                 List.of());
     }

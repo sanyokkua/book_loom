@@ -10,6 +10,7 @@ import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.StepResult;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.CallTimings;
 import ua.bookloom.ui.state.StepEntry;
 
 /** The one line a request of a stage reads as in the list: its number, where it stands, its time and its speed. */
@@ -17,7 +18,6 @@ import ua.bookloom.ui.state.StepEntry;
 final class RequestWords {
 
     static final String NONE = "none";
-    private static final double MILLIS_PER_SECOND = 1000.0;
 
     private final Messages messages;
 
@@ -98,11 +98,7 @@ final class RequestWords {
      * @return one decimal, or {@link #NONE} when it cannot be told
      */
     static String speed(final @Nullable TokenUsage usage) {
-        final Integer written = usage == null ? null : usage.completion();
-        final Duration generation = usage == null ? null : usage.generation();
-        if (written == null || generation == null || generation.isZero()) {
-            return NONE;
-        }
-        return String.format(Locale.ROOT, "%.1f", written * MILLIS_PER_SECOND / generation.toMillis());
+        final @Nullable Double rate = CallTimings.tokensPerSecond(usage);
+        return rate == null ? NONE : String.format(Locale.ROOT, "%.1f", rate);
     }
 }

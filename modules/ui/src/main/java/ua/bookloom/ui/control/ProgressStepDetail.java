@@ -21,6 +21,8 @@ import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.CallState;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.CallTimings;
+import ua.bookloom.ui.state.CheckSentences;
 import ua.bookloom.ui.state.ProgressDialogModel;
 import ua.bookloom.ui.state.StepEntry;
 import ua.bookloom.ui.state.WaitingCall;
@@ -48,6 +50,8 @@ final class ProgressStepDetail extends VBox {
     private final Label call = new Label();
     private final FigureLabel clock = new FigureLabel();
     private final Label tokens = new Label();
+    private final Label timings = new Label();
+    private final Label meanFirstToken = new Label();
     private final Label notKept = new Label();
     private final PromptView prompt;
     private final ReplyView reply;
@@ -92,6 +96,8 @@ final class ProgressStepDetail extends VBox {
                         call,
                         clock,
                         tokens,
+                        timings,
+                        meanFirstToken,
                         notKept,
                         prompt,
                         reply,
@@ -115,6 +121,8 @@ final class ProgressStepDetail extends VBox {
         call.setId("progress-call");
         clock.setId("progress-clock");
         tokens.setId("progress-tokens");
+        timings.setId("progress-timings");
+        meanFirstToken.setId("progress-mean-first-token");
         notKept.setId("progress-not-kept");
         notKept.setText(messages.get(MessageKey.PROGRESS_DETAIL_NOT_KEPT));
         notKept.setWrapText(true);
@@ -198,6 +206,10 @@ final class ProgressStepDetail extends VBox {
         Visibility.show(call, technical && (made != null || !sentRequests));
         Visibility.show(clock, technical && made != null);
         Visibility.show(tokens, technical && made != null && made.usage() != null);
+        final boolean answered = made != null && made.state() == CallState.ANSWERED;
+        Visibility.show(timings, technical && answered);
+        timings.setText(made == null || !answered ? "" : CallTimings.line(messages, made.usage()));
+        showMean(technical);
         if (made == null) {
             call.setText(messages.get(MessageKey.PROGRESS_DETAIL_NO_CALL));
             return;
@@ -219,6 +231,20 @@ final class ProgressStepDetail extends VBox {
                     count(usage.completion()),
                     RequestWords.speed(usage)));
         }
+    }
+
+    // A stage's average time to first token counts only the requests that reported one.
+    private void showMean(final boolean technical) {
+        final List<CallSnapshot> sent = model.requestRows().stream()
+                .map(model::callOf)
+                .filter(Objects::nonNull)
+                .toList();
+        Visibility.show(meanFirstToken, technical && sent.size() > 1);
+        meanFirstToken.setText(messages.get(
+                MessageKey.PROGRESS_DETAIL_MEAN_FIRST_TOKEN,
+                CallTimings.meanFirstToken(sent)
+                        .map(mean -> CheckSentences.durationText(messages, mean))
+                        .orElseGet(() -> CallTimings.dash(messages))));
     }
 
     /**

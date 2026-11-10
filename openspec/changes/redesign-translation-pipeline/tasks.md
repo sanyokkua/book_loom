@@ -2095,7 +2095,7 @@ screen recommends a model by memory, and every model picker gets a name filter (
   - **Log:** DEBUG per call with each figure or "missing"; the run summary line keeps its format.
   - **Done when:** the tests and acceptance (a) are green.
 
-- [ ] 15.3 Show the timings in the window — live card, call detail, progress dialog and the Providers test dialog —
+- [x] 15.3 Show the timings in the window — live card, call detail, progress dialog and the Providers test dialog —
   with a dash for a missing figure, so the person reads real speeds only. → :ui
   - **Satisfies:** "Show a figure the engine did not report as a dash" (app-shell), "Show a check's details in a test dialog" (settings; the dash and the uncached prompt reading — the route line is 5.8)
   - **Excludes:** storing seconds per call kind on the model (group 7, task 7.9, writes them at the end of every names pass and run, the proofread kind included once group 13 adds it)

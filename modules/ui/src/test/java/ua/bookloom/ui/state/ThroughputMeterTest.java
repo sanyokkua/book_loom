@@ -52,4 +52,26 @@ class ThroughputMeterTest {
     void averageTokensPerSecond_noCallYet_isUnknown() {
         assertThat(new ThroughputMeter().averageTokensPerSecond()).isNull();
     }
+
+    // IF a call that reported no generation time counted with its wall clock, THEN a slow load would drag the pace
+    // down.
+    @Test
+    void finished_callWithoutGeneration_isNotCounted() {
+        final ThroughputMeter meter = new ThroughputMeter();
+        meter.finished(new ModelCallFinished(
+                "s1",
+                CallKind.DRAFT,
+                Duration.ofSeconds(60),
+                new TokenUsage(100, 100, null, null, null),
+                10,
+                false,
+                List.of("s1"),
+                1,
+                null));
+        assertThat(meter.tokensPerSecond()).isNull();
+
+        meter.finished(call(CallKind.DRAFT, 100, 2));
+
+        assertThat(meter.tokensPerSecond()).isCloseTo(50.0, within(0.001));
+    }
 }

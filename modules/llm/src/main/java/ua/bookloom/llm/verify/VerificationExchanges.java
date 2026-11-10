@@ -119,6 +119,7 @@ final class VerificationExchanges {
                 shownBody,
                 "",
                 null,
+                null,
                 List.of());
         return chatUrl == null ? built : withUrl(built, chatUrl);
     }
@@ -165,6 +166,7 @@ final class VerificationExchanges {
                 exchange.shownRequestBody(),
                 exchange.shownResponseBody(),
                 exchange.loadMs(),
+                exchange.cachedPromptTokens(),
                 exchange.calls());
     }
 
@@ -194,6 +196,7 @@ final class VerificationExchanges {
                 usage == null || usage.load() == null
                         ? null
                         : Long.valueOf(usage.load().toMillis()),
+                usage == null ? null : usage.cachedPrompt(),
                 calls);
     }
 

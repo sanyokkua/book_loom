@@ -62,4 +62,12 @@ class VerificationExchangeTest {
         assertThat(exchange.loadMs()).isEqualTo(12L);
         assertThat(List.copyOf(exchange.calls()).getFirst().check()).isEqualTo(AdvancedCheck.SCHEMA);
     }
+
+    @Test
+    void constructor_fifteenArguments_hasNoCachedPromptTokens() {
+        final VerificationExchange exchange = new VerificationExchange(
+                "POST", "http://h/x", "{}", "{}", 200, null, null, false, "", null, null, "{}", "", null, List.of());
+
+        assertThat(exchange.cachedPromptTokens()).isNull();
+    }
 }

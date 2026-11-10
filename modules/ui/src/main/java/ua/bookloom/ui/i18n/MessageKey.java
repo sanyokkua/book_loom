@@ -213,6 +213,8 @@ public enum MessageKey {
     PROGRESS_DETAIL_CLOCK("progress.detail.clock"),
     /** Progress dialog, Detailed: the call's tokens; arguments: 0 sent, 1 written, 2 tokens a second or none. */
     PROGRESS_DETAIL_TOKENS("progress.detail.tokens"),
+    /** The mean time to first token over a stage's requests; 0 is the time, or the dash when none reported it. */
+    PROGRESS_DETAIL_MEAN_FIRST_TOKEN("progress.detail.meanFirstToken"),
     /** Progress dialog, Detailed: said of an older call whose full prompt is no longer kept. */
     PROGRESS_DETAIL_NOT_KEPT("progress.detail.notKept"),
     /** Progress dialog, Detailed: said of a step that made no model call. */
@@ -2307,6 +2309,12 @@ public enum MessageKey {
     /** Token usage of an answered call; arguments: 0 prompt tokens or {@code none}, 1 completion tokens or {@code none}. */
     LIVE_CALL_TOKENS("live.call.tokens"),
 
+    /** A call's timing figures; arguments: 0 time to first token, 1 speed, 2 cached share, each already a dash when not reported. */
+    CALL_TIMINGS("call.timings"),
+
+    /** A share of the prompt served from the cache; 0 is the whole percentage. */
+    CALL_TIMINGS_SHARE("call.timings.share"),
+
     /** Heading of the section holding the user message a call about no segment sent. */
     LIVE_CALL_INPUT("live.call.input"),
     /** Hover explanation of the input section. */
@@ -4270,6 +4278,8 @@ public enum MessageKey {
     SETTINGS_TEST_METRIC_SERVER("settings.test.metric.server"),
     /** A metric the server did not report. */
     SETTINGS_TEST_METRIC_NONE("settings.test.metric.none"),
+    /** Prompt reading that is labelled uncached; arguments: 0 the time, 1 the cached share in percent or {@code none}. */
+    SETTINGS_TEST_METRIC_UNCACHED("settings.test.metric.uncached"),
     /** HTTP status of an answered request; 0 is the code. */
     SETTINGS_TEST_STATUS_OK("settings.test.status.ok"),
     /** No HTTP status because nothing answered. */
