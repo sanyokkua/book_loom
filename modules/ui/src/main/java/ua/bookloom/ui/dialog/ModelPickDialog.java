@@ -5,6 +5,7 @@ import com.google.inject.Singleton;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.RadioButton;
@@ -13,10 +14,13 @@ import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.Literal;
+import ua.bookloom.ui.control.ModelFilterField;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ModelNameFilter;
 import ua.bookloom.ui.state.ProviderNames;
 
 /**
@@ -61,6 +65,7 @@ public final class ModelPickDialog implements ModelPickPrompt {
         for (final String modelId : modelIds) {
             options.getChildren().add(option(group, modelId));
         }
+        final ModelFilterField filter = filterAbove(options);
         final FormCard card = new FormCard(
                 modalHost, messages, CARD_ID, ModalCard.Size.DIALOG, messages.get(MessageKey.DIALOG_MODEL_PICK_TITLE));
         card.card()
@@ -71,12 +76,18 @@ public final class ModelPickDialog implements ModelPickPrompt {
                                         MessageKey.DIALOG_MODEL_PICK_BODY,
                                         ProviderNames.displayName(messages, providerId)),
                                 "dialog-text"),
+                        filter.node(),
                         options));
-        wire(card, group, use, notNow);
+        wire(card, group, use, notNow, filter);
         card.show();
     }
 
-    private void wire(final FormCard card, final ToggleGroup group, final Consumer<String> use, final Runnable notNow) {
+    private void wire(
+            final FormCard card,
+            final ToggleGroup group,
+            final Consumer<String> use,
+            final Runnable notNow,
+            final ModelFilterField filter) {
         final Button notNowButton = card.button(
                 NOT_NOW_ID,
                 messages.get(MessageKey.DIALOG_MODEL_PICK_NOT_NOW),
@@ -100,7 +111,37 @@ public final class ModelPickDialog implements ModelPickPrompt {
                         })
                 .disableProperty()
                 .bind(group.selectedToggleProperty().isNull());
-        card.card().setOnEscape(notNowButton::fire);
+        // Escape first empties a typed filter and only then means "Not now"; the card's own key filter sees it first.
+        card.card().setOnEscape(() -> {
+            if (!filter.clear()) {
+                notNowButton.fire();
+            }
+        });
+    }
+
+    // The filter only hides rows; the radios stay the same nodes, so a hidden pick stays selected and Use stays
+    // enabled.
+    private ModelFilterField filterAbove(final VBox options) {
+        return new ModelFilterField(
+                messages,
+                "model-pick-filter",
+                "model-pick-filter-none",
+                typed -> narrow(options, typed),
+                () -> options.getChildren().stream()
+                        .filter(node -> node.isVisible() && node.isManaged())
+                        .findFirst()
+                        .ifPresent(Node::requestFocus));
+    }
+
+    private static boolean narrow(final VBox options, final String typed) {
+        boolean any = false;
+        for (final Node node : options.getChildren()) {
+            final String id = ((RadioButton) node).getText();
+            final boolean shown = ModelNameFilter.matches(id, id, typed);
+            Visibility.show(node, shown);
+            any |= shown;
+        }
+        return any;
     }
 
     private RadioButton option(final ToggleGroup group, final String modelId) {

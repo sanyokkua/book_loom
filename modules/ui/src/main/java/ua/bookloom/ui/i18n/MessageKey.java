@@ -2800,6 +2800,12 @@ public enum MessageKey {
     DIALOG_MODEL_PICK_NOT_NOW("dialog.modelPick.notNow"),
     /** Hover explanation of the control labelled by {@link #DIALOG_MODEL_PICK_NOT_NOW}. */
     DIALOG_MODEL_PICK_NOT_NOW_TIP("dialog.modelPick.notNow.tip"),
+    /** Placeholder of the field that narrows a model list by name. */
+    MODEL_FILTER_PROMPT("model.filter.prompt"),
+    /** Hover explanation of the model-name filter field. */
+    MODEL_FILTER_TIP("model.filter.tip"),
+    /** Sentence shown when the typed filter hides every model: the typed text. */
+    MODEL_FILTER_NONE("model.filter.none"),
     /** Title of the question asked when a book is chosen while a project is open. */
     DIALOG_OPEN_ANOTHER_TITLE("dialog.openAnother.title"),
     /** Body of that question; argument 0 is the open project's name, argument 1 the file chosen. */

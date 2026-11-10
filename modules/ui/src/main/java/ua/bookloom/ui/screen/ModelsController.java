@@ -2,6 +2,7 @@ package ua.bookloom.ui.screen;
 
 import com.google.inject.Inject;
 import java.util.Objects;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
@@ -20,7 +21,7 @@ import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.ui.control.TextMatch;
+import ua.bookloom.ui.control.ModelFilterField;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.LanguageNames;
@@ -31,6 +32,7 @@ import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ModelAdviceSources;
 import ua.bookloom.ui.state.ModelEntry;
 import ua.bookloom.ui.state.ModelForm;
+import ua.bookloom.ui.state.ModelNameFilter;
 import ua.bookloom.ui.state.ModelQuantChips;
 import ua.bookloom.ui.state.ModelRoster;
 import ua.bookloom.ui.state.TechnicalDetails;
@@ -60,6 +62,7 @@ public final class ModelsController {
     private final ListChangeListener<ModelEntry> onOffer = change -> offerChanged();
 
     private @Nullable FilteredList<ModelEntry> offered;
+    private @Nullable ModelFilterField filter;
 
     // Set while this controller moves the chooser itself, so the move is not taken for a person's choice.
     private boolean syncing;
@@ -145,6 +148,7 @@ public final class ModelsController {
         final ModelAdviceSection advice = new ModelAdviceSection(adviceReader, current, form, messages, names);
         body.getChildren().setAll(advice.node(), new ModelsFormView(form, messages, technical).node(), advice.foot());
         buildChooser();
+        addFilter();
         bindVisibility();
         bindFooter();
         refresh.setOnAction(event -> roster.refresh());
@@ -197,24 +201,95 @@ public final class ModelsController {
         if (syncing || shown == null) {
             return;
         }
-        final String needle = TextMatch.normalize(typed.strip());
-        final boolean all = needle.isEmpty() || typed.equals(label(model.getValue()));
-        log.debug("narrowing the model chooser, filter of {} character(s)", needle.length());
+        final boolean all = typed.strip().isEmpty() || typed.equals(label(model.getValue()));
+        log.debug(
+                "narrowing the model chooser, filter of {} character(s)",
+                typed.strip().length());
         syncing = true;
         try {
             if (model.isShowing()) {
                 model.hide();
             }
-            shown.setPredicate(entry -> all || TextMatch.normalize(label(entry)).contains(needle));
+            shown.setPredicate(predicate(all ? "" : typed, filterText()));
             model.setVisibleRowCount(Math.clamp(shown.size(), 1, MAX_VISIBLE_ROWS));
             model.getEditor().setText(typed);
             model.getEditor().positionCaret(typed.length());
         } finally {
             syncing = false;
         }
+        showNoneHint();
         if (!all && model.getEditor().isFocused() && !shown.isEmpty()) {
             model.show();
         }
+    }
+
+    // No predicate at all while nothing narrows: a FilteredList with a live predicate misreports a setAll of its
+    // source.
+    private @Nullable Predicate<ModelEntry> predicate(final String typed, final String filterTyped) {
+        return typed.isBlank() && filterTyped.isBlank()
+                ? null
+                : entry -> matches(entry, typed) && matchesId(entry, filterTyped);
+    }
+
+    // The filter field names models, not providers: "llama" must not match every model of Ollama.
+    private static boolean matchesId(final ModelEntry entry, final String typed) {
+        return ModelNameFilter.matches(entry.modelId(), entry.modelId(), typed);
+    }
+
+    private boolean matches(final ModelEntry entry, final String typed) {
+        return ModelNameFilter.matches(entry.modelId(), label(entry), typed);
+    }
+
+    private String filterText() {
+        final ModelFilterField field = filter;
+        return field == null ? "" : field.text();
+    }
+
+    private void showNoneHint() {
+        final ModelFilterField field = filter;
+        final FilteredList<ModelEntry> shown = offered;
+        if (field != null && shown != null) {
+            field.showNone(shown.isEmpty() && !roster.entries().isEmpty());
+        }
+    }
+
+    // The filter field only hides rows: the chosen model, the form and the editor text are left as they are, and the
+    // combo's value is put back should the skin clear it when its row goes.
+    private void addFilter() {
+        final ModelFilterField field =
+                new ModelFilterField(messages, "models-filter", "models-filter-none", this::filterTyped, () -> {
+                    model.getEditor().requestFocus();
+                    model.show();
+                });
+        filter = field;
+        field.field().disableProperty().bind(Bindings.isEmpty(roster.entries()));
+        final VBox card = (VBox) model.getParent().getParent();
+        card.getChildren().add(card.getChildren().indexOf(model.getParent()) + 1, field.node());
+    }
+
+    private boolean filterTyped(final String typed) {
+        final FilteredList<ModelEntry> shown = offered;
+        if (syncing || shown == null) {
+            return true;
+        }
+        final String editorText = model.getEditor().getText();
+        final ModelEntry chosen = model.getValue();
+        syncing = true;
+        try {
+            if (model.isShowing()) {
+                model.hide();
+            }
+            final boolean all = editorText.strip().isEmpty() || editorText.equals(label(chosen));
+            shown.setPredicate(predicate(all ? "" : editorText, typed));
+            model.setVisibleRowCount(Math.clamp(shown.size(), 1, MAX_VISIBLE_ROWS));
+            if (!Objects.equals(model.getValue(), chosen)) {
+                model.setValue(chosen);
+            }
+            model.getEditor().setText(editorText);
+        } finally {
+            syncing = false;
+        }
+        return !shown.isEmpty() || roster.entries().isEmpty();
     }
 
     private void bindVisibility() {
@@ -268,7 +343,7 @@ public final class ModelsController {
         syncing = true;
         try {
             if (offered != null) {
-                offered.setPredicate(null);
+                offered.setPredicate(predicate("", filterText()));
             }
             model.setValue(entry);
             model.getEditor().setText(label(entry));

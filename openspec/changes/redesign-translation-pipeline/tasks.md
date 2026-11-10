@@ -2137,7 +2137,7 @@ screen recommends a model by memory, and every model picker gets a name filter (
   - **Docs:** `docs/specification/01_Product/07_SETTINGS.md#providers-tab` (the sentence shown while a run translates).
   - **Done when:** the tests are green; `scripts/ci-linux-ui.sh` passes for the changed line.
 
-- [ ] 15.5 Add one model-name filter to every model picker — the Providers model list, the Models chooser and the
+- [x] 15.5 Add one model-name filter to every model picker — the Providers model list, the Models chooser and the
   AI-model choice before Start — so a long list can be narrowed by typing. → :ui
   - **Satisfies:** "Narrow every model picker by the typed model name" (settings), "Let the keyboard and the selection work with the model-name filter" (settings)
   - **Depends on:** 15.4

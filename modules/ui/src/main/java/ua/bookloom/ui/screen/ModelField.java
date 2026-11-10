@@ -16,7 +16,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
-import ua.bookloom.ui.control.TextMatch;
+import ua.bookloom.ui.control.ModelFilterField;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.control.Wrapped;
@@ -24,6 +24,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ModelAdvice;
 import ua.bookloom.ui.state.ModelListing;
+import ua.bookloom.ui.state.ModelNameFilter;
 import ua.bookloom.ui.state.ProviderForm;
 import ua.bookloom.ui.state.SettingsViewModel;
 
@@ -40,6 +41,7 @@ final class ModelField {
     private final Messages messages;
     private final ComboBox<String> combo = new ComboBox<>();
     private final Label note = new Label();
+    private final ModelFilterField filter;
     private static final int MAX_VISIBLE_ROWS = 10;
 
     private final VBox box = new VBox(6);
@@ -56,6 +58,8 @@ final class ModelField {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.form = Objects.requireNonNull(form, "form");
         this.messages = Objects.requireNonNull(messages, "messages");
+        this.filter = new ModelFilterField(
+                messages, "settings-model-filter", "settings-model-filter-none", this::onFilterTyped, this::openList);
         build();
     }
 
@@ -90,7 +94,7 @@ final class ModelField {
         combo.setOnAction(event -> onEntryCommitted());
         configureNote();
         showNotes(viewModel.modelNotes().get());
-        box.getChildren().addAll(entryRow(), note);
+        box.getChildren().addAll(filter.node(), entryRow(), note);
         box.getChildren()
                 .addAll(
                         hint(
@@ -182,15 +186,34 @@ final class ModelField {
         }
     }
 
-    // The offered names that contain the text anywhere, ignoring case and accents; all of them for empty text.
+    // The offered names that contain the entry's text and the filter's text anywhere, ignoring case and accents.
     private List<String> matching(final String text) {
-        final String needle = TextMatch.normalize(text);
-        final List<String> choices = form.modelChoices();
-        return needle.isEmpty()
-                ? choices
-                : choices.stream()
-                        .filter(choice -> TextMatch.normalize(choice).contains(needle))
-                        .toList();
+        final List<String> byEntry = ModelNameFilter.narrow(form.modelChoices(), id -> id, id -> id, text);
+        return ModelNameFilter.narrow(byEntry, id -> id, id -> id, filter.text());
+    }
+
+    // The filter only changes which names are listed; the entry, the value and the draft stay as they are.
+    private boolean onFilterTyped(final String typed) {
+        final String entry = combo.getEditor().getText();
+        final List<String> shown = matching(entry);
+        applying = true;
+        try {
+            if (combo.isShowing()) {
+                combo.hide();
+            }
+            combo.getItems().setAll(shown);
+            combo.setVisibleRowCount(Math.clamp(shown.size(), 1, MAX_VISIBLE_ROWS));
+            combo.getEditor().setText(entry);
+            combo.setValue(entry.isEmpty() ? null : entry);
+        } finally {
+            applying = false;
+        }
+        return !shown.isEmpty();
+    }
+
+    private void openList() {
+        combo.getEditor().requestFocus();
+        combo.show();
     }
 
     /**
