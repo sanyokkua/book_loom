@@ -226,6 +226,28 @@ class ModelCapabilityServiceTest {
         server.verify(0, getRequestedFor(urlEqualTo("/v1/api/ps")));
     }
 
+    // IF a generic server were asked for /api/ps, THEN the Models tab could show a loaded figure it never had.
+    @Test
+    void report_genericServer_sendsNoApiPsAndNoLoadedFigure() {
+        assertThat(configs.save(new ProviderConfig(
+                                        "generic",
+                                        ProviderKind.OPENAI_COMPATIBLE,
+                                        URI.create(server.baseUrl() + "/v1"),
+                                        TIMEOUT,
+                                        TIMEOUT)
+                                .withEngine(ServerEngine.GENERIC))
+                        .isOk())
+                .isTrue();
+        server.stubFor(get(urlEqualTo("/api/ps"))
+                .willReturn(okJson("{\"models\":[{\"name\":\"qwen\",\"context_length\":4096}]}")));
+
+        final Result<ModelReport> result = capabilities.report(new ModelSelection("generic", "qwen"));
+
+        assertThat(result.data()).extracting(ModelReport::loadedContext).isNull();
+        server.verify(0, getRequestedFor(urlEqualTo("/api/ps")));
+        server.verify(0, getRequestedFor(urlEqualTo("/v1/api/ps")));
+    }
+
     @ParameterizedTest
     @CsvSource({
         "qwen2.5:1.5b, Q4_K_M, COMPLETE, ACCEPTABLE",

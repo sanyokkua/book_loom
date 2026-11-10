@@ -657,6 +657,14 @@ public enum MessageKey {
     SETTINGS_MODELS_FOUND_UNCHECKED("settings.models.found.unchecked"),
     /** Models tab: Asking the program about this model… */
     SETTINGS_MODELS_FOUND_LOADING("settings.models.found.loading"),
+    /** Models tab: BookLoom's verdict: &#123;0, select, ...&#125; */
+    SETTINGS_MODELS_VERDICT("settings.models.verdict"),
+    /** Models tab: Window: set in Ollama, not by BookLoom */
+    SETTINGS_MODELS_FOUND_CONTEXT_OLLAMA_V1("settings.models.found.context.ollamaV1"),
+    /** Models tab: loaded in LM Studio: &#123;0, number, integer&#125; */
+    SETTINGS_MODELS_FOUND_CONTEXT_LM_STUDIO("settings.models.found.context.lmStudio"),
+    /** Models tab: set at llama-server start: &#123;0, number, integer&#125; per slot */
+    SETTINGS_MODELS_FOUND_CONTEXT_LLAMA_SERVER("settings.models.found.context.llamaServer"),
     /** Models tab: Temperature */
     SETTINGS_MODELS_TEMPERATURE("settings.models.temperature"),
     /** Models tab: — how varied the wording is */
@@ -1049,16 +1057,6 @@ public enum MessageKey {
     SETTINGS_MODEL_LISTING("settings.model.listing"),
     /** Note beside the model entry when no list was obtained; says the entry still accepts a typed name. */
     SETTINGS_MODEL_NO_LIST("settings.model.noList"),
-    /** Note under the model entry for the recommended model, Gemma 4 26B. */
-    SETTINGS_ADVICE_GEMMA_26B("settings.advice.gemma26b"),
-    /** Note under the model entry for Gemma 4 E4B, the smallest model that translates a book acceptably. */
-    SETTINGS_ADVICE_GEMMA_E4B("settings.advice.gemmaE4b"),
-    /** Warning under the model entry for Gemma 4 E2B, which is too small. */
-    SETTINGS_ADVICE_GEMMA_E2B("settings.advice.gemmaE2b"),
-    /** Warning under the model entry for the gpt-oss models. */
-    SETTINGS_ADVICE_GPT_OSS("settings.advice.gptOss"),
-    /** Note under the model entry on LM Studio: slower, no streaming, more control codes. */
-    SETTINGS_ADVICE_LM_STUDIO("settings.advice.lmStudio"),
     /** Label of the theme selector in the appearance tab. */
     APPEARANCE_THEME_LABEL("appearance.theme.label"),
     /** Option of the theme selector that always uses the light block. */

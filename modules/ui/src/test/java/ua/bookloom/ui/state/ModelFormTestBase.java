@@ -17,6 +17,7 @@ import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.api.llm.SamplingOverride;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.ScriptedModelCapabilities;
@@ -25,8 +26,10 @@ import ua.bookloom.ui.ScriptedModelCapabilities;
 @SuppressWarnings("NullAway.Init")
 abstract class ModelFormTestBase extends SettingsViewModelTestBase {
 
-    static final ModelEntry GEMMA = new ModelEntry("ollama", "Ollama", ProviderKind.OLLAMA, "gemma4:e4b");
-    static final ModelEntry GPT_OSS = new ModelEntry("ollama", "Ollama", ProviderKind.OLLAMA, "gpt-oss");
+    static final ModelEntry GEMMA =
+            new ModelEntry("ollama", "Ollama", ProviderKind.OLLAMA, "gemma4:e4b", ServerEngine.OLLAMA);
+    static final ModelEntry GPT_OSS =
+            new ModelEntry("ollama", "Ollama", ProviderKind.OLLAMA, "gpt-oss", ServerEngine.OLLAMA);
 
     final ScriptedModelCapabilities capabilities = ScriptedModelCapabilities.idle();
     final StructuredAnswers structured = new StructuredAnswers();

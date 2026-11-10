@@ -16,6 +16,7 @@ import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelReport;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ModelSettings;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.ui.BackgroundExecutor;
@@ -101,7 +102,7 @@ public final class ModelForm extends ModelFormProperties {
         show(baseline);
         refused.clear();
         clearFeedback();
-        facts.set(new ModelFacts(null, null, structuredOf(entry), true, null));
+        facts.set(new ModelFacts(null, null, null, List.of(), ProbeVerdicts.none(), structuredOf(entry), true, null));
         reading.set(true);
         background.execute(() -> loadStored(entry, mine));
     }
@@ -234,6 +235,7 @@ public final class ModelForm extends ModelFormProperties {
         baseline = ModelDraft.of(settings);
         show(baseline);
         refused.setAll(settings.refused());
+        facts.set(facts.get().withVerdicts(settings.probeVerdicts()));
         reading.set(false);
         log.debug("stored settings of {} shown", entry.modelId());
         io.execute(() -> askReport(entry, mine));
@@ -253,12 +255,21 @@ public final class ModelForm extends ModelFormProperties {
             return;
         }
         facts.set(new ModelFacts(
-                report.contextLength(), report.loadedContext(), structuredOf(entry), false, report.thinking()));
+                report.contextLength(),
+                report.loadedContext(),
+                report.verdict(),
+                report.warnings(),
+                facts.get().verdicts(),
+                structuredOf(entry),
+                false,
+                report.thinking()));
         log.debug(
-                "model {} reported: context {}, loaded {}, thinking {}",
+                "model {} reported: context {}, loaded {}, verdict {}, warnings {}, thinking {}",
                 entry.modelId(),
                 report.contextLength(),
                 report.loadedContext(),
+                report.verdict(),
+                report.warnings().size(),
                 report.thinking().kind());
     }
 
@@ -347,9 +358,7 @@ public final class ModelForm extends ModelFormProperties {
     private void followStructured() {
         final @Nullable ModelEntry entry = selected.get();
         if (entry != null) {
-            final ModelFacts now = facts.get();
-            facts.set(new ModelFacts(
-                    now.contextLength(), now.loaded(), structuredOf(entry), now.loading(), now.thinking()));
+            facts.set(facts.get().withStructured(structuredOf(entry)));
         }
     }
 

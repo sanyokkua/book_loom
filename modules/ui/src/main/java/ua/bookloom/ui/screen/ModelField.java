@@ -22,14 +22,13 @@ import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.state.ModelAdvice;
 import ua.bookloom.ui.state.ModelListing;
 import ua.bookloom.ui.state.ModelNameFilter;
 import ua.bookloom.ui.state.ProviderForm;
 import ua.bookloom.ui.state.SettingsViewModel;
 
 /**
- * The Model entry with its refresh button and the notes about the listing: an editable combo whose text is the view
+ * The Model entry with its refresh button and the hints about the listing: an editable combo whose text is the view
  * model's typed model. The view model outlives this field, so it is observed through weak listeners held by the fields
  * below, which live exactly as long as the nodes that use them.
  */
@@ -40,7 +39,6 @@ final class ModelField {
     private final ProviderForm form;
     private final Messages messages;
     private final ComboBox<String> combo = new ComboBox<>();
-    private final Label note = new Label();
     private final ModelFilterField filter;
     private static final int MAX_VISIBLE_ROWS = 10;
 
@@ -48,7 +46,6 @@ final class ModelField {
     private final ListChangeListener<String> onOffered = change -> showOffered();
     private final ChangeListener<String> onEntryText = (observed, was, now) -> onEntryTyped(now);
     private final ChangeListener<String> onModel = (observed, was, now) -> showModel(now);
-    private final ChangeListener<List<ModelAdvice.Note>> onNotes = (observed, was, now) -> showNotes(now);
 
     // Set while this field changes the combo's items, editor or value, so the events that causes are not mistaken
     // for a person typing or picking; FX thread only.
@@ -90,11 +87,8 @@ final class ModelField {
         combo.getEditor().textProperty().addListener(onEntryText);
         viewModel.draftModel().addListener(new WeakChangeListener<>(onModel));
         listing.offered().addListener(new WeakListChangeListener<>(onOffered));
-        viewModel.modelNotes().addListener(new WeakChangeListener<>(onNotes));
         combo.setOnAction(event -> onEntryCommitted());
-        configureNote();
-        showNotes(viewModel.modelNotes().get());
-        box.getChildren().addAll(filter.node(), entryRow(), note);
+        box.getChildren().addAll(filter.node(), entryRow());
         box.getChildren()
                 .addAll(
                         hint(
@@ -154,17 +148,6 @@ final class ModelField {
         label.setId(id);
         Visibility.bind(label, shown);
         return label;
-    }
-
-    // A note is a sentence or two; it wraps under the entry rather than being cut at the card's edge.
-    private void configureNote() {
-        note.setId("settings-model-note");
-        Wrapped.wholeLines(note);
-        note.setMaxWidth(Double.MAX_VALUE);
-    }
-
-    private void showNotes(final List<ModelAdvice.Note> notes) {
-        ModelNoteLabel.show(note, notes, messages);
     }
 
     private void onEntryTyped(final String text) {

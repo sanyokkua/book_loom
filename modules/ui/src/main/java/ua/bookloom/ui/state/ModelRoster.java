@@ -160,7 +160,8 @@ public final class ModelRoster {
                     answered.orElse(List.of()),
                     config.customModels(),
                     storedByProvider.getOrDefault(config.id(), List.of()));
-            ids.forEach(id -> result.add(new ModelEntry(config.id(), name, config.kind(), id)));
+            ids.forEach(
+                    id -> result.add(new ModelEntry(config.id(), name, config.kind(), id, config.effectiveEngine())));
         }
         return new Reading(result, List.copyOf(silent));
     }

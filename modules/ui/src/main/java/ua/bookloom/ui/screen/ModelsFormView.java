@@ -8,12 +8,17 @@ import javafx.collections.WeakListChangeListener;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.ui.control.Banner;
+import ua.bookloom.ui.control.Visibility;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ModelEntry;
 import ua.bookloom.ui.state.ModelFacts;
 import ua.bookloom.ui.state.ModelForm;
+import ua.bookloom.ui.state.ModelReportRows;
 import ua.bookloom.ui.state.TechnicalDetails;
 import ua.bookloom.ui.state.Tone;
 
@@ -29,6 +34,8 @@ final class ModelsFormView {
     private final ModelForm form;
     private final Messages messages;
     private final VBox root = new VBox(14);
+    private final ModelReportRows rows;
+    private final Label verdict = Wrapped.label("", "hint");
     private final Banner found = new Banner("models-found", Tone.INFO, "i", "", "");
     private final ModelTemperatureSection temperature;
     private final ModelThinkingSection thinking;
@@ -44,6 +51,8 @@ final class ModelsFormView {
     ModelsFormView(final ModelForm form, final Messages messages, final TechnicalDetails technical) {
         this.form = Objects.requireNonNull(form, "form");
         this.messages = Objects.requireNonNull(messages, "messages");
+        rows = new ModelReportRows(messages);
+        verdict.setId("models-verdict");
         temperature = new ModelTemperatureSection(form, messages);
         thinking = new ModelThinkingSection(form, messages);
         sampling = new ModelSamplingSection(form, messages);
@@ -54,7 +63,7 @@ final class ModelsFormView {
         errors.getStyleClass().add("form-errors");
         errorsText.setId("models-errors-text");
         errorsText.setWrapText(true);
-        root.getChildren().addAll(found, temperature.node(), thinking.node(), sampling.node(), refused.node());
+        root.getChildren().addAll(verdict, found, temperature.node(), thinking.node(), sampling.node(), refused.node());
         root.getChildren().addAll(limits.node(), advanced.node(), errors);
         root.disableProperty().bind(form.reading());
         // The listeners below are weak, so the node (which the scene keeps) holds this view for as long as it is shown.
@@ -90,21 +99,16 @@ final class ModelsFormView {
     }
 
     private void showFound(final ModelFacts facts) {
+        final String verdictText = rows.verdict(facts);
+        verdict.setText(verdictText);
+        Visibility.show(verdict, !verdictText.isEmpty());
         if (facts.loading()) {
             found.setText(messages.get(MessageKey.SETTINGS_MODELS_FOUND_LOADING));
             return;
         }
-        found.setText(messages.get(MessageKey.SETTINGS_MODELS_FOUND, readable(facts), structured(facts)));
-    }
-
-    private String readable(final ModelFacts facts) {
-        final Integer length = facts.contextLength();
-        if (length == null) {
-            return messages.get(MessageKey.SETTINGS_MODELS_FOUND_UNKNOWN);
-        }
-        final String read = messages.get(MessageKey.SETTINGS_MODELS_FOUND_READ, length);
-        final Integer loaded = facts.loaded();
-        return loaded == null ? read : messages.get(MessageKey.SETTINGS_MODELS_FOUND_LOADED, read, loaded);
+        final @Nullable ModelEntry entry = form.selected().get();
+        final String window = entry == null ? "" : rows.context(entry, facts);
+        found.setText(messages.get(MessageKey.SETTINGS_MODELS_FOUND, window, structured(facts)));
     }
 
     private String structured(final ModelFacts facts) {

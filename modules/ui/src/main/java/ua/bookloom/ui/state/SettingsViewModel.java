@@ -58,7 +58,6 @@ public final class SettingsViewModel {
     private final StringProperty model = new SimpleStringProperty("");
     private final StringProperty draftModel = new SimpleStringProperty("");
     private final ProviderTestTarget testTarget = new ProviderTestTarget();
-    private final ModelNotesFollower modelNotes;
 
     // Only the first read may make the first row current (a deleted current provider stays deleted); a dirty form
     // holds typing that an adopted model must not replace.
@@ -100,7 +99,6 @@ public final class SettingsViewModel {
                 Objects.requireNonNull(activities, "activities"),
                 Objects.requireNonNull(memory, "memory"),
                 Objects.requireNonNull(clock, "clock"));
-        this.modelNotes = new ModelNotesFollower(editedProviderId, draftModel, providers);
         this.executor = executor;
         executor.execute(() -> loadProviders(readCurrentModel(), () -> {}));
     }
@@ -264,11 +262,6 @@ public final class SettingsViewModel {
     /** Takes what the form now offers to test, and whether the draft is what stops a test. */
     void publishTestSubject(final Optional<TestSubject> subject, final boolean blocked) {
         testTarget.publish(subject, blocked);
-    }
-
-    /** The advice for the selected provider and the chosen model, which follows both. */
-    public ReadOnlyObjectProperty<List<ModelAdvice.Note>> modelNotes() {
-        return modelNotes.notes();
     }
 
     /** The quant chips of the models the pickers show. */

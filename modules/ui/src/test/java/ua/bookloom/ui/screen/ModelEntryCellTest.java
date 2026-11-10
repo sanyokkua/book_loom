@@ -9,6 +9,7 @@ import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.QuantAdvice;
 import ua.bookloom.api.llm.QuantTier;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ScriptedModelCapabilities;
@@ -18,8 +19,10 @@ import ua.bookloom.ui.state.ModelQuantChips;
 /** A row of the Models chooser carries the quant chip once a quant is known, and no graphic at all before. */
 class ModelEntryCellTest extends FxTestBase {
 
-    private static final ModelEntry PHI = new ModelEntry("ollama", "Ollama", ProviderKind.OLLAMA, "phi4-mini");
-    private static final ModelEntry LLAMA = new ModelEntry("ollama", "Ollama", ProviderKind.OLLAMA, "llama3.1:8b");
+    private static final ModelEntry PHI =
+            new ModelEntry("ollama", "Ollama", ProviderKind.OLLAMA, "phi4-mini", ServerEngine.OLLAMA);
+    private static final ModelEntry LLAMA =
+            new ModelEntry("ollama", "Ollama", ProviderKind.OLLAMA, "llama3.1:8b", ServerEngine.OLLAMA);
 
     private final ModelQuantChips chips = chipsOver(java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor());
 
