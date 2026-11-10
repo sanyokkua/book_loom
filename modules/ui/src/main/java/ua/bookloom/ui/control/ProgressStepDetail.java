@@ -22,7 +22,6 @@ import ua.bookloom.api.pipeline.CallState;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.CallTimings;
-import ua.bookloom.ui.state.CheckSentences;
 import ua.bookloom.ui.state.ProgressDialogModel;
 import ua.bookloom.ui.state.StepEntry;
 import ua.bookloom.ui.state.WaitingCall;
@@ -223,13 +222,12 @@ final class ProgressStepDetail extends VBox {
                 made.maxAttempts()));
         final Instant at = lastTick;
         tick(at == null ? made.startedAt().plus(made.elapsed()) : at);
-        final TokenUsage usage = made.usage();
+        showTokens(made.usage());
+    }
+
+    private void showTokens(final @Nullable TokenUsage usage) {
         if (usage != null) {
-            tokens.setText(messages.get(
-                    MessageKey.PROGRESS_DETAIL_TOKENS,
-                    count(usage.prompt()),
-                    count(usage.completion()),
-                    RequestWords.speed(usage)));
+            tokens.setText(RequestWords.tokens(messages, usage));
         }
     }
 
@@ -240,11 +238,7 @@ final class ProgressStepDetail extends VBox {
                 .filter(Objects::nonNull)
                 .toList();
         Visibility.show(meanFirstToken, technical && sent.size() > 1);
-        meanFirstToken.setText(messages.get(
-                MessageKey.PROGRESS_DETAIL_MEAN_FIRST_TOKEN,
-                CallTimings.meanFirstToken(sent)
-                        .map(mean -> CheckSentences.durationText(messages, mean))
-                        .orElseGet(() -> CallTimings.dash(messages))));
+        meanFirstToken.setText(CallTimings.meanLine(messages, sent));
     }
 
     /**
@@ -396,9 +390,5 @@ final class ProgressStepDetail extends VBox {
     private static Map<String, String> locators(final CallSnapshot made) {
         return made.segments().stream()
                 .collect(Collectors.toMap(CallSegment::id, CallSegment::locator, (first, second) -> first));
-    }
-
-    private static String count(final @Nullable Integer value) {
-        return value == null ? "—" : Integer.toString(value);
     }
 }

@@ -101,4 +101,20 @@ final class RequestWords {
         final @Nullable Double rate = CallTimings.tokensPerSecond(usage);
         return rate == null ? NONE : String.format(Locale.ROOT, "%.1f", rate);
     }
+
+    /**
+     * The prompt and answer token counts with the speed, as the call's tokens line.
+     *
+     * @param messages the catalogue the words come from
+     * @param usage the reply's usage
+     * @return the line, a dash for a count the engine did not report
+     */
+    static String tokens(final Messages messages, final TokenUsage usage) {
+        return messages.get(
+                MessageKey.PROGRESS_DETAIL_TOKENS, count(usage.prompt()), count(usage.completion()), speed(usage));
+    }
+
+    private static String count(final @Nullable Integer value) {
+        return value == null ? "—" : Integer.toString(value);
+    }
 }

@@ -128,4 +128,19 @@ public final class CallTimings {
                 : Optional.of(Duration.ofMillis(Math.round(
                         reported.stream().mapToLong(Long::longValue).average().orElse(0))));
     }
+
+    /**
+     * The mean time to first token as shown, over the calls that reported one.
+     *
+     * @param messages the catalogue the words come from
+     * @param calls the calls
+     * @return the mean's words, with the dash when no call reported the figure
+     */
+    public static String meanLine(final Messages messages, final Collection<CallSnapshot> calls) {
+        return messages.get(
+                MessageKey.PROGRESS_DETAIL_MEAN_FIRST_TOKEN,
+                meanFirstToken(calls)
+                        .map(mean -> CheckSentences.durationText(messages, mean))
+                        .orElseGet(() -> dash(messages)));
+    }
 }

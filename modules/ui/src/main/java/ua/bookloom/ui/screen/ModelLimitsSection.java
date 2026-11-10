@@ -57,16 +57,7 @@ final class ModelLimitsSection {
         contextEngine = note("models-context-engine", MessageKey.SETTINGS_MODELS_CONTEXT_TECH, "hint");
         limitIgnored = note("models-limit-ignored", MessageKey.SETTINGS_MODELS_LIMIT_IGNORED, "hint");
         limitTech = note("models-limit-tech", MessageKey.SETTINGS_MODELS_LIMIT_TECH, "tech-note");
-        contextOn.setId("models-context-on");
-        contextOn.setText(messages.get(MessageKey.SETTINGS_MODELS_CONTEXT));
-        Tips.install(messages, contextOn, MessageKey.SETTINGS_MODELS_CONTEXT_TIP);
-        limitOn.setId("models-limit-on");
-        limitOn.setText(messages.get(MessageKey.SETTINGS_MODELS_LIMIT));
-        Tips.install(messages, limitOn, MessageKey.SETTINGS_MODELS_LIMIT_TIP);
-        contextOn.selectedProperty().addListener((observed, was, now) -> switched(now, true));
-        limitOn.selectedProperty().addListener((observed, was, now) -> switched(now, false));
-        context.textProperty().addListener((observed, was, now) -> typed(now, true));
-        limit.textProperty().addListener((observed, was, now) -> typed(now, false));
+        wireSwitches();
         box.getChildren()
                 .addAll(
                         block(
@@ -79,6 +70,19 @@ final class ModelLimitsSection {
                         contextOpenAi,
                         block(limitOn, limit, limitTech, "models-limit-hint", MessageKey.SETTINGS_MODELS_LIMIT_HINT),
                         limitIgnored);
+    }
+
+    private void wireSwitches() {
+        contextOn.setId("models-context-on");
+        contextOn.setText(messages.get(MessageKey.SETTINGS_MODELS_CONTEXT));
+        Tips.install(messages, contextOn, MessageKey.SETTINGS_MODELS_CONTEXT_TIP);
+        limitOn.setId("models-limit-on");
+        limitOn.setText(messages.get(MessageKey.SETTINGS_MODELS_LIMIT));
+        Tips.install(messages, limitOn, MessageKey.SETTINGS_MODELS_LIMIT_TIP);
+        contextOn.selectedProperty().addListener((observed, was, now) -> switched(now, true));
+        limitOn.selectedProperty().addListener((observed, was, now) -> switched(now, false));
+        context.textProperty().addListener((observed, was, now) -> typed(now, true));
+        limit.textProperty().addListener((observed, was, now) -> typed(now, false));
     }
 
     VBox node() {

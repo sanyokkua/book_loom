@@ -61,6 +61,15 @@ final class ModelsFormView {
         refused = new ModelRefusedSection(form, messages);
         limits = new ModelLimitsSection(form, messages, technical);
         advanced = new ModelAdvancedFold(form, messages, technical);
+        buildRoot();
+        root.disableProperty().bind(form.reading());
+        // The listeners below are weak, so the node (which the scene keeps) holds this view for as long as it is shown.
+        root.getProperties().put(ModelsFormView.class, this);
+        listen(technical);
+        showAll();
+    }
+
+    private void buildRoot() {
         errors.setId("models-errors");
         errors.getStyleClass().add("form-errors");
         errorsText.setId("models-errors-text");
@@ -75,9 +84,9 @@ final class ModelsFormView {
                         sampling.node(),
                         refused.node());
         root.getChildren().addAll(limits.node(), advanced.node(), errors);
-        root.disableProperty().bind(form.reading());
-        // The listeners below are weak, so the node (which the scene keeps) holds this view for as long as it is shown.
-        root.getProperties().put(ModelsFormView.class, this);
+    }
+
+    private void listen(final TechnicalDetails technical) {
         form.draft().addListener(new WeakChangeListener<>(onChange));
         form.facts().addListener(new WeakChangeListener<>(onChange));
         form.selected().addListener(new WeakChangeListener<>(onChange));
@@ -86,7 +95,6 @@ final class ModelsFormView {
         form.refusedFailed().addListener(new WeakChangeListener<>(onChange));
         technical.property().addListener(new WeakChangeListener<>(onChange));
         form.refused().addListener(new WeakListChangeListener<>(onRefused));
-        showAll();
     }
 
     VBox node() {

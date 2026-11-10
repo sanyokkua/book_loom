@@ -34,7 +34,6 @@ import ua.bookloom.api.pipeline.LanguageSupport;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.NamesPass;
 import ua.bookloom.api.pipeline.ProjectService;
-import ua.bookloom.api.pipeline.ProofreadProgress;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
@@ -132,19 +131,16 @@ public final class UiTestInjector {
             return this;
         }
 
-        /** What the graph's {@link ProviderConfigs} is. */
         public Builder configs(final ProviderConfigs value) {
             configs = Objects.requireNonNull(value, "configs");
             return this;
         }
 
-        /** What the graph's {@link ProviderVerifier} is. */
         public Builder verifier(final ProviderVerifier value) {
             verifier = Objects.requireNonNull(value, "verifier");
             return this;
         }
 
-        /** What the graph's {@link ModelCatalog} is. */
         public Builder catalog(final ModelCatalog value) {
             catalog = Objects.requireNonNull(value, "catalog");
             return this;
@@ -162,25 +158,21 @@ public final class UiTestInjector {
             return this;
         }
 
-        /** What the graph's {@link ProofreadProgress} is. */
         public Builder proofread(final ScriptedProofreadProgress value) {
             proofread = Objects.requireNonNull(value, "proofread");
             return this;
         }
 
-        /** What the graph's {@link ExportService} is. */
         public Builder exports(final ExportService value) {
             exports = Objects.requireNonNull(value, "exports");
             return this;
         }
 
-        /** What the graph's {@link ChatModelFactory} is. */
         public Builder models(final ChatModelFactory value) {
             models = Objects.requireNonNull(value, "models");
             return this;
         }
 
-        /** What the graph's {@link TranslationEngine} is. */
         public Builder engine(final TranslationEngine value) {
             engine = Objects.requireNonNull(value, "engine");
             return this;
@@ -223,13 +215,11 @@ public final class UiTestInjector {
             return this;
         }
 
-        /** What the graph's {@link StorageInfo} is. */
         public Builder storage(final StorageInfo value) {
             launch.storage(Objects.requireNonNull(value, "storage"));
             return this;
         }
 
-        /** What the graph's {@link ReviewModeChoice} is. */
         public Builder reviewModeChoice(final ReviewModeChoice value) {
             launch.reviewModeChoice(Objects.requireNonNull(value, "reviewModeChoice"));
             return this;
