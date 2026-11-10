@@ -203,7 +203,8 @@ public record ProviderDraft(
 
     /**
      * Switches the dialect: the overrides belong to the old one and are cleared, and a preset address follows the
-     * kind while an address the person wrote stays.
+     * kind while an address the person wrote stays. A changed kind also drops the detected engine, which described the
+     * old dialect, back to the kind's starting engine.
      *
      * @param newKind the dialect to switch to
      * @return the changed draft
@@ -225,7 +226,7 @@ public record ProviderDraft(
                 model,
                 headers,
                 customModels,
-                engine);
+                newKind == kind ? engine : DraftEngine.forKind(newKind));
     }
 
     /**

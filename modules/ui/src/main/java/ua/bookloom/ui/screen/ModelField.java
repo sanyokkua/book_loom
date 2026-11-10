@@ -5,6 +5,7 @@ import java.util.Objects;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
+import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
@@ -16,6 +17,8 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.ui.MemorySource;
 import ua.bookloom.ui.control.ModelFilterField;
 import ua.bookloom.ui.control.RecommendationLine;
@@ -26,6 +29,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ModelListing;
 import ua.bookloom.ui.state.ModelNameFilter;
+import ua.bookloom.ui.state.ProviderDraft;
 import ua.bookloom.ui.state.ProviderForm;
 import ua.bookloom.ui.state.SettingsViewModel;
 
@@ -109,7 +113,17 @@ final class ModelField {
                                 listing.noListObtained()),
                         refusal(listing),
                         Wrapped.label(messages.get(MessageKey.SETTINGS_FORM_MODEL_HINT), "hint"));
-        box.getChildren().addAll(RecommendationLine.nodes(messages, memory, "settings-model"));
+        final ObservableValue<Boolean> forOllama =
+                Bindings.createBooleanBinding(() -> isOllama(form.draft().get()), form.draft());
+        RecommendationLine.nodes(messages, memory, "settings-model").forEach(line -> {
+            Visibility.bind(line, forOllama);
+            box.getChildren().add(line);
+        });
+    }
+
+    // The pull command is Ollama's; it is wrong under any other server, whichever dialect reaches it.
+    private static boolean isOllama(final ProviderDraft draft) {
+        return draft.kind() == ProviderKind.OLLAMA || draft.engine().effective() == ServerEngine.OLLAMA;
     }
 
     private void configureCombo(final ModelListing listing) {

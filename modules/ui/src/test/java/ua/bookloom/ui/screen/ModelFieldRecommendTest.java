@@ -2,8 +2,11 @@ package ua.bookloom.ui.screen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.state.FixedMemory;
 
@@ -35,5 +38,45 @@ class ModelFieldRecommendTest extends SettingsScreenTestBase {
         final var children = box.getChildrenUnmodifiable();
         assertThat(children.indexOf(required("settings-model-recommend")))
                 .isGreaterThan(children.indexOf(required("settings-model")));
+    }
+
+    @SuppressWarnings("unchecked")
+    private ComboBox<ProviderKind> kindCombo() {
+        return (ComboBox<ProviderKind>) required("settings-form-kind");
+    }
+
+    private boolean recommendShown() {
+        return ThemeTestSupport.onFx(() -> {
+            final var line = required("settings-model-recommend");
+            return line.isVisible() && line.isManaged();
+        });
+    }
+
+    // IF an LM Studio form showed the line, THEN the person would be told to run a command that is Ollama's.
+    @Test
+    void modelField_ollamaProvider_showsTheLine() {
+        openSettings();
+
+        assertThat(recommendShown()).isTrue();
+    }
+
+    @Test
+    void modelField_lmStudioProvider_hidesTheLines() {
+        openSettings();
+
+        onFx(() -> kindCombo().setValue(ProviderKind.OPENAI_COMPATIBLE));
+
+        assertThat(recommendShown()).isFalse();
+        assertThat(ThemeTestSupport.onFx(() -> required("settings-model-optin").isVisible()))
+                .isFalse();
+    }
+
+    @Test
+    void modelField_kindSwitchedBack_showsTheLineAgain() {
+        openSettings();
+        onFx(() -> kindCombo().setValue(ProviderKind.OPENAI_COMPATIBLE));
+        onFx(() -> kindCombo().setValue(ProviderKind.OLLAMA));
+
+        assertThat(recommendShown()).isTrue();
     }
 }

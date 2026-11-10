@@ -168,7 +168,8 @@ model or tab with unsaved changes asks "Save the settings of gemma4:e4b · Ollam
 
 **Recommendation under the model field.** Where a model is chosen (the model field and the model-pick dialog) one line
 reads "This computer has {GB} GB: {model} is recommended. Pull it with `ollama pull {model}`." The tier follows the
-computer's memory: under 24 GB gemma4:e4b, 24 GB or more gemma4:26b-a4b, and from 36 GB a second line "Optional, best
+computer's memory, and the line appears for Ollama providers only (the Ollama dialect, or an engine detected as Ollama
+behind /v1), never under LM Studio or another server, where `ollama pull` is wrong: under 24 GB gemma4:e4b, 24 GB or more gemma4:26b-a4b, and from 36 GB a second line "Optional, best
 quality, slower, not measured here: gemma4:31b (`ollama pull gemma4:31b`)." The command is text; BookLoom never runs it.
 
 **Model advice lines (built, redesign 9.7).** Under the verdict line, wrapped plain lines, each shown only while it has

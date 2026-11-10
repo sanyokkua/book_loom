@@ -2193,7 +2193,7 @@ screen recommends a model by memory, and every model picker gets a name filter (
     line; no process is started.
   - **Done when:** the tests are green.
 
-- [ ] 15.8 Make the acceptance tests green, run the gate, fix this group's documents and check by hand, so the group
+- [x] 15.8 Make the acceptance tests green, run the gate, fix this group's documents and check by hand, so the group
   merges with evidence. → :api, :llm, :pipeline, :ui, :app, docs
   - **Satisfies:** enabling work for design D23 and D28 (closes the group; every requirement is named by 15.2–15.7)
   - **Depends on:** 15.1–15.7
