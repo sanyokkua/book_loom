@@ -31,6 +31,8 @@ final class WindowInjectionGrader {
     private static final String PAIRS_HEADING = "[Previous pairs";
     private static final String NEXT_HEADING = "[Next item after the batch";
     private static final String SOURCE_PREFIX = "Source: ";
+    // A numbered tag opens an item's own text ("[8] ..."), never a heading, so a next item's body stays in its section.
+    private static final Pattern NUMBERED_TAG = Pattern.compile("^\\[\\d+\\]\\s");
     private static final Pattern TAG = Pattern.compile("</?s(?:\\s[^>]*)?>");
     private static final Pattern SOURCE_LINE = Pattern.compile("(?m)^Source: ");
     private static final Pattern ALSO = Pattern.compile("\\(also ([^)]*)\\)");
@@ -104,7 +106,7 @@ final class WindowInjectionGrader {
         final List<String> lines = new ArrayList<>();
         boolean inside = false;
         for (final String line : user.split("\n", -1)) {
-            if (line.startsWith("[")) {
+            if (line.startsWith("[") && !NUMBERED_TAG.matcher(line).find()) {
                 inside = headings.stream().anyMatch(line::startsWith);
             } else if (line.isBlank()) {
                 inside = false;
