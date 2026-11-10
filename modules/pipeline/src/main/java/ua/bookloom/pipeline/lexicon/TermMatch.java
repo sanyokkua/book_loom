@@ -20,7 +20,8 @@ import lombok.NoArgsConstructor;
  * stricter: a word joined to another by a hyphen is one word, so {@code Mura} is not found inside {@code Kito-Mura};
  * a term that opens with a capital is found only with a capital (a name is not the common word it spells); and a term
  * that ends in a non-Latin letter keeps its stem and tolerates a short ending, because declension changes the end of a
- * word there. Words of a multi-word term may be separated by any run of spaces.
+ * word there. A term of fewer than three letters tolerates no ending ({@code Mr} is not {@code Mrs}). Words of a
+ * multi-word term may be separated by any run of spaces.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -167,7 +168,7 @@ public final class TermMatch {
             final String words = String.join(
                     "\\s+", SPACES.splitAsStream(key).map(Pattern::quote).toList());
             return Pattern.compile(
-                    NOT_AFTER_LETTER + words + ENDING + NOT_BEFORE_LETTER,
+                    NOT_AFTER_LETTER + words + endingFor(key) + NOT_BEFORE_LETTER,
                     Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
         });
     }
@@ -188,7 +189,12 @@ public final class TermMatch {
                 Character.isUpperCase(key.codePointAt(0)) ? capitalised(words.get(0)) : quoted(words.get(0));
         final String rest =
                 words.stream().skip(1).map(word -> "\\s+" + quoted(word)).collect(Collectors.joining());
-        return first + rest + (latin ? ENDING : "\\p{L}{0," + MAX_ENDING + "}");
+        return first + rest + (latin ? endingFor(key) : "\\p{L}{0," + MAX_ENDING + "}");
+    }
+
+    // A term shorter than MIN_STEM letters takes no ending: "Mr" must not be found inside "Mrs".
+    private static String endingFor(final String key) {
+        return key.codePointCount(0, key.length()) < MIN_STEM ? "" : ENDING;
     }
 
     private static String quoted(final String word) {

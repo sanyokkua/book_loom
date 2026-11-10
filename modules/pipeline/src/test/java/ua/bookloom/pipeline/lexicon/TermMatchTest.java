@@ -41,4 +41,20 @@ class TermMatchTest {
         assertThat(TermMatch.matches(List.of("фонарь", "фонаря"), "У фонаря был фонарь."))
                 .containsExactly("фонаря", "фонарь");
     }
+
+    @ParameterizedTest(name = "[{index}] {0} in «{1}» -> {2}")
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "Mr|Mrs Pellbury came|false",
+                "Mr|Mr Quill came|true",
+                "Mr|Ms Quill came|false",
+                "Mrs|Mrs Pellbury came|true",
+                "lantern|Two lanterns hung.|true",
+                "Orc|The Orcs came.|true"
+            })
+    void shortTerm_pluralEnding_isNotTolerated(final String term, final String text, final boolean expected) {
+        assertThat(TermMatch.occursIn(term, text)).isEqualTo(expected);
+        assertThat(TermMatch.isNamedIn(term, text)).isEqualTo(expected);
+    }
 }
