@@ -1421,7 +1421,7 @@ SET.providers = () => {
           ${fld('Inference endpoint (override)', `<input class="input mono w-url" ${dirtyOn} placeholder="${ol ? '/api/chat' : '/chat/completions'}" ${ol ? 'disabled' : ''}>`, ol ? 'Not used for Ollama — it has its own chat protocol.' : 'Empty: the standard path.')}
         </div>
         <div class="gap8">${fld('Connect timeout', `<input class="input w-num" ${dirtyOn} value="10 s">`)}${fld('Request timeout (at least)', `<input class="input w-num" ${dirtyOn} value="180 s">`, 'Long answers get more time by themselves.')}</div>
-        ${fld('Model', `<div class="input-group w-model"><select class="input" ${dirtyOn}><option>${ol ? 'gemma4:e4b' : 'lapa-v0.1.2-instruct'}</option><option>gemma4:26b</option><option>gpt-oss:20b</option>${ol ? '<option>gpt-oss:120b-cloud · cloud</option>' : ''}</select><button class="btn btn-secondary" title="Read the list of models again">↻</button></div>`, '7 models found · you can also type a model name. Settings for each model are on the Models tab.')}
+        ${fld('Model', `<input class="input w-model" id="providerModelFilter" placeholder="Filter models by name" style="margin-bottom:6px"><div class="input-group w-model"><select class="input" ${dirtyOn}><option>${ol ? 'gemma4:e4b' : 'lapa-v0.1.2-instruct'}</option><option>gemma4:26b</option><option>gpt-oss:20b</option>${ol ? '<option>gpt-oss:120b-cloud · cloud</option>' : ''}</select><button class="btn btn-secondary" title="Read the list of models again">↻</button></div>`, '7 models found · you can also type a model name. Settings for each model are on the Models tab.')}
         <div class="small" id="modelListChips" style="display:flex;flex-direction:column;gap:4px;margin:-4px 0 10px"><span class="muted">In the list:</span><span class="gap8" style="flex-wrap:nowrap">${ol ? 'gemma4:e4b-mlx' : 'lapa-v0.1.2-instruct'} <span class="muted">no chip until its facts are read</span></span><span class="gap8" style="flex-wrap:nowrap">hf.co/unsloth/GLM-4.7-Flash-GGUF:UD-Q4_K_XL ${qchip('UD-Q4_K_XL', 'good')}</span><span class="gap8" style="flex-wrap:nowrap">gemma4:e4b ${qchip('nvfp4', 'acceptable')}</span></div>
         <div class="toggle-row">${sw(ST.customHeaders, `onclick="ST.customHeaders=!ST.customHeaders;rerender()"`)}<div class="tx">Use custom headers<small>Extra HTTP headers for gateways and proxies; a value may name an environment variable as <span class="mono">\${env:NAME}</span>.</small></div></div>
         ${ST.customHeaders ? `<div style="margin:0 0 10px 44px" class="w-url">${gridTable(['Header', 'Value', ''], [['<input class="input" value="X-Team">', '<input class="input" value="translation">', '×']], ['', '', '40px'])}<button class="linkbtn mt1">＋ Add header</button></div>` : ''}
@@ -1442,7 +1442,9 @@ SET.models = () => `
 <div class="card form-card" style="max-width:860px;flex:1"><div class="card-b">
   ${demo(`Model ${demoSeg([['ok', 'gemma4:e4b (accepts everything)'], ['ref', 'gpt-x via a gateway (refused some settings)']], ST.refused ? 'ref' : 'ok', "(v=>{ST.refused=v==='ref';ST.temp=v==='ref'?'none':'app';rerender()})")} ${req('S6')}`)}
   ${fld('Model', `<div class="input-group w-model"><select class="input" ${dirtyOn}><option>${ST.refused ? 'gpt-x · Work gateway' : 'gemma4:e4b · Ollama'}</option><option>gemma4:26b · Ollama</option><option>lapa-v0.1.2-instruct · LM Studio</option></select><button class="btn btn-secondary">↻ Refresh</button></div>`, 'Each model keeps its own settings. All are optional — off means BookLoom picks the value per task.')}
+  <div class="field"><input class="input w-model" id="modelsFilter" placeholder="Filter models by name" title="Narrows the list below to the models whose name contains what you type. Escape clears it; Down moves into the list. Your choice is not changed."><div class="hint">No hit: No model name contains “xyz”.</div></div>
   <div class="small" id="chooserChips" style="display:flex;flex-direction:column;gap:4px;margin:-4px 0 10px"><span class="gap8" style="flex-wrap:nowrap">gemma4:e4b · Ollama ${qchip('Q4_K_M', 'acceptable')}</span><span class="gap8" style="flex-wrap:nowrap">gemma4:26b · Ollama ${qchip('Q4_K_M', 'good')}</span><span class="gap8" style="flex-wrap:nowrap">Qwen_Qwen3.5-9B-Q2_K_L.gguf · LM Studio ${qchip('Q2_K_L', 'unusable')}</span></div>
+  <div class="hint" id="modelsVerdictLine"><b>BookLoom’s verdict: recommended · a warning, when there is one</b></div>
   <div id="modelsAdvice" style="display:flex;flex-direction:column;gap:2px;margin-bottom:10px">
     <div class="hint" id="modelsIdentityLine">Understood: Gemma 4 E4B · Q4_K_M (server reports Q8_0) · recognised as Gemma 4, not this exact model</div>
     <div class="hint" id="modelsQuantLine">Slightly reduced precision. Usually fine, but names and word endings may drift, especially for Ukrainian; a larger version translates more reliably.</div>
@@ -1450,7 +1452,7 @@ SET.models = () => `
     <div class="hint" id="modelsLicenceLine">Thomson 1.0 Small is licensed for noncommercial use only (PolyForm Strict 1.0.0).</div>
     <div class="hint" id="modelsThinkingHint">This download cannot turn thinking off in Ollama, so it is slower. The library model qwen3.5:4b or a Modelfile with RENDERER and PARSER fixes it.</div>
   </div>
-  <div class="banner small"><span class="ico">ℹ</span><div>Found out from the program: it can read <b>131,072</b> tokens at once (32,768 loaded now) · structured answers: yes.</div></div>
+  <div class="banner small"><span class="ico">ℹ</span><div id="modelsFound">Found out from the program: it can read <b>131,072</b> tokens at once (32,768 loaded now).<div id="modelsStructured">Translate: schema · Name reading: plain JSON</div><div class="muted">With nothing checked: structured answers: not checked yet — Test inference on the Providers tab checks it</div><div class="muted">Other engines say who sets the window: Window: set in Ollama, not by BookLoom · loaded in LM Studio: 8,192 · set at llama-server start: 16,384 per slot</div></div></div>
   <div class="field mt2"><label class="fld">Temperature <span class="muted small" style="font-weight:400">— how varied the wording is ${tech('temperature')}</span></label>
     ${seg(['Let BookLoom choose', 'My value', 'Don’t send'], ST.temp === 'mine' ? 1 : ST.temp === 'none' ? 2 : 0, `onclick="const i=[...this.children].indexOf(event.target);if(i>=0){ST.temp=['app','mine','none'][i];ST.dirty=true;rerender()}"`)}
     ${ST.temp === 'mine' ? `<div class="gap8 mt1"><input type="range" value="20" style="max-width:320px"><b>0.20</b><span class="hint">one value for every request</span></div>` : ''}
@@ -1472,7 +1474,8 @@ SET.models = () => `
     <label class="fld">Field that carries the answer length</label>
     <div class="chk"><input type="radio" name="tl" checked disabled> <span class="muted">max_completion_tokens (standard)</span></div>
     <div class="chk"><input type="radio" name="tl" disabled> <span class="muted">max_tokens (older servers)</span></div>
-    <div class="hint">Not used for Ollama, which has its own option.</div></div></details>
+    <div class="hint">Not used for Ollama, which has its own option.</div>
+    <div class="hint" id="modelsLimitIgnored">The server ignored this limit on the last Advanced features check.</div></div></details>
   <div class="hint" id="modelsFactsDate" style="margin-top:10px">Model facts as of 2026-10-28</div>
 </div>${formFoot()}</div>`;
 const instant = (txt = 'Changes apply at once.') => `<div class="hint" style="margin-bottom:10px">✓ ${txt}</div>`;

@@ -339,6 +339,12 @@ it translate · save the translated book; "your original file is never changed")
 found**: "BookLoom could not choose an AI model by itself. Press Try again, or choose the AI program and model in Settings." with [Try again] and "I use another
 program…", which opens Settings; while Try again looks, the line reads "Looking for an AI program on this computer…"
 with Try again off, and when it finds nothing again it adds "Still nothing answered."), and **＋ New translation**.
+The tagline under the title reads "Translate a book. Private when you use a local AI model." While no project exists,
+a **recommendation line** follows by this computer's memory ("This computer has {GB} GB: {model} is recommended. Pull it
+with `ollama pull {model}`."; under 24 GB gemma4:e4b, 24 GB or more gemma4:26b-a4b, from 36 GB also "Optional, best
+quality, slower, not measured here: gemma4:31b"); the command is text and is never run. The same line shows under the
+model field and in the model-pick dialog, and every model picker (the Models chooser, the Providers model list, the
+model-pick dialog) has a **Filter models by name** field (`07_SETTINGS.md#models-tab`).
 
 **First launch and the AI model (owner decision 13, planned).** On the first launch BookLoom looks **once, by itself**
 for Ollama (`127.0.0.1:11434`) and LM Studio (`127.0.0.1:1234`) on this computer; if it finds one with models it creates
@@ -828,11 +834,12 @@ restarts".
   failed Test connection, with or without Test inference) keeps its tab and says "Not attempted — the connection
   failed first." instead of showing another test's request. A result row's **Details** keeps its whole width; the
   reason under the chip wraps.
-- **Models** (decision 6). Model (a list across providers, ↻ Refresh), with "Each model keeps its own settings. All are
-  optional — off means BookLoom picks the value per task." Found out from the program: how much it can read at once
-  (and how much is loaded now) and whether it gives structured answers. **Use one temperature** (slider; off = the
-  per-task defaults of `ChatRequests`); **Use context window** (number; filled in from what is loaded; `num_ctx` for
-  Ollama in grey); **Limit answer length** (off = `OutputLimit` per request); **Advanced**: the field that carries the
+- **Models** (decision 6). Model (a list across providers, ↻ Refresh, with a Filter models by name field), with "Each
+  model keeps its own settings. All are optional — off means BookLoom picks the value per task." BookLoom's verdict
+  line ("BookLoom's verdict: recommended · warnings"); Found out from the program: how much it can read at once, who
+  sets the window per engine (Ollama `/v1`, LM Studio, llama-server; "N loaded now" for Ollama native) and structured
+  answers per call kind (Translate, Name reading: schema · plain JSON · not checked yet). **Use one temperature** (slider; off = the
+  per-task defaults of `ChatRequests`); **Use context window** (number; filled in from what is loaded; read-only where the engine sets it, saying who does); **Limit answer length** (off = `OutputLimit` per request); **Advanced**: the field that carries the
   answer length (`max_completion_tokens` / `max_tokens`; not used for Ollama); **Thinking**: what thinking control the
   model offers, that BookLoom sends thinking off for draft, repair, proofread, names and brief calls, and Recommended
   (off) · Allow on proofreading and names · Always — no choice when the model has no control or always thinks;

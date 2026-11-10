@@ -120,7 +120,8 @@ Guice). Consequences, all in `scripts/jpackage-common.sh`:
   automatic modules, and a plain Temurin has no JavaFX jmods. So the script jlinks a runtime of the JDK modules only
   (`build_runtime`, the list in `RUNTIME_MODULES`) and hands it to jpackage with `--runtime-image`; every jar, JavaFX
   included, stays on the module path. A JDK module a dependency starts to need shows as a boot-layer `FindException`
-  in the smoke (`java.compiler` was one) and is added to the list.
+  in the smoke (`java.compiler` was one, `jdk.management` another: `:app`'s `SystemMemory` reads the computer's memory
+  through it) and is added to the list.
 - `--java-options "--add-modules=ALL-MODULE-PATH"`: an automatic module (Guice) does not resolve its explicit
   dependency Guava, so without it the image fails with `NoClassDefFoundError: com/google/common/base/Stopwatch`.
 - `--java-options "--enable-native-access=javafx.graphics"` silences the JEP 472 warning.

@@ -163,7 +163,7 @@ setting or sends a request.
   maker says nothing is unknown; a fine-tune reads its base model's list and says so. The server's own language list
   never overrides the table. A language counts as tested only where BookLoom's own run exists for that pair (the row's
   evidence); a maker's claim does not.
-- *Where it is shown.* Settings › Models (`07_SETTINGS.md#models-tab`) and, as one line, at Start (`StartAdviceLines`):
+- *Where it is shown.* Settings › Models (`07_SETTINGS.md#models-tab`, where BookLoom's verdict line comes first and these lines follow) and, as one line, at Start (`StartAdviceLines`):
   a warning where a complete list leaves out the source or target, a quieter information line where the maker says
   nothing or only a base model lists it, nothing where the model declares the language or BookLoom tested the pair.
 

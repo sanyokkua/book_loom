@@ -123,7 +123,7 @@ no consent dialog and no acknowledgement box for any provider.
 
 **Cloud models.** In the Providers model list and its model field a model the provider runs on its own servers (an Ollama
 cloud model, `ModelInfo.cloud`) carries the neutral label "cloud"; every model stays listed and choosing one asks
-nothing. (The Models tab chooser lists ids only.)
+nothing. (The Models tab chooser lists each model as its id and provider, with the quant chip.)
 
 The effective context is **not** a provider setting: it is resolved per model (see `#models-tab` and
 `#generation-tab`).
@@ -132,11 +132,24 @@ The effective context is **not** a provider setting: it is resolved per model (s
 
 *Built (finalize 7.2)* (mockups/README.md, decision 6). The Models tab is a **list of models across
 providers** (with ↻ Refresh) and a form for the picked one. **Each model keeps its own settings, all optional — off
-means BookLoom picks the value per task.** The tab also shows what was found out from the program: how much the model
-can read at once (and, for Ollama only, how much is loaded now — read from `/api/ps`) and whether it gave a structured
-answer in this session's last inference test (else "not checked yet"). While Use context window is off, the field shows the
-loaded figure as a suggestion. For an Ollama model the answer-length field choice is not offered, only a hint (an Ollama
-reached through an OpenAI-compatible provider also always receives `max_tokens`, whatever the stored choice). Save is
+means BookLoom picks the value per task.** The tab opens with **BookLoom's verdict** on the model: "BookLoom's verdict: unknown model / unknown fine-tune /
+recommended / usable / experimental / not recommended", then " · " and its warnings when it has any (the licence note has
+its own line). Under it, **Found out from the program** says how much the model can read at once and who sets the
+window, by engine: an Ollama model reached natively adds how much is loaded now ("N loaded now", read from `/api/ps`);
+Ollama through `/v1` says "Window: set in Ollama, not by BookLoom"; LM Studio "loaded in LM Studio: 8,192"; llama-server
+"set at llama-server start: 16,384 per slot"; any other server shows the readable figure only, and BookLoom never calls
+`/api/ps` for it. **Structured answers** are one row per call kind (Translate, Name reading), each "schema", "plain
+JSON" or "not checked yet" (for example gpt-oss:20b: Translate schema, Name reading plain JSON); with nothing checked
+the one line reads "structured answers: not checked yet — Test inference on the Providers tab checks it". While Use
+context window is off, the field shows the loaded figure as a suggestion; where the engine sets the window (LM Studio,
+llama-server, Ollama `/v1`) the field is read-only and says who sets it. For an Ollama model the answer-length field
+choice is not offered, only a hint (an Ollama reached through an OpenAI-compatible provider also always receives
+`max_tokens`, whatever the stored choice); after a stored "ignored" verdict from the Advanced features check, a note
+under Limit answer length reads "The server ignored this limit on the last Advanced features check.", and the Advanced
+fold is hidden for Ollama `/v1`. The chooser, and the Providers tab's model list, each carry a **Filter models by name**
+field: a case-insensitive substring over the model id; with no hit the list reads `No model name contains "{text}".`;
+Escape clears it, Down moves focus into the list, and a model already chosen stays chosen while the filter hides it.
+Save is
 an update that keeps a refusal recorded meanwhile; **Try again now** on a refused setting acts at once and leaves unsaved typing alone; changing
 model or tab with unsaved changes asks "Save the settings of gemma4:e4b · Ollama?".
 
@@ -153,7 +166,12 @@ model or tab with unsaved changes asks "Save the settings of gemma4:e4b · Ollam
 | Measured seconds (read-only) | `ModelSettings.secondsPerCall` (`MeasuredSpeed`: seconds and `TEST` or `RUN`) | none | stored on the model, never typed: the inference test writes the seconds per segment of a draft (`TEST`); the end of every names pass and run writes the mean wall time of its successful calls per call kind (`RUN`; `DRAFT` per drafted segment, other kinds per call). The names-pass estimate and the Book Brief's time line read them: "measured on this model" only when a run measured every kind the plan makes, else a range marked "estimate" with its source, and no time when nothing was measured | FR-BRIEF-08 |
 | Per-provider remembered model | derived | last used        | —                                                                                                     | FR-MODEL-04                           |
 
-**Model advice lines (built, redesign 9.7).** Under the chooser, wrapped plain lines, each shown only while it has
+**Recommendation under the model field.** Where a model is chosen (the model field and the model-pick dialog) one line
+reads "This computer has {GB} GB: {model} is recommended. Pull it with `ollama pull {model}`." The tier follows the
+computer's memory: under 24 GB gemma4:e4b, 24 GB or more gemma4:26b-a4b, and from 36 GB a second line "Optional, best
+quality, slower, not measured here: gemma4:31b (`ollama pull gemma4:31b`)." The command is text; BookLoom never runs it.
+
+**Model advice lines (built, redesign 9.7).** Under the verdict line, wrapped plain lines, each shown only while it has
 something to say; none is a dialog and none changes a setting. In order: *identity* ("Understood: {model} · {quant} ·
 exact match / recognised as {family}, not this exact model / recognised as a fine-tune of {base} (behaviour of {base}) /
 not recognised", with "(server reports {quant})" when the name and the server disagree); the *quant* sentence for the

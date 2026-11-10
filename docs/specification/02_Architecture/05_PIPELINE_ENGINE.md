@@ -544,6 +544,20 @@ The consistency stack this engine relies on is the **name/term dictionary** (`#n
 exact/context/fuzzy, never vector embeddings), and the **chapter summaries** (`#rolling-summary`). There is no
 embedding or RAG stage.
 
+## call-timings {#call-timings}
+
+Each engine reports the timing of a call in its own words, and BookLoom reads only what the reply carries. llama-server
+sends `timings`: `prompt_ms` is the time to first token, `cache_n` the prompt tokens served from its cache,
+`predicted_ms` and `predicted_per_second` the generation. LM Studio sends `stats`: `time_to_first_token`,
+`generation_time` and `tokens_per_second`. Ollama's native API is read as a stream, so BookLoom measures its own time to
+first token. Ollama's `/v1` route and OpenRouter report no time to first token, so that figure is missing.
+
+A missing figure is the en dash "–" (`settings.test.metric.none`, `CallTimings.dash`), never 0. The run summary prints
+the figure and averages only the calls that reported it (`CallKindTotals`); the window's line "first token {0} · speed
+{1} · cached {2}" uses the same glyph. In the Providers test dialog the first-token cell reads "<time> · uncached · N %"
+when the server reported cached prompt tokens: the time is that of the part it had to read, and N is the **cached**
+share (cached prompt tokens / prompt tokens, rounded), not the uncached one.
+
 ## quality-dial {#quality-dial}
 
 A single "quality vs speed" dial (`FAST | BALANCED | MAX`) parameterizes the engine's **mechanics**. It does **not** own
