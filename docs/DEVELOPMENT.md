@@ -2888,3 +2888,58 @@ settles none and no Continue is offered).
 - *Not changed:* the export's consistency summary counts only GENDER_UNKNOWN as "waiting for a gender"; a GENDER_CHANGED
   deferral waits on no gender, and the export's "wait on a fact you have since given" line is task 14.5's, with the pass
   group 14 removes.
+
+### Redesign closing run {#redesign-closing-run}
+
+The success table of `redesign-translation-pipeline` group 16 (task 16.1, design D24). Every rule below is fixed before
+any closing number exists; tasks 16.2 to 16.5 run the measurements and fill the `Result` column, task 16.6 judges each
+row. A `Result` of "not run" is the red state. A failing quality row is named with the falsifier it meets and goes to
+the owner with options; it is never reworded to pass.
+
+**Method.**
+
+- *Baselines.* The outputs of `79ffede6` recorded in task 1.10 (`#redesign-arms`, "Baselines of `79ffede6`"), kept under
+  `modules/pipeline/src/test/resources/eval/baseline/`. The ru->uk book is paired with a fresh `79ffede6` run made in
+  task 16.5, because the baselines hold invented text only.
+- *Runs.* `gemma4:e4b-mlx` on Ollama, single-flight, K = 3 with the recorded seeds 1000, 1001, 1002 for the mini
+  suites and `sequence` (K = 1 where a row says so); `gemma4:26b-mlx` once for the owner's en->uk book. Balanced unless
+  a row says Max.
+- *Statistics.* Unit = case (paragraph for `sequence` and the books); K repeats are averaged first. A real difference
+  is the exact two-sided sign test on discordant units, p < 0.05: 6:0, 8:1, 10:2 and 15:4 are the smallest wins.
+  Soft graders may not fall below baseline minus max(noise band, smallest detectable effect).
+- *Judge.* `gemma4:26b`, local, pairwise with the order swapped, a win only when both orders agree. Its calibration
+  failed the Wilson bounds (`#redesign-arms`, arm 1), so it is a screen only: every paragraph it marks as differing is
+  read by the agent (with a Codex second opinion by hand), and that reading is the grade the rows below use.
+- *Where things live.* Raw outputs, reports and every owner book's name, hash and result stay in the git-ignored
+  `.temporary_context/redesign-closing/`. Committed: the invented-text outputs of the mini suites and `sequence`, and
+  this table. Real books, their text and their reports are never committed.
+
+**Quality rows.**
+
+| Row | Measure | Run | Pass rule | Result |
+|---|---|---|---|---|
+| Q1 paired quality | paragraphs where the final text differs from `79ffede6`: better against worse, `sequence` e4b K = 3, Balanced and Max | 16.3 | sign test p < 0.05 for the new pipeline (6:0, 8:1, 10:2, 15:4 as the smallest wins) | not run |
+| Q2 window injection | window-injection violations (hard grader, both scopes) on mini-en, mini-ru and `sequence` | 16.2, 16.3 | 0 | not run |
+| Q3 mini hard graders | failures of every hard grader on mini-en and mini-ru, e4b K = 3 | 16.2 | 0 failures | not run |
+| Q4 mini soft graders | each soft grader's pass rate against the `79ffede6` baseline (mini-en Balanced 0.9240, mini-ru Balanced 0.8077) | 16.2 | no worse than baseline minus max(noise band, smallest detectable effect) | not run |
+| Q5 consistency (LTCR-1) | share of a term's later occurrences that keep its first rendering, `sequence` e4b K = 3, Balanced | 16.3 | not below the `79ffede6` `sequence` value minus max(noise band, 1.5 percentage points) | not run |
+| R1 stress marks | U+0301 in the ru->uk book's output | 16.5 | 0 | not run |
+| R2 foreign letters | letters outside the Ukrainian alphabet (ы э ъ ё) in the output | 16.5 | 0 | not run |
+| R3 source lines | whole source lines left in the output | 16.5 | 0 | not run |
+| R4 one form per lemma | target forms per glossary lemma for the top 20 lemmas (by hand) | 16.5 | exactly 1 each | not run |
+| R5 never-worse | proofread rewrites kept although worse | 16.5 | 0 | not run |
+| R6 meaning errors, paired | paragraphs with a meaning error, new run against the paired `79ffede6` run (paired by segment id) | 16.5 | fewer for the new pipeline, sign test p < 0.05 | not run |
+| R7 meaning-error rate | meaning-error paragraphs among 100 random paragraphs, with the Wilson 95 % interval | 16.5 | reported with its interval, no threshold | not run |
+| R8 source-language words | paragraphs of the same 100 with a source-language content word | 16.5 | at most 1 of 100; more than 1 % is the design's falsifier: tell the owner | not run |
+| R9 cut by length | share of replies cut by length at the ru->uk `outputRatio` 1.2 | 16.5 | under 1 % sets `outputRatio=1.2` in `prompt/languages/pairs/ru-uk.properties`; otherwise 1.5 stays | not run |
+
+**Speed rows.** Reported, no rule (owner decision: no time targets); a speed figure is never weighed against quality.
+
+| Row | Measure | Run | Pass rule | Result |
+|---|---|---|---|---|
+| S1 prompt-reading share | prompt-reading time over total time per call | 16.4 | reported, no rule | not run |
+| S2 Max against Balanced | extra calls and time of Max on a chapter slice | 16.4 | reported, no rule | not run |
+| S3 whole-book time | wall time of the owner's en->uk book, e4b and 26b | 16.4 | reported, no rule | not run |
+| S4 calls per segment | model calls per segment, same two runs | 16.4 | reported, no rule | not run |
+| S5 seconds per call kind | mean seconds per draft, repair, summary and proofread call | 16.4 | reported, no rule | not run |
+| S6 cached share per runtime | cached prompt tokens over prompt tokens: probe on `gemma4:e4b-mlx`, `gemma4:26b-mlx` and one GGUF tag, and from the run log of a whole run | 16.3 | reported, no rule | not run |

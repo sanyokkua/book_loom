@@ -2223,7 +2223,7 @@ The closing measurements decide whether the change met its quality goals: the mi
 recorded and reported with no pass rule (owner decision: no time targets). Real books stay on the owner's machine;
 only invented-text outputs and the results table are committed (design D24).
 
-- [ ] 16.1 Write the success table with each row's pass rule and record it unfilled (red), so every closing claim has
+- [x] 16.1 Write the success table with each row's pass rule and record it unfilled (red), so every closing claim has
   a rule fixed before the numbers arrive. → :pipeline (eval), docs
   - **Satisfies:** enabling work for design D24
   - **Depends on:** groups 12, 14, 15
