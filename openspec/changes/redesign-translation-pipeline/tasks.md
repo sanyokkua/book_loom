@@ -2240,7 +2240,7 @@ only invented-text outputs and the results table are committed (design D24).
   - **Test first:** none; the table with every row "not run" is the red state
   - **Done when:** the table is committed with every row "not run" (the red state).
 
-- [ ] 16.2 Run the mini suites on e4b against the baselines, so a regression on invented text is caught before the
+- [x] 16.2 Run the mini suites on e4b against the baselines, so a regression on invented text is caught before the
   long runs. → :pipeline (eval, local), docs
   - **Satisfies:** enabling work for design D24
   - **Depends on:** 16.1

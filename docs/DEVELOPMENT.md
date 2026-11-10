@@ -2919,9 +2919,9 @@ the owner with options; it is never reworded to pass.
 | Row | Measure | Run | Pass rule | Result |
 |---|---|---|---|---|
 | Q1 paired quality | paragraphs where the final text differs from `79ffede6`: better against worse, `sequence` e4b K = 3, Balanced and Max | 16.3 | sign test p < 0.05 for the new pipeline (6:0, 8:1, 10:2, 15:4 as the smallest wins) | not run |
-| Q2 window injection | window-injection violations (hard grader, both scopes) on mini-en, mini-ru and `sequence` | 16.2, 16.3 | 0 | not run |
-| Q3 mini hard graders | failures of every hard grader on mini-en and mini-ru, e4b K = 3 | 16.2 | 0 failures | not run |
-| Q4 mini soft graders | each soft grader's pass rate against the `79ffede6` baseline (mini-en Balanced 0.9240, mini-ru Balanced 0.8077) | 16.2 | no worse than baseline minus max(noise band, smallest detectable effect) | not run |
+| Q2 window injection | window-injection violations (hard grader, both scopes) on mini-en, mini-ru and `sequence` | 16.2, 16.3 | 0 | mini-en and mini-ru: 0 violations (offline run of `MiniGraders.windowInjection`); `sequence`: not run |
+| Q3 mini hard graders | failures of every hard grader on mini-en and mini-ru, e4b K = 3 | 16.2 | 0 failures | PASS: 0 failures in 3 of 3 repeats; 5 hard graders on en and 16 on ru; the baseline failed 4 hard ru graders, which now pass |
+| Q4 mini soft graders | each soft grader's pass rate against the `79ffede6` baseline (mini-en Balanced 0.9240, mini-ru Balanced 0.8077) | 16.2 | no worse than baseline minus max(noise band, smallest detectable effect) | PASS: aggregates unchanged (en 0.9240 vs 0.9240, ru 0.8077 vs 0.8077); noise bands 0.0175 en and 0.0 ru; thresholds about 0.10 en and 0.22 ru; no grader reaches p < 0.05. Note: en `address-same` and `dialogue-quote-form` now fail in 3 of 3 repeats, and `eval-score.py` prints "screen: fail (a metric loses 2)" for en, which the committed rule does not count; re-read in 16.6 |
 | Q5 consistency (LTCR-1) | share of a term's later occurrences that keep its first rendering, `sequence` e4b K = 3, Balanced | 16.3 | not below the `79ffede6` `sequence` value minus max(noise band, 1.5 percentage points) | not run |
 | R1 stress marks | U+0301 in the ru->uk book's output | 16.5 | 0 | not run |
 | R2 foreign letters | letters outside the Ukrainian alphabet (ы э ъ ё) in the output | 16.5 | 0 | not run |
@@ -2932,6 +2932,8 @@ the owner with options; it is never reworded to pass.
 | R7 meaning-error rate | meaning-error paragraphs among 100 random paragraphs, with the Wilson 95 % interval | 16.5 | reported with its interval, no threshold | not run |
 | R8 source-language words | paragraphs of the same 100 with a source-language content word | 16.5 | at most 1 of 100; more than 1 % is the design's falsifier: tell the owner | not run |
 | R9 cut by length | share of replies cut by length at the ru->uk `outputRatio` 1.2 | 16.5 | under 1 % sets `outputRatio=1.2` in `prompt/languages/pairs/ru-uk.properties`; otherwise 1.5 stays | not run |
+
+Mini runs (16.2): `gemma4:e4b-mlx`, Balanced, K = 3, seeds 1000-1002, at HEAD `c935aca2`. The mini datasets' `rootHash` and `labelsHash` changed after the baseline was recorded, so part of the ru hard-grader improvement may come from grader or label edits rather than the pipeline. The judge screen found no verdict-bearing row. Details are in `.temporary_context/redesign-closing/mini/RESULTS.md` (git-ignored, not committed).
 
 **Speed rows.** Reported, no rule (owner decision: no time targets); a speed figure is never weighed against quality.
 
