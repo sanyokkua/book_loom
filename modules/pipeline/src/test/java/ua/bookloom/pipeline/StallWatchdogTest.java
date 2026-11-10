@@ -8,18 +8,25 @@ import ch.qos.logback.core.read.ListAppender;
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.slf4j.LoggerFactory;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 
-/** The watchdog ends a call only past one and a half times its own timeout, or after twenty idle minutes. */
+/**
+ * The watchdog ends a call only past one and a half times its own timeout, or after twenty minutes with no decision
+ * and no answered proofread call.
+ */
 class StallWatchdogTest {
+
+    private static final Duration NO_DECISION = Duration.ofMinutes(20);
 
     private final ScriptedClock clock = new ScriptedClock();
     private final JobControl control = new JobControl(Set.of());
@@ -103,6 +110,75 @@ class StallWatchdogTest {
                 .isEqualTo(Duration.ofMinutes(20));
     }
 
+    // IF Proofread's answered windows were not progress, THEN a whole book's Proofread, which decides a segment only
+    // when it keeps a rewrite, would be ended after 20 min of healthy calls (the 16.4 whole-book run).
+    @Test
+    void check_proofreadWindowsAnsweredForTwentySevenMinutesWithNoDecision_endsNothing() {
+        startRunning();
+
+        callsEvery(CallKind.PROOFREAD, null, 9, Duration.ofMinutes(3));
+        startCall(CallKind.PROOFREAD, Duration.ofSeconds(90));
+        clock.advance(Duration.ofSeconds(10));
+        watchdog.check();
+
+        assertThat(Thread.interrupted()).isFalse();
+        assertThat(watchdog.takeStall()).isNull();
+        assertThat(appender.list)
+                .extracting(ILoggingEvent::getFormattedMessage)
+                .noneSatisfy(line -> assertThat(line).startsWith("No segment decided"));
+    }
+
+    // A proofread attempt that failed read no window, so failing attempts are no progress.
+    @Test
+    void check_proofreadAttemptsFailingForOverTwentyMinutes_endsTheCallInFlight() {
+        startRunning();
+
+        callsEvery(CallKind.PROOFREAD, ErrorCode.unreachable, 10, Duration.ofMinutes(2));
+        startCall(CallKind.PROOFREAD, Duration.ofSeconds(90));
+        clock.advance(Duration.ofSeconds(10));
+        watchdog.check();
+
+        assertThat(Thread.interrupted()).isTrue();
+        assertThat(watchdog.takeStall())
+                .isNotNull()
+                .extracting(StallWatchdog.Stall::ceiling)
+                .isEqualTo(NO_DECISION);
+    }
+
+    // The last answered window restarts the clock, so 21 quiet minutes after it still end the call in flight.
+    @Test
+    void check_noAnsweredWindowForTwentyOneMinutesAfterTheLast_endsTheCallInFlight() {
+        startRunning();
+        callsEvery(CallKind.PROOFREAD, null, 3, Duration.ofMinutes(3));
+
+        startCall(CallKind.DRAFT, Duration.ofMinutes(30));
+        clock.advance(Duration.ofMinutes(21));
+        watchdog.check();
+
+        assertThat(Thread.interrupted()).isTrue();
+        assertThat(watchdog.takeStall())
+                .isNotNull()
+                .extracting(StallWatchdog.Stall::ceiling)
+                .isEqualTo(NO_DECISION);
+    }
+
+    // A segment repaired again and again is answered every time and never decided: that run is stuck.
+    @Test
+    void check_repairCallsAnsweredForOverTwentyMinutesWithNoDecision_endsTheCallInFlight() {
+        startRunning();
+
+        callsEvery(CallKind.REPAIR, null, 10, Duration.ofMinutes(2));
+        startCall(CallKind.REPAIR, Duration.ofMinutes(5));
+        clock.advance(Duration.ofSeconds(10));
+        watchdog.check();
+
+        assertThat(Thread.interrupted()).isTrue();
+        assertThat(watchdog.takeStall())
+                .isNotNull()
+                .extracting(StallWatchdog.Stall::ceiling)
+                .isEqualTo(NO_DECISION);
+    }
+
     // IF a batch call's line named no segment (`DRAFT null`), THEN a person reading the log could not tell which
     // paragraphs the stalled call was about.
     @Test
@@ -130,6 +206,29 @@ class StallWatchdogTest {
         watchdog.check();
 
         assertThat(watchdog.takeStall()).isNull();
+    }
+
+    private void startRunning() {
+        control.claimRun();
+        watchdog.start((period, tick) -> () -> {});
+    }
+
+    private void startCall(final CallKind kind, final Duration timeout) {
+        control.enterModelCall();
+        watchdog.onEvent(new ModelCallStarted(null, kind, List.of("s1"), 1, 2, timeout, null));
+    }
+
+    // Each call takes `every` and ends with `failure` (null: answered); the watchdog looks after each, as its ticker
+    // would.
+    private void callsEvery(
+            final CallKind kind, final @Nullable ErrorCode failure, final int count, final Duration every) {
+        for (int call = 0; call < count; call++) {
+            startCall(kind, Duration.ofMinutes(5));
+            clock.advance(every);
+            watchdog.check();
+            control.exitModelCall();
+            watchdog.onEvent(new ModelCallFinished(null, kind, every, null, 0, false, List.of("s1"), 1, failure));
+        }
     }
 
     private void inProofreadCall() {

@@ -1984,9 +1984,11 @@ The application SHALL add one narrator line to the run's style sheet when the br
 
 WHILE a run is running, the system SHALL watch its model calls on a daemon ticker of its own and SHALL end a call —
 interrupting it through the job's control, as a pause does — when the attempt has been outstanding longer than 1.5
-times its own timeout (15 min for a call whose model announces none), or when no segment has been decided for 20
-minutes while a call is outstanding. The ended call SHALL answer `ErrorCode.timeout` and go through the run's ordinary
-timeout path.
+times its own timeout (15 min for a call whose model announces none), or when for 20 minutes no segment has been
+decided, the run has not resumed and no proofread call has been answered while a call is outstanding. An answered
+proofread call SHALL count as progress, since Proofread decides a segment only when it keeps a rewrite and each answered
+call ends its window; an answered draft or repair call SHALL NOT, since a segment repaired again and again without a
+decision is a stuck run. The ended call SHALL answer `ErrorCode.timeout` and go through the run's ordinary timeout path.
 
 **Source**: the overnight plan, step 11, the decision that a stalled call must never hold a night's run (`docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`). In plain words: a provider that accepts a request and never finishes it would otherwise keep the run waiting forever; this holds for every call kind, the proofread and chapter-summary calls included.
 
@@ -1994,6 +1996,17 @@ timeout path.
 
 - **WHEN** a proofread call with a 90 s timeout has been outstanding for 136 s (a run makes no reviewer call any more)
 - **THEN** the watchdog ends it, the gate is released, and the call answers `ErrorCode.timeout`
+
+#### Scenario: A long Proofread is not taken for a stall
+
+- **WHEN** Proofread's calls are answered every 3 minutes for 27 minutes and no segment is decided
+- **THEN** the watchdog ends no call (the 16.4 whole-book run's Proofread was ended after 185 of 630 windows before this)
+
+#### Scenario: Calls that make no progress are still ended
+
+- **WHEN** for over 20 minutes no segment is decided and every call is a repair that is answered, or a proofread attempt
+  that fails
+- **THEN** the watchdog ends the call in flight with the 20-minute limit as its ceiling
 
 #### Scenario: A call that never returns is retried, then flagged
 
