@@ -2077,7 +2077,7 @@ screen recommends a model by memory, and every model picker gets a name filter (
     filter exists.
   - **Done when:** both run red for those reasons; the output is pasted into the commit message.
 
-- [ ] 15.2 Read each engine's timings — llama-server `timings`, LM Studio `stats`, Ollama's stream — and carry a
+- [x] 15.2 Read each engine's timings — llama-server `timings`, LM Studio `stats`, Ollama's stream — and carry a
   missing figure as missing to the run summary, so speed is measured per engine without false zeros. → :llm, :pipeline
   - **Satisfies:** "Measure time to first token and prompt reading for each engine" (inference)
   - **Depends on:** 15.1

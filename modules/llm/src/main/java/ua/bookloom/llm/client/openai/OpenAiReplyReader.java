@@ -136,7 +136,7 @@ final class OpenAiReplyReader {
         if (wrongModel != null) {
             return Result.err(wrongModel);
         }
-        final TokenUsage usage = OpenAiUsage.of(decoded.usage(), decoded.stats(), elapsed);
+        final TokenUsage usage = OpenAiUsage.of(decoded.usage(), decoded.stats(), decoded.timings(), elapsed);
         logOutcome(requestedModel, reply, finishReason, usage);
         return Result.ok(chatResponse(message.content(), finishReason, usage, reply, decoded));
     }

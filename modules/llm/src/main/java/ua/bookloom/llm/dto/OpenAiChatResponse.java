@@ -14,6 +14,7 @@ import org.jspecify.annotations.Nullable;
  * @param choices nullable because malformed or partial replies may omit the collection
  * @param usage nullable because providers may omit reported token counts
  * @param stats nullable; LM Studio's own timing of the call, which other providers do not send
+ * @param timings nullable; llama-server's own timing of the call, which other providers do not send
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record OpenAiChatResponse(
@@ -21,7 +22,8 @@ public record OpenAiChatResponse(
         @JsonProperty("choices") @Nullable List<Choice> choices,
         @JsonProperty("usage") @Nullable Usage usage,
         @JsonProperty("stats") @Nullable Stats stats,
-        @JsonProperty("provider") @Nullable String provider) {
+        @JsonProperty("provider") @Nullable String provider,
+        @JsonProperty("timings") @Nullable Timings timings) {
 
     /** Copies a present choices list to preserve its order and prevent mutation. */
     public OpenAiChatResponse {
@@ -118,4 +120,19 @@ public record OpenAiChatResponse(
             @JsonProperty("time_to_first_token") @Nullable Double timeToFirstToken,
             @JsonProperty("generation_time") @Nullable Double generationTime,
             @JsonProperty("tokens_per_second") @Nullable Double tokensPerSecond) {}
+
+    /**
+     * llama-server's own timing of one call.
+     *
+     * @param promptMs nullable milliseconds spent reading the prompt, the time before the first token
+     * @param predictedMs nullable milliseconds spent generating the completion
+     * @param predictedPerSecond nullable generation rate, which gives the generation time when only the rate is sent
+     * @param cacheN nullable count of prompt tokens served from the server's cache
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record Timings(
+            @JsonProperty("prompt_ms") @Nullable Double promptMs,
+            @JsonProperty("predicted_ms") @Nullable Double predictedMs,
+            @JsonProperty("predicted_per_second") @Nullable Double predictedPerSecond,
+            @JsonProperty("cache_n") @Nullable Integer cacheN) {}
 }

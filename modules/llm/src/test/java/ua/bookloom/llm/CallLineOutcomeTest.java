@@ -84,6 +84,39 @@ class CallLineOutcomeTest {
                 .allSatisfy(line -> assertThat(line).contains("outcome=timeout"));
     }
 
+    // 15.2: a figure the server did not report is named "missing" in the call line, never printed as 0.
+    @Test
+    void chat_replyWithNoTiming_callLineNamesFirstTokenMissing() {
+        server.stubFor(
+                post(urlEqualTo(CHAT_PATH))
+                        .willReturn(
+                                aResponse()
+                                        .withHeader("Content-Type", "application/json")
+                                        .withBody(
+                                                "{\"model\":\"vendor/chat-model\",\"choices\":[{\"message\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5}}")));
+        final ChatModel model = hostedModel();
+        final Logger bookloom = (Logger) LoggerFactory.getLogger("ua.bookloom");
+        final Level before = bookloom.getLevel();
+        final ListAppender<ILoggingEvent> logged = new ListAppender<>();
+        bookloom.setLevel(Level.DEBUG);
+        logged.start();
+        bookloom.addAppender(logged);
+        try {
+            assertThat(model.chat(draft()).isOk()).isTrue();
+        } finally {
+            bookloom.detachAppender(logged);
+            bookloom.setLevel(before);
+        }
+
+        assertThat(logged.list.stream()
+                        .map(ILoggingEvent::getFormattedMessage)
+                        .filter(message -> message.startsWith("Provider chat call ")))
+                .singleElement()
+                .asString()
+                .contains("ttftMs=missing", "promptEvalMs=missing")
+                .doesNotContain("ttftMs=0");
+    }
+
     private ChatModel hostedModel() {
         final FakeProviderConfigs configs = new FakeProviderConfigs();
         assertThat(configs.save(new ProviderConfig(

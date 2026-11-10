@@ -88,6 +88,20 @@ class CallKindTotalsTest {
         assertThat(of(totals, CallKind.PROOFREAD).prefillShare()).isEmpty();
     }
 
+    // 15.2: two drafts, one with a 0.4 s first token and one with none: the mean is 0.4 s over the one call.
+    @Test
+    void record_oneDraftWith400msOneWithNone_meanFirstTokenIsFortyOverOneCall() {
+        final CallKindTotals totals = CallKindTotals.of(List.of(
+                answered(
+                        CallKind.DRAFT,
+                        3000,
+                        new TokenUsage(800, 90, Duration.ofMillis(2500), Duration.ofMillis(400), null)),
+                answered(CallKind.DRAFT, 2000, new TokenUsage(700, 60, Duration.ofMillis(1500)))));
+
+        assertThat(of(totals, CallKind.DRAFT).meanFirstToken()).contains(Duration.ofMillis(400));
+        assertThat(of(totals, CallKind.DRAFT).attempts()).isEqualTo(2);
+    }
+
     // A first-token time the call measured itself wins over the provider's prompt-evaluation time.
     @Test
     void record_measuredFirstToken_isUsedBeforeThePromptEvaluationTime() {

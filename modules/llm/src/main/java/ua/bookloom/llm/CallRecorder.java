@@ -27,6 +27,7 @@ import ua.bookloom.llm.provider.ProviderCallResult;
 final class CallRecorder {
 
     private static final String NOT_REPORTED = "-";
+    private static final String MISSING = "missing";
 
     private final CallLedger ledger;
     private final String providerId;
@@ -129,7 +130,7 @@ final class CallRecorder {
             final @Nullable ServedCall served) {
         log.debug(
                 "Provider chat call model={} kind={} attempt={} wallMs={} outcome={} prompt={} completion={} cached={}"
-                        + " sourceChars={}{}",
+                        + " promptEvalMs={} ttftMs={} sourceChars={}{}",
                 modelId,
                 request.callKind(),
                 attempt,
@@ -138,6 +139,8 @@ final class CallRecorder {
                 figure(usage == null ? null : usage.prompt()),
                 figure(usage == null ? null : usage.completion()),
                 figure(usage == null ? null : usage.cachedPrompt()),
+                millis(usage == null ? null : usage.promptEval()),
+                millis(usage == null ? null : usage.promptEval()),
                 request.messages().stream()
                         .mapToInt(message -> message.content().length())
                         .sum(),
@@ -166,6 +169,11 @@ final class CallRecorder {
     }
 
     // A figure the provider did not report is a dash in the log, never a 0.
+    // The word "missing", never 0, for a time the server did not report.
+    private static String millis(final @Nullable Duration time) {
+        return time == null ? MISSING : String.valueOf(time.toMillis());
+    }
+
     private static String figure(final @Nullable Integer value) {
         return value == null ? NOT_REPORTED : String.valueOf(value);
     }
