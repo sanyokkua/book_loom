@@ -40,7 +40,7 @@ class SettingsSummaryScreenTest extends SettingsScreenTestBase {
 
         assertThat(button("settings-summary-test").isDisable()).isTrue();
         assertThat(text("settings-summary-reason"))
-                .isEqualTo("Unavailable while “Translation” is running. Wait for it to finish or stop it.");
+                .isEqualTo("BookLoom is translating. Try again when the run ends or while it is paused.");
     }
 
     // IF the card did not say whose model it names, THEN a person could not tell which program a translation uses.

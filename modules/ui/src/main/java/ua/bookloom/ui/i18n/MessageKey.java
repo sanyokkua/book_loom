@@ -3246,6 +3246,7 @@ public enum MessageKey {
     NAV_FOOTER_SELECTION_TIP("nav.footer.selection.tip"),
     /** Why a model action is off while a translation is at work. */
     MODEL_BLOCKED_PAUSE_FIRST("model.blocked.pauseFirst"),
+    MODEL_BLOCKED_PROVIDER_CHECK("model.blocked.providerCheck"),
     /** Why Start translation is off while the names pass runs. */
     START_BLOCKED_NAMES_PASS("start.blocked.namesPass"),
     /** Heading of the question asked before leaving a screen with unsaved changes. */

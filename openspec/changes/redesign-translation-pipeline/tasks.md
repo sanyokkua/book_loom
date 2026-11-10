@@ -2109,7 +2109,7 @@ screen recommends a model by memory, and every model picker gets a name filter (
     with no time to first token; `ProgressStepDetail` leaves a missing figure out of its average.
   - **Done when:** the tests are green.
 
-- [ ] 15.4 Make the Providers screen say why a model check is not started while a run translates, reusing the existing
+- [x] 15.4 Make the Providers screen say why a model check is not started while a run translates, reusing the existing
   activity refusal, so the person learns that pausing the run frees the model. → :ui, docs
   - **Satisfies:** "Say that a check is not started while a run holds the model" (settings)
   - **Depends on:** 15.3; 5.8 (the Advanced features stage already refused through the same activity kind)

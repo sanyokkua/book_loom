@@ -10,7 +10,8 @@ import ua.bookloom.ui.state.RunStateView.Text;
 /**
  * Why a model action waits for other model work, in the words the README gives the two common cases: a translation
  * at work holds every other model action ("Pause the translation first — BookLoom sends one model request at a time"),
- * and the names pass holds Start translation ("Wait until the names pass ends"). Any other conflict names the work.
+ * and the names pass holds Start translation ("Wait until the names pass ends"). A provider's Test inference is the
+ * exception: a paused run lets it through, so the translation's hold is worded "try again while it is paused". Any other conflict names the work.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
 // cannot see the private constructor @NoArgsConstructor generates (ADR-0024).
@@ -28,6 +29,9 @@ public final class BlockedWords {
     public static Text why(final ActivityKind blocker, final ActivityKind wanted) {
         Objects.requireNonNull(blocker, "blocker");
         Objects.requireNonNull(wanted, "wanted");
+        if (blocker == ActivityKind.TRANSLATION && wanted == ActivityKind.PROVIDER_INFERENCE_TEST) {
+            return Text.of(MessageKey.MODEL_BLOCKED_PROVIDER_CHECK);
+        }
         if (blocker == ActivityKind.TRANSLATION) {
             return Text.of(MessageKey.MODEL_BLOCKED_PAUSE_FIRST);
         }

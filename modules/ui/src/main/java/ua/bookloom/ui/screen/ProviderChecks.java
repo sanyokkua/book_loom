@@ -28,6 +28,7 @@ import ua.bookloom.ui.dialog.ProviderTestDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
+import ua.bookloom.ui.state.BlockedWords;
 import ua.bookloom.ui.state.ProviderTest;
 import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StageChip;
@@ -195,7 +196,7 @@ final class ProviderChecks {
         final ActivityKind blocker = viewModel.tests().blockedBy().get();
         return !refusal.isEmpty() || blocker == null
                 ? refusal
-                : messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(blocker.label()));
+                : BlockedWords.in(messages, blocker, ActivityKind.PROVIDER_INFERENCE_TEST);
     }
 
     // The model tests have two ways in: the quiet one leaves its line beside the button, "Test with details" opens the

@@ -47,7 +47,7 @@ body, status, time, model load, first token, speed, response).
 The two tests that use the model, **Test inference** and **Test advanced features**, each have two buttons: the quiet
 one runs the test and leaves its result sentence beside the button, and **Test with details** runs it and opens the test
 dialog at once (the summary card's Test is the detailed one). Neither opens the generic progress dialog; the test still
-counts as model work (one at a time, the title bar's chip, refused while a translation is translating) and keeps the
+counts as model work (one at a time, the title bar's chip, refused while a translation is translating: no request is sent, the line under the buttons and the summary card read "BookLoom is translating. Try again when the run ends or while it is paused."; a paused, stopped or ended run lets it run; Test connection and Test models are never refused; other model actions keep "Pause the translation first…") and keeps the
 navigation locked while it runs. In the dialog the request line and the body appear as soon as the request is sent;
 the Response column reads "Waiting for the model" and the Time figure counts up until the reply comes, then the verdict,
 the reply and the figures fill in. While the test runs the dialog offers **Stop**; Close (or Escape) then asks "Close
@@ -88,7 +88,7 @@ look (ADR-0044) covers only the two default loopback addresses.
 requests with invented text and lists one verdict per check it ran: a recognised engine runs two (structured answers,
 turning reasoning off), a generic server or OpenRouter four ("Structured answers: honoured", "Turning reasoning off:
 works with reasoning_effort", "top_k/min_p: ignored", "Answer cap: max_tokens"). The verdicts are kept on the model.
-Like Test inference it is refused while a translation is translating and runs while the run is paused. The test
+Like Test inference it is not started while a translation is translating (same sentence, no request sent) and runs while the run is paused, stopped or ended. The test
 dialog's request line is the route the engine was actually reached on (LM Studio's `/api/v0/chat/completions`). Its
 dialog opens with one paragraph on what the test is for and that it costs a few short model calls, then one row per
 check it ran: what was asked ("Sent a request that asks for a JSON answer in a fixed shape."), what came back ("The
