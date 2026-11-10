@@ -2251,7 +2251,7 @@ only invented-text outputs and the results table are committed (design D24).
   - **Done when:** the rows hold numbers and a pass or fail; a failing hard grader is investigated and fixed in a
     separate task branch before 16.3, or reported to the owner if it needs a decision.
 
-- [ ] 16.3 Run `sequence` paired against `79ffede6`, so the consistency and meaning claims rest on about 320
+- [x] 16.3 Run `sequence` paired against `79ffede6`, so the consistency and meaning claims rest on about 320
   paragraphs. → :pipeline (eval, local), docs
   - **Satisfies:** enabling work for design D24
   - **Depends on:** 16.2
