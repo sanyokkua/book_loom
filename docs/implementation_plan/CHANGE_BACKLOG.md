@@ -1,5 +1,5 @@
 **Status:** Final **Owner:** architect **Audience:** anyone picking up the next unit of work **Last Updated:**
-2026-10-19 **Cross-references:** `docs/adr/ADR-0017-infrastructure-first-delivery-order.md`,
+2026-11-11 **Cross-references:** `docs/adr/ADR-0017-infrastructure-first-delivery-order.md`,
 `docs/adr/ADR-0023-backend-complete-milestone-and-backlog-interstitials.md`,
 `docs/adr/ADR-0016-openspec-delivery-tracking.md`, `docs/adr/ADR-0029-transcode-to-utf8-on-unrepresentable-target-text.md`,
 `docs/adr/ADR-0030-synthesize-a-missing-epub-mimetype-entry-on-write.md`, `docs/implementation_plan/07_ROADMAP.md`,
@@ -25,7 +25,14 @@ translation pipeline is redesigned by a separate proposal, `docs/proposals/2026-
 the change after `finalize-ui-and-persistence`. **Done:** `finalize-ui-and-persistence`
 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/`, proposed 2026-10-20, archived 2026-10-27) finished the UI to the 2026-10-19 mockup, added the
 Projects screen and the full Settings, and keeps state and settings in SQLite (ADR-0043); every task, the final gate, the hand run and the owner's checks included, is done, and its specs are folded into
-`openspec/specs/`. **Next:** `redesign-translation-pipeline`, after the owner's review.
+`openspec/specs/`. **Done:** `redesign-translation-pipeline` (`openspec/changes/redesign-translation-pipeline/`,
+built 2026-10-28 to 2026-11-11) re-centred the pipeline on three stages, Prepare, Translate and Proofread: one context
+builder over the book map, one repair behind the never-worse gate, no judge, reviewer, directed fix, backward revision
+or export consistency pass, export with no model call, server engines and per-model profiles, the Models tab and the
+memory-based model recommendation. Every group, the gate and the hand run are done; the owner's checks (task 17.4) and
+the archive remain. Its closing run is `docs/DEVELOPMENT.md#redesign-closing-run`; the falsifiers it met and the work
+it deferred are rows D20 to D25 in `#decision-debt`. **Next:** the `## Workflow follow-up` of its `tasks.md` (spec
+titles and Purpose paragraphs after archive), then the next change from this list.
 
 ## where-this-stands {#where-this-stands}
 
@@ -243,7 +250,9 @@ scratch. **D6 is not one of those five** — it surfaced later, while building `
 (change 5), and is recorded here for the same reason rather than folded into the earlier change's count. **D7
 through D10 surfaced later still**, while writing change 5's design and non-goals. What this section adds is an
 **owner for every one** — previously D1–D5 were named and assigned to nobody, and each finding since is assigned the
-moment it is found.
+moment it is found. **D20 to D25 come from `redesign-translation-pipeline`**: its closing run
+(`docs/DEVELOPMENT.md#redesign-closing-run`) and its hand run (task 17.2). D20 to D23 are the known limits the owner
+accepted on 2026-11-11; the 17.2 hand-run finding D7 is row D24 here, so the two D7s are not the same finding.
 
 | # | Finding | Status | Owner |
 |---|---|---|---|
@@ -266,6 +275,12 @@ moment it is found.
 | D17 | Declared language codes arrive unnormalized (`ua`, `EN`, `en-US`) | **Closed** by `complete-translation-workflow` — `util.lang.LanguageTags.normalize` (case-folds, `ua`→`uk`, region-tag handling, any well-formed tag the JDK can name); found by the 2026-09-12 `Books_Examples` sweep | `complete-translation-workflow` |
 | D18 | `:document` logs only at its port boundary: its readers, writers and maskers write no DEBUG or TRACE lines | **Partly closed** by `complete-translation-workflow` — the readers, walkers, inspection, splitter, `Fb2Writer` and the placeholder gate now log DEBUG parameters and TRACE text. Still without DEBUG lines: `EpubWriter`, `MarkdownWriter`, `TxtWriter`, `XhtmlParser`, `OpfParser`, `DrmAdjudicator`, `EpubStructureBuilder`, `ZipEntryReader`, `FormatResolver`, `CharsetLadder`, `TreeMasker`, `PlainTextMasker`, `Unmasker`, `MarkdownEscaper`, `MarkdownStructureCheck` | Unowned — the next `:document` change |
 | D19 | A provider HTTP error (for example LM Studio's `400` "Model unloaded") is flagged as a `validation` segment and counted as processed, so the run carries on and finishes with every remaining segment flagged; it should end the run | **Closed** by `complete-translation-workflow` — such an error pauses the run with the provider-error state and redoes the interrupted call on resume (and recovers by itself for an outage); found in `add-ui-translation-workspace`'s hand run | `complete-translation-workflow` |
+| D20 | Better quality than the old pipeline (`79ffede6`) is not proven on the paired reading (closing row Q1): on `sequence` at Balanced a blind reading gives 66 paragraphs better against 47 worse (p = 0.090; 68:45 was needed), Max 58:51 (p = 0.57); only repeat 0 of K = 3 was read. Term consistency (LTCR-1) rose from 0.9108 to 0.9682; the new pipeline makes about 2.6 times the calls and takes about 1.4 times the time on that book | Open — accepted by the owner as a known limit (2026-11-11), no follow-up planned; reading repeats 1 and 2 (about 4 hours) would extend Q1 to K = 3 (`docs/DEVELOPMENT.md#redesign-closing-run`) | Unowned — accepted by the owner; no follow-up change planned |
+| D21 | The narrator's gender slips in the verb forms of first-person chapters: 9 slips at Balanced and 5 at Max on the 328-paragraph `sequence` book, against 0 in the old pipeline | Open — accepted by the owner as a known limit (2026-11-11); the review desk and the audit's gender findings are the guard | Unowned — accepted by the owner; no follow-up change planned |
+| D22 | Source-language content words stay in ru→uk output: 5 of 100 random paragraphs (3 without two telegrams that are Russian in the source), above the design's 1 % falsifier (closing row R8). e4b keeps a Russian word where the Ukrainian one differs slightly, and no check reads single words: the language-identity check reads a whole paragraph and the letter check sees only ы э ъ ё | Open — accepted by the owner as a known limit (2026-11-11). Deferred fix: a word-level source-language check among the deterministic checks (a new requirement) | Unowned — accepted by the owner; no follow-up change planned |
+| D23 | The names pass stores possessives and case forms as separate glossary rows with their own targets (closing rows R3 and R4): 7 of the top 20 names had two spellings in the ru→uk book, and a possessive row read as another character raised a false name-swap block. One flagged paragraph (1 of 1,280, 182 words) was written in Russian: the one repair removed a stray letter but the false blocks stayed, and export re-checked the stored refused draft and fell back to the source | Open — accepted by the owner as a known limit (2026-11-11). Deferred fix: merge possessives and case forms into the name's one entry in the names pass (a new requirement); a separate question is whether export should prefer a repaired reply over the refused draft | Unowned — accepted by the owner; no follow-up change planned |
+| D24 | On the en→uk invented book of the 17.2 hand run (its finding D7) the names pass gave short-name entries with an empty Forms column | Open, low — the same names-pass area as D23, not fixed in the change | Unowned — needs a change |
+| D25 | A chapter summary was not stored on the small invented books of the 17.2 hand run: in 3 of 5 runs, all on `gemma4:26b-mlx`, the summary's code gate dropped every sentence (`Chapter summary not kept … reason=all-dropped`), and one e4b summary kept 1 of 3 sentences. The whole-book runs made 102 (e4b) and 60 (26b) summary calls; how many of those were kept was not counted | Open — needs a look on a real book: whether the gate is too strict for a short chapter or the model's sentences use words the chapter's text does not | Unowned — needs a change |
 
 **The review of `add-translation-engine-and-cli` found more gaps** — EPUB language metadata, serialization details, the
 command line and what the translation screen will need. They are recorded, each with a reproduction, in
@@ -724,7 +739,7 @@ every screen is built against bundle keys from the start rather than retrofitted
 
 | # | Change | Capability |
 |---|---|---|
-| 26 | `add-backward-revision-sweep` | `translation-pipeline` MOD — consumed by `complete-translation-workflow`: the `REVISE` stage on Max and the export's consistency pass |
+| 26 | `add-backward-revision-sweep` | `translation-pipeline` MOD — consumed by `complete-translation-workflow` (the `REVISE` stage on Max and the export's consistency pass), then replaced by the Proofread stage and removed by `redesign-translation-pipeline` (groups 13 and 14; ADR-0046) |
 | 27 | `add-packaging-and-release` | *(skip_specs)* — only the packaged launch smoke's resolve-all step landed in `complete-translation-workflow` (task 16.2) |
 | 28 | `complete-ukrainian-localization` | `localization` MOD |
 

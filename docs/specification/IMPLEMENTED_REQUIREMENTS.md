@@ -280,7 +280,7 @@ These were left out on purpose and are ordered in `docs/implementation_plan/CHAN
   in-app language switch, the Projects screen, and add / edit / delete provider with credentials.
 - Settings tabs Models, Generation, Automation and Storage.
 - The translation pipeline redesign, the next change `redesign-translation-pipeline`
-  (`docs/proposals/2026-10-16-translation-pipeline-redesign.md`).
+  (`docs/proposals/2026-10-16-translation-pipeline-redesign.md`); built since, see the last section.
 - Numeral masking and an automatic model pre-scan of names (decided against, D-7); parallel cloud lanes (local inference
   is single-flight).
 
@@ -317,3 +317,39 @@ The Projects screen, the full Settings, SQLite storage, continue after a restart
 | FR-RESUME-02 | implemented | `finalize-ui-and-persistence` | `resume` | Reopen the last project at launch; a run left running or paused shows as interrupted and continues at its first pending segment. |
 | FR-RESUME-03 | implemented | `finalize-ui-and-persistence` | `resume` | Pause and resume of a running job; reopen-last-project switch in Settings › Automation. |
 | FR-RESUME-05 | implemented | `finalize-ui-and-persistence` | `resume` | Stop is terminal; a new run starts at the first pending segment, also after a restart. |
+
+## Requirements changed by `redesign-translation-pipeline`
+
+Built and checked by the gate, the closing run (`docs/DEVELOPMENT.md#redesign-closing-run`) and the hand run of task
+17.2; the owner's checks (task 17.4) and the archive are still to come, so the change sits in
+`openspec/changes/redesign-translation-pipeline/` and its delta specs are not yet merged into `openspec/specs/`. Rows
+already annotated in the tables above (FR-ALGO-04, FR-ALGO-08, FR-ALGO-10, FR-ALGO-11, FR-EXPORT-06, FR-SETTINGS-03,
+FR-SETTINGS-05) are not repeated. Four quality results are known limits the owner accepted on 2026-11-11 (quality not
+proven better than the old pipeline, narrator gender slips, source-language words in ru→uk output, the names pass's
+separate rows for possessives and case forms); they are rows D20 to D23 of
+`docs/implementation_plan/CHANGE_BACKLOG.md#decision-debt`, not unbuilt requirements.
+
+| Requirement id | Status | Change | Owning capability (`openspec/specs/<capability>/`) | Notes |
+|---|---|---|---|---|
+| FR-ALGO-01 | implemented | `redesign-translation-pipeline` | `translation-pipeline` | A run has three stages, Prepare, Translate and Proofread, and is Completed only after Proofread (design D15). |
+| FR-ALGO-02 | implemented | `redesign-translation-pipeline` | `translation-pipeline` | A chunk closes on the model tier's current-part budget (600 or 1,000 estimated source tokens) or at a chapter boundary, chapters found by one rule for every format (groups 11 and 12). |
+| FR-ALGO-07 | implemented | `redesign-translation-pipeline` | `translation-pipeline` | Earlier chapters' stored two-to-three-sentence summaries replace the rolling summary (group 12). Known limit: on the 17.2 hand run's small invented books the summary's code gate dropped every sentence in 3 of 5 runs (backlog D25). |
+| FR-QA-01 | implemented | `redesign-translation-pipeline` | `quality-gates` | Every check finding has a level, BLOCK, REPAIR or NOTE; a function-word residue check replaces the listed foreign words (group 10). Known limit: no check reads a single source-language word (backlog D22). |
+| FR-QA-02 | implemented | `redesign-translation-pipeline` | `quality-gates` | One repair call per failing segment (Fast: a re-draft only for lost formatting marks), kept only through `NeverWorse`; no judge, per-chunk reviewer or directed fix (groups 10 and 14, ADR-0046). |
+| FR-QA-07 | implemented | `redesign-translation-pipeline` | `quality-gates` | Acceptance by levels: hard gates pass and no BLOCK finding is left (`AcceptanceRule`, `CheckLevels`). |
+| FR-GLOSS-01 | implemented | `redesign-translation-pipeline` | `glossary` | The names pass keeps one entry per name with its forms, origins and states (group 7). Known limits: possessives and case forms can still be stored as separate rows (backlog D23), and an English book got short-name entries with no forms (backlog D24). |
+| FR-GLOSS-02 | implemented | `redesign-translation-pipeline` | `glossary` | The table shows kind, forms, a suggested target marked likely and accepted by a tick, the state (suggested, pinned, locked) and gender, each value with its origin (group 7). |
+| FR-INFER-01 | implemented | `redesign-translation-pipeline` | `inference` | The server engine (Ollama, LM Studio, llama-server, OpenRouter, Unsloth or a generic OpenAI-compatible server) is detected on Save, Test and Detect again and selects each request's fields; the kind stays the transport (ADR-0047). |
+| FR-INFER-07 | implemented | `redesign-translation-pipeline` | `llm-provider` | One ordered provider-error catalogue maps every transport and HTTP outcome, by the meaning of the reply's text before the status, to one error code (group 3). |
+| FR-INFER-09 | implemented | `redesign-translation-pipeline` | `inference` | Reasoning per model profile; structured answers step down per model and call kind (group 6). |
+| FR-INFER-09e | implemented | `redesign-translation-pipeline` | `inference` | A setting a model refuses is dropped, the call repeated without it and the refusal remembered per model (group 6). |
+| FR-INFER-10 | implemented | `redesign-translation-pipeline` | `llm-provider` | Each call's line names provider, engine, endpoint host, model, call kind, attempt and status, never a secret or book text; the timings an engine reports travel with the usage, and a missing figure is shown as an en dash and left out of averages (groups 5 and 15). |
+| FR-PROV-02 | implemented | `redesign-translation-pipeline` | `llm-provider` | The engine is detected from the server's replies and can be corrected with Treat this server as… (ADR-0047). |
+| FR-PROV-03 | implemented | `redesign-translation-pipeline` | `llm-provider` | A provider holds its server engine and the engine's version beside kind, endpoint and timeouts (group 5). |
+| FR-MODEL-01 | implemented | `redesign-translation-pipeline` | `settings` | One model-name filter on the Models chooser, the Providers list and the model-pick dialog; a model is recommended by the computer's memory, read locally, on the empty Projects screen, under the model field and in the model-pick dialog (group 15). |
+| FR-MODEL-06 | implemented | `redesign-translation-pipeline` | `llm-provider` | Where an engine answers any id with the model it has loaded, the id is checked against the server's own list before the first chat call (`engine/ModelIdCheck`). |
+| FR-RESUME-03 | implemented | `redesign-translation-pipeline` | `resume` | A paused or stopped run continues inside Proofread at the window it reached ("Continues with Proofread at window n of m"); the stall watchdog counts an answered Proofread call as progress. |
+| FR-REVIEW-03 | implemented | `redesign-translation-pipeline` | `review-queue` | The desk lists the Proofread marks with their reasons, Changed by proofread and Waiting on a gender, and offers Undo proofread (group 13). |
+| FR-REVIEW-10 | implemented | `redesign-translation-pipeline` | `review-queue` | Proofread and the term sweep never rewrite a segment the person edited; such a segment gets a proposal (groups 13 and 14). |
+| FR-REVIEW-A1 | implemented | `redesign-translation-pipeline` | `review-queue` | Try again rebuilds the context through the run's context builder from the current glossary and settings, never a replay of the stored prompt (group 11). |
+| FR-BRIEF-02 | implemented | `redesign-translation-pipeline` | `book-brief` | The brief suggestion adds the story shape and the Chapter summaries switch (group 12). |

@@ -2354,7 +2354,7 @@ There is no separate acceptance test: the gate, the smoke and the hand run are t
   - **Test first:** none; the recorded hand run is the evidence
   - **Done when:** every step is recorded as seen, or a defect is filed and fixed in a task branch before 17.3.
 
-- [ ] 17.3 Update the project's own documents to the finished change, so the next reader finds the pipeline as built.
+- [x] 17.3 Update the project's own documents to the finished change, so the next reader finds the pipeline as built.
   → :app (no code; `AGENTS.md` and the implementation plan), docs
   - **Satisfies:** enabling work for design D28
   - **Depends on:** 17.2

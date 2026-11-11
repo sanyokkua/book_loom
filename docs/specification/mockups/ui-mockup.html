@@ -1718,7 +1718,7 @@ const FLAGGED = [
     {loc: 'ch3 · p17', kind: ['may be in another language', 'b-err'], src: 'The tide tables are printed in every harbour.', tgt: 'The tide tables are printed in every harbour.', why: 'The translation is still in English.', tech: 'untranslated · language check · high; refused twice · acceptance rule'},
     {loc: 'ch4 · p02', kind: ['number differs', 'b-warn'], src: 'g is about 9.81 m/s².', tgt: 'g дорівнює приблизно 9,8 м/с².', why: '9.81 became 9,8.', tech: 'number · number check · low'},
     {loc: 'ch4 · p19', kind: ['he/she form', 'b-warn'], src: 'The narrator says she measured it herself.', tgt: 'Оповідач каже, що виміряв це сам.', why: 'The narrator is a woman; the verb is in the male form.', tech: 'narrator-gender · gender check · medium'},
-    {loc: 'ch5 · p08', kind: ['the check was unsure', 'b-warn'], src: 'Weightlessness is falling without stopping.', tgt: 'Невагомість — це падіння без зупинки.', why: 'The proofread suggested a smoother wording.', tech: 'proofread-doubt · reviewer · low', proposal: 'Невагомість — це безупинне падіння.'},
+    {loc: 'ch5 · p08', kind: ['the check was unsure', 'b-warn'], src: 'Weightlessness is falling without stopping.', tgt: 'Невагомість — це падіння без зупинки.', why: 'The proofread suggested a smoother wording.', tech: 'proofread-doubt · proofread · low', proposal: 'Невагомість — це безупинне падіння.'},
 ];
 const RV = {sel: 0, tab: 'why', st: FLAGGED.map(() => 'flag'), dirty: false, note: false, menu: false, tech: false};
 const RV_WORD = {flag: ['to review', 'flag'], ok: ['accepted', 'done'], edit: ['your edit', 'done'], skip: ['later', 'wait']};

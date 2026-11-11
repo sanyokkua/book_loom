@@ -1,6 +1,11 @@
 # Proposal: re-centre the translation pipeline on prepare → translate → proofread
 
-Status: proposed (owner review pending) · 2026-10-16, evidence extended 2026-10-20 · evidence (owner-local):
+Status: done by the change `redesign-translation-pipeline` (`openspec/changes/redesign-translation-pipeline/`; built
+2026-10-28 to 2026-11-11, archive after the owner's checks). Its results, and the known limits the owner accepted on
+2026-11-11, are in `docs/DEVELOPMENT.md#redesign-closing-run`. The text below is the proposal as written and is not
+updated.
+
+Proposed 2026-10-16, evidence extended 2026-10-20 · evidence (owner-local):
 `.temporary_context/new_translation_3/ANALYSIS.md` (two gemma4 26b runs, English sources) and the Russian → Ukrainian run
 of 2026-10-18 in the same folder (`За мільярд років до кінця світу`, its run log
 `~/Library/Logs/BookLoom-Dev/bookloom-trace-run-20261018-103640.log`), reviewed below.

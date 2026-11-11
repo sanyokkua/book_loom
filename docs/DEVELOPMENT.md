@@ -60,8 +60,8 @@ The full gate — what pre-push and CI run — is:
 ./gradlew clean build check spotlessCheck
 ```
 
-About 4 minutes on the owner's machine (measured 2026-10-01: 4m 13s, 118 tasks; it was 8m 39s before the tests ran
-in parallel forks without TestFX's fixed sleeps), of which about two are `:ui`'s ~6,900 TestFX tests. While coding, use the focused loop
+About 20 minutes on the owner's machine (measured 2026-11-11 at the end of `redesign-translation-pipeline`: 17m 45s
+to 20m 17s from clean; it was 4m 13s on 2026-10-01). While coding, use the focused loop
 instead ([§7](#test-speed)). Note your own baseline: a run materially longer than it is treated as hung.
 
 ---

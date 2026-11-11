@@ -13,16 +13,17 @@ canonical-equal round trip. Java 25 + JavaFX 26, Gradle Kotlin DSL + Guice, JUni
 ## Where it stands — keep this paragraph current
 
 Real: `:api` (`Result`/`AppError`, document model, `DocumentPort`, project and brief records, storage and service
-ports), `:util` (paths, hashing, the language catalogue), `:document` (four-format round trip, inline masking to
-`⟦gN⟧`, unmask behind a placeholder hard gate that checks the multiset and the order of paired placeholders, book
-inspection, sentence splitting, auxiliary text units — verified on the owner's local corpus, 235 books at the last
-sweep), `:llm` (chat-model contract, factory, pseudo model, gated/retried Ollama-native and OpenAI-compatible clients,
-server engines and per-model profiles, token usage, verification, model discovery), `:persistence` (in-memory adapters
-for the command line and tests, SQLite adapters for the window, behind the storage ports), `:pipeline` (the translation
-engine and the pausable, interruptible job; prompts, the context builder, chunk packing, the stored-project service,
-the glossary and names pass, translation memory, chapter summaries, the deferral register, the quality gates below,
-export), `:ui` (the shell, the workflow screens, the state mirror, English and Ukrainian bundles chosen by the OS,
-light/dark theme) and `:app` (boot, logging, single-instance lock, DI, the window, the command line).
+ports), `:util` (paths, hashing, the language catalogue), `:document` (four-format round trip, inline masking to `⟦gN⟧`,
+unmask behind a placeholder hard gate that checks the multiset and the order of paired placeholders, book inspection,
+sentence splitting, auxiliary text units — verified on the owner's local corpus, 235 books at the last sweep), `:llm`
+(chat-model contract, factory, pseudo model, gated/retried Ollama-native and OpenAI-compatible clients, detected server
+engines, per-model profiles, bundled quant and language knowledge, timings, verification, model discovery),
+`:persistence` (in-memory adapters for the command line and tests, SQLite adapters for the window, behind the storage
+ports), `:pipeline` (the translation engine and the pausable, interruptible job; prompts, the context builder over the
+book map, chunk packing, the stored-project service, the glossary and names pass, translation memory, chapter summaries,
+the deferral register, the quality gates below, export), `:ui` (the shell, the workflow screens, the state mirror,
+English and Ukrainian bundles chosen by the OS, light/dark theme) and `:app` (boot, logging, single-instance lock, DI,
+the window, the command line).
 
 A book of any of the four formats goes through the whole pipeline from the window or the command line, with the pseudo
 model or a configured real provider, as a run on the stored project that starts at its first pending segment and stores
@@ -32,15 +33,16 @@ on the token budget (and at a chapter boundary), drafts them in JSON batches siz
 protected spans and control codes by code, runs the deterministic checks (each finding has a level, BLOCK, REPAIR or
 NOTE) and decides every segment by the acceptance rule: a draft that fails gets **one repair** call (Fast: a re-draft
 only for lost formatting marks) and the new text stays only through the never-worse gate (`NeverWorse`), else the
-segment is flagged. Each draft carries its context package and every record its snapshot; repeated passages reuse the
-translation memory; new names and deferrals are kept as the run goes; each finished chapter gets a stored summary.
-**Proofread** runs after the last chunk at every dial: a final audit, a term sweep, the narrator inference and the
-deferrals settled by code, then a mark list; Fast stops there and lists the marks on the review desk, Balanced reads each
-marked window in one minimal-edit call and Max adds a second round over every story paragraph, each rewrite kept only
-through the never-worse gate (a person's edit gets a proposal). There is no judge, no per-chunk reviewer, no directed
-fix, no backward revision and no consistency pass (groups 10, 13 and 14 of `redesign-translation-pipeline` removed
-them; ADR-0046). The quality dial (Fast / Balanced / Max) sets only the fixing call and how far Proofread reads; the
-review mode (Unattended / Assisted / Manual, a setting and a launch flag) decides only when the run pauses.
+segment is flagged. One context builder plans every call from the book map (the window's names and terms, recent
+characters, earlier chapters' summaries). Each draft carries its context package and every record its snapshot; repeated
+passages reuse the translation memory; new names and deferrals are kept as the run goes; each finished chapter gets a
+stored summary. **Proofread** runs after the last chunk at every dial: a final audit, a term sweep, the narrator
+inference and the deferrals settled by code, then a mark list; Fast stops there and lists the marks on the review desk,
+Balanced reads each marked window in one minimal-edit call and Max adds a second round over every story paragraph, each
+rewrite kept only through the never-worse gate (a person's edit gets a proposal). No judge, per-chunk reviewer, directed
+fix, backward revision or consistency pass remains (ADR-0046). The quality dial (Fast / Balanced / Max) sets only the
+fixing call and how far Proofread reads; the review mode (Unattended / Assisted / Manual, a setting and a launch flag)
+decides only when the run pauses.
 
 Export is a separate action and makes no model call: it validates each segment, writes the book and the chosen side
 files (glossary CSV, bilingual HTML, quality report), asks before replacing an existing file and reports the stored
@@ -50,11 +52,12 @@ recovery, writes what a stopped run translated and is the headless proof tool (`
 
 Every model call is bounded (output cap, per-kind timeout, one retry with a new seed and a lower cap, the Ollama reply
 read as a stream with an idle gap); a step that pauses twice is flagged and the run goes on, a paused run can skip the
-failing segment, and a resume continues at the call that failed. Invisible text is no segment, and a segment with no
-letter, a Roman numeral, one character or only a locked name is kept verbatim with no call. Per-model profiles (built-in
-rows with evidence, the facts read only when the person acts, the person's overrides) decide the reasoning field, system
-role, samplers, structured rung and window of each call; model advice (quant, declared languages) is shown and never
-blocks Start.
+failing segment, and a resume continues at the call that failed. A stall watchdog ends a call held 1.5× its timeout, or
+after 20 minutes with no decided segment and no answered Proofread call. Invisible text is no segment, and a segment
+with no letter, a Roman numeral, one character or only a locked name is kept verbatim with no call. Per-model profiles
+(built-in rows with evidence, the facts read only when the person acts, the person's overrides) decide the reasoning
+field, system role, samplers, structured rung and window of each call; model advice (quant, declared languages) is shown
+and never blocks Start. Timings are per engine; a missing figure is an en dash (–), never 0, and stays out of averages.
 
 The window opens a book on the stored project (one current project, the book's content matched against the stored
 projects so a known book is never imported twice, the import states chosen from the inspection's verdict), numbers five
@@ -63,25 +66,32 @@ connection chip in its title bar. Book Brief (languages, who narrates, name poli
 switches; read-only while a translation is at work, languages locked once a segment is decided); Names & style (the
 glossary with one entry per name and its forms, the Recurring terms card, Scan · Review · Translate · Stop, CSV, an
 autonomous names pass with Undo all); Translating (summary strip, live card with Simple and Detailed rows and the row's
-call, prompt and reply, the activity log, the provider-error banners with Skip segment and Retry now, the Proofread stage
-chip and `window` rows, and the review desk with accept, edit, revert, skip, apply a proposal, Changed by proofread, Undo
-proofread and Try again with the context rebuilt from the current glossary and settings); Export (Save as, side files,
-tiles from the project and the stored last export, banners for a translating, partial or empty book, the
-export-complete dialog). Settings has Providers (tests the form as typed in three stages), Models (per-model settings and
-profile overrides), Generation (shows what each quality setting does), Automation, Appearance and Storage & logs; the
-Projects screen lists, opens, continues, renames and removes the stored projects. Saving is SQLite (WAL, JDBI, state as
-JSON documents) at `bookloom.db` in the data folder, a chunk's decisions and run record are one transaction, and a file
-whose schema or stored record shapes changed is set aside as `bookloom.db.old-<time>` before release. The theme is
-token-only and holds WCAG AA in both themes, every operable control explains itself on hover, transitions stop under
-reduced motion, and the first-launch look is the one silent local model listing of ADR-0044.
+call, prompt and reply, the activity log, the provider-error banners with Skip segment and Retry now, the Proofread
+stage chip and `window` rows, and the review desk with accept, edit, revert, skip, apply a proposal, Changed by
+proofread, Undo proofread and Try again with the context rebuilt from the current glossary and settings); Export (Save
+as, side files, tiles from the project and the stored last export, banners for a translating, partial or empty book, the
+export-complete dialog). Settings has Providers (detected engine; tests the form as typed in three stages), Models (a
+name filter, the model's rows per engine and the overrides), Generation (shows what each quality setting does),
+Automation, Appearance and Storage & logs; the Projects screen lists, opens, continues, renames and removes the stored
+projects. A model is recommended from the computer's memory, read locally; its pull command is text only. Saving is
+SQLite (WAL, JDBI, state as JSON documents) at `bookloom.db` in the data folder, a chunk's decisions and run record are
+one transaction, and a file whose schema or stored record shapes changed is set aside as `bookloom.db.old-<time>` before
+release. The theme is token-only and holds WCAG AA in both themes, every operable control explains itself on hover,
+transitions stop under reduced motion, and the first-launch look is the one silent local model listing of ADR-0044.
 
-Measurements and evals live in `docs/DEVELOPMENT.md` (`docs/DEVELOPMENT.md#redesign-arms`, `docs/DEVELOPMENT.md#15d-results`, the prompt-eval and matrix
-sections) and `scripts/eval-matrix.sh`; the history of the groups that were not planned up front, 15a–15j, is in
+Measurements and evals: `docs/DEVELOPMENT.md` (`docs/DEVELOPMENT.md#redesign-arms`, `docs/DEVELOPMENT.md#15d-results`,
+prompt-eval and matrix sections) and `scripts/eval-matrix.sh`; the unplanned groups 15a–15j are in
 `openspec/changes/archive/2026-10-19-complete-translation-workflow/additional-work.md` (IDs unchanged). The archived
-changes `complete-translation-workflow` and `finalize-ui-and-persistence` have every task and the owner's hand checks
-done and their specs folded into `openspec/specs/`; `redesign-translation-pipeline` is under way (groups 1–13 built; group 14 is at its last step).
-Local-only data (sample books, the corpus, eval inputs, outputs and history) lives in the git-ignored
-`.temporary_context/`, described by its `README.md` — never in the home folder.
+changes `complete-translation-workflow` and `finalize-ui-and-persistence` are done, their specs folded into
+`openspec/specs/`. `redesign-translation-pipeline` is built; the owner's checks (17.4) and the archive remain. Closing
+run (`docs/DEVELOPMENT.md#redesign-closing-run`): LTCR-1 0.9682 vs 0.9108; quality better than `79ffede6` not proven (Q1
+66:47, p = 0.090); Bartimaeus 1 en→uk at Balanced 263 min (e4b), 344 min (26b); Max ≈ 1.45× Balanced's time, 1.46× its
+calls; ru→uk (e4b) old 81.9 min / 14 flagged, new 92.1 min / 33 flagged. **Known limits the owner accepted
+(2026-11-11)**, guarded by the review desk (backlog D20–D25): Q1; narrator gender slips (9 Balanced, 5 Max, 0 before);
+source-language words in ru→uk output (5 of 100 paragraphs; no word-level check); possessives and case forms stored as
+separate glossary rows (7 of the top 20 names spelled two ways; one flagged paragraph exported in Russian). Local-only
+data (sample books, the corpus, eval inputs, outputs and history) lives in the git-ignored `.temporary_context/`,
+described by its `README.md` — never in the home folder.
 
 ## Commands
 
@@ -89,7 +99,7 @@ Local-only data (sample books, the corpus, eval inputs, outputs and history) liv
 scripts/test-focused.sh                           # THE INNER LOOP — format + the tests the diff points at + fastTest of dependents
 scripts/test-focused.sh --full-module             # the changed module's full check — once before each commit
 ./gradlew build                                   # compile + lint + test
-./gradlew clean build check spotlessCheck         # THE GATE — exactly what pre-push and CI run (≈4 min; ~2 is :ui TestFX)
+./gradlew clean build check spotlessCheck         # THE GATE — exactly what pre-push and CI run (≈20 min from clean; 17m 45s–20m 17s measured)
 ./gradlew :ui:fastTest                            # a module's tests minus the `slow`-tagged end-to-end classes
 python3 scripts/slowest-tests.py                  # where the last run's test time went
 ./gradlew :document:test --tests 'ua.bookloom.document.golden.*'   # one class or package
