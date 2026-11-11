@@ -2263,7 +2263,7 @@ only invented-text outputs and the results table are committed (design D24).
   - **Test first:** none; the filled rows are the evidence
   - **Done when:** the rows are filled with their verdicts.
 
-- [ ] 16.4 Run the owner's en→uk book on e4b and once on 26b on the owner's machine, so whole-book speed and quality
+- [x] 16.4 Run the owner's en→uk book on e4b and once on 26b on the owner's machine, so whole-book speed and quality
   are known for the two recommended models. → :pipeline (a local run only; nothing of the book committed), docs
   - **Satisfies:** enabling work for design D24
   - **Depends on:** 16.3
