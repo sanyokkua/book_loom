@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 
 class ModelRecommendationTest {
 
@@ -42,5 +44,18 @@ class ModelRecommendationTest {
     @Test
     void pullCommand_tag_isTextOnly() {
         assertThat(ModelRecommendation.pullCommand("gemma4:e4b")).isEqualTo("ollama pull gemma4:e4b");
+    }
+
+    // The advice is Ollama's: shown for Ollama's connection or an Ollama server, never for another engine.
+    @ParameterizedTest
+    @CsvSource({
+        "OLLAMA, OLLAMA, true",
+        "OPENAI_COMPATIBLE, OLLAMA, true",
+        "OPENAI_COMPATIBLE, LM_STUDIO, false",
+        "OPENAI_COMPATIBLE, GENERIC, false"
+    })
+    void isOllamaServer_kindAndEngine_decidesTheAdvice(
+            final ProviderKind kind, final ServerEngine engine, final boolean expected) {
+        assertThat(ModelRecommendation.isOllamaServer(kind, engine)).isEqualTo(expected);
     }
 }

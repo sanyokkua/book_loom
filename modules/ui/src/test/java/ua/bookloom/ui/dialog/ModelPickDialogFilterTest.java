@@ -21,7 +21,11 @@ class ModelPickDialogFilterTest extends ShellTestBase {
 
     private void ask() {
         onFx(() -> injector.getInstance(ModelPickDialog.class)
-                .ask("ollama", List.of("mistral-small3.2:24b", "gemma4:e4b", "qwen3:8b"), model -> {}, () -> {}));
+                .ask(
+                        ModelPickProviders.ollama(),
+                        List.of("mistral-small3.2:24b", "gemma4:e4b", "qwen3:8b"),
+                        model -> {},
+                        () -> {}));
     }
 
     private Optional<TextField> filterField() {

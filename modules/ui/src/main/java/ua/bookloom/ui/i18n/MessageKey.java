@@ -2398,9 +2398,6 @@ public enum MessageKey {
     /** Result word: the item's text seems to carry the next item as well. */
     LIVE_CALL_ITEM_MERGED("live.call.item.merged"),
 
-    /** Words for one reason in an outcome chip, and for a rule a consistency answer broke; arguments: 0 the reason's code lower-cased with dashes as underscores, 1 the code as reported, shown when no words are known. */
-    LIVE_CALL_DETAIL("live.call.detail"),
-
     /** Heading of the source pane when no source language is set. */
     LIVE_SOURCE_FALLBACK("live.source.fallback"),
     /** Heading of the target pane when no target language is set. */
@@ -3004,7 +3001,7 @@ public enum MessageKey {
     REVIEW_READABLE("review.readable"),
     /** Shown under the findings heading of a flagged segment whose record holds no finding. */
     REVIEW_FINDINGS_NONE("review.findings.none"),
-    /** Heading of an edit the reviewer made and the app verified; argument 0 is the criterion's name. */
+    /** Heading of an applied edit an older record keeps; argument 0 is the criterion's name. */
     REVIEW_EDIT_APPLIED("review.edit.applied"),
     /** Compare: the Proofread stage's verdict line; argument 0 is the verdict in words. */
     REVIEW_PROOFREAD_VERDICT("review.proofread.verdict"),
@@ -3014,7 +3011,7 @@ public enum MessageKey {
     REVIEW_EDIT_CRITERION("review.edit.criterion"),
     /** The replacement line of an edit that only deleted its quote. */
     REVIEW_EDIT_DELETED("review.edit.deleted"),
-    /** Hover explanation of the diff of an applied edit: red is what the reviewer removed, green what it put there. */
+    /** Hover explanation of the diff of an applied edit: red is what was removed, green what was put there. */
     REVIEW_EDIT_TIP("review.edit.applied.tip"),
     /** Button that retries the selected segment's translation as it is. */
     REVIEW_RETRY("review.retry"),

@@ -100,15 +100,18 @@ public final class CallTimings {
      * The tokens written a second, from the generation time the engine reported.
      *
      * @param usage the call's usage, or {@code null}
-     * @return the rate, or {@code null} when the completion or its time was not reported
+     * @return the rate, or {@code null} when the completion or its time was not reported or the time is under a
+     *     millisecond
      */
     public static @Nullable Double tokensPerSecond(final @Nullable TokenUsage usage) {
         final @Nullable Integer written = usage == null ? null : usage.completion();
         final @Nullable Duration generation = usage == null ? null : usage.generation();
-        if (written == null || generation == null || generation.isZero()) {
+        // A generation under one whole millisecond has no rate worth showing, and dividing by it would read infinity.
+        final long millis = generation == null ? 0 : generation.toMillis();
+        if (written == null || millis == 0) {
             return null;
         }
-        return written * MILLIS_PER_SECOND / generation.toMillis();
+        return written * MILLIS_PER_SECOND / millis;
     }
 
     /**

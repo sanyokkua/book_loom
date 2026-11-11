@@ -2,6 +2,8 @@ package ua.bookloom.ui.state;
 
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 
 /**
  * The model advice for a computer's memory: a tag to pull and, from a larger memory, one more tag offered as an
@@ -35,6 +37,18 @@ public record ModelRecommendation(
     /** The larger model offered as an option, if any. */
     public Optional<String> optIn() {
         return Optional.ofNullable(optInTag);
+    }
+
+    /**
+     * Whether the advice applies to a provider at all: the pull command is Ollama's, so it is wrong under any other
+     * server, whichever dialect reaches it.
+     *
+     * @param kind the provider's wire dialect
+     * @param engine the engine its requests are shaped for (the person's choice, else the detected one)
+     * @return {@code true} for Ollama's own connection or a server that is Ollama, {@code false} otherwise
+     */
+    public static boolean isOllamaServer(final ProviderKind kind, final ServerEngine engine) {
+        return kind == ProviderKind.OLLAMA || engine == ServerEngine.OLLAMA;
     }
 
     /** The command a person can run themselves to fetch this model; BookLoom never runs it. */

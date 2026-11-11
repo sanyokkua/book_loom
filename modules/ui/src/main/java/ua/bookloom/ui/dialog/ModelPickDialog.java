@@ -12,6 +12,7 @@ import javafx.scene.control.RadioButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.ui.MemorySource;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.Literal;
@@ -23,6 +24,7 @@ import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ModelNameFilter;
+import ua.bookloom.ui.state.ModelRecommendation;
 import ua.bookloom.ui.state.ProviderNames;
 
 /**
@@ -59,12 +61,15 @@ public final class ModelPickDialog implements ModelPickPrompt {
 
     @Override
     public void ask(
-            final String providerId, final List<String> modelIds, final Consumer<String> use, final Runnable notNow) {
-        Objects.requireNonNull(providerId, "providerId");
+            final ProviderConfig provider,
+            final List<String> modelIds,
+            final Consumer<String> use,
+            final Runnable notNow) {
+        Objects.requireNonNull(provider, "provider");
         Objects.requireNonNull(modelIds, "modelIds");
         Objects.requireNonNull(use, "use");
         Objects.requireNonNull(notNow, "notNow");
-        log.debug("asking which of {} model(s) of {} to use", modelIds.size(), providerId);
+        log.debug("asking which of {} model(s) of {} to use", modelIds.size(), provider.id());
         final ToggleGroup group = new ToggleGroup();
         final VBox options = new VBox(LIST_SPACING);
         for (final String modelId : modelIds) {
@@ -77,9 +82,13 @@ public final class ModelPickDialog implements ModelPickPrompt {
                 LIST_SPACING * 2,
                 Wrapped.label(
                         messages.get(
-                                MessageKey.DIALOG_MODEL_PICK_BODY, ProviderNames.displayName(messages, providerId)),
+                                MessageKey.DIALOG_MODEL_PICK_BODY, ProviderNames.displayName(messages, provider.id())),
                         "dialog-text"));
-        content.getChildren().addAll(RecommendationLine.nodes(messages, memory, "model-pick"));
+        final boolean ollama = ModelRecommendation.isOllamaServer(provider.kind(), provider.effectiveEngine());
+        log.debug("pull advice for {}: {}", provider.id(), ollama);
+        if (ollama) {
+            content.getChildren().addAll(RecommendationLine.nodes(messages, memory, "model-pick"));
+        }
         content.getChildren().addAll(filter.node(), options);
         card.card().setContent(content);
         wire(card, group, use, notNow, filter);

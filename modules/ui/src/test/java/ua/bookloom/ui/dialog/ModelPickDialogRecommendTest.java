@@ -24,7 +24,7 @@ class ModelPickDialogRecommendTest extends ShellTestBase {
 
     private void ask() {
         onFx(() -> injector.getInstance(ModelPickDialog.class)
-                .ask("ollama", List.of("gemma4:e4b", "qwen3:8b"), model -> {}, () -> {}));
+                .ask(ModelPickProviders.ollama(), List.of("gemma4:e4b", "qwen3:8b"), model -> {}, () -> {}));
     }
 
     @Test
@@ -47,5 +47,16 @@ class ModelPickDialogRecommendTest extends ShellTestBase {
         assertThat(((Label) required("model-pick-recommend")).getText())
                 .isEqualTo("На цьому комп’ютері 32 ГБ пам’яті: рекомендовано gemma4:26b-a4b."
                         + " Завантажте командою `ollama pull gemma4:26b-a4b`.");
+    }
+
+    // The pull command is Ollama's: LM Studio answering alone opens the card with no line telling the person to run it.
+    @Test
+    void ask_lmStudio_showsNoPullLine() {
+        onFx(() -> injector.getInstance(ModelPickDialog.class)
+                .ask(ModelPickProviders.lmStudio(), List.of("gemma4:e4b", "qwen3:8b"), model -> {}, () -> {}));
+
+        assertThat(required("model-pick-filter")).isNotNull();
+        assertThat(scene.getRoot().lookup("#model-pick-recommend")).isNull();
+        assertThat(textsUnder(required(ModelPickDialog.CARD_ID))).noneMatch(text -> text.contains("ollama pull"));
     }
 }

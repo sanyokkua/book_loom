@@ -15,8 +15,10 @@ import ua.bookloom.api.settings.AppSetting;
 /**
  * The model each provider keeps for when it is made current again — the open form of a provider that is not the
  * current one shows it, so Use this one makes it current with it — as stored at the last read of the registry and as
- * chosen since; {@link ProviderStorage} writes the same models. A blank model never erases the one a provider keeps.
- * FX thread only, apart from {@link #read}.
+ * chosen since; {@link ProviderStorage} writes the same models. A switch with a blank model never erases the one a
+ * provider keeps, so the provider left can be made current again with it; saving a provider with no model does erase
+ * it ({@link ProviderStorage#persist}), and the next read of the registry takes that in. FX thread only, apart from
+ * {@link #read}.
  */
 @Slf4j
 final class KeptModels {

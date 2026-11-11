@@ -154,8 +154,8 @@ public record CallFrame(
     }
 
     /**
-     * The frame of a call made on an opened book outside a translation run — the setup assistant, a glossary scan, the
-     * consistency pass — with the brief's own style sheet and no word validator.
+     * The frame of a call made on an opened book outside a translation run — the setup assistant, a glossary scan —
+     * with the brief's own style sheet and no word validator.
      *
      * @param brief the project's brief, whose target language the caller has already checked
      * @param document the opened book

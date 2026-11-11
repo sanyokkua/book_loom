@@ -17,7 +17,7 @@ import ua.bookloom.pipeline.qa.QaResult;
 
 /**
  * Checks a context-matched memory target before any draft is made: through the chunk's gate and every check, decided
- * by the same {@link AcceptanceRule} as a draft but never by the reviewer, so a memory entry can never put a broken or
+ * by the same {@link AcceptanceRule} as a draft with no model call, so a memory entry can never put a broken or
  * since-forbidden target into the book ({@code specs/quality-gates/spec.md} "Accept a context-matched memory reuse
  * when its checks pass"). A refusal only
  * means the segment is drafted instead, so the caller logs it and moves on; it is never routed like a model error.

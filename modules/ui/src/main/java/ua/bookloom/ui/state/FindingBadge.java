@@ -13,7 +13,7 @@ import ua.bookloom.ui.i18n.MessageKey;
  * The one short word a flagged row carries: why the segment was flagged, chosen from its main finding.
  *
  * <p>The main finding is the one of highest severity; on a tie a name outranks a wrong language, which outranks an
- * omission, which outranks any other kind. Kinds are compared in lower case because the reviewer writes them itself; its {@code terminology} is a name that was not honoured too.
+ * omission, which outranks any other kind. Kinds are compared in lower case because a record stored before the per-chunk reviewer was removed may hold one the model wrote itself; its {@code terminology} is a name that was not honoured too.
  */
 public enum FindingBadge {
     /** A locked or glossary name was not honoured. */
@@ -74,7 +74,7 @@ public enum FindingBadge {
      * Chooses the badge of a flagged segment.
      *
      * @param findings the segment's findings; never null
-     * @param judgeScore a stored score, or {@code null} — the reviewer gives none, so only a record from before it has one
+     * @param judgeScore a stored score, or {@code null} — nothing scores a segment now, so only an older record has one
      * @return the badge of the main finding, {@link #LOW_SCORE} when only a score exists, or empty when the
      *     segment has neither
      */

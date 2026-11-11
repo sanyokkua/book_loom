@@ -9,7 +9,7 @@ import ua.bookloom.api.project.SegmentRecord;
 
 /**
  * Which stored findings are blocking: those whose level ({@link CheckLevels#of}) is {@link CheckLevel#BLOCK}. The
- * export and the consistency pass both ask this, and the acceptance rule reads the same level, so a defect that kept a
+ * export asks this, and the acceptance rule reads the same level, so a defect that kept a
  * segment from being accepted is called blocking in the same way before and after the run.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")

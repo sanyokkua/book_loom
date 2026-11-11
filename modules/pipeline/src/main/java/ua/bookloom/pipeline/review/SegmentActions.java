@@ -109,7 +109,7 @@ public final class SegmentActions {
     }
 
     /**
-     * Applies the proposal waiting on a segment — a backward revision's or a proofread's — as the person's own edit.
+     * Applies the proposal the Proofread stage left on a segment the person had edited, as the person's own edit.
      *
      * @param projectId the non-null project id
      * @param segmentId the non-null segment id

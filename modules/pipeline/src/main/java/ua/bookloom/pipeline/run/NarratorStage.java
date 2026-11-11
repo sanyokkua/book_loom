@@ -35,7 +35,7 @@ import ua.bookloom.pipeline.proofread.DeferralRegister;
  * The narrator's gender from the run's own work (15i.T5, 15f.A4): when translation has ended and the brief still holds
  * no gender for a first-person narrator, the decided targets of the segments told in the first person are counted
  * ({@link NarratorInference}), and a gender that holds is stored with the origin INFERRED. The segments holding the
- * other gender's forms are left a gender deferral waiting on the narrator, so backward revision re-renders them. A
+ * other gender's forms are left a gender deferral waiting on the narrator, which the Proofread stage settles. A
  * narrator the person set, the brief verified or the run already inferred, and a third-person one, are never replaced; a
  * merely suggested gender is, because the decided targets are stronger evidence than an unverified guess. Nothing here
  * asks a model.

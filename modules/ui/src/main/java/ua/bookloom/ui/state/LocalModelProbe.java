@@ -261,7 +261,7 @@ public final class LocalModelProbe {
         final String providerId = answered.config().id();
         outcome.set(new ProbeOutcome.Asking());
         pick.ask(
-                providerId,
+                answered.config(),
                 answered.models(),
                 modelId -> executor.execute(() -> pickedModel(new ModelSelection(providerId, modelId), atFirstLaunch)),
                 () -> {

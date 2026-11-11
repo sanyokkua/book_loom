@@ -24,7 +24,7 @@ import ua.bookloom.pipeline.WholeWord;
 import ua.bookloom.pipeline.glossary.NameForms;
 
 /**
- * Works out which deferrals a fact leaves behind, so backward revision fixes only what was recorded. Two changed
+ * Works out which deferrals a fact leaves behind, so the Proofread stage settles only what was recorded. Two changed
  * terms in one segment stay two deferrals because each is keyed by the term it waits on. Nothing here writes; the
  * caller stores what each producer returns.
  */
@@ -213,8 +213,8 @@ public final class DeferralRegister {
 
     /**
      * The GENDER_UNKNOWN deferrals the segments holding the minority gender's forms of an inferred narrator leave: one
-     * per segment, waiting on {@link #NARRATOR}, so backward revision re-renders them once the narrator's gender is
-     * checkable (15i.T5).
+     * per segment, waiting on {@link #NARRATOR}, so the Proofread stage settles them by code once the narrator's gender
+     * is checkable and marks a segment that still holds the other gender's words (15i.T5).
      *
      * @param projectId the owning project's id; never null
      * @param segmentIds the ids of the segments whose narrator forms disagree with the inferred gender; never null

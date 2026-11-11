@@ -14,7 +14,7 @@ import org.jspecify.annotations.Nullable;
  * glossary entry it is soft: the rendering is a "keep consistent" hint, never a lock.
  *
  * <p>Which rendering counts as established is decided here, once, by the conflict policy of {@link #established()}, so
- * the prompt, the reviewer and the screen agree.
+ * the prompt, the run's term learning and the screen agree.
  *
  * @param projectId the owning project's id
  * @param term the source term as proposed or typed; matched ignoring case

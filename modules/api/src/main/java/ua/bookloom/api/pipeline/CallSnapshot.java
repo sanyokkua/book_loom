@@ -12,12 +12,12 @@ import ua.bookloom.api.llm.TokenUsage;
 /**
  * One model call as a person can inspect it: the segments it is about, the prompt it sent part by part, where it
  * stands, the reply it got and what became of each segment. A segment's own context snapshot says what one segment
- * was meant to see; this says what one call actually sent, which for a batch or a reviewer call covers several
+ * was meant to see; this says what one call actually sent, which for a batch or a proofread window covers several
  * segments at once.
  *
  * @param callId the call's number within its run, from one; every snapshot of one call carries the same
  * @param kind what the call is for
- * @param label the name of the prompt the call was built from ({@code draft-batch-json}, {@code reviewer}), which a
+ * @param label the name of the prompt the call was built from ({@code draft-batch-json}, {@code proofread}), which a
  *     screen may word in its own language
  * @param position the chunk the call was made in, or null when the call names none
  * @param segments the segments the call is about, in document order; empty for a call about none

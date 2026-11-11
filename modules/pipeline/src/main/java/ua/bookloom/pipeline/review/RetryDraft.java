@@ -23,7 +23,6 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ModelProfile;
-import ua.bookloom.api.llm.ModelWindow;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
@@ -71,10 +70,10 @@ import ua.bookloom.pipeline.run.RunSettings;
  * and brief, stored once per project; the window of the stored targets the person and the run kept before the segment
  * and the next source; and the map as it stands — never replaying the first draft's snapshot. The draft is a batch of
  * one through the run's own prompts, in the same pieces when the segment is alone above the budget, each carrying the
- * note, and it is decided by the run's draft step, checks, reviewer and acceptance rule — the quality loop with no
- * repair. The record keeps the sections the retry sent, marked as a retry's. It never queues behind a running book:
+ * note, and it is decided by the run's draft step, deterministic checks and acceptance rule — the quality loop with
+ * no repair. The record keeps the sections the retry sent, marked as a retry's. It never queues behind a running book:
  * while the latest run is RUNNING it answers {@code busy} before any call. A failure never downgrades an ACCEPTED
- * segment. The consistency pass reuses the draft and decision alone ({@link #candidate}) and stores by its own rule.
+ * segment.
  */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
@@ -104,7 +103,7 @@ public final class RetryDraft {
      * @param note the person's instruction shown under {@code [Extra instruction]}, or null for none
      * @param lowerTemperature whether the draft call asks for the draft's lower temperature
      * @param model the non-null bound model, called directly since no run is using it
-     * @return the stored record after the retry — ACCEPTED and reviewed on a pass, FLAGGED with the new findings on a
+     * @return the stored record after the retry — ACCEPTED on a pass, FLAGGED with the new findings on a
      *     failing FLAGGED segment — or, for a failing ACCEPTED segment, its unchanged stored record carrying the new
      *     findings; {@code busy} while a run of the project is RUNNING; {@code validation} for an unknown id, another
      *     status, or a project with no open book; or the error a store or a model call answered
@@ -156,29 +155,6 @@ public final class RetryDraft {
                                 RetryCalls.over(
                                         model, progress, clock, plan.callFrame().targetLanguage(), plan.document()))
                         .flatMap(retried -> new RetryStore(segments).store(plan.record(), retried)));
-    }
-
-    /**
-     * Drafts one segment again and decides the draft as {@link #retry} does, but stores nothing and does not check for
-     * a running book: the caller owns both choices.
-     *
-     * @param record the non-null stored record to draft again, FLAGGED or ACCEPTED
-     * @param calls the non-null seam every model call is sent through
-     * @param profile the non-null profile of the model {@code calls} reach, which sizes the window and the frame
-     * @return the decided candidate; {@code validation} for another status or a project with no open book; or the error
-     *     a store or a model call answered
-     */
-    public Result<RetryCandidate> candidate(
-            final SegmentRecord record, final ModelCalls calls, final ModelProfile profile) {
-        Objects.requireNonNull(record, "record");
-        Objects.requireNonNull(calls, "calls");
-        Objects.requireNonNull(profile, "profile");
-        log.debug("retry candidate requested segment={} status={}", record.segmentId(), record.status());
-        final Target target = new Target(profile, ModelWindow.of(profile.context(), null));
-        return retryable(record)
-                .flatMap(retryable -> plan(retryable, target))
-                .flatMap(plan -> drafted(plan, Note.NONE, calls)
-                        .map(retried -> new RetryCandidate(plan.segment(), retried.outcome(), retried.snapshot())));
     }
 
     private Result<SegmentRecord> retryable(final SegmentRecord record) {
@@ -268,7 +244,7 @@ public final class RetryDraft {
     }
 
     // The run's own prompts over a chunk of the one segment: the masks and the gate from today's glossary, the window
-    // and map the run's planner gives, and the reviewer's sheets. The mode is asked once per retry, so a change in
+    // and map the run's planner gives. The mode is asked once per retry, so a change in
     // Settings reaches the next retry and one retry never mixes two.
     private Result<Retried> drafted(final RetryPlan plan, final Note note, final ModelCalls calls) {
         final TranslatePlanner planner = plannerOf(plan);

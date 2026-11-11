@@ -27,7 +27,7 @@ import ua.bookloom.pipeline.typography.TypographyGate;
 /**
  * One chunk's glossary as it stood when the chunk started, and what the run reads of it besides the context builder:
  * the spans each segment hides behind tokens, the gate that puts them back, and the names, terms and sheets the checks
- * and the reviewer hold the chunk to. Reading the glossary once per chunk is what makes an edit saved during a pause
+ * and the draft's prompt hold the chunk to. Reading the glossary once per chunk is what makes an edit saved during a pause
  * inside the chunk wait for the next chunk.
  *
  * <p>Used from the job thread only.

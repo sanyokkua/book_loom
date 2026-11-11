@@ -25,6 +25,7 @@ import ua.bookloom.ui.dialog.ContinueDialog;
 import ua.bookloom.ui.dialog.FormCard;
 import ua.bookloom.ui.dialog.ModalCard;
 import ua.bookloom.ui.dialog.ModelPickDialog;
+import ua.bookloom.ui.dialog.ModelPickProviders;
 import ua.bookloom.ui.dialog.RenameDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -110,7 +111,7 @@ class DialogFitTest extends ShellTestBase {
                         test -> test.injector
                                 .getInstance(ModelPickDialog.class)
                                 .ask(
-                                        "ollama",
+                                        ModelPickProviders.ollama(),
                                         List.of("gemma4:e4b", "qwen3:8b", "llama3.1:8b"),
                                         model -> {},
                                         () -> {})),

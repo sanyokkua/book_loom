@@ -12,8 +12,7 @@ import ua.bookloom.api.project.QaFinding;
  * Finds the words of the target a finding is about, so the review panel can mark them where they stand.
  *
  * <p>Two shapes carry a quote: an applied edit, whose replacement is what stands in the target now, and a note that
- * opens with the quoted words in double quotes followed by a dash or {@code could read} — the shape the checks and the
- * reviewer write. A quote cut to its first 80 characters ends in an ellipsis, which is dropped, so the rest still
+ * opens with the quoted words in double quotes followed by a dash or {@code could read} — the shape the checks write. A quote cut to its first 80 characters ends in an ellipsis, which is dropped, so the rest still
  * matches.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it

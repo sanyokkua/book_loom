@@ -27,8 +27,8 @@ import ua.bookloom.util.paths.AppPaths;
  *
  * <p>Memory is bounded by the number of segments held, the lines held per segment and, because a TRACE line may carry
  * a whole prompt, by a byte budget over every line held: past it the oldest segment that was never kept is forgotten
- * first, then the oldest lines of the one segment left. Lines that name no segment (a reviewer call reads a whole
- * chunk) are held in one short queue and written ahead of the next segment kept, once. A segment arrives in two spans
+ * first, then the oldest lines of the one segment left. Lines that name no segment (a batch draft reads several
+ * segments) are held in one short queue and written ahead of the next segment kept, once. A segment arrives in two spans
  * (its draft, then its decision) with its chunk-mates in between, which is why lines are held per segment key and not
  * in order.
  *

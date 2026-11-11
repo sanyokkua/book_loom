@@ -22,8 +22,8 @@ import ua.bookloom.ui.state.MarkStatus;
 
 /**
  * Draws one finding of the review desk's "What may be wrong": one label naming its kind, severity and who raised it,
- * then in plain words what may be wrong, or an edit the reviewer made as the words it removed beside the words it put
- * there; and the Proofread stage's verdict on the segment. It owns no state and logs nothing.
+ * then in plain words what may be wrong, or an applied edit an older record keeps as the words it removed beside the
+ * words it put there; and the Proofread stage's verdict on the segment. It owns no state and logs nothing.
  */
 final class FindingRows {
 
@@ -46,7 +46,7 @@ final class FindingRows {
         return AppliedEdit.from(finding).map(this::editRow).orElseGet(() -> plainRow(finding, technical));
     }
 
-    // An edit the reviewer made and the app verified, as the words it removed beside the words it put there.
+    // An edit an older record keeps (AppliedEdit), as the words it removed beside the words it put there.
     private VBox editRow(final AppliedEdit edit) {
         final Label heading = new Label(messages.get(
                 MessageKey.REVIEW_EDIT_APPLIED,

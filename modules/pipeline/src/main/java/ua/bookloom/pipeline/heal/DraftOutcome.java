@@ -244,7 +244,7 @@ public sealed interface DraftOutcome {
     /**
      * A translation-memory target reused because the segment's source and both neighbours match the entry's; it
      * already passed its hard gates and checks when the run found it, so it is accepted in its turn with no call
-     * ({@code specs/quality-gates/spec.md} "Accept a context-matched memory reuse without the reviewer").
+     * ({@code specs/quality-gates/spec.md} "Accept a context-matched memory reuse when its checks pass").
      *
      * @param segment the segment this outcome is about
      * @param maskedSource the text a draft would have been shown, protected spans behind tokens
@@ -275,7 +275,7 @@ public sealed interface DraftOutcome {
     }
 
     /**
-     * A segment with nothing to translate, kept as its own source with no model call and no reviewer
+     * A segment with nothing to translate, kept as its own source with no model call and no check
      * ({@code specs/translation-pipeline/spec.md} "Keep a segment with nothing to translate as it is").
      *
      * @param segment the segment this outcome is about

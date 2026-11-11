@@ -25,7 +25,11 @@ class ModelPickDialogTest extends ShellTestBase {
 
     private void ask(final List<String> models) {
         onFx(() -> injector.getInstance(ModelPickDialog.class)
-                .ask("ollama", models, model -> answers.add("use " + model), () -> answers.add("notNow")));
+                .ask(
+                        ModelPickProviders.ollama(),
+                        models,
+                        model -> answers.add("use " + model),
+                        () -> answers.add("notNow")));
     }
 
     private List<RadioButton> options() {

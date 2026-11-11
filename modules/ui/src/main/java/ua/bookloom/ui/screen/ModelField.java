@@ -18,8 +18,6 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
-import ua.bookloom.api.llm.ProviderKind;
-import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.ui.MemorySource;
 import ua.bookloom.ui.control.ModelFilterField;
 import ua.bookloom.ui.control.RecommendationLine;
@@ -30,6 +28,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ModelListing;
 import ua.bookloom.ui.state.ModelNameFilter;
+import ua.bookloom.ui.state.ModelRecommendation;
 import ua.bookloom.ui.state.ProviderDraft;
 import ua.bookloom.ui.state.ProviderForm;
 import ua.bookloom.ui.state.SettingsViewModel;
@@ -124,9 +123,8 @@ final class ModelField {
         });
     }
 
-    // The pull command is Ollama's; it is wrong under any other server, whichever dialect reaches it.
     private static boolean isOllama(final ProviderDraft draft) {
-        return draft.kind() == ProviderKind.OLLAMA || draft.engine().effective() == ServerEngine.OLLAMA;
+        return ModelRecommendation.isOllamaServer(draft.kind(), draft.engine().effective());
     }
 
     private void configureCombo(final ModelListing listing) {

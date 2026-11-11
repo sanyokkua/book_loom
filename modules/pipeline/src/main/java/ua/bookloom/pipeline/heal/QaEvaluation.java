@@ -13,8 +13,8 @@ import ua.bookloom.pipeline.qa.QaResult;
 import ua.bookloom.pipeline.qa.SoftCheckInput;
 
 /**
- * Builds the {@link SoftCheckInput} the quality loop's own evaluations share, so the initial draft evaluation, every
- * self-heal round and backward revision's re-render build it the same way instead of each repeating the field list.
+ * Builds the {@link SoftCheckInput} every evaluation of a target shares — the draft's, the repair's, a memory reuse's
+ * and a proofread rewrite's — so each builds it the same way instead of repeating the field list.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)

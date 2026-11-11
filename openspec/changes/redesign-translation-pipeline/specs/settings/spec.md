@@ -315,9 +315,9 @@ The Models tab SHALL show at its foot "Model facts as of {date}", the date of th
 
 ### Requirement: Recommend a model by the computer's memory where models are chosen
 
-The application SHALL mark as recommended, in the note under the model chooser and at Start, `gemma4:e4b` when the computer has under 24 GB of memory and `gemma4:26b-a4b` from 24 GB, SHALL offer `gemma4:31b` as an opt-in "best quality, slower, not measured here" from 36 GB, and SHALL offer the `ollama pull` command as text and never run it.
+WHERE the provider is Ollama's own connection or a server detected as Ollama, the application SHALL mark as recommended, in the note under the model chooser and at Start, `gemma4:e4b` under 24 GB of memory and `gemma4:26b-a4b` from 24 GB, SHALL offer `gemma4:31b` as an opt-in "best quality, slower, not measured here" from 36 GB, and SHALL offer the `ollama pull` command as text and never run it; for any other provider it SHALL show no such note.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a bigger model that does not fit in memory is slower than a smaller one that does. The computer's memory picks the default, and the person pulls the model themselves.
+**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a bigger model that does not fit in memory is slower than a smaller one that does. The computer's memory picks the default, and the person pulls the model themselves. The pull command is Ollama's, so under LM Studio or another server it would tell the person to run something wrong.
 
 #### Scenario: A 16 GB computer
 
@@ -338,6 +338,11 @@ The application SHALL mark as recommended, in the note under the model chooser a
 
 - **WHEN** the pull command is shown
 - **THEN** BookLoom runs nothing and starts no download
+
+#### Scenario: No pull line for LM Studio
+
+- **WHEN** the model-pick card or the model chooser is shown for the provider `lmstudio` on a computer with 16 GB of memory
+- **THEN** no model is marked as recommended and no `ollama pull` text is shown
 
 ### Requirement: Show what a model offers for thinking and let the person override it
 

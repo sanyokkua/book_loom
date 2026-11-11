@@ -53,6 +53,14 @@ class CallTimingsTest {
         assertThat(CallTimings.speed(EN, usage(null, null))).isEqualTo("25.0 tok/s");
     }
 
+    // IF a generation under one millisecond were divided by its zero whole milliseconds, THEN the speed would read
+    // "Infinity tok/s".
+    @Test
+    void speed_generationUnderOneMillisecond_isTheDash() {
+        assertThat(CallTimings.speed(EN, new TokenUsage(600, 50, Duration.ofNanos(400_000), null, null, null)))
+                .isEqualTo("–");
+    }
+
     @ParameterizedTest
     @CsvSource({"600,200,33", "600,0,0", "3,2,67", "600,600,100"})
     void cachedShare_reported_isTheRoundedPercent(final int prompt, final int cached, final int expected) {
