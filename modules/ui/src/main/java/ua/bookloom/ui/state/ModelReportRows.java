@@ -21,6 +21,7 @@ import ua.bookloom.ui.i18n.Messages;
 @Slf4j
 public final class ModelReportRows {
 
+    private static final String FACTS = "facts";
     private static final String NO_WARNINGS = "none";
     private static final String WARNING_SEPARATOR = " · ";
     private static final String SCHEMA_SETTING = "response_format";
@@ -43,7 +44,7 @@ public final class ModelReportRows {
      *     its own line
      */
     public String verdict(final ModelFacts facts) {
-        Objects.requireNonNull(facts, "facts");
+        Objects.requireNonNull(facts, FACTS);
         final @Nullable String verdict = facts.verdict();
         if (verdict == null) {
             return "";
@@ -68,7 +69,7 @@ public final class ModelReportRows {
      */
     public String context(final ModelEntry entry, final ModelFacts facts) {
         Objects.requireNonNull(entry, "entry");
-        Objects.requireNonNull(facts, "facts");
+        Objects.requireNonNull(facts, FACTS);
         final @Nullable Integer loaded = facts.loaded();
         if (entry.kind() == ProviderKind.OLLAMA) {
             return nativeOllama(facts);
@@ -99,7 +100,7 @@ public final class ModelReportRows {
      *     known; never empty
      */
     public List<String> structured(final ModelFacts facts, final List<RefusedSetting> refused) {
-        Objects.requireNonNull(facts, "facts");
+        Objects.requireNonNull(facts, FACTS);
         Objects.requireNonNull(refused, "refused");
         final List<String> kinds = new ArrayList<>(DEFAULT_KINDS);
         refused.stream()

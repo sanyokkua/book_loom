@@ -146,9 +146,9 @@ WHEN the names pass or a model review finds characters with no gender from the p
 
 ### Requirement: Ask at Start for the genders nobody has settled
 
-WHEN Start translation is pressed and a character the book names at least 5 times has a gender that is only likely or by rule, the application SHALL ask once for those genders, the least confident first and each with its likely value already chosen, and SHALL make a value the person confirms or changes the person's: a click on any gender of a row, the offered one included, answers that row, a row left alone stays a hint, and each row shows the name with its current rendering (or that it has none yet).
+WHEN Start translation is pressed and a character the book names at least 5 times has a gender that is only likely or by rule, the application SHALL ask once for those genders, the least confident first and each with its likely value already chosen, and each row SHALL show the name with its current rendering (or that it has none yet).
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: the model's guess is cheap but a wrong one spreads, so before the long run the person sees the characters whose gender nobody has checked and can fix the doubtful ones first. A click on the offered gender is a confirmation; a row nobody clicked stays a hint, and the dialog says so.
+**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: the model's guess is cheap but a wrong one spreads, so before the long run the person sees the characters whose gender nobody has checked and can fix the doubtful ones first.
 
 #### Scenario: The least confident comes first
 
@@ -160,31 +160,60 @@ WHEN Start translation is pressed and a character the book names at least 5 time
 - **WHEN** `Ivar` is male by rule and the model said female
 - **THEN** the row reads `rule: male · model: female` with the rule's value chosen
 
-#### Scenario: Confirming makes the person's value
-
-- **WHEN** the person changes `Ivar` to female and confirms `Mira Holt` as offered
-- **THEN** both are then the person's, and a row the person left alone stays likely
-
 #### Scenario: Nothing to ask
 
 - **WHEN** every character the book names 5 times or more has a gender from the person or the book
 - **THEN** no question is shown
 
+### Requirement: A gender answered at Start becomes the person's
+
+WHEN the person clicks any gender of a row in the Start question, the offered one included, the application SHALL make that value the person's, and SHALL leave a row nobody clicked as a hint.
+
+**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a click on the offered gender is a confirmation, a row nobody clicked stays a hint, and the dialog says so.
+
+#### Scenario: Confirming makes the person's value
+
+- **WHEN** the person changes `Ivar` to female and confirms `Mira Holt` as offered
+- **THEN** both are then the person's, and a row the person left alone stays likely
+
 ### Requirement: Render forms of address and common words by data and by the book, not by sound
 
-WHEN targets are suggested for the glossary or the recurring terms, the application SHALL render a form of address that the language pair's `titleRenderings` lists (`mr`, `mrs`, `ms`, `miss`, `sir`, `dr` and so on) by that data, without asking the model and locked with the rule as its origin, with a capital first letter where the term has one; SHALL pass a recurring term that the source language's title list holds as a title, not as a bare noun; and SHALL treat a place, organisation or other name whose word the book also writes in lower case at least as often as the scan's limit as an ordinary word to translate, not to sound out, telling the model to translate such a word inside a longer name. A term that the glossary already renders under the same lower-case key (`houses` beside `Houses`) SHALL take that rendering in its own case and not be asked.
+WHEN targets are suggested for the glossary or the recurring terms, the application SHALL render a form of address that the language pair's `titleRenderings` lists (`mr`, `mrs`, `ms`, `miss`, `sir`, `dr` and so on) by that data, without asking the model and locked with the rule as its origin, with a capital first letter where the term has one.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a small model sounds `ms` out as `міз`, writes `Mr` in Latin letters and turns the plain word `Houses` into `Хаузиз`. The pair's file states the few certain words once, and the book itself shows which capitalised words are ordinary words.
+**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a small model sounds `ms` out as `міз` and writes `Mr` in Latin letters. The pair's file states the few certain words once.
 
 #### Scenario: A title of the pair's data is not asked
 
 - **WHEN** the pair is English to Ukrainian and the terms `ms` and `Mr` are suggested
 - **THEN** they get `пані` and `Пан` with no model call, locked with the rule as origin
 
+### Requirement: Pass a recurring term held by the title list as a title
+
+WHEN a recurring term is held by the source language's title list, the application SHALL pass it to the model as a title, not as a bare noun.
+
+**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a title asked as a bare noun is sounded out; asking it as a title gets the form of address.
+
+#### Scenario: A recurring title is passed as a title
+
+- **WHEN** the source language is English and the recurring term `Mrs` is held by its title list
+- **THEN** the model is asked for it as a title, and not as a bare noun
+
+### Requirement: Translate a name that is also a common word in the book
+
+WHEN a place, organisation or other name has its word written in lower case in the book at least as often as the scan's limit, the application SHALL treat it as an ordinary word to translate, not to sound out, and SHALL tell the model to translate such a word inside a longer name.
+
+**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a small model turns the plain word `Houses` into `Хаузиз`; the book itself shows which capitalised words are ordinary words.
+
 #### Scenario: A place that is a common word is translated
 
 - **WHEN** the book writes `houses` three times and `Houses` once, and `Houses` is a place under Transliterate
 - **THEN** it is asked as a common word and `Будинки` is accepted
+
+### Requirement: Reuse the glossary's rendering of a term under the same lower-case key
+
+WHEN a term's lower-case key is already rendered by the glossary (`houses` beside `Houses`), the application SHALL give the term that rendering in its own case and SHALL NOT ask the model for it.
+
+**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: one word in two cases gets one rendering, with no second call that could disagree.
 
 #### Scenario: The glossary's rendering is reused
 

@@ -70,10 +70,16 @@ final class OpenAiUsage {
         if (timings != null && timings.predictedMs() != null) {
             return seconds(timings.predictedMs() / MILLIS_PER_SECOND);
         }
-        final Double rate = stats != null && stats.tokensPerSecond() != null
-                ? stats.tokensPerSecond()
-                : timings == null ? null : timings.predictedPerSecond();
+        final Double rate = rate(stats, timings);
         return rate == null || completion == null || rate <= 0 ? null : seconds(completion / rate);
+    }
+
+    private static @Nullable Double rate(
+            final OpenAiChatResponse.@Nullable Stats stats, final OpenAiChatResponse.@Nullable Timings timings) {
+        if (stats != null && stats.tokensPerSecond() != null) {
+            return stats.tokensPerSecond();
+        }
+        return timings == null ? null : timings.predictedPerSecond();
     }
 
     private static Duration seconds(final double value) {

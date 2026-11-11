@@ -120,8 +120,8 @@ class ModelPickDialogFilterTest extends ShellTestBase {
 
         onFx(() -> filterField().orElseThrow().setText("llama"));
 
-        assertThat(ThemeTestSupport.onFx(
-                        () -> ((javafx.scene.control.Label) required("model-pick-filter-none")).getText()))
-                .isEqualTo("No model name contains \"llama\".");
+        final javafx.scene.control.Label none = (javafx.scene.control.Label) required("model-pick-filter-none");
+
+        assertThat(ThemeTestSupport.onFx(none::getText)).isEqualTo("No model name contains \"llama\".");
     }
 }
