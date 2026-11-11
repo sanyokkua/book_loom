@@ -2951,3 +2951,27 @@ Mini runs (16.2): `gemma4:e4b-mlx`, Balanced, K = 3, seeds 1000-1002, at HEAD `c
 | S4 calls per segment | model calls per segment, same two runs | 16.4 | reported, no rule | translation-job calls (draft / repair / summary / proofread): e4b 2002 (1166 / 117 / 102 / 617), 26b 1588 (948 / 112 / 60 / 468). Per segment with Proofread 0.529 (e4b) and 0.420 (26b); without Proofread 0.366 and 0.296. The names pass added 266 and 223 calls, the brief 6. The 26b profile packs larger batches, so it makes fewer draft and summary calls |
 | S5 seconds per call kind | mean seconds per draft, repair, summary and proofread call | 16.4 | reported, no rule | mean seconds per call, draft / repair / summary / proofread: e4b 7.81 / 4.04 / 6.90 / 6.12; 26b 13.95 / 6.29 / 16.02 / 7.82 (chapter slice e4b: 7.8 / 4.6 / 5.4 / 6.5 Balanced and 7.6 / 3.9 / 5.2 / 7.0 Max) |
 | S6 cached share per runtime | cached prompt tokens over prompt tokens: probe on `gemma4:e4b-mlx`, `gemma4:26b-mlx` and one GGUF tag, and from the run log of a whole run | 16.3 | reported, no rule | probe, identical prompt repeated: `gemma4:e4b-mlx` 0, 99.4, 99.8 %; `gemma4:26b-mlx` 0, 99.8, 99.8 %; Mistral-Small-3.2 GGUF 0, 99.8, 99.8 %; a different case reuses 0 to 15 %. From the run logs of a whole run: 50.4 % Balanced, 50.1 % Max (Balanced by kind: draft 57 %, proofread 47 %, chapter summary 11 %) |
+
+**Closing verdict (16.6).** Quality rows judged against their fixed rules, nothing reworded to pass:
+
+| Row | Verdict |
+|---|---|
+| Q1 paired quality | NOT MET (Balanced 66:47 by blind reading, p = 0.090; Max 58:51, p = 0.57; one repeat of K = 3 read). |
+| Q2 window injection | PASS after two fixes found by this run (`Mr` taken for `Mrs`; a grader reading a numbered line as a heading). |
+| Q3 mini hard graders | PASS. |
+| Q4 mini soft graders | PASS by the aggregate rule; on re-reading, two en graders (`address-same`, `dialogue-quote-form`) lose cases (0:2 and 0:1, no p < 0.05) while two glossary graders gain (1:0 each), so it is a shift, not a measured loss. |
+| Q5 LTCR-1 | PASS (0.9682 against 0.9108). |
+| R1 stress marks | PASS, a weak test (the book has none). |
+| R2, R3, R4, R6, R8 | FAIL (numbers in the rows above). |
+| R5 never-worse | PASS by the gate's measure, not verifiable by reading. |
+| R7 | reported. |
+| R9 | PASS (estimate); `outputRatio=1.2` is set for ru->uk. |
+
+Defects this run found and fixed in place: the stall watchdog ended a whole-book run in Proofread (`84deca31`), `Mr` matched inside `Mrs` in the window map (`3942d3e4`), and the window-injection grader misread a numbered line (`57190b05`).
+
+Falsifiers met and the owner's options:
+
+- *Q1 (new pipeline not shown better than `79ffede6`).* On `sequence` at Balanced the new pipeline makes more calls than `79ffede6` (about 307 against 118) and takes about 1.4 times as long (about 1650 s against 1198 s of job time), and wins no significant quality margin; narrator gender slips are 9 (Balanced) and 5 (Max) against 0, flagged segments 12 against 9. Options: accept (the redesign targeted consistency, window discipline and the repaired defects, and LTCR-1 improved); or open a follow-up on narrator gender in Translate; or rerun Q1 with the judged repeats 1 and 2 (about 4 hours) before deciding.
+- *R8 (Russian content words, the design's falsifier).* 5 of 100 paragraphs. Options: a word-level source-language check in the deterministic checks (a bounded change, new requirement); or accept that e4b leaves near-cognate words and let the review desk catch them; or recommend 26b for ru->uk.
+- *R3 and R4 (one flagged paragraph fell back to Russian; 7 of the top 20 names have two renderings).* Cause is in the names pass: a possessive stored as its own glossary row reads as another character and case forms get their own targets. Options: merge possessives and case forms into the lemma's entry in the names pass (a new requirement); or keep the glossary as is and have export prefer the repaired reply over the refused draft; or accept.
+- *R2 (20 letters outside the alphabet, 19 of them in the R3 paragraph) and R6 (24:16, p = 0.268).* R2 follows R3; R6 favours the new pipeline without significance on one reader and 250 of 747 differing paragraphs.

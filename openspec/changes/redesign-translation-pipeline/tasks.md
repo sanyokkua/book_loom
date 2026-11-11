@@ -2295,7 +2295,7 @@ only invented-text outputs and the results table are committed (design D24).
   - **Test first:** none for the run; if `outputRatio` changes, its loader test in `LanguageFilesTest` is updated first
   - **Done when:** the ru→uk rows are filled with their verdicts.
 
-- [ ] 16.6 Evaluate every row, record the result and run the gate, so the change's outcome is written down with its
+- [x] 16.6 Evaluate every row, record the result and run the gate, so the change's outcome is written down with its
   evidence. → :pipeline (eval), docs
   - **Satisfies:** enabling work for design D24
   - **Depends on:** 16.1–16.5

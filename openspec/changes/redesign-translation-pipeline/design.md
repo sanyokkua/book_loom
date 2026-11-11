@@ -1356,5 +1356,7 @@ requirement if their alternative wins); none needs a new decision.
   written by facts, not by server version.
 - **Data still to read**: the Qwen3 (119) and TranslateGemma (55) language lists stay UNKNOWN until read; the
   Ukrainian quant ladder may re-cut the CSV grid; Nemotron 3.5 Bolt's row waits for its off-switch probe.
+- **Closing run** (16.6): Q1 not met, R2, R3, R4, R6 and R8 fail, the rest pass or are reported; the verdicts, falsifiers and the
+  owner's options are in `docs/DEVELOPMENT.md#redesign-closing-run` ("Closing verdict"); D24's arm table is complete.
 - **Prefix reuse per runtime** and speed rows (seconds per call kind, calls per segment, whole-book time): reported in
   group 16, with no target.
