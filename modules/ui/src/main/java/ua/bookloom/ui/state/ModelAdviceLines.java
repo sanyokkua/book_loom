@@ -194,10 +194,28 @@ public final class ModelAdviceLines {
         final String source = reading.sourceTag();
         final String target = reading.targetTag();
         if (!advice.pairTested() || source == null || target == null) {
-            return line;
+            final boolean listed =
+                    advice.baseLabel() != null || (declared != null && declared.listKind() != ListKind.NONE);
+            return listed ? withTarget(line, advice.targetState(), target) : line;
         }
         return messages.get(
                 MessageKey.SETTINGS_ADVICE_LANGUAGES_TESTED, line, languageName(source), languageName(target));
+    }
+
+    // What a list says about the target: nothing can be checked while none is chosen (no book open), and a list says
+    // "declared" or, only when it is complete, "not declared"; an unknown state adds nothing.
+    private String withTarget(final String line, final LanguageState state, final @Nullable String target) {
+        log.debug("languages line: target {} in state {}", target, state);
+        if (target == null) {
+            return messages.get(MessageKey.SETTINGS_ADVICE_LANGUAGES_NO_TARGET, line);
+        }
+        return switch (state) {
+            case DECLARED ->
+                messages.get(MessageKey.SETTINGS_ADVICE_LANGUAGES_TARGET_DECLARED, line, languageName(target));
+            case NOT_DECLARED ->
+                messages.get(MessageKey.SETTINGS_ADVICE_LANGUAGES_TARGET_NOT_DECLARED, line, languageName(target));
+            case UNKNOWN -> line;
+        };
     }
 
     private static List<String> ordered(final Set<String> codes) {

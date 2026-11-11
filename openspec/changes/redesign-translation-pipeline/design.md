@@ -822,7 +822,11 @@ task edits the delta requirement and this file's line; the result is written int
   `distillOf`, `quantLabel`, `needsShow`; `ModelInput` (what the person pasted, normalised).
 - **`llm.profile`** (new package). `ModelInputNormalizer` (a URL, an `ollama run` command, a file name, `hf.co/`
   prefixes, `@variant`) and `ModelIdentityParser` (name grammar v2). Metadata (`details.family`, LM Studio `arch`) wins
-  over the name on conflict (a DEBUG line with both); architecture aliases are normalised (`qwen35` = `qwen3_5`,
+  over the name on conflict (a DEBUG line with both), except that a size the name writes picks the built-in row: the
+  server's exact count (26.2B for `gemma4:26b-mlx`) refines the identity's size but never moves a model off the row its
+  name gives, so the profile and its batch size are the same before and after the server's facts are read (17.2 hand
+  run: the row was lost once the facts were read, batch 8 became 2 and the stored-run resume line named "window 1 of 4"
+  of a run planned as 16 windows); architecture aliases are normalised (`qwen35` = `qwen3_5`,
   `gemma4` = `gemma4_unified`, `muse_glimmer`, `glm4moelite`); `deepseek2` alone and `llama` alone never select a row
   (two installed `hf.co` GGUFs report `llama`), and a name that reads a family of its own (Nemotron 3.5 Bolt) never gets
   another family's row by its architecture alone. A non-LLM kind (embeddings, `mmproj-*`, video) never reaches a picker.
@@ -1345,11 +1349,12 @@ requirement if their alternative wins); none needs a new decision.
   `pairs/ru-uk.properties` sets `outputRatio=1.2`; other pairs keep the default 1.5.
 - **ru→uk source-language words** (16.5, R8): 5 of 100 random paragraphs kept a Russian content word (3 without the two
   Russian telegrams), above the design's 1 % falsifier. No check reads a single word (the language-identity check
-  reads a whole paragraph, the letter check only ы э ъ ё); the owner decides whether to add a word-level check.
+  reads a whole paragraph, the letter check only ы э ъ ё). The owner accepted it on 2026-11-11 as a known limit
+  (no word-level check is planned); it is written in `docs/DEVELOPMENT.md#redesign-closing-run`.
 - **Possessives and case forms stored as glossary rows** (16.5, R3 and R4): a possessive stored as its own row is read
   as a different character and raises a false name-swap block, and case forms with separate targets split a name into
-  two renderings (7 of the top 20). One flagged paragraph then fell back to the source at export; the owner decides
-  whether the names pass merges such rows.
+  two renderings (7 of the top 20). One flagged paragraph then fell back to the source at export. The owner accepted
+  it on 2026-11-11 as a known limit, written in `docs/DEVELOPMENT.md#redesign-closing-run`; no change is planned.
 - **Unsloth probes** (port, headers, whether its tools run by default, which off switch works): they set trait-row data
   and a scenario; the requirement "turn tools off where an engine runs them by default" holds either way.
 - **P-A15-1** (`UNSWITCHABLE` on current Ollama): it decides whether the path is common or rare; the behaviour is

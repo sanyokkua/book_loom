@@ -80,7 +80,7 @@ final class ReviewDeskCard extends ModalCard {
         getStyleClass().add("review-desk");
         setEnterNeedsShortcut(true);
         setOnEscape(this::closeAsked);
-        buildHeader();
+        buildHeader(parts.lists());
         setContent(body(parts));
         if (getContent() instanceof ScrollPane scroll) {
             scroll.setFitToHeight(true);
@@ -90,23 +90,31 @@ final class ReviewDeskCard extends ModalCard {
         log.debug("review desk built");
     }
 
-    private void buildHeader() {
+    private void buildHeader(final LiveSection lists) {
         final Label left = Wrapped.label("", "dialog-sub");
         left.setId("review-desk-left");
         left.textProperty()
                 .bind(Bindings.createStringBinding(
-                        () -> messages.get(
-                                viewModel.translating().get()
-                                        ? MessageKey.REVIEW_DESK_LEFT_READ_ONLY
-                                        : MessageKey.REVIEW_DESK_LEFT,
-                                viewModel.flaggedCount().get(),
-                                Math.max(
-                                        viewModel.deskTotal().get(),
-                                        viewModel.flaggedCount().get())),
+                        () -> headerLine(lists),
                         viewModel.translating(),
                         viewModel.flaggedCount(),
-                        viewModel.deskTotal()));
+                        viewModel.deskTotal(),
+                        lists.suspicious()));
         header(title(messages.get(MessageKey.REVIEW_DESK_TITLE)), left);
+    }
+
+    // "x of y left" counts the segments to review; with none to review now or when the desk opened, it would read
+    // "0 of 0" over a list of segments worth a second look, so the line says that instead.
+    private String headerLine(final LiveSection lists) {
+        final int flagged = viewModel.flaggedCount().get();
+        final int total = Math.max(viewModel.deskTotal().get(), flagged);
+        if (viewModel.translating().get()) {
+            return messages.get(MessageKey.REVIEW_DESK_LEFT_READ_ONLY, flagged, total);
+        }
+        return total == 0
+                ? messages.get(
+                        MessageKey.REVIEW_DESK_NONE_LEFT, lists.suspicious().get())
+                : messages.get(MessageKey.REVIEW_DESK_LEFT, flagged, total);
     }
 
     private Node body(final Parts parts) {

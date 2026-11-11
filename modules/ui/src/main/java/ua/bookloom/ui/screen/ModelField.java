@@ -2,6 +2,7 @@ package ua.bookloom.ui.screen;
 
 import java.util.List;
 import java.util.Objects;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
@@ -53,6 +54,7 @@ final class ModelField {
     private final ListChangeListener<String> onOffered = change -> showOffered();
     private final ChangeListener<String> onEntryText = (observed, was, now) -> onEntryTyped(now);
     private final ChangeListener<String> onModel = (observed, was, now) -> showModel(now);
+    private final ChangeListener<String> onProvider = (observed, was, now) -> providerChanged(now);
 
     // Set while this field changes the combo's items, editor or value, so the events that causes are not mistaken
     // for a person typing or picking; FX thread only.
@@ -99,6 +101,7 @@ final class ModelField {
         combo.getEditor().textProperty().addListener(onEntryText);
         viewModel.draftModel().addListener(new WeakChangeListener<>(onModel));
         listing.offered().addListener(new WeakListChangeListener<>(onOffered));
+        viewModel.editedProviderId().addListener(new WeakChangeListener<>(onProvider));
         combo.setOnAction(event -> onEntryCommitted());
         box.getChildren().addAll(filter.node(), entryRow());
         box.getChildren()
@@ -179,7 +182,17 @@ final class ModelField {
         }
         log.trace("model entry now holds '{}'", text);
         viewModel.setModelText(text);
+        if (isPickFromOpenList(text)) {
+            // The list is still selecting the name; replacing its items now breaks that selection (D5). The commit
+            // that follows the pick restores the whole list.
+            log.debug("model entry follows a name picked in the open list; the list is left as it is");
+            return;
+        }
         narrow(text);
+    }
+
+    private boolean isPickFromOpenList(final String text) {
+        return combo.isShowing() && text.equals(combo.getSelectionModel().getSelectedItem());
     }
 
     private void onEntryCommitted() {
@@ -188,7 +201,8 @@ final class ModelField {
             viewModel.commitModel();
             // Settling on a model of a saved provider reads its facts for the chip; typing never does.
             viewModel.testedSubject().get().ifPresent(viewModel.quantChips()::readFacts);
-            narrow("");
+            // A pick commits while the list is still selecting it, so the whole list comes back after that event.
+            Platform.runLater(() -> narrow(""));
         }
     }
 
@@ -217,6 +231,14 @@ final class ModelField {
         return !shown.isEmpty();
     }
 
+    // A filter typed for one server's names would hide another's whole list, so it belongs to the provider it was
+    // typed for.
+    private void providerChanged(final String providerId) {
+        if (filter.clear()) {
+            log.debug("model filter cleared: provider {} is edited now", providerId);
+        }
+    }
+
     private void openList() {
         combo.getEditor().requestFocus();
         combo.show();
@@ -240,6 +262,7 @@ final class ModelField {
                 combo.getItems().setAll(shown);
             }
             combo.setVisibleRowCount(Math.clamp(shown.size(), 1, MAX_VISIBLE_ROWS));
+            this.filter.showNone(shown.isEmpty());
             combo.setValue(typed.isEmpty() ? null : typed);
             combo.getEditor().setText(typed);
             combo.getEditor().positionCaret(typed.length());
@@ -265,6 +288,7 @@ final class ModelField {
         applying = true;
         try {
             combo.getItems().setAll(choices);
+            filter.showNone(choices.isEmpty());
         } finally {
             applying = false;
         }

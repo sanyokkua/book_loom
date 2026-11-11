@@ -45,6 +45,8 @@ class ReviewDeskProofreadTest {
     private static final String GENDER_ID = "ch05.xhtml:40";
     private static final String BEFORE = "Тарн прийде завтра.";
     private static final String AFTER = "Тарн прийшов завтра.";
+    private static final QaFinding TYPOGRAPHY =
+            new QaFinding("fluency", Severity.LOW, "Typography normalised: 1 apostrophe.", "normalised");
     private static final QaFinding ALPHABET = new QaFinding("language", Severity.HIGH, "кобылу", "alphabet");
 
     @TempDir
@@ -191,6 +193,20 @@ class ReviewDeskProofreadTest {
         assertThat(listed.getFirst().findings())
                 .extracting(QaFinding::note)
                 .contains("gender now known: Корін Ешбі — female");
+    }
+
+    // At Fast the Proofread stage reads no window, so a note-level finding left on an accepted segment is a doubtful
+    // mark the export counts as waiting on the person; the desk lists it under Worth a second look and counts it too.
+    @Test
+    void secondLook_fastNoteLevelMark_listsAndCountsWhatTheExportCounts() {
+        final Desk desk = ReviewFixtures.epub(tempDir);
+        accept(desk, KEPT_ID, BEFORE);
+        update(desk, KEPT_ID, record -> record.withFindings(List.of(TYPOGRAPHY)));
+        final ReviewDeskImpl port = desk.reviewDesk(ReviewMode.ASSISTED);
+
+        assertThat(ids(port, desk, ReviewFilter.SUSPICIOUS)).containsExactly(KEPT_ID);
+        assertThat(Objects.requireNonNull(port.counts(desk.projectId()).data()).suspicious())
+                .isEqualTo(1);
     }
 
     // IF Changed by proofread went on listing a segment once the person applied its proposal or wrote over a kept

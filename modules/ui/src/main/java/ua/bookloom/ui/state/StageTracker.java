@@ -1,6 +1,7 @@
 package ua.bookloom.ui.state;
 
 import java.util.Objects;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.SegmentStatus;
@@ -52,7 +53,8 @@ final class StageTracker {
         show(new RunStage(stage, coverage, 0));
     }
 
-    void round(final ProofreadRoundStarted round) {
+    // Only Max reads in two rounds; its second round is a stage of its own in the log, as on the stage chip.
+    Optional<LogEntry> round(final ProofreadRoundStarted round) {
         log.debug(
                 "proofread round {} of {} started: {} of {} windows to read",
                 round.round(),
@@ -61,6 +63,9 @@ final class StageTracker {
                 round.windows());
         progress.proofread().roundStarted(round.round());
         show(new RunStage(JobStage.PROOFREAD, coverage, round.round()));
+        return round.rounds() > 1
+                ? Optional.of(feed.stageStarted(JobStage.PROOFREAD, round.round()))
+                : Optional.empty();
     }
 
     LogEntry windowRead(final ProofreadWindowRead read) {

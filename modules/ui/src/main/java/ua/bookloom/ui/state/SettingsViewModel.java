@@ -51,6 +51,7 @@ public final class SettingsViewModel {
     private final ObservableList<ProviderRow> loaded = FXCollections.observableArrayList();
     private final ObservableList<ProviderRow> providers = FXCollections.unmodifiableObservableList(loaded);
     private final Map<String, ProviderConfig> snapshot = new LinkedHashMap<>();
+    private final KeptModels keptModels = new KeptModels();
     private final Messages messages;
     private final ReadOnlyStringWrapper selectedProviderId = new ReadOnlyStringWrapper("");
     private final ReadOnlyStringWrapper editedProviderId = new ReadOnlyStringWrapper("");
@@ -107,10 +108,11 @@ public final class SettingsViewModel {
     private void loadProviders(final Optional<ModelSelection> stored, final Runnable afterPublished) {
         log.debug("loading the providers on {}", Thread.currentThread().getName());
         final List<ProviderConfig> read = ProviderRows.sorted(configs);
+        final Map<String, String> kept = KeptModels.read(read, settingsStore);
         if (Platform.isFxApplicationThread()) {
-            publishProviders(read, stored, afterPublished);
+            publishProviders(read, kept, stored, afterPublished);
         } else {
-            Platform.runLater(() -> publishProviders(read, stored, afterPublished));
+            Platform.runLater(() -> publishProviders(read, kept, stored, afterPublished));
         }
     }
 
@@ -126,9 +128,13 @@ public final class SettingsViewModel {
     }
 
     private void publishProviders(
-            final List<ProviderConfig> read, final Optional<ModelSelection> stored, final Runnable afterPublished) {
+            final List<ProviderConfig> read,
+            final Map<String, String> kept,
+            final Optional<ModelSelection> stored,
+            final Runnable afterPublished) {
         snapshot.clear();
         read.forEach(config -> snapshot.put(config.id(), config));
+        keptModels.replace(kept);
         final List<ProviderRow> rows = read.stream().map(ProviderRows::rowOf).toList();
         loaded.setAll(rows);
         if (!loadedOnce && selectedProviderId.get().isEmpty()) {
@@ -155,7 +161,7 @@ public final class SettingsViewModel {
     }
 
     private void showEdited(final String id) {
-        draftModel.set(id.equals(selectedProviderId.get()) ? model.get() : "");
+        draftModel.set(id.equals(selectedProviderId.get()) ? model.get() : keptModels.of(id));
         editedProviderId.set(id);
     }
 
@@ -194,6 +200,7 @@ public final class SettingsViewModel {
         }
         final boolean following =
                 !adding.get() && !formDirty && editedProviderId.get().equals(selectedProviderId.get());
+        keptModels.switched(selectedProviderId.get(), model.get(), chosen);
         selectedProviderId.set(chosen.providerId());
         model.set(chosen.modelId());
         if (following) {

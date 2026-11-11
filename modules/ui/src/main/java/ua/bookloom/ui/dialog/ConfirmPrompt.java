@@ -29,6 +29,14 @@ public interface ConfirmPrompt {
                 MessageKey.CONFIRM_STOP_YES_TIP,
                 MessageKey.CONFIRM_STOP_NO);
 
+        /** Stopping the run during its Proofread stage, where the segments in flight are being proofread. */
+        public static final Question STOP_PROOFREAD = new Question(
+                MessageKey.CONFIRM_STOP_TITLE,
+                MessageKey.CONFIRM_STOP_TEXT_PROOFREAD,
+                MessageKey.CONFIRM_STOP_YES,
+                MessageKey.CONFIRM_STOP_YES_TIP,
+                MessageKey.CONFIRM_STOP_NO);
+
         /** Opening another project while a translation is at work; the text names the book and the project. */
         public static final Question SWITCH_PROJECT = new Question(
                 MessageKey.CONFIRM_SWITCH_TITLE,

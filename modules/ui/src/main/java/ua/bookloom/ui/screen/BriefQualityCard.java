@@ -105,7 +105,12 @@ final class BriefQualityCard {
         Tips.install(messages, change, MessageKey.BRIEF_MODEL_CHANGE_TIP);
         change.getStyleClass().add("btn-ghost");
         change.setOnAction(event -> {
-            log.debug("the model row's change link pressed: opening the settings");
+            log.debug("the model row's change link pressed: opening the settings on the current provider");
+            // The settings show the provider last edited there, which may be another than the run's.
+            final String current = settings.selectedProviderId().get();
+            if (!current.isEmpty()) {
+                settings.editProvider(current);
+            }
             navigator.navigate(ViewNames.SETTINGS);
         });
         final Region spacer = new Region();

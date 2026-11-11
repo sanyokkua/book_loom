@@ -41,7 +41,9 @@ The tab is a list | form split that stays side by side at every width. The detai
 "current" or **Use this one**, **Delete…** with a confirmation), a **summary card** ("Your AI model: Ollama · gemma4:e4b
 — ready · Answers in about 1 second · 7 models available", with Test and Change model), and a **Connection details**
 fold around the unchanged GoText-style form. The fold opens by itself when there is a problem, for a new provider, or
-with Show technical details. Test results are in plain words with a **Details** link to the test dialog (request line,
+with Show technical details. Each provider keeps the model last saved or chosen on it (stored per provider beside the
+current model), so a provider that stops being the current one, and **Use this one** later, comes back with its model.
+Test results are in plain words with a **Details** link to the test dialog (request line,
 body, status, time, model load, first token, speed, response).
 
 The two tests that use the model, **Test inference** and **Test advanced features**, each have two buttons: the quiet
@@ -177,8 +179,10 @@ something to say; none is a dialog and none changes a setting. In order: *identi
 exact match / recognised as {family}, not this exact model / recognised as a fine-tune of {base} (behaviour of {base}) /
 not recognised", with "(server reports {quant})" when the name and the server disagree); the *quant* sentence for the
 tier, naming the project's target language (none for excellent); the *languages* line ("Declared languages: {n}
-(includes uk, ru)", "English only", "not stated by the maker", or "Declared for its base model {base}: …", then "· BookLoom
-tested it for {source} → {target}" where a run exists); the *licence* note for a noncommercial-only model; and the
+(includes uk, ru)", "English only", "not stated by the maker", or "Declared for its base model {base}: …"; where the maker
+lists languages it then says what is known about the target: "· no target language chosen yet" while no project names
+one, else "· {target} is declared", or "· {target} is not declared" only for a complete list, and nothing more where the
+list cannot tell; or, where a run exists, "· BookLoom tested it for {source} → {target}" instead); the *licence* note for a noncommercial-only model; and the
 *thinking* hint for an Ollama download that cannot turn thinking off. The foot of the tab reads "Model facts as of
 {date}", the `data-version` of the bundled knowledge. At Start the same advice becomes at most one language line, a quant
 line only for a poor, unusable or removed quant (or an acceptable one on a model of 5B or less, unless BookLoom measured

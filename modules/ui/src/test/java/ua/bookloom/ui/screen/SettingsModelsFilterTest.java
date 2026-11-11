@@ -144,6 +144,42 @@ class SettingsModelsFilterTest extends SettingsModelsScreenTestBase {
                 .containsExactly(QWEN);
     }
 
+    // A filter typed for one server's names means nothing for another's list: it would hide every model there.
+    @Test
+    void providersFilter_otherProviderEdited_filterClearedAndItsListWhole() throws TimeoutException {
+        catalog.respondFor("lmstudio", QWEN);
+        openSettingsSettled();
+        openFold();
+        awaitFx(() -> modelCombo().getItems().size() == 3);
+        onFx(() -> modelsField("settings-model-filter").setText("e4b"));
+
+        onFx(() -> viewModel().editProvider("lmstudio"));
+
+        awaitFx(() -> modelCombo().getItems().size() == 1);
+        assertThat(ThemeTestSupport.onFx(
+                        () -> modelsField("settings-model-filter").getText()))
+                .isEmpty();
+        assertThat(visible("settings-model-filter-none")).isFalse();
+        assertThat(ThemeTestSupport.onFx(() -> List.copyOf(modelCombo().getItems())))
+                .containsExactly(QWEN);
+    }
+
+    // The sentence answers the list shown, so a list read after the typing that holds a match takes it away.
+    @Test
+    void providersFilter_matchingListArrivesAfterTyping_noneSentenceHidden() throws TimeoutException {
+        openSettingsSettled();
+        openFold();
+        awaitFx(() -> modelCombo().getItems().size() == 3);
+        onFx(() -> modelsField("settings-model-filter").setText("llama"));
+        assertThat(visible("settings-model-filter-none")).isTrue();
+        catalog.respondFor("ollama", E4B, "llama3:8b");
+
+        onFx(() -> viewModel().refreshModels());
+
+        awaitFx(() -> modelCombo().getItems().size() == 1);
+        assertThat(visible("settings-model-filter-none")).isFalse();
+    }
+
     private static void press(final TextField target, final KeyCode code) {
         ThemeTestSupport.onFx(() -> {
             Event.fireEvent(target, new KeyEvent(KeyEvent.KEY_PRESSED, "", "", code, false, false, false, false));

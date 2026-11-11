@@ -136,7 +136,8 @@ for advanced users.
 - **Stop** ends translating for now, for example to close the project (terminal `stopped` state). It is never surfaced
   as an error, and Stop is a secondary (not red) button. The toolbar then offers **Continue translation**, which starts
   a new run at the first PENDING segment. The Stop dialog says how many segments are done and saved and that the ones
-  being translated now are translated next time.
+  being translated now are translated next time (during Proofread: the ones being proofread now are proofread next
+  time).
 - Both keep every decision made so far, and segments that need review keep waiting in the review desk. Today those
   decisions are kept for the rest of the session only; saving them across a restart is planned (SQLite).
 - **Try again now** is the one retry verb; "Retry now", "Send again" and "Stay paused" are gone.

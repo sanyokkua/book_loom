@@ -19,7 +19,8 @@ public enum ReviewFilter {
 
     /**
      * Accepted segments no person has reviewed that the final audit doubts, that hold a repair-level finding the
-     * Proofread stage left, or whose open gender deferral's gender has arrived and the text disagrees with it.
+     * Proofread stage left, or whose open gender deferral's gender has arrived and the text disagrees with it, and every
+     * segment not flagged that holds a proofread mark no window has dealt with — the marks an export counts as waiting.
      */
     SUSPICIOUS,
 

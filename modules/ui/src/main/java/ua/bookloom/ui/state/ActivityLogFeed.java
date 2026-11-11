@@ -14,6 +14,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ChapterSummaryKept;
+import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.PauseReason;
@@ -35,7 +36,6 @@ import ua.bookloom.ui.i18n.MessageKey;
 @Slf4j
 final class ActivityLogFeed {
 
-    static final String STAGE_STARTED = "stageStarted";
     static final String PAUSED_KEY = "paused";
     static final String RESUMED_KEY = "resumed";
     static final String FINISHED_KEY = "finished";
@@ -182,8 +182,17 @@ final class ActivityLogFeed {
         return String.valueOf(counts.getOrDefault(outcome, 0L));
     }
 
-    LogEntry stageStarted() {
-        return milestone(STAGE_STARTED);
+    /**
+     * The line naming the stage that started, worded as the stage chip words it.
+     *
+     * @param stage the stage
+     * @param round the Proofread round of a two-round reading, else 0
+     * @return the entry; arguments: 0 the stage's name, 1 the round
+     */
+    LogEntry stageStarted(final JobStage stage, final int round) {
+        log.debug("log: stage {} round {} started", stage, round);
+        return LogEntry.of(
+                LogKind.MILESTONE, MessageKey.LOG_STAGE_STARTED, List.of(stage.name(), String.valueOf(round)));
     }
 
     LogEntry paused(final Paused event) {

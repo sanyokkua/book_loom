@@ -3,9 +3,12 @@ package ua.bookloom.ui.screen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ListView;
+import javafx.scene.control.skin.ComboBoxListViewSkin;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
@@ -62,6 +65,27 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
 
         assertThat(ThemeTestSupport.onFx(() -> viewModel().draftModel().get())).isEqualTo("qwen3:8b");
         assertThat(((Button) required("settings-test-inference")).isDisable()).isFalse();
+    }
+
+    // IF picking a name in the open list changed the list's items while the list was still selecting it, THEN the
+    // list would fail on its own stale selection change (an IndexOutOfBoundsException on the FX thread) on a click.
+    @Test
+    void modelControl_nameClickedInOpenList_choosesItWithNoFailureOnTheFxThread() throws TimeoutException {
+        catalog.respondWith("gemma3:12b", "qwen3:8b", "qwen3:14b");
+        openSettings();
+        awaitFx(() -> modelCombo().getItems().size() == 3);
+        openFold();
+        final List<Throwable> failures = new CopyOnWriteArrayList<>();
+        onFx(() -> {
+            Thread.currentThread().setUncaughtExceptionHandler((thread, error) -> failures.add(error));
+            modelCombo().show();
+        });
+
+        onFx(() -> popupList().getSelectionModel().clearAndSelect(1));
+        onFx(() -> Thread.currentThread().setUncaughtExceptionHandler(null));
+
+        assertThat(failures).isEmpty();
+        assertThat(ThemeTestSupport.onFx(() -> viewModel().draftModel().get())).isEqualTo("qwen3:8b");
     }
 
     // IF typing did not narrow the list, THEN a catalogue of hundreds of models could not be searched: "free" must
@@ -212,6 +236,11 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
 
         assertThat(modelCombo().getEditor().getText()).isEqualTo("mistral-small:24b");
         assertThat(ThemeTestSupport.onFx(() -> viewModel().draftModel().get())).isEqualTo("mistral-small:24b");
+    }
+
+    @SuppressWarnings("unchecked")
+    private ListView<String> popupList() {
+        return (ListView<String>) ((ComboBoxListViewSkin<String>) modelCombo().getSkin()).getPopupContent();
     }
 
     // IF a refusal a person can fix were not said beside the control, THEN they would get no reason for an empty list;

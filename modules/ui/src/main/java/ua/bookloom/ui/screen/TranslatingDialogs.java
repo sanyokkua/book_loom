@@ -61,12 +61,13 @@ record TranslatingDialogs(
      */
     void askToStop(final TranslatingViewModel viewModel, final RunStateSource.StopFigures figures) {
         log.debug(
-                "stop pressed at {} of {} with {} in flight: asking first",
+                "stop pressed at {} of {} with {} in flight, proofreading {}: asking first",
                 figures.decided(),
                 figures.total(),
-                figures.inFlight());
+                figures.inFlight(),
+                figures.proofreading());
         confirm.ask(
-                ConfirmPrompt.Question.STOP_RUN,
+                figures.proofreading() ? ConfirmPrompt.Question.STOP_PROOFREAD : ConfirmPrompt.Question.STOP_RUN,
                 List.of(figures.decided(), figures.total(), figures.inFlight()),
                 viewModel::stop);
     }

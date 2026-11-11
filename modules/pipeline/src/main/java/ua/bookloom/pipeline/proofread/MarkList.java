@@ -24,6 +24,8 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.api.project.ProofreadOutcome;
+import ua.bookloom.api.project.ProofreadVerdict;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
@@ -95,6 +97,40 @@ public final class MarkList {
         }
         log.debug("Mark list built segments={} marks={}", records.size(), marks.size());
         return List.copyOf(marks);
+    }
+
+    /**
+     * The segments that hold a mark no window has dealt with: never read, or read with the rewrite refused. This is
+     * what the export counts as waiting on the person and what the review desk lists, so both read it here. A book
+     * whose target language is not chosen yet has no decided segment, so it has no open mark.
+     *
+     * @param book the non-null book and map as they are now
+     * @param records the non-null stored records
+     * @param open the non-null open deferrals
+     * @return the ids in reading order; never null, empty when no mark is open
+     */
+    public static Set<String> openMarks(final Book book, final List<SegmentRecord> records, final List<Deferral> open) {
+        Objects.requireNonNull(book, "book");
+        Objects.requireNonNull(records, "records");
+        Objects.requireNonNull(open, "open");
+        if (book.brief().targetLanguage() == null) {
+            log.debug("Open marks: none, no target language chosen records={}", records.size());
+            return Set.of();
+        }
+        final Map<String, SegmentRecord> byId = new HashMap<>();
+        records.forEach(record -> byId.putIfAbsent(record.segmentId(), record));
+        final Set<String> unread = of(book, records, open).stream()
+                .map(Mark::segmentId)
+                .filter(id -> isUnread(byId.get(id)))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        log.debug("Open marks={} of records={}", unread.size(), records.size());
+        return unread;
+    }
+
+    // Every mark is of a stored record, so a missing one never reaches here; it would count as unread.
+    private static boolean isUnread(final @Nullable SegmentRecord record) {
+        final ProofreadVerdict verdict = record == null ? null : record.proofread();
+        return verdict == null || verdict.outcome() == ProofreadOutcome.REJECTED;
     }
 
     private static Optional<Mark> markOf(

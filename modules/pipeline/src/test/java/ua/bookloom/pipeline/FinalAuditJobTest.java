@@ -182,7 +182,8 @@ class FinalAuditJobTest {
                         run.stores().segments(),
                         run.deferrals(),
                         run.stores().promptFrames(),
-                        run.stores().glossary())
+                        run.stores().glossary(),
+                        run.stores().lexicon())
                 .queue(run.id(), ReviewFilter.SUSPICIOUS)
                 .data());
         final ReviewCounts counts = ReviewCounting.count(stored(run), Set.of());

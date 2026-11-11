@@ -32,6 +32,22 @@ public final class StageWords {
     }
 
     /**
+     * The stage a log line says started: its name, and for a round of Max's two-round Proofread the round as the chip
+     * words it.
+     *
+     * @param messages the non-null catalogue
+     * @param stage the non-null stage
+     * @param round the round of a two-round Proofread, else 0
+     * @return for example "Translate" or "Proofread · round 2 of 2: whole book"
+     */
+    public static String started(final Messages messages, final JobStage stage, final int round) {
+        final String name = name(messages, stage);
+        return stage == JobStage.PROOFREAD && round > 0
+                ? messages.get(MessageKey.RUN_STAGE_PROOFREAD_ROUND, name, String.valueOf(round))
+                : name;
+    }
+
+    /**
      * The stage in work with what it does at the run's quality, as the chip and the strip's marked stage read it.
      *
      * @param messages the non-null catalogue

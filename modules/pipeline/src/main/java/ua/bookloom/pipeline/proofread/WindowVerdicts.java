@@ -76,8 +76,21 @@ final class WindowVerdicts {
      * @param record the stored record the window read
      * @param current the text the window showed
      * @param reasons the segment's marks
+     * @param wholeBook whether the window belongs to Max's whole-book round, where a small rewrite of an unmarked
+     *     paragraph is kept at an equal score (design D14)
      */
-    record Read(Segment segment, SegmentRecord record, String current, List<String> reasons) {}
+    record Read(Segment segment, SegmentRecord record, String current, List<String> reasons, boolean wholeBook) {
+
+        /** A segment read in the marked round. */
+        Read(final Segment segment, final SegmentRecord record, final String current, final List<String> reasons) {
+            this(segment, record, current, reasons, false);
+        }
+
+        /** {@return whether the segment is an unmarked focus of Max's whole-book round} */
+        boolean isUnmarkedMaxFocus() {
+            return wholeBook && reasons.isEmpty();
+        }
+    }
 
     /**
      * What a window decided, to be committed together.
@@ -151,7 +164,8 @@ final class WindowVerdicts {
             final String fingerprint,
             final List<Deferral> proposals,
             final List<String> resolved) {
-        return switch (judge.judge(read.segment(), read.current(), rewrite, read.reasons(), arrived(read))) {
+        return switch (judge.judge(
+                read.segment(), read.current(), rewrite, read.reasons(), arrived(read), read.isUnmarkedMaxFocus())) {
             case ProofreadJudge.Judged.Reject(final String reason) -> {
                 log.warn(
                         "Proofread rewrite rejected segmentId={} veto={}",

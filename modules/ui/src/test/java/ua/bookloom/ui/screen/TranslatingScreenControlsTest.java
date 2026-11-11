@@ -9,11 +9,14 @@ import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.ProofreadCoverage;
 import ua.bookloom.ui.LiveCallFixtures;
 import ua.bookloom.ui.ProgressFixtures;
 import ua.bookloom.ui.TooltipProbe;
+import ua.bookloom.ui.state.RunStage;
 
 /**
  * The dashboard's buttons wired to the run: each one fired on the screen reaches the recording job the scripted engine
@@ -146,5 +149,24 @@ class TranslatingScreenControlsTest extends TranslatingScreenTestBase {
                 .contains("74 of 142 segments are done and saved. The 4 being translated now are translated next"
                         + " time. For a short break, use Pause.");
         assertThat(button("confirm-cancel").isDefaultButton()).isTrue();
+    }
+
+    // IF the question said the segments in flight are "being translated" during Proofread, THEN it would misname the
+    // work a stop interrupts: in Proofread they are being proofread.
+    @Test
+    void stopQuestion_inProofreadWith4InFlight_saysTheyAreProofreadNextTime() throws Exception {
+        startRun();
+        mirror().publishProgress(ProgressFixtures.progress(2, 9, 74, 0, 68));
+        mirror().live().publishStage(new RunStage(JobStage.PROOFREAD, ProofreadCoverage.MARKED_AND_DOUBTFUL, 0));
+        mirror().live()
+                .publishCalls(LiveCallFixtures.calls(
+                        LiveCallFixtures.waiting(1, 4, "Text.", LiveCallFixtures.smallPrompt()), null));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        onFx(() -> button("translating-stop").fire());
+
+        assertThat(textOf("confirm-card"))
+                .contains("74 of 142 segments are done and saved. The 4 being proofread now are proofread next"
+                        + " time. For a short break, use Pause.");
     }
 }

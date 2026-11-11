@@ -90,6 +90,25 @@ class ModelProfilesTest {
         assertThat(resolved.quant()).isEqualTo("q4_k_m");
     }
 
+    // A name's size is the rounded label of the weights; the server's exact count (26.2 for a "26b" model) must not
+    // lose the model its own row, or the profile, and the windows planned from its batch size, would change once the
+    // server's facts are read.
+    @Test
+    void resolve_serverSizeRefinesTheNamedSize_keepsTheNamedRow() {
+        final ModelProfiles builtIn = new ModelProfiles(new BuiltInRows());
+        final String model = "gemma4:26b-mlx";
+        final ModelSettings settings = ModelSettings.defaults("ollama", model);
+
+        final ResolvedProfile named = builtIn.resolve(ServerEngine.OLLAMA, model, ModelFacts.unknown(), settings);
+        final ResolvedProfile told = builtIn.resolve(ServerEngine.OLLAMA, model, sized("26.2B"), settings);
+
+        assertThat(told.match()).isEqualTo(ModelReport.Match.EXACT);
+        assertThat(told.profile().batchSize())
+                .isEqualTo(named.profile().batchSize())
+                .isEqualTo(8);
+        assertThat(told.identity().sizeB()).isEqualTo(26.2);
+    }
+
     @Test
     void report_beforeAModelExists_isServedBySelection() {
         final WireMockServer server =
@@ -217,6 +236,30 @@ class ModelProfilesTest {
                         .reasoning()
                         .kind())
                 .isEqualTo(ReasoningControl.Kind.BOOLEAN);
+    }
+
+    private static ModelFacts sized(final String parameterSize) {
+        return new ModelFacts(
+                "gemma4",
+                null,
+                "gguf",
+                null,
+                parameterSize,
+                List.of("completion"),
+                List.of(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                List.of(),
+                null,
+                false,
+                List.of());
     }
 
     private static ModelFacts ollamaFacts(

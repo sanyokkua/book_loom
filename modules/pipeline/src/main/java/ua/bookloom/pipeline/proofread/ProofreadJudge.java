@@ -105,6 +105,8 @@ final class ProofreadJudge {
      * @param rewrite the non-null text the reply gave
      * @param reasons the non-null reasons the segment was marked by, which name the finding a keep should clear
      * @param arrived the non-null genders now known that the segment's open deferrals waited on
+     * @param unmarkedMaxFocus whether the segment is an unmarked focus of Max's whole-book round, where a small
+     *     rewrite at an equal score is kept
      * @return the judgement; never null
      */
     Judged judge(
@@ -112,14 +114,17 @@ final class ProofreadJudge {
             final String current,
             final String rewrite,
             final List<String> reasons,
-            final List<ArrivedGender> arrived) {
+            final List<ArrivedGender> arrived,
+            final boolean unmarkedMaxFocus) {
         final Optional<String> readable = withoutControlCodes(segment, rewrite);
         if (readable.isEmpty()) {
             return rejected(segment, CONTROL_CHARACTERS);
         }
         final String candidate = WhitespaceRestoration.restore(current, readable.get());
+        log.debug("Proofread rewrite judging segmentId={} unmarkedMaxFocus={}", segment.id(), unmarkedMaxFocus);
         return switch (book.gate().restore(segment, candidate)) {
-            case GateResult.Restored restored -> inScope(segment, new Texts(current, restored), reasons, arrived);
+            case GateResult.Restored restored ->
+                inScope(segment, new Texts(current, restored, unmarkedMaxFocus), reasons, arrived);
             case GateResult.GateFailed failed ->
                 rejected(segment, failed.finding().raisedBy());
             case GateResult.StepError(final AppError error) -> rejected(segment, "gate-error " + error.code());
@@ -139,8 +144,8 @@ final class ProofreadJudge {
                 segment.masked(), stripped, book.frame().targetLanguage());
     }
 
-    /** The text in place and the rewrite as the gate restored it. */
-    private record Texts(String current, GateResult.Restored restored) {
+    /** The text in place, the rewrite as the gate restored it, and whether the focus is an unmarked Max paragraph. */
+    private record Texts(String current, GateResult.Restored restored, boolean unmarkedMaxFocus) {
 
         // Read on the masked form like the text in place, so the book's markup and escapes are no words.
         String plainAfter() {
@@ -175,7 +180,7 @@ final class ProofreadJudge {
                 book.frame().targetLanguage(),
                 book.glossary(),
                 trigger(before, reasons, arrived, texts),
-                false);
+                texts.unmarkedMaxFocus());
         final Candidate held = new Candidate(current, before, FinalAudit.checksOf(book.audit(), segment, current));
         final Candidate fresh = new Candidate(
                 restored.maskedForm(), after, FinalAudit.checksOf(book.audit(), segment, restored.maskedForm()));

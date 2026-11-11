@@ -4,6 +4,7 @@ import static ua.bookloom.util.contract.ArgNames.ERROR;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -33,33 +34,74 @@ final class ProviderStorage {
         this.settings = settings;
     }
 
-    Result<Boolean> persist(final ProviderConfig config, final @Nullable String currentModel) {
+    /**
+     * Saves the provider and the model typed for it, which it keeps for when it is made current again; for the current
+     * provider the model is the current model too. A blank model is kept as typed, i.e. none.
+     */
+    Result<Boolean> persist(final ProviderConfig config, final String model, final boolean current) {
         final Result<ProviderConfig> stored = configs.save(config);
         if (stored.isErr()) {
             return Result.err(Objects.requireNonNull(stored.error(), ERROR));
         }
-        if (currentModel == null) {
+        final String chosen = model.strip();
+        final Result<?> kept = chosen.isEmpty()
+                ? settings.remove(AppSetting.providerModel(config.id()))
+                : settings.put(AppSetting.providerModel(config.id()), chosen);
+        log.debug("provider '{}' keeps a model: {}, current {}", config.id(), !chosen.isEmpty(), current);
+        if (kept.isErr()) {
+            return modelNotWritten(config.id(), kept);
+        }
+        if (!current) {
             return Result.ok(true);
         }
-        final Result<?> written = currentModel.isEmpty()
+        final Result<?> written = chosen.isEmpty()
                 ? settings.remove(AppSetting.CURRENT_MODEL)
-                : settings.put(AppSetting.CURRENT_MODEL, new ModelSelection(config.id(), currentModel));
-        if (written.isErr()) {
-            final AppError error = Objects.requireNonNull(written.error(), ERROR);
-            log.warn("provider '{}' was saved but its current model was not: {}", config.id(), error.code());
-            return Result.err(error);
-        }
-        return Result.ok(true);
+                : settings.put(AppSetting.CURRENT_MODEL, new ModelSelection(config.id(), chosen));
+        return written.isErr() ? modelNotWritten(config.id(), written) : Result.ok(true);
     }
 
-    /** Writes the provider and model as the current ones; a blank model is kept as typed, i.e. none. */
+    private static Result<Boolean> modelNotWritten(final String providerId, final Result<?> written) {
+        final AppError error = Objects.requireNonNull(written.error(), ERROR);
+        log.warn("provider '{}' was saved but its model was not: {}", providerId, error.code());
+        return Result.err(error);
+    }
+
+    /**
+     * Writes the provider and model as the current ones; a blank model is kept as typed, i.e. none. The provider that
+     * was current keeps its model, and so does the new one when a model is named, so either can be made current again
+     * with the model chosen for it.
+     */
     Result<Boolean> makeCurrent(final ModelSelection chosen) {
+        keepEarlier(chosen.providerId());
         final Result<?> written = settings.put(AppSetting.CURRENT_MODEL, chosen);
         if (written.isErr()) {
             log.warn("provider '{}' could not be made current", chosen.providerId());
             return Result.err(Objects.requireNonNull(written.error(), ERROR));
         }
-        return Result.ok(true);
+        if (chosen.modelId().isBlank()) {
+            log.debug("provider '{}' made current with no model: the model it keeps stays", chosen.providerId());
+            return Result.ok(true);
+        }
+        final Result<?> kept = settings.put(AppSetting.providerModel(chosen.providerId()), chosen.modelId());
+        return kept.isErr() ? modelNotWritten(chosen.providerId(), kept) : Result.ok(true);
+    }
+
+    // A current model set without a save (the first-launch look, an earlier version) is kept for its provider too.
+    private void keepEarlier(final String next) {
+        final Result<Optional<ModelSelection>> read = settings.get(AppSetting.CURRENT_MODEL);
+        final @Nullable ModelSelection earlier = read.isOk()
+                ? Objects.requireNonNull(read.data(), "current model").orElse(null)
+                : null;
+        if (earlier == null
+                || earlier.providerId().equals(next)
+                || earlier.modelId().isBlank()) {
+            log.debug("no earlier model to keep before '{}' is made current", next);
+            return;
+        }
+        if (settings.put(AppSetting.providerModel(earlier.providerId()), earlier.modelId())
+                .isErr()) {
+            log.warn("the model of provider '{}' could not be kept", earlier.providerId());
+        }
     }
 
     /**
@@ -86,6 +128,9 @@ final class ProviderStorage {
         if (configs.delete(id).isErr()) {
             log.warn("provider '{}' could not be deleted", id);
             return false;
+        }
+        if (settings.remove(AppSetting.providerModel(id)).isErr()) {
+            log.warn("the model kept for deleted provider '{}' could not be removed", id);
         }
         if (current && settings.remove(AppSetting.CURRENT_MODEL).isErr()) {
             log.warn("the current model of deleted provider '{}' could not be removed; it points at nothing", id);

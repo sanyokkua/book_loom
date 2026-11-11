@@ -656,7 +656,7 @@ offer, the stored counts) by `RunStateSource`; `RunStateMappingTest` walks all s
 | Failed | FAILED | "Did not finish" · Error (red) | **Continue translation** · Review (n) | "The translation stopped because of an error. Finished segments are saved." [Show details] | "Stopped by an error at Chapter 2, segment 5." | editable · partial · no |
 
 The Stop dialog says: "74 of 142 segments are done and saved. The 4 being translated now are translated next time. For
-a short break, use Pause." ("Stay paused" and "Retry now / Send again" are gone; **Try again now** is the one retry
+a short break, use Pause."; during Proofread it says "The 4 being proofread now are proofread next time." instead. ("Stay paused" and "Retry now / Send again" are gone; **Try again now** is the one retry
 verb.)
 
 ### Changes while translating {#changes-while-translating}
@@ -734,8 +734,9 @@ without leaving the screen shown. **Built** as an `.xl` `ModalCard` (`ReviewDesk
 
 **Target editor.** The editable pane shows, in order of preference: the saved human edit, else the machine target,
 else the model's refused reply, else the source — all in **masked** form: `⟦gN⟧` tokens stay visible and a locked
-name shows as its locked rendering. Saving an edit that deletes or reorders a token is refused, naming the reason; a
-revised segment can be edited again.
+name shows as its locked rendering. Over a refused reply a note says why it was refused, from its findings: lost
+formatting marks, letters of another alphabet, part in another language, else the checks under "What may be wrong".
+Saving an edit that deletes or reorders a token is refused, naming the reason; a revised segment can be edited again.
 
 **Edit vs accept.** The one main button is Save my edit once the text is edited, so Accept never silently discards an
 unsaved edit, and a re-read of the list never replaces what the person is typing. Accept (`SegmentActions`) moves a

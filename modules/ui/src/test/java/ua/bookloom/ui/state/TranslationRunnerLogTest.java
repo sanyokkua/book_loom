@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Named;
@@ -18,8 +19,11 @@ import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.ProofreadRoundStarted;
 import ua.bookloom.api.pipeline.Resumed;
 import ua.bookloom.api.pipeline.StageStarted;
+import ua.bookloom.ui.control.TaggedLog;
+import ua.bookloom.ui.i18n.Messages;
 
 /** How engine events become activity-log entries and figures. */
 class TranslationRunnerLogTest extends RunnerTestBase {
@@ -35,9 +39,6 @@ class TranslationRunnerLogTest extends RunnerTestBase {
                 Arguments.of(
                         Named.<JobEvent>of("flagged", decided("s-8", SegmentStatus.FLAGGED, at)),
                         log(LogKind.SEGMENT_ERROR, "s-8")),
-                Arguments.of(
-                        Named.<JobEvent>of("stage", new StageStarted(JobStage.TRANSLATE, at)),
-                        log(LogKind.MILESTONE, "stageStarted")),
                 Arguments.of(
                         Named.<JobEvent>of("paused", new Paused(PauseReason.AFTER_SECTION, null, at)),
                         log(LogKind.MILESTONE, "paused")),
@@ -55,6 +56,35 @@ class TranslationRunnerLogTest extends RunnerTestBase {
         deliverAndTick();
 
         assertThat(logEntries()).containsExactly(expected);
+        job.finish(Result.err(error()));
+        awaitState(RunState.FAILED);
+    }
+
+    static Stream<Arguments> stagesAndTheirLines() {
+        final JobProgress at = progress(1, 0, 1);
+        return Stream.of(
+                Arguments.of(Named.<JobEvent>of("prepare", new StageStarted(JobStage.PREP, at)), "Prepare"),
+                Arguments.of(Named.<JobEvent>of("translate", new StageStarted(JobStage.TRANSLATE, at)), "Translate"),
+                Arguments.of(Named.<JobEvent>of("proofread", new StageStarted(JobStage.PROOFREAD, at)), "Proofread"),
+                Arguments.of(
+                        Named.<JobEvent>of("round 2", new ProofreadRoundStarted(2, 2, 3, 3)),
+                        "Proofread · round 2 of 2: whole book"));
+    }
+
+    // IF the log said only that "a new stage" started, THEN the person could not tell from it which stage the run is
+    // in.
+    @ParameterizedTest
+    @MethodSource("stagesAndTheirLines")
+    void stageEvent_eachStage_logsALineNamingIt(final JobEvent event, final String stage) throws Exception {
+        startJob();
+
+        job.emit(event);
+        deliverAndTick();
+
+        assertThat(logEntries())
+                .singleElement()
+                .satisfies(entry -> assertThat(TaggedLog.lineOf(entry, new Messages(() -> Locale.ENGLISH)))
+                        .endsWith("Stage started: " + stage + "."));
         job.finish(Result.err(error()));
         awaitState(RunState.FAILED);
     }

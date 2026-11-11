@@ -20,6 +20,7 @@ import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.StageStarted;
+import ua.bookloom.ui.i18n.MessageKey;
 
 /** The returned result, never an event, decides how a run ends. */
 class TranslationRunnerOutcomeTest extends RunnerTestBase {
@@ -45,7 +46,7 @@ class TranslationRunnerOutcomeTest extends RunnerTestBase {
         assertThat(onFx(() -> mirror.figures().get().remaining())).isZero();
         assertThat(logEntries())
                 .containsExactly(
-                        log(LogKind.MILESTONE, "stageStarted"),
+                        LogEntry.of(LogKind.MILESTONE, MessageKey.LOG_STAGE_STARTED, List.of("TRANSLATE", "0")),
                         log(LogKind.ACCEPTED, "s-1"),
                         log(LogKind.ACCEPTED, "s-2"),
                         log(LogKind.MILESTONE, "finished"));

@@ -23,6 +23,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.document.BookProfile;
 import ua.bookloom.api.pipeline.CallSegment;
 import ua.bookloom.api.pipeline.CallSnapshot;
+import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.control.DurationText;
 import ua.bookloom.ui.i18n.Messages;
@@ -186,7 +187,9 @@ public final class RunStateSource {
      */
     public StopFigures stopFigures() {
         final RunStateInputs in = inputs(model.get());
-        return new StopFigures(in.decided(), in.total(), in.inFlight());
+        final RunStage stage = mirror.live().stage().get();
+        final boolean proofreading = stage != null && stage.stage() == JobStage.PROOFREAD;
+        return new StopFigures(in.decided(), in.total(), in.inFlight(), proofreading);
     }
 
     /**
@@ -194,9 +197,10 @@ public final class RunStateSource {
      *
      * @param decided the segments done and saved
      * @param total the segments in all
-     * @param inFlight the segments being translated now, which are translated next time
+     * @param inFlight the segments being worked on now, which are worked on again next time
+     * @param proofreading whether the run is in its Proofread stage, where the segments in flight are being proofread
      */
-    public record StopFigures(int decided, int total, int inFlight) {}
+    public record StopFigures(int decided, int total, int inFlight, boolean proofreading) {}
 
     private void refresh() {
         final ModelChoice choice = modelChoice();

@@ -22,6 +22,7 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.PromptFrameRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
@@ -34,6 +35,7 @@ import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.PromptFrame;
 import ua.bookloom.api.project.ProofreadVerdict;
@@ -49,6 +51,7 @@ import ua.bookloom.pipeline.memory.ProtectedSpans;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.SegmentLocators;
 import ua.bookloom.pipeline.proofread.GenderNowKnown;
+import ua.bookloom.pipeline.proofread.MarkList;
 import ua.bookloom.pipeline.qa.CheckLevel;
 import ua.bookloom.pipeline.qa.CheckLevels;
 import ua.bookloom.pipeline.qa.CheckName;
@@ -72,6 +75,7 @@ public final class ReviewQueries {
     private final DeferralRepository deferrals;
     private final PromptFrameRepository frames;
     private final GlossaryRepository glossary;
+    private final LexiconRepository lexicon;
 
     /**
      * Lists the segments behind a filter chip.
@@ -153,7 +157,8 @@ public final class ReviewQueries {
         }
         final Stored held =
                 new Stored(found.get().brief(), document, stored, Objects.requireNonNull(open.data()), joined.data());
-        return glossary.all(projectId).map(entries -> reading(projectId, held, entries));
+        return glossary.all(projectId)
+                .flatMap(entries -> lexicon.all(projectId).map(terms -> reading(projectId, held, entries, terms)));
     }
 
     /** What a read found stored, before the glossary is read. */
@@ -164,13 +169,19 @@ public final class ReviewQueries {
             List<Deferral> open,
             @Nullable Map<String, List<PromptSection>> frames) {}
 
-    private Reading reading(final String projectId, final Stored held, final List<GlossaryEntry> entries) {
+    private Reading reading(
+            final String projectId,
+            final Stored held,
+            final List<GlossaryEntry> entries,
+            final List<LexiconEntry> terms) {
         final BookIndex index = openProjects.index(projectId);
         return new Reading(
                 held.brief(),
                 held.records(),
                 held.open(),
                 genderKnown(held.brief(), held.records(), held.open(), entries),
+                MarkList.openMarks(
+                        new MarkList.Book(held.brief(), held.document(), entries, terms), held.records(), held.open()),
                 sourcesOf(held.document()),
                 SegmentLocators.of(held.document()),
                 index == null ? null : index.majorityScript().orElse(null),
@@ -227,6 +238,7 @@ public final class ReviewQueries {
             List<SegmentRecord> records,
             List<Deferral> open,
             Map<String, String> genderKnown,
+            Set<String> openMarks,
             Map<String, Segment> sources,
             Map<String, SegmentLocator> locators,
             Character.@Nullable UnicodeScript bookScript,
@@ -258,12 +270,22 @@ public final class ReviewQueries {
                     records.stream().filter(record -> matches(record, filter)).count();
         }
 
-        // The audit's doubts, a repair-level finding the Proofread stage left, and a gender now known that the text
-        // disagrees with — the last is what Fast's Proofread leaves for the person, as it makes no model call.
+        // The audit's doubts, a repair-level finding the Proofread stage left, a gender now known that the text
+        // disagrees with, and any other mark of the mark list no window has dealt with — what Fast's Proofread leaves
+        // for the person, as it makes no model call, and what the export counts as waiting. A flagged segment is
+        // listed under the flagged filters and one waiting on a gender under its own list, where the gender rule
+        // decides whether it is a second look too, so the lists together hold what the export counts.
         private boolean isSecondLook(final SegmentRecord record) {
             final boolean unreviewedAccept = record.status() == SegmentStatus.ACCEPTED && !record.reviewed();
             return AuditFindings.isSuspicious(record)
-                    || (unreviewedAccept && (genderKnown.containsKey(record.segmentId()) || holdsOpenMark(record)));
+                    || (unreviewedAccept && (genderKnown.containsKey(record.segmentId()) || holdsOpenMark(record)))
+                    || isOpenMark(record);
+        }
+
+        private boolean isOpenMark(final SegmentRecord record) {
+            return record.status() != SegmentStatus.FLAGGED
+                    && openMarks.contains(record.segmentId())
+                    && !isWaitingOnGender(record);
         }
 
         private static boolean holdsOpenMark(final SegmentRecord record) {

@@ -236,8 +236,7 @@ public final class ProviderForm {
         flags.saving.set(true);
         flags.saveFailed.set(false);
         executor.execute(() -> {
-            final Result<Boolean> stored =
-                    storage.persist(config, isCurrent ? typed.model().strip() : null);
+            final Result<Boolean> stored = storage.persist(config, typed.model(), isCurrent);
             FxThread.run(() -> saved(stored, new ProviderSaved(id, adding, isCurrent, typed), then));
         });
     }

@@ -80,10 +80,11 @@ public final class ModelProfiles {
         Objects.requireNonNull(modelId, "modelId");
         Objects.requireNonNull(facts, "facts");
         Objects.requireNonNull(settings, "settings");
-        final ModelIdentity identity = identity(modelId, facts);
-        final Optional<BaseFamilyAliases.Base> base = aliases.baseOf(identity);
-        final Optional<ProfileRows.Picked> picked =
-                rows.pick(identity, facts).or(() -> fromBase(identity, facts, base));
+        final ModelIdentity named = parser.parse(modelId).identity();
+        final ModelIdentity identity = withMetadata(named, facts);
+        final ModelIdentity rowKey = rowKey(named, identity);
+        final Optional<BaseFamilyAliases.Base> base = aliases.baseOf(rowKey);
+        final Optional<ProfileRows.Picked> picked = rows.pick(rowKey, facts).or(() -> fromBase(rowKey, facts, base));
         final ProfileRow row = picked.map(ProfileRows.Picked::row).orElse(DEFAULT_ROW);
         final ReasoningControl reasoning = foundSwitch(
                 engine,
@@ -185,9 +186,23 @@ public final class ModelProfiles {
                 List.of());
     }
 
-    private ModelIdentity identity(final String modelId, final ModelFacts facts) {
-        final ModelIdentity named = parser.parse(modelId).identity();
+    private ModelIdentity withMetadata(final ModelIdentity named, final ModelFacts facts) {
         return metadataWins.apply(named, new MetadataWins.Facts(billions(facts.parameterSize()), null));
+    }
+
+    // A row is picked by the name (BuiltInRows): a size the name writes is the rounded label the rows are written in,
+    // so
+    // the server's exact count (26.2 for a "26b") must not cost the model its row, nor make the profile, and the batch
+    // size planned from it, differ before and after the server's facts are read. Only a name with no size takes the
+    // server's.
+    private static ModelIdentity rowKey(final ModelIdentity named, final ModelIdentity identity) {
+        final boolean byName = named.sizeB() != null;
+        log.debug(
+                "Row key size={} from={} serverSize={}",
+                byName ? named.sizeB() : identity.sizeB(),
+                byName ? "name" : "server",
+                identity.sizeB());
+        return byName ? named : identity;
     }
 
     private static ModelProfile profile(

@@ -270,7 +270,8 @@ final class WindowReader {
                         reading.segment(id),
                         reading.record(id),
                         question.texts().current(id),
-                        question.window().reasons().getOrDefault(id, List.of())))
+                        question.window().reasons().getOrDefault(id, List.of()),
+                        question.round() == WindowFingerprint.ROUND_WHOLE_BOOK))
                 .toList();
     }
 

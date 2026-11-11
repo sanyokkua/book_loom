@@ -26,13 +26,17 @@ class LiveRowDetailTest extends LiveCardTestBase {
 
     // The call of four segments ch2 · p05 to p08, in flight, with the clock at 21 s of 3:00.
     private static CallSnapshot call42() {
+        return call42(CallKind.DRAFT, "draft-batch-json");
+    }
+
+    private static CallSnapshot call42(final CallKind kind, final String label) {
         final List<CallSegment> segments = IntStream.rangeClosed(5, 8)
                 .mapToObj(n -> new CallSegment("s-" + n, "ch2 · p0" + n, "Source text " + n))
                 .toList();
         return CallSnapshot.waiting(
                 42,
-                CallKind.DRAFT,
-                "draft-batch-json",
+                kind,
+                label,
                 null,
                 segments,
                 LiveCallFixtures.smallPrompt(),
@@ -160,6 +164,16 @@ class LiveRowDetailTest extends LiveCardTestBase {
 
         assertThat(textOf("translating-live-inflight"))
                 .contains("Being translated now", "Source text 5", "Source text 8");
+    }
+
+    // IF the box said "Being translated now" while a proofread window was read, THEN it would name the wrong stage.
+    @Test
+    void simpleDetail_proofreadCallInFlight_saysBeingProofreadNow() {
+        showLive(LiveRowFixtures.calls(call42(CallKind.PROOFREAD, "proofread-window"), mixedChunk()));
+
+        assertThat(textOf("translating-live-inflight"))
+                .contains("Being proofread now", "Source text 5")
+                .doesNotContain("Being translated now");
     }
 
     // IF Detailed did not name the call, THEN a person chasing a slow call could not tell which one it is.

@@ -9,6 +9,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallSegment;
 import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.CallState;
@@ -199,7 +200,10 @@ public final class LiveRowDetail extends VBox {
     }
 
     private void showInFlight(final @Nullable CallSnapshot waiting) {
-        final Label heading = new Label(messages.get(MessageKey.LIVE_DETAIL_IN_FLIGHT));
+        // A Proofread window re-reads decided text; calling it "being translated" would name the wrong stage.
+        final boolean proofread = waiting != null && waiting.kind() == CallKind.PROOFREAD;
+        final Label heading = new Label(messages.get(
+                proofread ? MessageKey.LIVE_DETAIL_IN_FLIGHT_PROOFREAD : MessageKey.LIVE_DETAIL_IN_FLIGHT));
         heading.getStyleClass().add("stat-caption");
         inFlight.getChildren().setAll(heading);
         if (waiting == null || waiting.segments().isEmpty()) {

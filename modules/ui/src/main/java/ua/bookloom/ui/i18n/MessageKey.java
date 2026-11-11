@@ -327,6 +327,8 @@ public enum MessageKey {
     CONFIRM_STOP_TITLE("confirm.stop.title"),
     /** Body of the stop-the-run question. */
     CONFIRM_STOP_TEXT("confirm.stop.text"),
+    /** The Stop question's text during Proofread; arguments as {@link #CONFIRM_STOP_TEXT}, the third proofread now. */
+    CONFIRM_STOP_TEXT_PROOFREAD("confirm.stop.text.proofread"),
     /** Confirming button of the stop-the-run question. */
     CONFIRM_STOP_YES("confirm.stop.yes"),
     /** Hover explanation of the control labelled by {@link #CONFIRM_STOP_YES}. */
@@ -504,8 +506,10 @@ public enum MessageKey {
     LOG_SEGMENT_ERROR("log.segmentError"),
     /** Activity-log entry for a step of the automatic recovery; arguments: 0 the attempt, 1 the next try as {@code HH:mm:ss} or empty, 2 the last probe's code or {@code none}, 3 {@code waiting}, {@code gaveUp} or {@code held}; all Strings. */
     LOG_WAITING("log.waiting"),
-    /** Activity-log entry for a run milestone; argument 0 is one of the tokens stageStarted, paused, resumed or finished, selecting the catalogue's own wording. */
+    /** Activity-log entry for a run milestone; argument 0 is one of the tokens paused, resumed or finished, selecting the catalogue's own wording. */
     LOG_MILESTONE("log.milestone"),
+    /** Activity-log entry naming the run stage that started, worded as the stage chip words it. */
+    LOG_STAGE_STARTED("log.stageStarted"),
     /** Label of the error dialog's button that runs the failed action again. */
     ERROR_RETRY("error.retry"),
     /** Hover explanation of the control labelled by {@link #ERROR_RETRY}. */
@@ -2954,6 +2958,12 @@ public enum MessageKey {
     REVIEW_LOCKED_RETRY("review.locked.retry"),
     /** Note above the target of a segment that kept no translation but the model's refused reply, which it shows. */
     REVIEW_TARGET_REJECTED("review.target.rejected"),
+    /** The refused-reply note when the checks found letters of another alphabet in it. */
+    REVIEW_TARGET_REJECTED_SCRIPT("review.target.rejected.script"),
+    /** The refused-reply note when the checks found part of it in another language. */
+    REVIEW_TARGET_REJECTED_LANGUAGE("review.target.rejected.language"),
+    /** The refused-reply note when other checks refused it; the findings below say which. */
+    REVIEW_TARGET_REJECTED_CHECKS("review.target.rejected.checks"),
     /** Note above the target of a segment that kept no translation at all, so its source is shown. */
     REVIEW_TARGET_SOURCE("review.target.source"),
     /** The review editor's line while the edit is blank: Save waits for the translation's words. */
@@ -3791,6 +3801,8 @@ public enum MessageKey {
     LIVE_DETAIL_NO_WORDS("live.detail.noWords"),
     /** Live detail: the heading of the box of what the model works on. */
     LIVE_DETAIL_IN_FLIGHT("live.detail.inFlight"),
+    /** Heading of the in-flight box while the call in flight reads a Proofread window. */
+    LIVE_DETAIL_IN_FLIGHT_PROOFREAD("live.detail.inFlight.proofread"),
     /** Live detail: the box of what the model works on, with nothing in flight. */
     LIVE_DETAIL_IN_FLIGHT_NONE("live.detail.inFlight.none"),
     /** Live detail, Detailed: a segment no call has carried yet. */
@@ -3809,6 +3821,11 @@ public enum MessageKey {
     REVIEW_DESK_LEFT("review.desk.left"),
     /** The desk's header line while a run translates; arguments as {@link #REVIEW_DESK_LEFT}. */
     REVIEW_DESK_LEFT_READ_ONLY("review.desk.leftReadOnly"),
+    /**
+     * The desk's header line when nothing was or is left to review, so it never reads "0 of 0" over a list of segments
+     * worth a second look; argument 0 is how many are worth a second look.
+     */
+    REVIEW_DESK_NONE_LEFT("review.desk.noneLeft"),
     /** Button in the read-only banner that pauses the run. */
     REVIEW_DESK_PAUSE("review.desk.pause"),
     /** Hover explanation of {@link #REVIEW_DESK_PAUSE}. */
@@ -4235,6 +4252,12 @@ public enum MessageKey {
     SETTINGS_ADVICE_LANGUAGES_BASE("settings.advice.languages.base"),
     /** Added to the languages line where BookLoom tested the pair; &#123;0&#125; is the source language, &#123;1&#125; the target. */
     SETTINGS_ADVICE_LANGUAGES_TESTED("settings.advice.languages.tested"),
+    /** The languages line while no target language is chosen, so none can be checked against the list. */
+    SETTINGS_ADVICE_LANGUAGES_NO_TARGET("settings.advice.languages.noTarget"),
+    /** The languages line when the maker's list declares the project's target language. */
+    SETTINGS_ADVICE_LANGUAGES_TARGET_DECLARED("settings.advice.languages.targetDeclared"),
+    /** The languages line when the maker's complete list leaves the project's target language out. */
+    SETTINGS_ADVICE_LANGUAGES_TARGET_NOT_DECLARED("settings.advice.languages.targetNotDeclared"),
     /** Joins two language names; &#123;0&#125; and &#123;1&#125; are the names. */
     SETTINGS_ADVICE_LANGUAGE_AND("settings.advice.language.and"),
     /** The warning for a language the maker's complete list leaves out; &#123;0&#125; is the model's family, &#123;1&#125; the language names. */

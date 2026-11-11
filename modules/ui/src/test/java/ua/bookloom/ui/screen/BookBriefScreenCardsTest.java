@@ -297,6 +297,24 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
         assertThat(currentView()).isEqualTo(ViewNames.SETTINGS);
     }
 
+    // IF change opened the settings on the provider last edited there, THEN the person would be shown another
+    // provider's models than the one the run uses.
+    @Test
+    void modelRow_anotherProviderLastEdited_changeOpensTheSettingsOnTheCurrentProvider() throws TimeoutException {
+        final SettingsViewModel settings = injector.getInstance(SettingsViewModel.class);
+        onFx(() -> settings.model().set("gemma4:26b"));
+        openFrankensteinThenShowBrief();
+        onFx(() -> settings.editProvider("lmstudio"));
+        assertThat(ThemeTestSupport.onFx(() -> settings.editedProviderId().get()))
+                .isEqualTo("lmstudio");
+
+        onFx(() -> button("brief-model-change").fire());
+
+        assertThat(currentView()).isEqualTo(ViewNames.SETTINGS);
+        assertThat(ThemeTestSupport.onFx(() -> settings.editedProviderId().get()))
+                .isEqualTo("ollama");
+    }
+
     // IF the model row kept its text after the model changed, THEN it would name a model the run no longer uses.
     @Test
     void modelRow_modelChosenAfterwards_followsTheSettings() throws TimeoutException {

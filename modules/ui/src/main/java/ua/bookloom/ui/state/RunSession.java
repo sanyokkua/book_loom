@@ -267,7 +267,7 @@ final class RunSession implements JobListener {
             case StepChanged changed -> onStep(changed);
             case ChapterSummaryKept kept -> onSummaryKept(kept);
             case ProofreadForecast forecast -> locked(() -> stages.forecast(forecast));
-            case ProofreadRoundStarted round -> locked(() -> stages.round(round));
+            case ProofreadRoundStarted round -> locked(() -> stages.round(round).ifPresent(this::queue));
             case ProofreadWindowRead read -> locked(() -> queue(stages.windowRead(read)));
         }
     }
@@ -313,7 +313,7 @@ final class RunSession implements JobListener {
         record(started.progress());
         locked(() -> {
             stages.started(started.stage());
-            queue(feed.stageStarted());
+            queue(feed.stageStarted(started.stage(), 0));
         });
         log.debug("stage {} started", started.stage());
     }

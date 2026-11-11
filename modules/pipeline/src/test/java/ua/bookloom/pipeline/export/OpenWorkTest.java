@@ -44,6 +44,15 @@ class OpenWorkTest {
         assertThat(work).isEqualTo(new ExportOpenWork(1, 1, List.of("Оррін")));
     }
 
+    // A book opened before its target language is chosen has no open work yet, and reading it is no failure.
+    @Test
+    void of_targetLanguageNotChosen_returnsNone() {
+        final ExportOpenWork work = OpenWork.of(
+                new MarkList.Book(BookBrief.defaults("en"), BOOK, List.of(), List.of()), List.of(), List.of());
+
+        assertThat(work).isEqualTo(ExportOpenWork.NONE);
+    }
+
     private static SegmentRecord decided(final int position, final String text) {
         return new SegmentRecord(
                 PROJECT,

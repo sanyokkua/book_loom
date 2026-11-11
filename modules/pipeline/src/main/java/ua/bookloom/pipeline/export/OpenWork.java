@@ -29,7 +29,7 @@ final class OpenWork {
      */
     static ExportOpenWork of(final MarkList.Book book, final List<SegmentRecord> records, final List<Deferral> open) {
         Objects.requireNonNull(book, "book");
-        final int marks = ProofreadSummaries.openMarks(book, records, open).size();
+        final int marks = MarkList.openMarks(book, records, open).size();
         final Map<String, String> arrived =
                 GenderNowKnown.arrived(open, book.glossary(), book.brief().narrator());
         final List<String> facts = List.copyOf(new LinkedHashSet<>(arrived.values()));

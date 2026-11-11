@@ -2328,7 +2328,7 @@ There is no separate acceptance test: the gate, the smoke and the hand run are t
   - **Test first:** none; the gate, the lock check and the smoke are the evidence
   - **Done when:** every command is green and its tail is pasted into the commit message.
 
-- [ ] 17.2 Run the numbered hand-run script on the owner's models and record what was seen, so the visible behaviour
+- [x] 17.2 Run the numbered hand-run script on the owner's models and record what was seen, so the visible behaviour
   of the whole change is checked in the real window. → :app (by hand)
   - **Satisfies:** enabling work for design D1 and D2
   - **Depends on:** 17.1

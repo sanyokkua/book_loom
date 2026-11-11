@@ -61,6 +61,51 @@ class ProviderFormUseThisTest extends ProviderFormTestBase {
         assertThat(dirtyOf(form)).isFalse();
     }
 
+    // IF a provider's model were dropped when another provider became current, THEN making it current again would
+    // leave the run with no model, though the person chose one for it.
+    @Test
+    void useThis_backToAProviderAfterAnother_keepsItsChosenModel() {
+        final SettingsViewModel viewModel = openLmStudio();
+        final ProviderForm form = form(viewModel);
+        edit(form, draft -> draft.withModel("vendor/model-a"));
+        useThis(form);
+        open(viewModel, "ollama");
+        edit(form, draft -> draft.withModel("model-b:7b"));
+        useThis(form);
+
+        open(viewModel, "lmstudio");
+        useThis(form);
+
+        assertThat(settings.get(AppSetting.CURRENT_MODEL).data())
+                .contains(new ModelSelection("lmstudio", "vendor/model-a"));
+        assertThat(onFx(() -> viewModel.model().get())).isEqualTo("vendor/model-a");
+    }
+
+    // IF a model saved on a provider that is not the current one were forgotten, THEN Use this one after a restart
+    // would make it current with no model, as the hand run saw.
+    @Test
+    void useThis_modelSavedWhileNotCurrentAfterARestart_keepsTheSavedModel() {
+        final SettingsViewModel first = openLmStudio();
+        final ProviderForm firstForm = form(first);
+        edit(firstForm, draft -> draft.withModel("vendor/model-a"));
+        save(firstForm);
+        final SettingsViewModel relaunched = viewModel();
+        open(relaunched, "lmstudio");
+
+        useThis(form(relaunched));
+
+        assertThat(settings.get(AppSetting.CURRENT_MODEL).data())
+                .contains(new ModelSelection("lmstudio", "vendor/model-a"));
+    }
+
+    private static void open(final SettingsViewModel viewModel, final String providerId) {
+        onFx(() -> {
+            viewModel.editProvider(providerId);
+            return null;
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
     // IF a blank model refused the switch, THEN a person could not move to a provider before picking its model.
     @Test
     void useThis_blankModel_writesTheProviderWithNoModel() {

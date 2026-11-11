@@ -93,6 +93,22 @@ public record AppSetting<T>(
     }
 
     /**
+     * The model last chosen on one provider, kept apart from {@link #CURRENT_MODEL} so a provider that stops being the
+     * current one keeps its model for when it is made current again.
+     *
+     * @param providerId the non-null provider id
+     * @return the setting, absent until a model is chosen on the provider; a blank text reads as absent
+     */
+    public static AppSetting<String> providerModel(final String providerId) {
+        Objects.requireNonNull(providerId, "providerId");
+        return new AppSetting<>(
+                "model.ofProvider." + providerId,
+                null,
+                raw -> Optional.of(raw.strip()).filter(s -> !s.isEmpty()),
+                Function.identity());
+    }
+
+    /**
      * Reads a stored text.
      *
      * @param raw the stored text, or {@code null} when nothing is stored
