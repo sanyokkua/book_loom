@@ -1341,8 +1341,15 @@ requirement if their alternative wins); none needs a new decision.
   group-10 task already planned sets NOTE (D12).
 - **Arm outcomes** (D24): each arm's alternative and the task that applies it are named; the result column is filled
   when the arm runs.
-- **ru→uk output ratio**: 1.5 until mini-ru and the closing rerun measure it; 1.2 becomes a pair-file value if under
-  1 % of replies are cut by length.
+- **ru→uk output ratio**: resolved in 16.5: 3 of 895 replies (0.34 %) were cut by length, under 1 %, so
+  `pairs/ru-uk.properties` sets `outputRatio=1.2`; other pairs keep the default 1.5.
+- **ru→uk source-language words** (16.5, R8): 5 of 100 random paragraphs kept a Russian content word (3 without the two
+  Russian telegrams), above the design's 1 % falsifier. No check reads a single word (the language-identity check
+  reads a whole paragraph, the letter check only ы э ъ ё); the owner decides whether to add a word-level check.
+- **Possessives and case forms stored as glossary rows** (16.5, R3 and R4): a possessive stored as its own row is read
+  as a different character and raises a false name-swap block, and case forms with separate targets split a name into
+  two renderings (7 of the top 20). One flagged paragraph then fell back to the source at export; the owner decides
+  whether the names pass merges such rows.
 - **Unsloth probes** (port, headers, whether its tools run by default, which off switch works): they set trait-row data
   and a scenario; the requirement "turn tools off where an engine runs them by default" holds either way.
 - **P-A15-1** (`UNSWITCHABLE` on current Ollama): it decides whether the path is common or rare; the behaviour is

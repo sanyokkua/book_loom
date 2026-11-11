@@ -75,6 +75,12 @@ class LanguageFilesTest {
     }
 
     @Test
+    void pairFile_ruUk_statesOutputRatio1point2() throws IOException {
+        assertThat(file("languages/pairs/ru-uk.properties").getProperty("outputRatio"))
+                .isEqualTo("1.2");
+    }
+
+    @Test
     void pairFile_enUkTitleRenderings_mapLowerCaseSourceWordsToTargetScriptWords() throws IOException {
         final String rows = file("languages/pairs/en-uk.properties").getProperty("titleRenderings");
 

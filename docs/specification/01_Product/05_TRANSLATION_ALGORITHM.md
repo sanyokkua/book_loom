@@ -115,7 +115,7 @@ sizes the calls, not the chunks. Before a model is chosen, the Structure screen'
 default profile's tier.
 
 **Reply reserve.** `OutputReserve.of` sets the room a call keeps for its reply: the pair's output ratio (from the pair's
-language file, default 1.5) times the items' source tokens, plus 16 tokens per item for the id and wrapper. A model
+language file, default 1.5; ru→uk states 1.2, measured at 0.34 % of replies cut by length) times the items' source tokens, plus 16 tokens per item for the id and wrapper. A model
 that always reasons, or whose reasoning cannot be switched off, gets `max(2048, 4 × sourceTokens + 35 × items)`. The
 reserve is never above half the window.
 

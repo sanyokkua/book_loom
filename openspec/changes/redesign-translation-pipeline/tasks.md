@@ -2275,7 +2275,7 @@ only invented-text outputs and the results table are committed (design D24).
   - **Test first:** none; the recorded measurements are the evidence
   - **Done when:** the speed rows hold the measurements with "reported, no rule".
 
-- [ ] 16.5 Rerun the ru→uk book with its table, so the defects that motivated the change (stress marks, Russian
+- [x] 16.5 Rerun the ru→uk book with its table, so the defects that motivated the change (stress marks, Russian
   letters, source lines, split lemmas, worse proofreads) are counted on a real book. → :pipeline (a local run; only the
   pair file's `outputRatio` may change), docs
   - **Satisfies:** enabling work for design D24

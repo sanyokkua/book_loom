@@ -268,8 +268,13 @@ The system SHALL cap the output of every draft, repair and proofread call at a r
 
 #### Scenario: A pair with no ratio uses the default
 
-- **WHEN** a ru→uk repair of one item estimated at 29 tokens is built and the pair's file sets no output ratio
+- **WHEN** an en→uk repair of one item estimated at 29 tokens is built and the pair's file sets no output ratio
 - **THEN** its output cap is 1.5 × 29 + 16 = 60 tokens
+
+#### Scenario: ru→uk states its measured ratio
+
+- **WHEN** a ru→uk repair of one item estimated at 29 tokens is built
+- **THEN** the pair's file sets the output ratio 1.2 and the output cap is 1.2 × 29 + 16 = 51 tokens
 
 #### Scenario: A model that always reasons gets more room
 

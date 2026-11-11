@@ -162,12 +162,12 @@ class ContextBuilderTest {
         assertThat(Objects.requireNonNull(plan.error()).code()).isEqualTo(ErrorCode.validation);
     }
 
-    // The reply is capped at the output reserve: 1.5 × 19 source tokens + 16 for the one item, for ru→uk with no ratio.
+    // The reply is capped at the output reserve: ceil(1.2 × 19 source tokens) + 16 for the one item, ru→uk stating 1.2.
     @Test
     void plan_draftOfOneItem_capsTheReplyAtTheReserve() {
         final PromptPlan plan = plan(CallKind.DRAFT, FrameFixtures.focus(NARRATION), FrameFixtures.frame(BOOK));
 
-        assertThat(plan.maxOutputTokens()).isEqualTo(45);
+        assertThat(plan.maxOutputTokens()).isEqualTo(39);
     }
 
     // A model that always reasons gets at least 2048 tokens for its reply.
