@@ -2312,7 +2312,7 @@ The change ends as every change does: the whole gate from clean, the locks, the 
 numbered hand run of the three stages at each dial on the owner's models, then the project's own documents updated.
 There is no separate acceptance test: the gate, the smoke and the hand run are the evidence.
 
-- [ ] 17.1 Run the whole gate from clean, the strict lock check and the packaged image smoke, and paste their tails,
+- [x] 17.1 Run the whole gate from clean, the strict lock check and the packaged image smoke, and paste their tails,
   so the merged change is proven buildable and launchable. → :api, :util, :document, :llm, :persistence, :pipeline,
   :ui, :app
   - **Satisfies:** enabling work for design D1
