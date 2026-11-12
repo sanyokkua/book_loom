@@ -1,6 +1,6 @@
 **Status:** Final (built clauses) / Planned (clauses marked so) **Owner:** architect **Audience:** architect, engineering (`:ui`), QA, UX **Last Updated:** 2026-10-19
 **Cross-references:** `docs/spec_baseline/specification/mockups/ui-mockup.html`, `docs/spec_baseline/specification/mockups/README.md`,
-`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`,
+`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`,
 `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`, `docs/spec_baseline/specification/01_Product/09_THEMING.md`,
 `docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md`,
 `docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md`

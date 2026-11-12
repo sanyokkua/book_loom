@@ -464,7 +464,7 @@ written to the others, a gender the person set never being overwritten.
 
 The Names & style screen SHALL show the glossary as a table with the columns Term, Kind, Translation (an empty one shows the placeholder "No target"), Gender, Locked and a remove cross, under the purpose line "Names of people and places — written the same way every time. Set the gender so names take the right grammatical form."
 
-**Source**: FR-GLOSS-02, FR-GLOSS-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1, N3 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: this is where the person settles spellings before translating; the table explains its purpose, a changed row is marked on its edge so the term is never cut, an empty table says what to do, and the two cards sit side by side only when the content is at least 1440 px wide.
+**Source**: FR-GLOSS-02, FR-GLOSS-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1, N3 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: this is where the person settles spellings before translating; the table explains its purpose, a changed row is marked on its edge so the term is never cut, an empty table says what to do, and the two cards sit side by side only when the content is at least 1440 px wide.
 
 #### Scenario: A scanned entry appears unlocked
 
@@ -1527,7 +1527,7 @@ Dice association with the term is at least 0.6 and at least twice that of any un
 
 WHILE a translation of the project is at work (running, pausing, stopping, waiting on a stuck call, or waiting for the model), the Names & style screen SHALL keep the Glossary and the Recurring terms editable under the banner "Translating is going on. Changes apply to the next segments translated."
 
-**Source**: `docs/spec_baseline/specification/mockups/README.md#changes-while-translating-i`, `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1–N5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: hand edits stay possible because the next group of segments reads the glossary again. Which model actions are disabled while a translation runs is the `app-shell` capability's rule ("Disable model actions while a translation runs"), and the read-only screen while the names pass runs hidden is also the `app-shell` capability's rule ("Make the screen that hidden work writes to read-only").
+**Source**: `docs/spec_baseline/specification/mockups/README.md#changes-while-translating-i`, `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1–N5 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: hand edits stay possible because the next group of segments reads the glossary again. Which model actions are disabled while a translation runs is the `app-shell` capability's rule ("Disable model actions while a translation runs"), and the read-only screen while the names pass runs hidden is also the `app-shell` capability's rule ("Make the screen that hidden work writes to read-only").
 
 #### Scenario: Typing a translation stays possible
 
@@ -1538,7 +1538,7 @@ WHILE a translation of the project is at work (running, pausing, stopping, waiti
 
 The glossary table SHALL let every column be resized, the last filling the remaining width, with minimum widths (Term 140 px, Kind 96, Translation 170, Gender 110, Locked 64, remove 36), grid lines, a header that stays visible and fixed row heights.
 
-**Source**: `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, `docs/spec_baseline/specification/mockups/README.md#g9--two-kinds-of-table-jx-g4`, N2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person can widen what is cut, and a column can never be dragged so narrow that its content disappears.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, `docs/spec_baseline/specification/mockups/README.md#g9--two-kinds-of-table-jx-g4`, N2 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: the person can widen what is cut, and a column can never be dragged so narrow that its content disappears.
 
 #### Scenario: A column can be resized
 
@@ -1549,7 +1549,7 @@ The glossary table SHALL let every column be resized, the last filling the remai
 
 The Recurring terms card SHALL show the purpose line "Words the book repeats — kept the same all through the book. Learned while translating, or set here." and the columns Term, Translation, Used and a link to the glossary, Used being the number of times the term occurs in the book's text, ignoring letter case and matching exact word forms only (a term of several words counts the mentions of the whole phrase); an empty card SHALL read "No recurring terms yet. They are found when you prepare names, or while translating."
 
-**Source**: `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person sees how often each repeated word occurs and where such words come from. Used counts the words as written: `Warden` and `warden` count together, while an inflected form such as `wardens` is a different word and is not counted.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: the person sees how often each repeated word occurs and where such words come from. Used counts the words as written: `Warden` and `warden` count together, while an inflected form such as `wardens` is a different word and is not counted.
 
 #### Scenario: An empty lexicon says where terms come from
 
@@ -1565,7 +1565,7 @@ The Recurring terms card SHALL show the purpose line "Words the book repeats —
 
 The progress dialog of the names pass SHALL list eight steps in order — Find candidates in the book, Decide the names, Find repeated words, Clean up repeated words, Read repeated words in context, Suggest translations for names, Suggest translations for repeated words, Write the results — each with the number of requests it sent ("25 requests so far" while it runs, "6 requests" when it has ended, "no request" when it sent none, "Not started" before it begins; no step knows its total up front, so a count never reads "of N") and a figures line such as "53 % · 26 of about 49 steps · Left about 1 min".
 
-**Source**: `docs/spec_baseline/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`, N4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person sees which part of the pass is running and how much is left. The dialog itself follows the progress-dialog pattern of the `app-shell` capability.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`, N4 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: the person sees which part of the pass is running and how much is left. The dialog itself follows the progress-dialog pattern of the `app-shell` capability.
 
 #### Scenario: The eight steps are listed with counts
 
@@ -1576,7 +1576,7 @@ The progress dialog of the names pass SHALL list eight steps in order — Find c
 
 WHEN the pass finishes, its dialog SHALL become a Results view with the subtitle "5 added · 0 removed · 1 changed · 49 steps · 1 min 48 s", the tabs Changes (Entry, Change, Before, After, grouped; a Why column when some row has a reason, and a Revert on each row) and Steps (the eight stages with their request counts), and the actions Undo all, Show changed rows and Done.
 
-**Source**: `docs/spec_baseline/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`, N5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person sees every change the pass made and can give all of them back.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`, N5 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: the person sees every change the pass made and can give all of them back.
 
 #### Scenario: Results list the changes
 
@@ -1603,7 +1603,7 @@ WHEN every row an operation of Names & style changed is put back, by Undo all or
 
 The Scan, Review and Translate actions on a card SHALL run the progress dialog with two steps, the action's requests and then the write, and SHALL NOT be hideable.
 
-**Source**: `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: every model action looks the same, and only the long names pass can be hidden.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N4 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: every model action looks the same, and only the long names pass can be hidden.
 
 #### Scenario: A card action runs two steps and cannot be hidden
 
@@ -1713,7 +1713,7 @@ The application SHALL keep, for each project, a stored lexicon of recurring comm
 
 The Names & style screen SHALL offer "Prepare names automatically" in a card above both tables that says what it does and how long it takes for the brief's quality dial ("About 1 min. You can undo it all afterwards."), and a press SHALL run the names pass on the chosen model in the progress dialog, whose Cancel ("Cancel writes nothing.") stops the pass and leaves both tables as they were.
 
-**Source**: `additional-work.md` 15i.U6, `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N4, N5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: one button replaces five presses and gives every change back one by one or all together. Hiding the dialog with Continue in background or Esc, and the activity chip, are the `app-shell` capability's progress-dialog rules.
+**Source**: `additional-work.md` 15i.U6, `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N4, N5 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: one button replaces five presses and gives every change back one by one or all together. Hiding the dialog with Continue in background or Esc, and the activity chip, are the `app-shell` capability's progress-dialog rules.
 
 #### Scenario: The press fills both tables and Undo all gives both back
 

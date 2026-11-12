@@ -9,7 +9,7 @@ This document specifies toasts, banners, the activity log, the error dialog, the
 realizing `FR-NOTIF-*`. It builds on the uniform `Result{data,error}` envelope and the typed `AppError`/`ErrorCode` with
 a safe-details allowlist (DD-14), defined in `:api`. The UI behaviour here follows `mockups/README.md`; where a clause
 says **planned**, it is built by the next change (UI finalization + SQLite persistence,
-`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`) and is not in the app today.
+`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`) and is not in the app today.
 
 **No OS/desktop notifications.** This is an owner decision, not a v1 gap. All surfacing is in-app (toasts, banners,
 dialogs, the activity log, the title bar's activity chip). There is no operating-system notification channel, no

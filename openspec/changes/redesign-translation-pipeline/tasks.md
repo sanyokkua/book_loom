@@ -2363,7 +2363,7 @@ There is no separate acceptance test: the gate, the smoke and the hand run are t
   - **Test first:** none; the gate's documentation checks are the evidence
   - **Docs:** `AGENTS.md` "Where it stands" (three stages, book map, context builder, one repair, never-worse gate,
     engines and profiles, closing-run figures); `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md` (this change done, the
-    open falsifiers and the deferred items as backlog rows); `docs/proposals/2026-10-16-translation-pipeline-redesign.md`
+    open falsifiers and the deferred items as backlog rows); `openspec/changes/redesign-translation-pipeline/proposal.md`
     marked done by this change; `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md` (new packages `llm.engine`,
     `llm.profile`, `llm.knowledge`, `pipeline.proofread`); `docs/spec_baseline/specification/IMPLEMENTED_REQUIREMENTS.md` final
     reconcile; a last grep for `judge|reviewer|backward|rolling summary|last check` across `docs/spec_baseline/specification` and

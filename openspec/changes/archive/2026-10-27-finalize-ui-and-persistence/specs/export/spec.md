@@ -4,7 +4,7 @@
 
 The export screen SHALL show four tiles filled from the project before any export: how many segments are done ("74 of 142"), how many were translated without changes, how many were reviewed by the person, and "checked when written", "—" until a file is written. After a written export the first tile SHALL read what the stored export wrote and the fourth "checked: opens, nothing missing", also after a restart.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#step-5--export--e1e3-i, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E1). In plain words: the person sees how much of the book is done before choosing to write it, instead of four empty tiles that only fill after the file exists.
+**Source**: docs/spec_baseline/specification/mockups/README.md#step-5--export--e1e3-i, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (E1). In plain words: the person sees how much of the book is done before choosing to write it, instead of four empty tiles that only fill after the file exists.
 
 #### Scenario: Tiles show the project's figures before an export
 
@@ -25,7 +25,7 @@ The export screen SHALL show four tiles filled from the project before any expor
 
 The export screen's title and author card SHALL show the original title and author read-only and the translated title and author editable, SHALL write the translated title the person typed into the exported book, and WHERE the book names no author SHALL say so in one line, "The book names no author".
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#step-5--export--e1e3-i, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E1). In plain words: the person can correct the book's translated title before it is written, and an empty author field says the book simply names none instead of looking like a bug.
+**Source**: docs/spec_baseline/specification/mockups/README.md#step-5--export--e1e3-i, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (E1). In plain words: the person can correct the book's translated title before it is written, and an empty author field says the book simply names none instead of looking like a bug.
 
 #### Scenario: The translated title is editable and written
 
@@ -72,7 +72,7 @@ The system SHALL take the book's original title from the first source that has o
 
 WHEN the person presses "✦ Suggest a name", the application SHALL open a short progress dialog with one step that shows what was sent (title, target language, format) and the answer (the name and how it was made), with the line "Cancel keeps the current name." and the buttons Cancel and "Use this name".
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--suggest-a-file-name-g4-short, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E1, G4). In plain words: a model call that picks a file name is still a model call, so the person sees it and decides whether to take its answer.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--suggest-a-file-name-g4-short, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (E1, G4). In plain words: a model call that picks a file name is still a model call, so the person sees it and decides whether to take its answer.
 
 #### Scenario: A suggested name is used only on request
 
@@ -93,7 +93,7 @@ WHEN the person presses "✦ Suggest a name", the application SHALL open a short
 
 WHEN an export runs the last check before saving, the application SHALL show a progress dialog with the groups Steps (Check the translation is complete, Fix he/she forms that became known, Translate unsure segments again), Reread next to the neighbours (one item per segment with its result) and Finish (Write the file), and the figures line "48 % · 12 of 25 steps · Left about 2 min".
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--export--last-check-before-saving-g4-long--e2-e3, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E2, E3, G4). In plain words: the last check can take minutes, so the person sees each step and each reread paragraph rather than a spinner.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--export--last-check-before-saving-g4-long--e2-e3, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (E2, E3, G4). In plain words: the last check can take minutes, so the person sees each step and each reread paragraph rather than a spinner.
 
 #### Scenario: The groups and figures are shown
 
@@ -104,7 +104,7 @@ WHEN an export runs the last check before saving, the application SHALL show a p
 
 Selecting a reread item SHALL show a bordered Before | After grid holding the segment before, this segment and the segment after, and a fix SHALL show the old text struck through above the new one; an item that did not change SHALL read "Unchanged — kept as it was".
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--export--last-check-before-saving-g4-long--e2-e3, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E2). In plain words: the person can judge each change the pass made in its place in the story, and unchanged paragraphs are said to be unchanged.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--export--last-check-before-saving-g4-long--e2-e3, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (E2). In plain words: the person can judge each change the pass made in its place in the story, and unchanged paragraphs are said to be unchanged.
 
 #### Scenario: A fix shows the old text struck through
 
@@ -120,7 +120,7 @@ Selecting a reread item SHALL show a bordered Before | After grid holding the se
 
 The last-check dialog SHALL offer "Write the file now", which asks first "6 of 18 reread, 1 fixed; the other 12 stay as they are", and Cancel, which asks "Cancel the export? No file is written."; Continue in background SHALL hide the dialog and Esc SHALL hide it too.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--export--last-check-before-saving-g4-long--e2-e3, docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E2, E3). In plain words: stopping early is allowed but never silent: the person is told what stays as it is, and cancelling is confirmed because it throws the work away.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--export--last-check-before-saving-g4-long--e2-e3, docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (E2, E3). In plain words: stopping early is allowed but never silent: the person is told what stays as it is, and cancelling is confirmed because it throws the work away.
 
 #### Scenario: Write the file now asks what stays
 

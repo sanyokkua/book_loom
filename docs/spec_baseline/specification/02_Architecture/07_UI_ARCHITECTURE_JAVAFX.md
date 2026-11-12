@@ -14,7 +14,7 @@
 driven by an observable state mirror. The mockup at `docs/spec_baseline/specification/mockups/ui-mockup.html` is the visual reference
 (pattern P6) and `docs/spec_baseline/specification/mockups/README.md` is its behaviour reference (global patterns G1-G12, layout rules
 L1-L10, words): every screen, state, and dialog below maps to them. Items marked **planned** are the next change's
-(UI finalization + SQLite, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md`) and do not exist in the code
+(UI finalization + SQLite, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`) and do not exist in the code
 yet. Binding acceptance is scoped — **structure, tokens, and
 geometry gated in CI; pixel fidelity nightly** (`04_Build_and_Release/06_TESTING_STRATEGY.md`).
 

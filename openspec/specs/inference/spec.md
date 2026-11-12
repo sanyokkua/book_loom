@@ -191,7 +191,7 @@ server that produced nothing at all.
 
 IF a server rejects a request with HTTP `400` or `422` whose body names an optional setting the request sent, THEN the system SHALL send the request once more without that setting, or, for `max_tokens`, with `max_completion_tokens` in its place, and SHALL record the downgrade without exposing the response body.
 
-**Source**: FR-INFER-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), FR-INFER-09e (`docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `#effective-context`, ADR-0013, S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: servers differ in which optional knobs they accept, and a refusal that names the knob is a hint, not a failure, so the request is sent once more without it. Which settings count and what the repeat keeps are stated in this capability's refused-setting requirements.
+**Source**: FR-INFER-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), FR-INFER-09e (`docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `#effective-context`, ADR-0013, S6 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: servers differ in which optional knobs they accept, and a refusal that names the knob is a hint, not a failure, so the request is sent once more without it. Which settings count and what the repeat keeps are stated in this capability's refused-setting requirements.
 
 #### Scenario: An unsupported native thinking control is omitted once
 
@@ -218,7 +218,7 @@ IF a server rejects a request with HTTP `400` or `422` whose body names an optio
 
 WHERE a model's temperature choice is Let BookLoom choose, the system SHALL send each call at the temperature of its kind: draft `0.2` (`0.1` for a review retry that asks for a lower one), reviewer `0` with a fixed seed, directed fix `0.2`, pre-scan, summary and revision `0.2`. WHERE it is My value, every request SHALL carry that value; WHERE it is Don't send, none SHALL.
 
-**Source**: FR-INFER-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#generation-parameters`, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#generation-parameters`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#directed-fix-repair`, S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: by default every call stays low and near-deterministic for fidelity, a scorer being the steadiest. A person can instead fix one temperature for a model, or send none for models that refuse the setting. The reasoning level is a separate requirement ("Carry the reasoning level that the Generation setting chooses").
+**Source**: FR-INFER-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#generation-parameters`, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#generation-parameters`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#directed-fix-repair`, S6 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: by default every call stays low and near-deterministic for fidelity, a scorer being the steadiest. A person can instead fix one temperature for a model, or send none for models that refuse the setting. The reasoning level is a separate requirement ("Carry the reasoning level that the Generation setting chooses").
 
 #### Scenario: A reviewer call is steadier than a draft
 
@@ -268,7 +268,7 @@ SHALL carry no usage at all, never zeros.
 
 The system SHALL recognise as refused only an optional setting the request sent — the temperature, `top_p`, `top_k`, `min_p`, a repeat penalty, `seed`, the output-length field, `num_ctx`, the reasoning control or the structured-output format — named by the body of an HTTP `400` or `422` reply; IF a `400` names nothing the request sent, THEN the system SHALL answer `ErrorCode.validation`, repeat nothing and remember nothing.
 
-**Source**: FR-INFER-09e (`docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#refused-settings-s6`. In plain words: BookLoom drops a setting only when the server's own words name a setting BookLoom sent, so an unrelated 400 is never papered over or guessed at.
+**Source**: FR-INFER-09e (`docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), S6 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#refused-settings-s6`. In plain words: BookLoom drops a setting only when the server's own words name a setting BookLoom sent, so an unrelated 400 is never papered over or guessed at.
 
 #### Scenario: A refused temperature is recognised
 
@@ -310,7 +310,7 @@ A request sent again without a refused setting SHALL keep everything else it car
 
 WHEN a setting is refused and dropped, the system SHALL remember the refusal for that provider and that model across restarts, and SHALL leave the setting out of the first attempt of every later call to that model until the person chooses Send again.
 
-**Source**: FR-INFER-09e (`docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#refused-settings-s6`. In plain words: a model that rejects `temperature` once will reject it every time. Remembering saves a failed request at the start of every later call, and the person can undo it from Settings › Models.
+**Source**: FR-INFER-09e (`docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), S6 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#refused-settings-s6`. In plain words: a model that rejects `temperature` once will reject it every time. Remembering saves a failed request at the start of every later call, and the person can undo it from Settings › Models.
 
 #### Scenario: A later call leaves the setting out from the start
 
@@ -336,7 +336,7 @@ WHEN a setting is refused and dropped, the system SHALL remember the refusal for
 
 WHEN a setting is refused and dropped, the system SHALL write one warning line to the activity log naming the setting and what was done instead, and SHALL NOT raise a toast while a run is in progress.
 
-**Source**: S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#refused-settings-s6`. In plain words: the person watching a long run is not interrupted by a technical detail that BookLoom already handled; it is in the log and the test details for whoever looks.
+**Source**: S6 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#refused-settings-s6`. In plain words: the person watching a long run is not interrupted by a technical detail that BookLoom already handled; it is in the log and the test details for whoever looks.
 
 #### Scenario: One warning line, no toast
 
@@ -353,7 +353,7 @@ WHEN a setting is refused and dropped, the system SHALL write one warning line t
 
 WHEN a person saves a change to a model's settings (temperature choice, context window, answer length and its field) while a run is in progress, the system SHALL apply the context window from the next chunk that starts and the temperature choice, answer length and its field from the next request, and SHALL leave decided segments unchanged.
 
-**Source**: decision 6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#models-decision-6`. In plain words: changing a setting mid-book steers the rest of the book without re-translating the part already done, and the screen says so ("to the segments not translated yet"). A chunk is packed for its context window when it starts, so the chunk in flight keeps that window; the other settings change nothing about packing and apply from the next request.
+**Source**: decision 6 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#models-decision-6`. In plain words: changing a setting mid-book steers the rest of the book without re-translating the part already done, and the screen says so ("to the segments not translated yet"). A chunk is packed for its context window when it starts, so the chunk in flight keeps that window; the other settings change nothing about packing and apply from the next request.
 
 #### Scenario: A change saved during a run reaches the next chunk
 
@@ -369,7 +369,7 @@ WHEN a person saves a change to a model's settings (temperature choice, context 
 
 Every call SHALL carry the reasoning level that Settings › Generation chooses under "Thinking before answering" — Off, Low or On, Off when nothing is stored — and WHERE the reasoning environment variable `BOOKLOOM_REASONING` (or its launch property) is set, it SHALL override the stored setting.
 
-**Source**: S4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#generation-tab`. In plain words: reasoning stays off by default because it only costs time and can leave the answer empty, but a person can now turn it on for a model that translates better with it. The evaluation scripts keep steering it with the environment variable. How each server is told the level is the `llm-provider` capability's rule.
+**Source**: S4 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#generation-tab`. In plain words: reasoning stays off by default because it only costs time and can leave the answer empty, but a person can now turn it on for a model that translates better with it. The evaluation scripts keep steering it with the environment variable. How each server is told the level is the `llm-provider` capability's rule.
 
 #### Scenario: The default is off
 

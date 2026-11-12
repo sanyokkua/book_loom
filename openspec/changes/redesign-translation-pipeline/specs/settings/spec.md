@@ -747,7 +747,7 @@ The Generation tab SHALL show what Fast, Balanced and Max do as a read-only tabl
 
 The Generation tab SHALL list the time limits as read-only rules: a prescan waits 120 s, longer for a model that always thinks; every other call waits 0.5 s per expected output token, at least the provider's request timeout and at most 600 s; a stream that sends nothing for 60 s is stopped. It SHALL offer no control to change them.
 
-**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#generation-tab`, S4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: how long BookLoom waits for each kind of call follows fixed rules, and the tab says what they are rather than offering a knob that is not there. The rules themselves are the llm-provider capability's "Wait for a chat call by its kind, its expected output and its model" and "Read an Ollama-native reply as a stream that must keep arriving".
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#generation-tab`, S4 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: how long BookLoom waits for each kind of call follows fixed rules, and the tab says what they are rather than offering a knob that is not there. The rules themselves are the llm-provider capability's "Wait for a chat call by its kind, its expected output and its model" and "Read an Ollama-native reply as a stream that must keep arriving".
 
 #### Scenario: The limits cannot be edited
 
@@ -758,7 +758,7 @@ The Generation tab SHALL list the time limits as read-only rules: a prescan wait
 
 The Models tab SHALL show, as found out from the program, how much the model can read at once, who sets that window on this engine, how much is loaded now where the program says so, and for each kind of call whether structured answers come as a schema, as plain JSON or not at all, each from a test or from a refusal. It SHALL NOT store what it read from a server.
 
-**Source**: decision 6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#models-decision-6`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: before changing a number, a person sees what the model itself reports about its limits and who controls them. The structured-answer row follows what BookLoom learned for each kind of call, since a server may take a schema for one and refuse it for another.
+**Source**: decision 6 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#models-decision-6`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: before changing a number, a person sees what the model itself reports about its limits and who controls them. The structured-answer row follows what BookLoom learned for each kind of call, since a server may take a schema for one and refuse it for another.
 
 #### Scenario: Reported limits are shown
 
@@ -799,7 +799,7 @@ The Models tab SHALL show, as found out from the program, how much the model can
 
 The Automation tab SHALL offer When to stop and ask you, a default quality, and switches to open the review desk when a translation finishes with segments to review, to Keep the computer awake (on by default) and to Reopen the last project (on by default), and SHALL NOT offer a switch for operating-system notifications or for a last check before saving.
 
-**Source**: S4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#automation-tab`, ADR-0045, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: how often BookLoom interrupts, and what it does at the end of a run, is the person's choice. Notifications are not offered because BookLoom sends none. The last-check switch is gone because export no longer makes a model call. What the window opens at launch with Reopen the last project on is the `app-shell` capability's rule.
+**Source**: S4 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#automation-tab`, ADR-0045, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: how often BookLoom interrupts, and what it does at the end of a run, is the person's choice. Notifications are not offered because BookLoom sends none. The last-check switch is gone because export no longer makes a model call. What the window opens at launch with Reopen the last project on is the `app-shell` capability's rule.
 
 #### Scenario: The stop-and-ask choice is stored
 
@@ -835,7 +835,7 @@ The Automation tab SHALL offer When to stop and ask you, a default quality, and 
 
 The Appearance, Automation and Storage & logs tabs SHALL apply a change at once and SHALL say when it takes effect: "Changes apply at once", "to the segments not translated yet", or "after BookLoom restarts".
 
-**Source**: theme H, option H1 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#settings--s1s5-h1-decisions-67`. In plain words: a switch takes effect when flipped, and the screen is honest about the cases where the next launch is what changes. The Generation tab no longer holds a setting to flip, so it is not in this list.
+**Source**: theme H, option H1 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#settings--s1s5-h1-decisions-67`. In plain words: a switch takes effect when flipped, and the screen is honest about the cases where the next launch is what changes. The Generation tab no longer holds a setting to flip, so it is not in this list.
 
 #### Scenario: A theme change applies at once
 
@@ -853,7 +853,7 @@ The Appearance, Automation and Storage & logs tabs SHALL apply a change at once 
 
 WHEN the person opens a check's details, the settings screen SHALL show a dialog with a verdict banner, the request line (the route actually used) with Copy as curl (key hidden), three columns Body, a table of Status, Time, First token, Speed, Tokens and Structured, and Response, and a footer that switches between the tests that have run and closes; a copy is confirmed in the footer, never a toast. A figure the engine does not report SHALL read –, never 0.
 
-**Source**: S2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#dialog--test-connection--models--inference-s2`, `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: when a test fails, a person or a helper can see exactly what was asked and what came back, and can reproduce it in a terminal without the secret being exposed. A speed the server never reported is shown as missing, not as zero, so it cannot be mistaken for a measurement.
+**Source**: S2 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#dialog--test-connection--models--inference-s2`, `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: when a test fails, a person or a helper can see exactly what was asked and what came back, and can reproduce it in a terminal without the secret being exposed. A speed the server never reported is shown as missing, not as zero, so it cannot be mistaken for a measurement.
 
 #### Scenario: The dialog shows the request and the answer
 
@@ -895,7 +895,7 @@ WHEN the person opens a check's details, the settings screen SHALL show a dialog
 
 The Models tab SHALL offer for each model a Use context window number (filled in from what is loaded) from 512 to 1,048,576 tokens, which is the one size every call to that model uses and is read-only where BookLoom cannot set the window on that engine, a Limit answer length switch no larger than the window, and under Advanced the field that carries the answer length, `max_completion_tokens` or `max_tokens`, which SHALL NOT apply to Ollama.
 
-**Source**: decision 6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#models-decision-6`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a person can widen the window a model reads or cap how long it may answer, and for OpenAI-style servers choose the field name the server expects. Ollama has no such choice, so the field is not offered for it. Where the server owns the window, the number is shown but cannot be edited, so it never pretends to be a setting.
+**Source**: decision 6 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#models-decision-6`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a person can widen the window a model reads or cap how long it may answer, and for OpenAI-style servers choose the field name the server expects. Ollama has no such choice, so the field is not offered for it. Where the server owns the window, the number is shown but cannot be edited, so it never pretends to be a setting.
 
 #### Scenario: A context window outside its range
 
@@ -941,7 +941,7 @@ The Models tab SHALL offer for each model a Use context window number (filled in
 
 The Models tab SHALL list under "Settings this model refused" each setting the model refused, its scope (the whole model, or one call kind or schema), when it was refused and what BookLoom did instead, with Send again on each row that acts on that scope only, and SHALL say "Nothing refused" when the list is empty.
 
-**Source**: S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), FR-INFER-09e (`docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), `docs/spec_baseline/specification/mockups/README.md#refused-settings-s6`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: BookLoom learns by itself that a model rejects a setting, sometimes for every call and sometimes for one kind of call, and the person can see what it learned and undo exactly that part if the model was updated.
+**Source**: S6 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), FR-INFER-09e (`docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), `docs/spec_baseline/specification/mockups/README.md#refused-settings-s6`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: BookLoom learns by itself that a model rejects a setting, sometimes for every call and sometimes for one kind of call, and the person can see what it learned and undo exactly that part if the model was updated.
 
 #### Scenario: A refusal is listed
 
@@ -982,7 +982,7 @@ The Models tab SHALL list under "Settings this model refused" each setting the m
 
 The settings screen SHALL carry a subtitle saying that books stay private when a local model is used and that BookLoom sends the text only to the AI model chosen here, and SHALL NOT say the text always stays on this computer; it SHALL present six areas — Providers, Models, Generation, Appearance, Automation, and Storage & logs — as a row of tabs whose selected tab is marked by an underline, every one enabled, with no accent row on Appearance.
 
-**Source**: decision 6, S4, S5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#settings--s1s5-h1-decisions-67`, `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#settings-tabs`, the owner's decision that privacy is stated as "private when used with local models". In plain words: with the models, generation, automation and storage tabs built, nothing is greyed any more. The subtitle must not promise more than BookLoom can keep: with a remote provider the book's text leaves the computer, so only the local-model case is called private.
+**Source**: decision 6, S4, S5 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#settings--s1s5-h1-decisions-67`, `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#settings-tabs`, the owner's decision that privacy is stated as "private when used with local models". In plain words: with the models, generation, automation and storage tabs built, nothing is greyed any more. The subtitle must not promise more than BookLoom can keep: with a remote provider the book's text leaves the computer, so only the local-model case is called private.
 
 #### Scenario: All six areas are listed
 
@@ -1014,7 +1014,7 @@ The settings screen SHALL carry a subtitle saying that books stay private when a
 
 WHEN Test inference passes for a model of a stored provider, the application SHALL store the measured speed in seconds per segment on that model's settings, with where it was measured (the later measurement winning), and the estimate before Start SHALL say where. WHEN a translation ends it SHALL store its seconds per drafted segment, pauses left out, and nothing if none was drafted; a translation or names pass SHALL also store seconds per call of each kind it made.
 
-**Source**: S2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: an estimate needs a measurement behind it. The test the person just ran is one, and a finished run measures each kind of call (draft, repair, proofread, names), which is more exact than one figure per segment. Storing them on the model keeps them after a restart and keeps two models apart.
+**Source**: S2 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: an estimate needs a measurement behind it. The test the person just ran is one, and a finished run measures each kind of call (draft, repair, proofread, names), which is more exact than one figure per segment. Storing them on the model keeps them after a restart and keeps two models apart.
 
 #### Scenario: The measured speed is stored and named
 

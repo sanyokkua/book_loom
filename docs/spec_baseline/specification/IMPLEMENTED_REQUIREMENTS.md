@@ -280,7 +280,7 @@ These were left out on purpose and are ordered in `docs/spec_baseline/implementa
   in-app language switch, the Projects screen, and add / edit / delete provider with credentials.
 - Settings tabs Models, Generation, Automation and Storage.
 - The translation pipeline redesign, the next change `redesign-translation-pipeline`
-  (`docs/proposals/2026-10-16-translation-pipeline-redesign.md`); built since, see the last section.
+  (`openspec/changes/redesign-translation-pipeline/proposal.md`); built since, see the last section.
 - Numeral masking and an automatic model pre-scan of names (decided against, D-7); parallel cloud lanes (local inference
   is single-flight).
 

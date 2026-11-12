@@ -126,7 +126,7 @@ IF a custom header's name contains `authorization`, `key`, `token` or `secret` �
 
 WHEN a person removes a project, the system SHALL delete that project's stored data — its brief, term lists, segment decisions, translation memory, summaries and run — and SHALL NOT delete the book file, any exported file, or any other project of the same book.
 
-**Source**: `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (Persistence), `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`. In plain words: Remove forgets the translation inside BookLoom; it never reaches out to files the person owns. A second translation of the same book is a different project and stays.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md` (Persistence), `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`. In plain words: Remove forgets the translation inside BookLoom; it never reaches out to files the person owns. A second translation of the same book is a different project and stays.
 
 #### Scenario: Removing one of two translations of a book
 
@@ -143,7 +143,7 @@ WHEN a person removes a project, the system SHALL delete that project's stored d
 
 WHEN the last project of a book is removed, the system SHALL also delete the stored book (its metadata and file location), and SHALL leave the book file on disk untouched.
 
-**Source**: `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (Persistence), ADR-0043. In plain words: a stored book with no project would be an invisible leftover; the next import of the same file stores it again.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md` (Persistence), ADR-0043. In plain words: a stored book with no project would be an invisible leftover; the next import of the same file stores it again.
 
 #### Scenario: The last project of a book takes the stored book with it
 
@@ -159,7 +159,7 @@ WHEN the last project of a book is removed, the system SHALL also delete the sto
 
 The system SHALL store a book's metadata and the location of its file once, under the hash of its content, and SHALL let every project of that content use it; the book's bytes SHALL NOT be copied into the database, and the file SHALL be read again when a project opens.
 
-**Source**: `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (Persistence), ADR-0043. In plain words: translating the same book into a second language must not copy the book again, and the same bytes under a new file name are still the same book.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md` (Persistence), ADR-0043. In plain words: translating the same book into a second language must not copy the book again, and the same bytes under a new file name are still the same book.
 
 #### Scenario: A second language reuses the stored book
 
@@ -181,7 +181,7 @@ The system SHALL store a book's metadata and the location of its file once, unde
 
 WHEN the person chooses a file with Find the book… for a project whose book file is missing, the system SHALL accept it only when its content hash equals the stored one, and SHALL then store the new location for the book, so that every project of that book opens from it; IF the content differs, THEN it SHALL store nothing and say the file is a different book.
 
-**Source**: `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (Persistence), `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`. In plain words: a moved book can be found again without importing it anew, but another book, or another edition, can never be attached to a translation by mistake.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md` (Persistence), `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`. In plain words: a moved book can be found again without importing it anew, but another book, or another edition, can never be attached to a translation by mistake.
 
 #### Scenario: Find the book updates the one location
 
@@ -197,7 +197,7 @@ WHEN the person chooses a file with Find the book… for a project whose book fi
 
 The system SHALL refuse a project name that equals the name of another project of the same book when letter case is ignored, Cyrillic letters folded like Latin ones, and SHALL report the duplicate instead of saving it; projects of different books MAY carry the same name.
 
-**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D10", `docs/spec_baseline/specification/mockups/README.md#project-names--one-book-several-translations-pn`, decision 9 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: Projects groups translations by book, so two translations of one book that differ only by capitals would look the same under one heading. Two different books — two editions with the same title, for example — each keep their automatic name.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D10", `docs/spec_baseline/specification/mockups/README.md#project-names--one-book-several-translations-pn`, decision 9 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: Projects groups translations by book, so two translations of one book that differ only by capitals would look the same under one heading. Two different books — two editions with the same title, for example — each keep their automatic name.
 
 #### Scenario: Two books with the same title and pair both keep the name
 

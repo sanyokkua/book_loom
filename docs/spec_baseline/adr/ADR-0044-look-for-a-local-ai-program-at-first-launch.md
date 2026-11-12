@@ -8,7 +8,7 @@
 ADR-0010 and DD-01 allow exactly one kind of outbound call: provider communication that the person starts (inference,
 model discovery, verification). A first-time, non-technical user meets an empty Settings screen and does not know what
 an "endpoint" is. The final review found this to be the largest first-launch obstacle
-(`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`, theme D). Most people run Ollama or LM Studio on the
+(`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`, theme D). Most people run Ollama or LM Studio on the
 same computer, on fixed ports.
 
 ## Decision

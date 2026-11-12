@@ -11,7 +11,7 @@ They found:
 - no Projects screen, two of six Settings tabs, and no stored state.
 
 The owner's observations, decisions 1–14 and every requirement ID are in
-`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`. The target is
+`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`. The target is
 `docs/spec_baseline/specification/mockups/ui-mockup.html`, described element by element in `docs/spec_baseline/specification/mockups/README.md`.
 This change makes BookLoom functionally finished: the final UI, the Projects screen, the full Settings, and the
 application's state and settings stored on disk, so that a translation can be closed and continued after a restart.

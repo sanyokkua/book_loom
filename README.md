@@ -186,5 +186,5 @@ on a 235-book local corpus. The interface is English or Ukrainian, chosen from t
 cannot be resumed after a restart, and settings are not remembered. Within a run the whole pipeline is live: book
 brief, glossary and recurring terms, chunked drafts, deterministic checks, the reviewer, directed repair, the review
 desk and a checked export with a consistency pass (`openspec/changes/archive/2026-10-19-complete-translation-workflow`).
-Next: the translation-pipeline redesign (`docs/proposals/2026-10-16-translation-pipeline-redesign.md`), then SQLite
+Next: the translation-pipeline redesign (`openspec/changes/redesign-translation-pipeline/proposal.md`), then SQLite
 persistence.

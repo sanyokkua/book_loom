@@ -657,7 +657,7 @@ The register SHALL be kept by a strict majority of the windows read, and the nar
 
 The brief suggestion SHALL run in a progress dialog whose Steps group lists what the model knows about the book (not listed when the title is the file name), reading sample 1 to K (K = 3, 4 or 5 for Fast, Balanced or Max, fewer when the story is too short for K windows), and deciding genre, readers, voice and story shape; Esc SHALL cancel it and it SHALL NOT be hideable.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3, docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (B1–B3), `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: the suggestion is short work, so the person watches its steps and can stop it, but it is not pushed into the background.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3, docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (B1–B3), `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: the suggestion is short work, so the person watches its steps and can stop it, but it is not pushed into the background.
 
 #### Scenario: The steps follow the dial and skip unknown knowledge
 
@@ -678,7 +678,7 @@ The brief suggestion SHALL run in a progress dialog whose Steps group lists what
 
 The dialog's "What it decides" group SHALL list five rows, genre, register, who tells the story, who reads it with the voice, and the story shape, each with its value so far and its agreement ("3 of 4 samples agree"); selecting one SHALL show each sample's answer with its verified quote, and a value without support SHALL be shown as likely.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (B2, B3), `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: the person can see why each field has its value and read the sentence of the book that supports it.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (B2, B3), `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: the person can see why each field has its value and read the sentence of the book that supports it.
 
 #### Scenario: A field shows its agreement and quote
 

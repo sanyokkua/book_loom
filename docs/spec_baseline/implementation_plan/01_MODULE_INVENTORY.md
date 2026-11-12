@@ -237,7 +237,7 @@ assistant and the autonomous names pass all wired into it. A book of any of the 
 from the window or from `./gradlew :app:translate`, with `pseudo` or a configured real provider. Groups 15a–15j, which
 were not planned up front, are written down in `openspec/changes/archive/2026-10-19-complete-translation-workflow/additional-work.md`
 (their IDs are unchanged); the translation pipeline was then redesigned by the change `redesign-translation-pipeline`
-(`docs/proposals/2026-10-16-translation-pipeline-redesign.md`), described next.
+(`openspec/changes/redesign-translation-pipeline/proposal.md`), described next.
 
 **What `redesign-translation-pipeline` changed (built 2026-10-28 to 2026-11-11; archive after the owner's checks).**
 A run has three stages, Prepare, Translate and Proofread. New packages: `:llm/ua.bookloom.llm.engine` (which server

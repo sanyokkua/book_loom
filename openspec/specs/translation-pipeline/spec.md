@@ -1837,7 +1837,7 @@ number added.
 
 WHILE a run translates, the live card SHALL list the run's segments in reading order, the chunk being translated last and earlier chunks above it (the latest 500 rows), one line each with formatting marks left out and the full text in the tooltip, each with a marker: waiting, translating…, drafted, checking…, translated, to review, translated again alone, or kept as is.
 
-**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`, `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Live card), `docs/spec_baseline/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1–T4). In plain words: a book takes hours, and watching sentences go by is how a person judges the model before the run ends; the card shows every segment of the call with its state instead of two rows, keeps what was translated earlier in the run to scroll back to, and shows a draft as soon as it arrives, so a chunk whose check decides all its segments at once does not look as if nothing happened until then.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`, `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Live card), `docs/spec_baseline/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md` (T1–T4). In plain words: a book takes hours, and watching sentences go by is how a person judges the model before the run ends; the card shows every segment of the call with its state instead of two rows, keeps what was translated earlier in the run to scroll back to, and shows a draft as soon as it arrives, so a chunk whose check decides all its segments at once does not look as if nothing happened until then.
 
 #### Scenario: The decided segment above the one in progress
 
@@ -2693,7 +2693,7 @@ stay synchronous and size-capped, with no queue that a slow disk could fill.
 
 The Translating screen's live card SHALL always show, under its detail, the current scene summary — its target-language text, else its source text — and where it comes from, in one wording on every quality: "Updated after every 20 accepted segments and at the end of each chapter. On Max quality the model writes the one at the end of each chapter."; WHERE no summary exists yet, it SHALL read "No scene summary yet." rather than hide the line.
 
-**Source**: `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Scene summary), `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T5), "Keep a rolling summary of the book so far". In plain words: the summary the model carries from segment to segment is part of why a translation reads as it does, so the person can always see it and how often it is refreshed. On every quality it is refreshed after 20 accepted segments and at each chapter's end; only on Max is the chapter-end one written by the model. Writing it more often belongs to the pipeline redesign, not to this change.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Scene summary), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md` (T5), "Keep a rolling summary of the book so far". In plain words: the summary the model carries from segment to segment is part of why a translation reads as it does, so the person can always see it and how often it is refreshed. On every quality it is refreshed after 20 accepted segments and at each chapter's end; only on Max is the chapter-end one written by the model. Writing it more often belongs to the pipeline redesign, not to this change.
 
 #### Scenario: The line shows the summary and its source
 
@@ -2747,7 +2747,7 @@ Each segment count on the translating screen SHALL be derived from the progress 
 
 The live card SHALL offer Simple and Detailed views in a list | detail split that never stacks; Simple SHALL show the selected segment's marker and location, a bordered Source | Translation grid and "Being translated now" with the call's sources, and Detailed SHALL add the call's figures and the parsed prompt and reply.
 
-**Source**: `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (List | detail split, Simple detail, Detailed detail), `docs/spec_baseline/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1, T3). In plain words: a person who only wants to watch sees plain sentences, and one who wants the technical truth sees the call itself.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (List | detail split, Simple detail, Detailed detail), `docs/spec_baseline/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md` (T1, T3). In plain words: a person who only wants to watch sees plain sentences, and one who wants the technical truth sees the call itself.
 
 #### Scenario: Detailed adds the call's figures
 
@@ -2758,7 +2758,7 @@ The live card SHALL offer Simple and Detailed views in a list | detail split tha
 
 WHEN the reply to a batch is parsed, each segment's result SHALL reach its row, so that a segment the batch could not be used for reads "translated again alone" from its solo draft on, even while its chunk's check runs, and "to review" if it is then flagged; its tooltip SHALL name the fault (a missing id, a duplicate id, a merged answer). An extra id the batch never asked for has no row.
 
-**Source**: `docs/spec_baseline/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1, T4). In plain words: a batch answers for several segments at once, and each row must show what happened to its own segment.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md` (T1, T4). In plain words: a batch answers for several segments at once, and each row must show what happened to its own segment.
 
 #### Scenario: A segment the batch lacked is translated again alone
 
@@ -2779,7 +2779,7 @@ WHEN the reply to a batch is parsed, each segment's result SHALL reach its row, 
 
 WHILE "Show each segment when translated" is on, the live card SHALL select the first newly translated segment when a reply arrives, and SHALL stop following only when the person clicks or keys to another row, offering "Follow again".
 
-**Source**: `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Show each segment when translated), `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1). In plain words: the card keeps up with the translation until the person wants to read something else, and never loses their place by itself.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Show each segment when translated), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md` (T1). In plain words: the card keeps up with the translation until the person wants to read something else, and never loses their place by itself.
 
 #### Scenario: Only a click turns following off
 
@@ -2795,7 +2795,7 @@ WHILE "Show each segment when translated" is on, the live card SHALL select the 
 
 WHILE an attempt of a model call has had no answer for 60 seconds or more, the screen SHALL show the amber chip "No answer for m:ss", the banner "The model is taking longer than usual (m:ss). BookLoom tries again by itself at m:ss. You do not need to do anything.", and ONE clock reading the time waited of the attempt's time limit.
 
-**Source**: `docs/spec_baseline/specification/mockups/README.md#run-states-a` (Stuck call), `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Call line), `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T2, A). In plain words: a slow model should look slow, not broken, and the person is told nothing needs doing. A minute without an answer is when the screen calls the call stuck; the time it tries again is the attempt's own time limit, which for a draft grows with the answer it expects.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#run-states-a` (Stuck call), `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Call line), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md` (T2, A). In plain words: a slow model should look slow, not broken, and the person is told nothing needs doing. A minute without an answer is when the screen calls the call stuck; the time it tries again is the attempt's own time limit, which for a draft grows with the answer it expects.
 
 #### Scenario: A stuck call shows one clock
 
@@ -2811,7 +2811,7 @@ WHILE an attempt of a model call has had no answer for 60 seconds or more, the s
 
 The engine SHALL announce the steps it plans, by kind, as "Plan a run's steps and count the time spent" defines them, the steps it adds as they start, and each step's change of state as it starts and ends, so that the screen's progress counts the run's own work.
 
-**Source**: `docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`, `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (PR1–PR3). In plain words: the progress bar and time left can only be as honest as the engine's announcement of its own work.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`, `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md` (PR1–PR3). In plain words: the progress bar and time left can only be as honest as the engine's announcement of its own work.
 
 #### Scenario: The plan is announced before the work
 
@@ -2822,7 +2822,7 @@ The engine SHALL announce the steps it plans, by kind, as "Plan a run's steps an
 
 WHEN a batch reply is parsed, the engine SHALL announce each item's result (translated, missing or unusable) for its segment.
 
-**Source**: `docs/spec_baseline/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1, T4). In plain words: the rows and the reply grid need the per-segment answer, not only that a batch came back.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md` (T1, T4). In plain words: the rows and the reply grid need the per-segment answer, not only that a batch came back.
 
 #### Scenario: A batch reply announces each item's result
 
@@ -2833,7 +2833,7 @@ WHEN a batch reply is parsed, the engine SHALL announce each item's result (tran
 
 WHEN a chunk is entered, the system SHALL plan one draft step per segment to translate — a segment kept verbatim being a draft step done at once with no call — and the dial's checks for the chunk (Fast 0, Balanced 1, Max 2); it SHALL add a step when a repair round, a batch re-ask or a resend after a timeout starts, plan Max's chapter summaries and backward revision, and count the time spent without the time paused.
 
-**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (PR1–PR3). In plain words: the reviewer reads a whole chunk at once, so a check is a step per chunk, not per segment. A planned check that turns out not to be needed — no pair of the chunk qualifies for the reviewer, or Max's second pass after an unreadable first verdict — is done at once with no call. How the steps become the bar, the percentage and the time left, and that the bar never moves back, is the app-shell capability's.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md` (PR1–PR3). In plain words: the reviewer reads a whole chunk at once, so a check is a step per chunk, not per segment. A planned check that turns out not to be needed — no pair of the chunk qualifies for the reviewer, or Max's second pass after an unreadable first verdict — is done at once with no call. How the steps become the bar, the percentage and the time left, and that the bar never moves back, is the app-shell capability's.
 
 #### Scenario: A twelve-segment unit on Balanced
 
@@ -2864,7 +2864,7 @@ WHEN a chunk is entered, the system SHALL plan one draft step per segment to tra
 
 The translating screen SHALL start a run for the open project, as briefed, with the chosen model, and WHILE it is in progress SHALL report the time spent and left, tokens per second, the segment counts translated, fixed automatically, to review and kept as is, the live card and a log of what the run has decided.
 
-**Source**: FR-ALGO-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Summary strip), `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T2), ADR-0042, ADR-0043. In plain words: the dashboard shows the run's throughput and counts in plain words; progress is saved as it goes, so the old warning to keep the application open is gone.
+**Source**: FR-ALGO-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Summary strip), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md` (T2), ADR-0042, ADR-0043. In plain words: the dashboard shows the run's throughput and counts in plain words; progress is saved as it goes, so the old warning to keep the application open is gone.
 
 #### Scenario: Counts advance as segments are decided
 

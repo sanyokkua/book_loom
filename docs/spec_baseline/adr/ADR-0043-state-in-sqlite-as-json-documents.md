@@ -9,7 +9,7 @@ the tests)
 
 ADR-0034 put the working state of a translation behind storage ports with in-memory adapters, so nothing survives a
 restart. The Projects screen, the stored providers and settings, and "continue after a restart"
-(`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`, "Persistence") need that state on disk.
+(`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`, "Persistence") need that state on disk.
 
 ADR-0009 chose SQLite with Flyway and JDBI, typed tables for domain data, and a typed key/value table for preferences.
 The schema in `docs/spec_baseline/specification/02_Architecture/06_DATA_MODEL_SQLITE.md` has fallen behind the records the code

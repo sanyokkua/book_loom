@@ -4,7 +4,7 @@
 
 The application SHALL open the review desk as a large in-window dialog from the toolbar's "Review (n)" and from "n to review" on the Translating screen, and SHALL have no review panel on the Translating screen and no review step in the navigation.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/spec_baseline/specification/mockups/README.md#g1--dialogs-live-in-the-window-on-two-layers, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (decision 5, T6), ADR-0045. In plain words: reviewing is a task of its own that needs the whole window, so it is a dialog and not a panel squeezed beside the run.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/spec_baseline/specification/mockups/README.md#g1--dialogs-live-in-the-window-on-two-layers, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (decision 5, T6), ADR-0045. In plain words: reviewing is a task of its own that needs the whole window, so it is a dialog and not a panel squeezed beside the run.
 
 #### Scenario: Review (n) opens the desk
 
@@ -56,7 +56,7 @@ WHEN a translation finishes with at least one segment to review and the setting 
 
 The review desk SHALL offer the filters "To review (n)", "Worth a second look (n)" and "All segments", and ‹ › controls that move to the previous and next segment of the filter shown; what "Worth a second look" lists is "List in Worth a second look the accepted segments the final audit doubts", and what "All segments" lists is "Browse every segment after an Unattended run".
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/spec_baseline/specification/mockups/README.md#words-w--user-facing-vocabulary, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (F1). In plain words: the person works through what needs them first, can look at what the last check doubted, and can still read everything else.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/spec_baseline/specification/mockups/README.md#words-w--user-facing-vocabulary, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (F1). In plain words: the person works through what needs them first, can look at what the last check doubted, and can still read everything else.
 
 #### Scenario: Filters show their counts
 
@@ -109,7 +109,7 @@ WHEN the person chooses "Leave for later", the desk SHALL write nothing, SHALL k
 
 The desk's translation editor SHALL treat each formatting mark such as `⟦0⟧` as one protected unit: a deletion that touches any part of a mark SHALL remove the whole mark, cutting a whole mark and pasting it elsewhere SHALL move it, and a paste SHALL insert only the marks the editor is missing.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (decision 12, F1). In plain words: a mark that is half deleted breaks the book's bold, links or italics, so the editor never allows half a mark, and the person can still move a mark to where the formatting belongs.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (decision 12, F1). In plain words: a mark that is half deleted breaks the book's bold, links or italics, so the editor never allows half a mark, and the person can still move a mark to where the formatting belongs.
 
 #### Scenario: Deleting part of a mark removes all of it
 
@@ -130,7 +130,7 @@ The desk's translation editor SHALL treat each formatting mark such as `⟦0⟧`
 
 The desk's footer SHALL offer a "More ▾" menu with Leave for later, Try again, Try again with a note… and Undo my edit, each with a line saying what it does; Try again with a note… SHALL open an inline panel inside the desk, not a second dialog, and Undo my edit SHALL be disabled while the segment holds no saved edit.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (F1). In plain words: the common path is one button, and the rarer actions are one click away without crowding the footer or stacking a second window on the desk.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (F1). In plain words: the common path is one button, and the rarer actions are one click away without crowding the footer or stacking a second window on the desk.
 
 #### Scenario: Try again with a note stays inside the desk
 
@@ -146,7 +146,7 @@ The desk's footer SHALL offer a "More ▾" menu with Leave for later, Try again,
 
 The desk SHALL run its main button on Ctrl+Enter (⌘+Enter on macOS) and SHALL move to the next or previous row on Ctrl+Alt+↓ and Ctrl+Alt+↑, without using Alt+↑ or Alt+↓, which belong to the editor on macOS.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (F1). In plain words: a person who reviews dozens of segments can stay on the keyboard, and the shortcuts do not collide with text editing.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (F1). In plain words: a person who reviews dozens of segments can stay on the keyboard, and the shortcuts do not collide with text editing.
 
 #### Scenario: Ctrl+Enter runs Accept & next
 
@@ -177,7 +177,7 @@ The desk SHALL run its main button on Ctrl+Enter (⌘+Enter on macOS) and SHALL 
 
 The desk's "What the model saw" tab SHALL show the segment's stored context snapshot, parsed into its sections; for a segment that was drafted in a batch, it SHALL show the batch context that was actually sent to the model.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/spec_baseline/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (T8). In plain words: to judge a translation the person must see what the model was told, and for a batch that is the batch's package, not a reconstruction.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/spec_baseline/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (T8). In plain words: to judge a translation the person must see what the model was told, and for a batch that is the batch's package, not a reconstruction.
 
 #### Scenario: A batch-drafted segment shows the batch's context
 
@@ -193,7 +193,7 @@ The desk's "What the model saw" tab SHALL show the segment's stored context snap
 
 The review editor SHALL show each stored formatting mark `⟦gN⟧` as the text `⟦N⟧` with the same number, and saving SHALL map each `⟦N⟧` back to `⟦gN⟧` before the placeholder check.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (decision 12, F1). In plain words: the stored text keeps its internal mark names, while the person sees short numbered marks that are easy to move and recognise.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (decision 12, F1). In plain words: the stored text keeps its internal mark names, while the person sees short numbered marks that are easy to move and recognise.
 
 #### Scenario: The editor shows numbers and saving maps them back
 
@@ -204,7 +204,7 @@ The review editor SHALL show each stored formatting mark `⟦gN⟧` as the text 
 
 The desk SHALL offer one main button: "✓ Accept & next" keeps the machine text and moves to the next segment, and once the translation is edited the same button SHALL read "✓ Save my edit & next" and save the text instead; re-reading the list or the segment SHALL NOT replace text the person has typed and not saved.
 
-**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (T7). In plain words: Accept means "the machine was right", so while the person's own typing is pending the button changes its meaning to saving it, and a refresh must never eat what they typed.
+**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (T7). In plain words: Accept means "the machine was right", so while the person's own typing is pending the button changes its meaning to saving it, and a refresh must never eat what they typed.
 
 #### Scenario: An unedited segment offers Accept
 
@@ -225,7 +225,7 @@ The desk SHALL offer one main button: "✓ Accept & next" keeps the machine text
 
 IF a saved edit reaches the placeholder check with a formatting mark missing or doubled, THEN the system SHALL refuse it with `ErrorCode.validation`, store nothing, and keep the segment's stored translation and status.
 
-**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (decision 12). In plain words: the desk's editor cannot produce such an edit, because its main button stays off until every mark is present once; this check is the safety net behind it, so a broken text is never stored by any path.
+**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (decision 12). In plain words: the desk's editor cannot produce such an edit, because its main button stays off until every mark is present once; this check is the safety net behind it, so a broken text is never stored by any path.
 
 #### Scenario: A save with a missing mark is refused
 
@@ -273,7 +273,7 @@ IF the editor's text is empty or only spaces, THEN the desk SHALL keep the main 
 
 WHILE the editor lacks a formatting mark of the source or holds one twice, the desk SHALL show under it a line naming each such mark and what to do — "⟦0⟧ is missing — paste it back where the formatting ends." — and SHALL keep the main button disabled until every mark is present exactly once.
 
-**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (decision 12). In plain words: the line names the wrong mark and says where to put it back, and the button cannot save a broken text.
+**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (decision 12). In plain words: the line names the wrong mark and says where to put it back, and the button cannot save a broken text.
 
 #### Scenario: A missing mark is named and blocks the button
 

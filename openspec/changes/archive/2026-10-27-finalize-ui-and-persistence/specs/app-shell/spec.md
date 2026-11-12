@@ -188,7 +188,7 @@ The progress dialog SHALL have a follow switch, on by default, that selects the 
 
 WHERE model work is long — the names pass or the export's last check — the progress dialog SHALL offer "Continue in background", which hides it and shows the activity chip in the title bar (for example "Names · 53 % · open"). Short work — the brief, a file name, a test — SHALL NOT be hideable. WHEN the chip is clicked, the same dialog SHALL reopen with its state.
 
-**Source**: `docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`, owner decision 11 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: a names pass can take many minutes, and a person should be able to read the book meanwhile. Short work ends before anyone could want to hide it, so it is not offered.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`, owner decision 11 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: a names pass can take many minutes, and a person should be able to read the book meanwhile. Short work ends before anyone could want to hide it, so it is not offered.
 
 #### Scenario: Hiding the names pass
 
@@ -230,7 +230,7 @@ WHILE long model work runs in the background, the screen it writes to SHALL be r
 
 The application SHALL show an operation's progress as the share of its finished steps, one percentage in the bar and the title bar, and SHALL NOT move the bar back when work is added on the way. Which steps a translation counts is defined by translation-pipeline ("Announce the planned steps and each step's state").
 
-**Source**: `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, PR1–PR3 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: counting only segments made "52 % in 2 hours, 10 hours left". The bar now shows every step the work announces, and it holds still rather than going backwards when a repair adds work.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, PR1–PR3 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: counting only segments made "52 % in 2 hours, 10 hours left". The bar now shows every step the work announces, and it holds still rather than going backwards when a repair adds work.
 
 #### Scenario: Three tasks of three items
 
@@ -519,7 +519,7 @@ The Translating screen's live card SHALL hold two tabs, Live and Activity log. T
 
 The application SHALL show the Projects screen with the purpose line "A project is one translation of a book. One book can have several — into other languages, or the same language with another AI model. Progress is saved as you go.", a search over books and projects, an All, In progress and Finished filter, and the projects grouped under a header for each book with its cover, title, file, format, segment count and the number of translations.
 
-**Source**: `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, G6 and decision 8 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: a person may have translated a book into three languages, and wants to find which, and where it stopped. Grouping by book puts a book's translations together.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, G6 and decision 8 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: a person may have translated a book into three languages, and wants to find which, and where it stopped. Grouping by book puts a book's translations together.
 
 #### Scenario: Two translations of one book
 
@@ -792,7 +792,7 @@ WHEN "Rename…" is used, the application SHALL ask for a name with chips, an er
 
 WHEN "Translate into another language" is used, the application SHALL ask for the language and the project name (required for a used pair), create a project on the already imported book that uses the currently chosen AI model, copy the brief and the Glossary and Recurring terms (entries, kinds, genders, locked marks) with every translation emptied, never copy the translation memory, import nothing again and open the new project's brief.
 
-**Source**: `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, open question 5 of `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (recorded default), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D10". In plain words: the characters and places are the same in any language, so their list is kept; renderings and old translations would pull a new language wrong, so they are cleared.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, open question 5 of `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md` (recorded default), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D10". In plain words: the characters and places are the same in any language, so their list is kept; renderings and old translations would pull a new language wrong, so they are cleared.
 
 #### Scenario: A German copy of a Ukrainian project
 

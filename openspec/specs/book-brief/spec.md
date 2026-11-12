@@ -684,7 +684,7 @@ The register SHALL be kept by a strict majority of the windows read, and the nar
 
 WHILE the run state of the open project is Translating, Stuck call, Waiting for the AI program, Pausing or Stopping, the Book Brief SHALL be read-only and SHALL show the banner "Pause the translation to change the brief. Changes apply to segments not translated yet." with a Pause button; in every other run state, Paused included, it SHALL be editable except the languages, which "Lock the languages once translating has started" governs.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#changes-while-translating-i, docs/spec_baseline/specification/mockups/README.md#run-states-a, docs/spec_baseline/specification/mockups/README.md#step-2--book-brief--b1b3-i, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (open question 7, recorded default: read-only until a pause). In plain words: the engine rereads the brief's switches only when it resumes, so an edit made mid-run would look accepted and change nothing; the screen therefore waits for a pause and says so.
+**Source**: docs/spec_baseline/specification/mockups/README.md#changes-while-translating-i, docs/spec_baseline/specification/mockups/README.md#run-states-a, docs/spec_baseline/specification/mockups/README.md#step-2--book-brief--b1b3-i, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (open question 7, recorded default: read-only until a pause). In plain words: the engine rereads the brief's switches only when it resumes, so an edit made mid-run would look accepted and change nothing; the screen therefore waits for a pause and says so.
 
 #### Scenario: The brief is read-only during a translation
 
@@ -731,7 +731,7 @@ WHILE a project has started translating — it holds at least one decided segmen
 
 The Book Brief's languages card SHALL show a Project name line reading "automatic — follows the languages" while the name is automatic, with a Rename… action, and an automatic name SHALL follow the chosen languages as `<title> · <SRC> → <TGT>`, with no arrow until a target is chosen (`<title> · <SRC>`, or only the title while no source is known).
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#project-names--one-book-several-translations-pn, docs/spec_baseline/specification/mockups/README.md#step-2--book-brief--b1b3-i, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (PN1). In plain words: the person sees what the project is called and why, and a name they typed is never overwritten by a language change.
+**Source**: docs/spec_baseline/specification/mockups/README.md#project-names--one-book-several-translations-pn, docs/spec_baseline/specification/mockups/README.md#step-2--book-brief--b1b3-i, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (PN1). In plain words: the person sees what the project is called and why, and a name they typed is never overwritten by a language change.
 
 #### Scenario: The automatic name follows a language change
 
@@ -758,7 +758,7 @@ The Book Brief's languages card SHALL show a Project name line reading "automati
 
 IF the person chooses a source and target that another project of the same book already uses, THEN the Book Brief SHALL open the dialog "Same language pair" naming that project, with "Open that project" and "Make a second <language> translation" that requires a name of its own.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#project-names--one-book-several-translations-pn, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (PN2). In plain words: two projects with the same pair would be indistinguishable, so the person either goes to the existing one or names a deliberate second one.
+**Source**: docs/spec_baseline/specification/mockups/README.md#project-names--one-book-several-translations-pn, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (PN2). In plain words: two projects with the same pair would be indistinguishable, so the person either goes to the existing one or names a deliberate second one.
 
 #### Scenario: A used pair opens the dialog
 
@@ -789,7 +789,7 @@ IF the person chooses a source and target that another project of the same book 
 
 The Quality and speed card SHALL show an estimate line, such as "For this book on this computer: about 2 h 30 min (estimate from the model test)", only when a speed in seconds per segment was measured for the chosen model by the inference test or an earlier run, and otherwise SHALL show the relative cost of the choices; a speed in tokens per second alone SHALL NOT give an estimate.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#step-2--book-brief--b1b3-i, docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (PR2). In plain words: a made-up number for hours of work misleads, so a time appears only when the computer was actually measured, and otherwise the card says how the choices compare.
+**Source**: docs/spec_baseline/specification/mockups/README.md#step-2--book-brief--b1b3-i, docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (PR2). In plain words: a made-up number for hours of work misleads, so a time appears only when the computer was actually measured, and otherwise the card says how the choices compare.
 
 #### Scenario: A measured speed gives an estimate
 
@@ -810,7 +810,7 @@ The Quality and speed card SHALL show an estimate line, such as "For this book o
 
 The brief suggestion SHALL run in a progress dialog whose Steps group lists what the model knows about the book (not listed when the title is the file name), reading sample 1 to K (K = 3, 4 or 5 for Fast, Balanced or Max, fewer when the story is too short for K windows), and deciding genre, readers and voice; Esc SHALL cancel it and it SHALL NOT be hideable.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3, docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (B1–B3). In plain words: the suggestion is short work, so the person watches its steps and can stop it, but it is not pushed into the background.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3, docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (B1–B3). In plain words: the suggestion is short work, so the person watches its steps and can stop it, but it is not pushed into the background.
 
 #### Scenario: The steps follow the dial and skip unknown knowledge
 
@@ -831,7 +831,7 @@ The brief suggestion SHALL run in a progress dialog whose Steps group lists what
 
 The dialog's "What it decides" group SHALL list four rows, genre, register, who tells the story and who reads it with the voice, each with its value so far and its agreement ("3 of 4 samples agree"); selecting one SHALL show each sample's answer with its verified quote, and a value without a quote SHALL NOT be used.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (B2, B3). In plain words: the person can see why each field has its value and read the sentence of the book that supports it.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (B2, B3). In plain words: the person can see why each field has its value and read the sentence of the book that supports it.
 
 #### Scenario: A field shows its agreement and quote
 
@@ -842,7 +842,7 @@ The dialog's "What it decides" group SHALL list four rows, genre, register, who 
 
 The application SHALL write nothing to the brief until the person presses "Apply to the brief", which SHALL be offered when all steps have ended, and Cancel SHALL leave the brief unchanged.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (B1). In plain words: a model's suggestion is only a proposal; the brief changes when the person says so.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (B1). In plain words: a model's suggestion is only a proposal; the brief changes when the person says so.
 
 #### Scenario: Nothing is written until Apply
 

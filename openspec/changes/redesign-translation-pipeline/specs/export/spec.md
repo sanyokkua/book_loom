@@ -435,7 +435,7 @@ findings, and the proofread notes (each segment the Proofread stage read, with i
 
 The export screen SHALL show four tiles filled from the project before any export: segments done, translated without changes, reviewed by the person, and "checked when written" ("—" until a file is written). After a written export the first tile SHALL read what the stored export wrote and the fourth "checked: opens, nothing missing", also after a restart. A line under the tiles SHALL give the stored export's proofread summary, "—" before any.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#step-5--export--e1e3-i, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E1), `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: the person sees how much of the book is done before choosing to write it, instead of four empty tiles that only fill after the file exists.
+**Source**: docs/spec_baseline/specification/mockups/README.md#step-5--export--e1e3-i, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (E1), `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: the person sees how much of the book is done before choosing to write it, instead of four empty tiles that only fill after the file exists.
 
 #### Scenario: Tiles show the project's figures before an export
 

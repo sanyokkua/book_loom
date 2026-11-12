@@ -227,7 +227,7 @@ IF the stored database was made by another schema version or with other stored r
 
 WHEN a person removes a project, the system SHALL delete that project's stored data — its brief, term lists, segment decisions with their proofread verdicts, translation memory, chapter summaries, the stored prompt frames and run — and SHALL NOT delete the book file, any exported file, or any other project of the same book.
 
-**Source**: `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (Persistence), `design.md#d26--stored-shapes-and-database-resets`, `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`. In plain words: Remove forgets the translation inside BookLoom; it never reaches out to files the person owns. A second translation of the same book is a different project and stays.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md` (Persistence), `design.md#d26--stored-shapes-and-database-resets`, `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`. In plain words: Remove forgets the translation inside BookLoom; it never reaches out to files the person owns. A second translation of the same book is a different project and stays.
 
 #### Scenario: Removing one of two translations of a book
 

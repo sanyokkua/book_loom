@@ -2,7 +2,7 @@
 2026-10-19 **Cross-references:** `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`,
 `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md`, `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md`,
 `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md`, `docs/spec_baseline/specification/mockups/README.md`,
-`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`, `docs/spec_baseline/specification/diagrams/pipeline.mermaid`
+`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`, `docs/spec_baseline/specification/diagrams/pipeline.mermaid`
 
 # Translation Workflow
 
@@ -11,7 +11,7 @@ automatic-first behaviour. It is the user-facing counterpart to the pipeline des
 the high-level flow is drawn in `docs/spec_baseline/specification/diagrams/pipeline.mermaid`.
 
 **Status convention.** Behaviour marked **planned — UI finalization + SQLite** is the target of the next change
-(`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`; every screen is described in
+(`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`; every screen is described in
 `docs/spec_baseline/specification/mockups/README.md`) and is not built today. Everything else describes the current build. In
 particular, nothing is saved today: persistence is in memory (ADR-0034) and the SQLite store is planned.
 

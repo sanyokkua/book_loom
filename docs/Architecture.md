@@ -408,7 +408,7 @@ Code-visible today:
 - `:document` logs DEBUG/TRACE in its readers, walkers and gate but not yet in every writer, parser and masker (D18,
   `CHANGE_BACKLOG.md#decision-debt`).
 - The translation pipeline is being redesigned as the next change, `redesign-translation-pipeline`
-  (`docs/proposals/2026-10-16-translation-pipeline-redesign.md`, with its "Moved here" list).
+  (`openspec/changes/redesign-translation-pipeline/proposal.md`, with its "Moved here" list).
 
 Resolved: D2, D3, D5, D6, D7, D8, D11, D13, D17 and D19 (see `CHANGE_BACKLOG.md#decision-debt`); the EPUB, OPF, FB2
 byte-order-mark, TXT-refusal and Markdown-URL gaps that the review of `add-translation-engine-and-cli` recorded
@@ -455,6 +455,6 @@ is the headless proof against a real local model.
 The workflow this change set out to build runs end to end in the window and from the command line (§1, §5, §6). The
 change was archived on 2026-10-19 after the owner's hand checks (task 16.5) passed. Next comes
 the pipeline redesign as its own change, `redesign-translation-pipeline`
-(`docs/proposals/2026-10-16-translation-pipeline-redesign.md`), and after it the SQLite adapter behind `:persistence`'s
+(`openspec/changes/redesign-translation-pipeline/proposal.md`), and after it the SQLite adapter behind `:persistence`'s
 ports, which is what finally lets a run, the settings and the Projects screen survive a restart. The order beyond that
 is `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md`.

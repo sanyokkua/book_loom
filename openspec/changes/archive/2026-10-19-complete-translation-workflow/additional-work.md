@@ -586,7 +586,7 @@ and graded blind by Opus (`.temporary_context/new_translation_3/ANALYSIS.md`, ow
 differ the new one has 19 paragraphs with a meaning error against 25, 24 errors against 33, and is preferred 28 to 16; the
 consistency pass is preferred 8 to 2 on the 13 paragraphs it changed. Four defects the code caused and one window remain;
 idioms read literally and occasional broken grammar are the model's own ceiling and are left to the review and consistency
-passes. Owner decisions (2026-10-15/16): the pipeline redesign is a separate proposal (`docs/proposals/2026-10-16-translation-pipeline-redesign.md`) and this group fixes only what is obvious; a brand follows the brief's name policy as a person's name does, and a material, a
+passes. Owner decisions (2026-10-15/16): the pipeline redesign is a separate proposal (`openspec/changes/redesign-translation-pipeline/proposal.md`) and this group fixes only what is obvious; a brand follows the brief's name policy as a person's name does, and a material, a
 substance or a drug is a common noun and is always translated; these tasks are written now and implemented later. Test
 fixtures use invented brands and names only (book-neutral).
 

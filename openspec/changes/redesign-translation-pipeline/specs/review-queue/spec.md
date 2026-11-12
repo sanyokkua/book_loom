@@ -339,7 +339,7 @@ The application SHALL pass a retried draft through the hard gates and the checks
 
 The review desk SHALL offer the filters "To review (n)", "Worth a second look (n)", "Changed by proofread (n)", "Waiting on a gender (n)" and "All segments", each listing what its own requirement names, and ‹ › controls that move to the previous and next segment of the filter shown.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/spec_baseline/specification/mockups/README.md#words-w--user-facing-vocabulary, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (F1). In plain words: the person works through what needs them first, can look at what the audit doubted and what the Proofread stage changed or still waits on, and can still read everything else.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/spec_baseline/specification/mockups/README.md#words-w--user-facing-vocabulary, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (F1). In plain words: the person works through what needs them first, can look at what the audit doubted and what the Proofread stage changed or still waits on, and can still read everything else.
 
 #### Scenario: Filters show their counts
 
@@ -355,7 +355,7 @@ The review desk SHALL offer the filters "To review (n)", "Worth a second look (n
 
 The desk's footer SHALL offer a "More ▾" menu with Leave for later, Try again, Try again with a note…, Undo my edit and Undo proofread, each with a line saying what it does; Try again with a note… SHALL open an inline panel inside the desk, not a second dialog, Undo my edit SHALL be disabled while the segment holds no saved edit, and Undo proofread SHALL be disabled while it holds no kept proofread rewrite.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (F1). In plain words: the common path is one button, and the rarer actions are one click away without crowding the footer or stacking a second window on the desk.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (F1). In plain words: the common path is one button, and the rarer actions are one click away without crowding the footer or stacking a second window on the desk.
 
 #### Scenario: Try again with a note stays inside the desk
 
@@ -376,7 +376,7 @@ The desk's footer SHALL offer a "More ▾" menu with Leave for later, Try again,
 
 The desk's "What the model saw" tab SHALL show the segment's stored context snapshot, parsed into its sections, with the run's frame it was sent with; for a segment that was drafted in a batch, it SHALL show the batch context that was actually sent to the model, and for a retry the context rebuilt for that retry, labelled "as it was sent for this retry".
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/spec_baseline/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (T8). In plain words: to judge a translation the person must see what the model was told, and for a batch that is the batch's package, not a reconstruction.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/spec_baseline/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (T8). In plain words: to judge a translation the person must see what the model was told, and for a batch that is the batch's package, not a reconstruction.
 
 #### Scenario: A batch-drafted segment shows the batch's context
 

@@ -275,7 +275,7 @@ WHEN the application asks the model for the brief, the names, a file name or a t
 
 WHERE model work is long — the names pass — the progress dialog SHALL offer "Continue in background", which hides it and shows the activity chip in the title bar (for example "Names · 53 % · open"). Short work — the brief, a file name, a test — SHALL NOT be hideable. WHEN the chip is clicked, the same dialog SHALL reopen with its state.
 
-**Source**: `docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`, owner decision 11 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: a names pass can take many minutes, and a person should be able to read the book meanwhile. Short work ends before anyone could want to hide it, so it is not offered. The export's last check, once also hideable, no longer exists.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`, owner decision 11 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: a names pass can take many minutes, and a person should be able to read the book meanwhile. Short work ends before anyone could want to hide it, so it is not offered. The export's last check, once also hideable, no longer exists.
 
 #### Scenario: Hiding the names pass
 

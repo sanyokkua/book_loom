@@ -10,7 +10,7 @@ This document specifies i18n and accessibility requirements for the UI, realizin
 WCAG 2.1 AA.
 
 Status convention: what is **built** runs today; what is marked **planned — UI finalization + SQLite** is the next change
-(`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). Nothing is saved across restarts today (ADR-0034), so
+(`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). Nothing is saved across restarts today (ADR-0034), so
 the language choice is applied from the OS locale on every launch until persistence lands.
 
 ## internationalization {#internationalization}

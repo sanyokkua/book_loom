@@ -63,7 +63,7 @@ The Two language marks verdict SHALL compare only what the file declares about i
 
 The "About this book" fold SHALL show, closed, a summary line (format, chapters, words, images, cover) and, opened, the cover or "No cover", the file, `Title · Author`, the declared language, DRM and what is kept, and SHALL omit a row the book does not state.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#step-1--import--i1i4, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (I2). In plain words: the details are one click away and never cluttered with placeholders for things the book does not say.
+**Source**: docs/spec_baseline/specification/mockups/README.md#step-1--import--i1i4, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (I2). In plain words: the details are one click away and never cluttered with placeholders for things the book does not say.
 
 #### Scenario: The fold omits what the book does not state
 
@@ -85,7 +85,7 @@ The chapter count SHALL be the number of top-level nodes of the structure tree, 
 
 The book's text browser SHALL be three panes — Chapters, the selected chapter's Segments, and the selected segment's Text — with a search of the text or of a place such as `ch1 · p05`, a kind filter, a kind chip on each row, and the line "Nothing matches 'xyz'." when nothing is found.
 
-**Source**: docs/spec_baseline/specification/mockups/README.md#step-1--import--i1i4, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (I3, I4). In plain words: the person can read what BookLoom found before translating, and find a paragraph by its words or its place.
+**Source**: docs/spec_baseline/specification/mockups/README.md#step-1--import--i1i4, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (I3, I4). In plain words: the person can read what BookLoom found before translating, and find a paragraph by its words or its place.
 
 #### Scenario: The text browser narrows by search
 
