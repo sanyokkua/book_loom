@@ -49,7 +49,7 @@ pre-commit:
       # A committed secret is unrecoverable — rewriting history does not un-publish a pushed blob, and the
       # credential must be rotated regardless. Catching it before the commit object exists is the only cheap
       # moment. Scans the staged diff only, so it is fast and cannot be tripped by unrelated working-tree junk.
-      # Also runs in CI over full history, per #what-fails-where.
+      # Runs only here, on the staged diff; CI has no secret-scan step.
       run: gitleaks git --pre-commit --staged --redact --no-banner
 
     - name: file-size

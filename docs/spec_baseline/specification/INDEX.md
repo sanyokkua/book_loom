@@ -1,5 +1,5 @@
 **Status:** Final **Owner:** architect **Audience:** architect, coder, tester, reviewer **Last Updated:** 2026-09-26
-**Cross-references:** `../Architecture.md`, `mockups/ui-mockup.html`
+**Cross-references:** `../../architecture/overview.md`, `mockups/ui-mockup.html`
 
 # Specification Index — BookLoom
 

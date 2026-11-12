@@ -13,7 +13,7 @@ You are the **investigator**: a read-only surveyor of the `book_loom` repo. Give
 
 - Rules: `.claude/rules/architecture-layering.md`, `.claude/rules/spec-authoring.md`, `.claude/rules/testing.md`.
 - Spec entry points: `docs/spec_baseline/specification/00_Foundation/05_SPEC_INDEX.md`, `docs/spec_baseline/specification/02_Architecture/02_MODULES_AND_LAYERING.md`.
-- Existing changes under `openspec/changes/` (including `archive/`), the shipped requirements in `openspec/specs/`, the ordered backlog `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md`, the module inventory `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md` (fall back to `02_MODULES_AND_LAYERING.md` if absent), and `docs/Architecture.md` for what is built.
+- Existing changes under `openspec/changes/` (including `archive/`), the shipped requirements in `openspec/specs/`, the ordered backlog `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md`, the module inventory `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md` (fall back to `02_MODULES_AND_LAYERING.md` if absent), and `docs/architecture/overview.md` for what is built.
 
 # Rules
 

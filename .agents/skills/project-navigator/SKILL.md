@@ -52,7 +52,7 @@ ports, never concrete `..Impl`/`..Dao`/`..Service` in another module.
 | `docs/spec_baseline/specification/mockups/ui-mockup.html` | Binding UI visual source of truth (P6) |
 | `docs/spec_baseline/specification/diagrams/` | Canonical `pipeline.mermaid`, `chunk-translate-loop.mermaid` |
 | `docs/spec_baseline/implementation_plan/` | `CHANGE_BACKLOG.md` (the ordered backlog), `01_MODULE_INVENTORY.md` (as-built log), `04_ADR_FORMAT.md`, `07_ROADMAP.md` (five stages), `notes-corpus-verification.md` (corpus evidence) |
-| `docs/Architecture.md`, `docs/DEVELOPMENT.md` | What is built and how to verify it; how to build, run, test, package |
+| `docs/architecture/`, `docs/pipeline/`, `docs/development/` | Design and current behaviour; how translation works; how to build, run, test, package |
 | `openspec/changes/<name>/` | THE UNIT OF WORK: `proposal.md`, `design.md`, `specs/<capability>/spec.md`, `tasks.md` |
 | `openspec/specs/<capability>/` | The ledger of what is actually BUILT, one folder per shipped capability, grown by `openspec archive` |
 | `openspec/config.yaml` | Project context + the R1-R4 rules that steer artifact generation |

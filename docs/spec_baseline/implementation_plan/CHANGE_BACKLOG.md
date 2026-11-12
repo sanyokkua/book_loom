@@ -40,7 +40,7 @@ titles and Purpose paragraphs after archive), then the next change from this lis
 of four archived**, change 5 — `add-inline-masking-and-placeholder-gate` — included (2026-09-11).
 `add-translation-engine-and-cli` (2026-09-20) delivered the walking skeleton the owner named as the next unit of work
 — a book of any of the four formats through the whole pipeline from the command line with a deterministic pseudo
-model (`docs/Architecture.md` §9) — making `:llm` and `:pipeline` real. `add-real-llm-clients` (2026-09-24) made the
+model (the old `docs/Architecture.md` §9, now `docs/architecture/overview.md`) — making `:llm` and `:pipeline` real. `add-real-llm-clients` (2026-09-24) made the
 existing LLM seam real for Ollama-native and OpenAI-compatible endpoints. The interstitial
 `settle-writer-policy-and-document-lifetime` shrank on 2026-09-11 when D2 and D11 were fixed directly.
 

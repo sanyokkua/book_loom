@@ -29,7 +29,7 @@ public enum CallKind {
     /** The summary of one finished chapter, written in the target language for later windows (design D10). */
     CHAPTER_SUMMARY,
 
-    /** A proofread call re-reading an already-decided segment (until group 14 also the export pass's calls). */
+    /** A proofread call re-reading an already-decided segment. */
     PROOFREAD,
 
     /** A setup call proposing the translated book's file name. */

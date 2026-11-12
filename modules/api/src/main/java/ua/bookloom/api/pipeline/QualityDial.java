@@ -9,7 +9,7 @@ public enum QualityDial {
     /** No fixing call beyond lost marks and no proofread call; fastest wall-clock time. */
     FAST,
 
-    /** The default balance of speed and repair/review effort. */
+    /** The default balance of speed and fixing effort. */
     BALANCED,
 
     /** One repair and a proofread that also re-reads the whole book. */

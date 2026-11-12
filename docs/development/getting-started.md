@@ -90,7 +90,7 @@ it through the OS store.
 ## Layout and modules {#project-structure}
 
 ```
-AGENTS.md                  operating manual (agents)         docs/Architecture.md   what is built, how to verify it
+AGENTS.md                  operating manual (agents)         docs/architecture/        design and current behaviour
 docs/development/         this guide (getting started, running, testing, quality and CI)
 docs/evaluation/          eval suites and the measured results of the prompt and pipeline rounds
 docs/spec_baseline/specification/        the spec — editable reference     docs/spec_baseline/adr/              decisions (ADR-0001 …)

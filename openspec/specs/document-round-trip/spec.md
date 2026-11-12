@@ -4,7 +4,7 @@
 The document engine's built behaviour: how an EPUB, FB2, Markdown or TXT book is parsed into a skeleton plus
 ordered segments, how each segment's inline markup is masked to `⟦gN⟧` placeholders and restored behind a
 placeholder-multiset gate, and how the book is written back canonical-equal. Every requirement here is proven by a
-test in `modules/document/src/test`; `docs/Architecture.md` is the readable map of the same behaviour.
+test in `modules/document/src/test`; `docs/architecture/document-engine.md` is the readable map of the same behaviour.
 
 ## Requirements
 

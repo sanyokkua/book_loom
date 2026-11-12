@@ -105,16 +105,16 @@ on Windows), then upload artifacts. The upload glob is `build/package/*.tar.gz`,
 days, `if-no-files-found: warn`; the Windows leg produces a folder, not an archive, so it uploads nothing. See
 [release-and-packaging.md](release-and-packaging.md).
 
-The file's own comment says this job "has never been observed running" and was written as documented debt. That
-comment predates the finished app and may be out of date; treat the packaging legs as unverified in CI unless a run
-history shows otherwise.
+The packaging matrix ran green on every leg for the pull-request runs of 2026-10-19 and 2026-10-27. Pushes after
+2026-11-01 failed at the quality job's strict lock verification (a build-script dependency checksum entry missing from
+`gradle/verification-metadata.xml` on the Linux runner), so the packaging legs did not start; the entry was added
+at the end of the redesign change and the next CI run is the proof.
 
 ### What CI does not run
 
 `liveLocal`, `promptEval`, `visual`, `corpus` and `soak` (excluded from `check` by the task graph; they need a real
-model, a pinned display or the owner's books), Sonar, and `scripts/ci-linux-ui.sh`. Gitleaks is not a CI step in the
-workflow file, although a comment in `lefthook.yml` says it also runs in CI over full history. The secret scan is a
-local pre-commit hook only.
+model, a pinned display or the owner's books), Sonar, and `scripts/ci-linux-ui.sh`. The secret scan (gitleaks) is a local
+pre-commit hook only; CI has no secret-scan step.
 
 ## Git hooks (Lefthook)
 

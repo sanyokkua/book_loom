@@ -139,8 +139,7 @@ jobs:
       # file before changing so much as a flag here.
       #
       # Covers: Spotless, Checkstyle, Error Prone + NullAway, SpotBugs + FindSecBugs, the ArchUnit boundary
-      # rules, the JaCoCo branch-coverage gate, every test tier that can run on a runner, and the `build-logic`
-      # functional tests that prove each of those fails red on a seeded canary.
+      # rules, the JaCoCo branch-coverage gate, and every test tier that can run on a runner.
       - name: Quality gate
         run: ./gradlew clean build check spotlessCheck
 

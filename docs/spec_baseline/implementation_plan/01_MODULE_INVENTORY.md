@@ -1,6 +1,6 @@
 **Status:** Final **Owner:** architect **Audience:** architect, coder, tester, reviewer **Last Updated:** 2026-11-11
 **Cross-references:** `docs/spec_baseline/specification/02_Architecture/02_MODULES_AND_LAYERING.md`,
-`docs/spec_baseline/specification/02_Architecture/01_SYSTEM_ARCHITECTURE.md`, `docs/Architecture.md`
+`docs/spec_baseline/specification/02_Architecture/01_SYSTEM_ARCHITECTURE.md`, `docs/architecture/document-engine.md`
 
 # Module Inventory
 
@@ -160,7 +160,7 @@ including the four it deliberately did **not** fix — are recorded in
 `TreeMasker` in `.model`, `MarkdownMasker`/`MarkdownEscaper`/`MarkdownStructureCheck` in `.md`, `PlainTextMasker`,
 and `DocumentPort.unmask`. Follow-ups on the same day: `OpenDocumentRegistry<T>` in `.model` replaces the four
 per-format registries and adds `close(id)`; `EpubWriter` synthesizes a missing `mimetype` (ADR-0030); `Fb2Writer`
-echoes the source's line-ending style. The readable map of all of this is `docs/Architecture.md`.
+echoes the source's line-ending style. The readable map of all of this is `docs/architecture/document-engine.md`.
 
 **What `add-translation-engine-and-cli` filled in (archived 2026-09-20).** The first
 change to translate a book, end to end, with a chat model — a deterministic offline `pseudo` model standing in for

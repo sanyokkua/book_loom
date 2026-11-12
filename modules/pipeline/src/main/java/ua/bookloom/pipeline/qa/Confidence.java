@@ -8,8 +8,8 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 /**
- * Blends the five soft checks' margins into one confidence number, so the acceptance rule has a single deterministic
- * score with no model opinion mixed in (design D8).
+ * Blends the five soft checks' margins into one confidence number, so a segment carries one deterministic score with
+ * no model opinion mixed in (design D8); the acceptance rule decides on the findings' levels, not on this number.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)

@@ -23,7 +23,6 @@ contributors and agents is [`AGENTS.md`](../AGENTS.md) at the repository root; t
 | [architecture/document-engine.md](architecture/document-engine.md) | parsing, masking, round trip, reassembly |
 | [architecture/ui.md](architecture/ui.md) | the JavaFX window, state mirror, theme |
 | [architecture/decisions.md](architecture/decisions.md) | the decisions that shaped the design |
-| [Architecture.md](Architecture.md) | an older single-file account of the architecture, regenerated on 2026-10-17 (see its own header); the pages above are newer |
 
 ## Pipeline and translation
 

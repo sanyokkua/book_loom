@@ -210,7 +210,7 @@ Two further guard tests in the same source set (`NoReasoningVariableTest`, `NoSa
 
 - [Document engine](document-engine.md), [UI](ui.md), [Decisions index](decisions.md)
 - [Getting started](../development/getting-started.md), [Running](../development/running.md), [Testing](../development/testing.md), [Quality and CI](../development/quality-and-ci.md)
-- [Known limits](../known-limits.md)
+- [Translation pipeline](../pipeline/translation-pipeline.md), [Known limits](../known-limits.md)
 - [Module inventory](../spec_baseline/implementation_plan/01_MODULE_INVENTORY.md)
 - [System architecture spec](../spec_baseline/specification/02_Architecture/01_SYSTEM_ARCHITECTURE.md), [modules and layering spec](../spec_baseline/specification/02_Architecture/02_MODULES_AND_LAYERING.md)
 - [Privacy and offline spec](../spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md)
