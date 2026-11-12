@@ -1,6 +1,6 @@
 # Persistence (SQLite)
 
-Scope: `:persistence` (`ua.bookloom.persistence..`). Spec: `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md`. Stack: `org.xerial:sqlite-jdbc` (WAL) + JDBI 3 (fluent API; Flyway from the first release, ADR-0043). FX-free. Implements the repository ports.
+Scope: `:persistence` (`ua.bookloom.persistence..`). Spec: `docs/spec_baseline/specification/02_Architecture/06_DATA_MODEL_SQLITE.md`. Stack: `org.xerial:sqlite-jdbc` (WAL) + JDBI 3 (fluent API; Flyway from the first release, ADR-0043). FX-free. Implements the repository ports.
 
 ## Current status
 

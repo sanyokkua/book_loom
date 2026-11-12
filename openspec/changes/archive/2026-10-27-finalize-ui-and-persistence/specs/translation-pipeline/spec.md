@@ -4,7 +4,7 @@
 
 The Translating screen's live card SHALL always show, under its detail, the current scene summary — its target-language text, else its source text — and where it comes from, in one wording on every quality: "Updated after every 20 accepted segments and at the end of each chapter. On Max quality the model writes the one at the end of each chapter."; WHERE no summary exists yet, it SHALL read "No scene summary yet." rather than hide the line.
 
-**Source**: `docs/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Scene summary), `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T5), "Keep a rolling summary of the book so far". In plain words: the summary the model carries from segment to segment is part of why a translation reads as it does, so the person can always see it and how often it is refreshed. On every quality it is refreshed after 20 accepted segments and at each chapter's end; only on Max is the chapter-end one written by the model. Writing it more often belongs to the pipeline redesign, not to this change.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Scene summary), `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T5), "Keep a rolling summary of the book so far". In plain words: the summary the model carries from segment to segment is part of why a translation reads as it does, so the person can always see it and how often it is refreshed. On every quality it is refreshed after 20 accepted segments and at each chapter's end; only on Max is the chapter-end one written by the model. Writing it more often belongs to the pipeline redesign, not to this change.
 
 #### Scenario: The line shows the summary and its source
 
@@ -20,7 +20,7 @@ The Translating screen's live card SHALL always show, under its detail, the curr
 
 WHILE a translation is running, the Translating screen SHALL show once per project a closable help line: "BookLoom keeps the computer awake while it translates. Closing a laptop lid still puts it to sleep — after sleep, translating goes on by itself. Nothing finished is lost." and, WHILE keep-awake is off in Settings, instead "The computer may sleep while translating — turn on Keep awake in Settings."
 
-**Source**: `docs/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Help line). In plain words: a person who closes a laptop lid mid-run should know what happens; the README marks the sentence about continuing after sleep as to be verified once with a real laptop sleep before it ships.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Help line). In plain words: a person who closes a laptop lid mid-run should know what happens; the README marks the sentence about continuing after sleep as to be verified once with a real laptop sleep before it ships.
 
 #### Scenario: The help line is shown once and can be closed
 
@@ -36,7 +36,7 @@ WHILE a translation is running, the Translating screen SHALL show once per proje
 
 The translating screen SHALL refuse to start when no project is open, no target language is chosen, or no model is chosen, and SHALL say which is missing; a run SHALL start with no source language chosen (Auto), and its prompts then name the source as "the language of this segment (infer it from its text)" (ADR-0042).
 
-**Source**: FR-ALGO-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, ADR-0042. In plain words: a run that cannot work is refused at once with the reason, while a missing source language is not a reason to refuse.
+**Source**: FR-ALGO-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, ADR-0042. In plain words: a run that cannot work is refused at once with the reason, while a missing source language is not a reason to refuse.
 
 #### Scenario: A missing target language is named
 
@@ -47,7 +47,7 @@ The translating screen SHALL refuse to start when no project is open, no target 
 
 Each segment count on the translating screen SHALL be derived from the progress snapshot the engine emits: pending never includes a segment kept as source by choice, the segments done are the translated, fixed automatically, to review and kept-as-is counts together, and a total of zero SHALL show zero rather than a division.
 
-**Source**: FR-ALGO-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/specification/mockups/README.md#words-w--user-facing-vocabulary`. In plain words: the numbers a person reads are the engine's own counts, with the plain names the screen uses. How the bar and the text lines show them is the app-shell capability's.
+**Source**: FR-ALGO-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/mockups/README.md#words-w--user-facing-vocabulary`. In plain words: the numbers a person reads are the engine's own counts, with the plain names the screen uses. How the bar and the text lines show them is the app-shell capability's.
 
 #### Scenario: Kept as source is not pending
 
@@ -58,7 +58,7 @@ Each segment count on the translating screen SHALL be derived from the progress 
 
 The live card SHALL offer Simple and Detailed views in a list | detail split that never stacks; Simple SHALL show the selected segment's marker and location, a bordered Source | Translation grid and "Being translated now" with the call's sources, and Detailed SHALL add the call's figures and the parsed prompt and reply.
 
-**Source**: `docs/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (List | detail split, Simple detail, Detailed detail), `docs/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1, T3). In plain words: a person who only wants to watch sees plain sentences, and one who wants the technical truth sees the call itself.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (List | detail split, Simple detail, Detailed detail), `docs/spec_baseline/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1, T3). In plain words: a person who only wants to watch sees plain sentences, and one who wants the technical truth sees the call itself.
 
 #### Scenario: Detailed adds the call's figures
 
@@ -69,7 +69,7 @@ The live card SHALL offer Simple and Detailed views in a list | detail split tha
 
 WHEN the reply to a batch is parsed, each segment's result SHALL reach its row, so that a segment the batch could not be used for reads "translated again alone" from its solo draft on, even while its chunk's check runs, and "to review" if it is then flagged; its tooltip SHALL name the fault (a missing id, a duplicate id, a merged answer). An extra id the batch never asked for has no row.
 
-**Source**: `docs/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1, T4). In plain words: a batch answers for several segments at once, and each row must show what happened to its own segment.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1, T4). In plain words: a batch answers for several segments at once, and each row must show what happened to its own segment.
 
 #### Scenario: A segment the batch lacked is translated again alone
 
@@ -90,7 +90,7 @@ WHEN the reply to a batch is parsed, each segment's result SHALL reach its row, 
 
 WHILE "Show each segment when translated" is on, the live card SHALL select the first newly translated segment when a reply arrives, and SHALL stop following only when the person clicks or keys to another row, offering "Follow again".
 
-**Source**: `docs/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Show each segment when translated), `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1). In plain words: the card keeps up with the translation until the person wants to read something else, and never loses their place by itself.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Show each segment when translated), `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1). In plain words: the card keeps up with the translation until the person wants to read something else, and never loses their place by itself.
 
 #### Scenario: Only a click turns following off
 
@@ -106,7 +106,7 @@ WHILE "Show each segment when translated" is on, the live card SHALL select the 
 
 WHILE an attempt of a model call has had no answer for 60 seconds or more, the screen SHALL show the amber chip "No answer for m:ss", the banner "The model is taking longer than usual (m:ss). BookLoom tries again by itself at m:ss. You do not need to do anything.", and ONE clock reading the time waited of the attempt's time limit.
 
-**Source**: `docs/specification/mockups/README.md#run-states-a` (Stuck call), `docs/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Call line), `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T2, A). In plain words: a slow model should look slow, not broken, and the person is told nothing needs doing. A minute without an answer is when the screen calls the call stuck; the time it tries again is the attempt's own time limit, which for a draft grows with the answer it expects.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#run-states-a` (Stuck call), `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Call line), `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T2, A). In plain words: a slow model should look slow, not broken, and the person is told nothing needs doing. A minute without an answer is when the screen calls the call stuck; the time it tries again is the attempt's own time limit, which for a draft grows with the answer it expects.
 
 #### Scenario: A stuck call shows one clock
 
@@ -122,7 +122,7 @@ WHILE an attempt of a model call has had no answer for 60 seconds or more, the s
 
 The engine SHALL announce the steps it plans, by kind, as "Plan a run's steps and count the time spent" defines them, the steps it adds as they start, and each step's change of state as it starts and ends, so that the screen's progress counts the run's own work.
 
-**Source**: `docs/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`, `docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (PR1–PR3). In plain words: the progress bar and time left can only be as honest as the engine's announcement of its own work.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`, `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (PR1–PR3). In plain words: the progress bar and time left can only be as honest as the engine's announcement of its own work.
 
 #### Scenario: The plan is announced before the work
 
@@ -133,7 +133,7 @@ The engine SHALL announce the steps it plans, by kind, as "Plan a run's steps an
 
 WHEN a batch reply is parsed, the engine SHALL announce each item's result (translated, missing or unusable) for its segment.
 
-**Source**: `docs/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1, T4). In plain words: the rows and the reply grid need the per-segment answer, not only that a batch came back.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1, T4). In plain words: the rows and the reply grid need the per-segment answer, not only that a batch came back.
 
 #### Scenario: A batch reply announces each item's result
 
@@ -144,7 +144,7 @@ WHEN a batch reply is parsed, the engine SHALL announce each item's result (tran
 
 WHEN a chunk is entered, the system SHALL plan one draft step per segment to translate — a segment kept verbatim being a draft step done at once with no call — and the dial's checks for the chunk (Fast 0, Balanced 1, Max 2); it SHALL add a step when a repair round, a batch re-ask or a resend after a timeout starts, plan Max's chapter summaries and backward revision, and count the time spent without the time paused.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (PR1–PR3). In plain words: the reviewer reads a whole chunk at once, so a check is a step per chunk, not per segment. A planned check that turns out not to be needed — no pair of the chunk qualifies for the reviewer, or Max's second pass after an unreadable first verdict — is done at once with no call. How the steps become the bar, the percentage and the time left, and that the bar never moves back, is the app-shell capability's.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (PR1–PR3). In plain words: the reviewer reads a whole chunk at once, so a check is a step per chunk, not per segment. A planned check that turns out not to be needed — no pair of the chunk qualifies for the reviewer, or Max's second pass after an unreadable first verdict — is done at once with no call. How the steps become the bar, the percentage and the time left, and that the bar never moves back, is the app-shell capability's.
 
 #### Scenario: A twelve-segment unit on Balanced
 
@@ -175,7 +175,7 @@ WHEN a chunk is entered, the system SHALL plan one draft step per segment to tra
 
 The translating screen SHALL start a run for the open project, as briefed, with the chosen model, and WHILE it is in progress SHALL report the time spent and left, tokens per second, the segment counts translated, fixed automatically, to review and kept as is, the live card and a log of what the run has decided.
 
-**Source**: FR-ALGO-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Summary strip), `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T2), ADR-0042, ADR-0043. In plain words: the dashboard shows the run's throughput and counts in plain words; progress is saved as it goes, so the old warning to keep the application open is gone.
+**Source**: FR-ALGO-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Summary strip), `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T2), ADR-0042, ADR-0043. In plain words: the dashboard shows the run's throughput and counts in plain words; progress is saved as it goes, so the old warning to keep the application open is gone.
 
 #### Scenario: Counts advance as segments are decided
 
@@ -216,7 +216,7 @@ The translating screen SHALL start a run for the open project, as briefed, with 
 
 IF a model call answers `busy` or `discoveryFailed`, or `emptyCompletion` or `contextWindow` on a call that does not flag its segment for it, or an error happens outside every step, THEN the system SHALL leave the segment and every later one PENDING and end the job Failed with `ErrorCode.internal`; WHERE pause on error is off, any other model-call error SHALL end it Failed with that error. IF the model answers `cancelled`, THEN the job SHALL end Cancelled.
 
-**Source**: `docs/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`, `#boundary-discipline`, `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, `docs/implementation_plan/CHANGE_BACKLOG.md` (D19). In plain words: every other model-call error — a provider error, a rejected request, or a step that threw — pauses the run, as the resume capability's "Pause instead of failing when an error stops the job" says; a draft that answers `emptyCompletion` or `contextWindow` flags its segment ("Flag a segment whose reply cannot be used, and continue"). A reply of HTTP `400` or `404` saying the server has no model loaded (such as LM Studio's `Model unloaded` or `No models loaded`) is classified `ErrorCode.modelUnavailable`, not `validation`, so it pauses. A `validation` refusal before any model call, for a run that cannot start, is answered as that refusal, not as a pause.
+**Source**: `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`, `#boundary-discipline`, `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md` (D19). In plain words: every other model-call error — a provider error, a rejected request, or a step that threw — pauses the run, as the resume capability's "Pause instead of failing when an error stops the job" says; a draft that answers `emptyCompletion` or `contextWindow` flags its segment ("Flag a segment whose reply cannot be used, and continue"). A reply of HTTP `400` or `404` saying the server has no model loaded (such as LM Studio's `Model unloaded` or `No models loaded`) is classified `ErrorCode.modelUnavailable`, not `validation`, so it pauses. A `validation` refusal before any model call, for a run that cannot start, is answered as that refusal, not as a pause.
 
 #### Scenario: An unexpected code fails the job as internal
 
@@ -264,7 +264,7 @@ The system SHALL set the run's mechanics from the Book Brief's quality dial, and
 
 WHERE the review mode is Manual, a chunk SHALL hold exactly one segment. The dial SHALL NOT change the trust threshold.
 
-**Source**: FR-ALGO-11, FR-BRIEF-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`, `#fr-brief`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#quality-dial-mapping`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#quality-dial`, ADR-0036, ADR-0038. In plain words: one control trades speed for care, and the table says exactly what it changes; the reviewer reads each chunk once on Balanced and twice on Max, the second time only when the first verdict was readable. The threshold that decides what gets flagged belongs to the review mode, so turning the dial never silently flags more or fewer segments.
+**Source**: FR-ALGO-11, FR-BRIEF-08 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`, `#fr-brief`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#quality-dial-mapping`, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#quality-dial`, ADR-0036, ADR-0038. In plain words: one control trades speed for care, and the table says exactly what it changes; the reviewer reads each chunk once on Balanced and twice on Max, the second time only when the first verdict was readable. The threshold that decides what gets flagged belongs to the review mode, so turning the dial never silently flags more or fewer segments.
 
 #### Scenario: Fast skips the reviewer
 
@@ -285,7 +285,7 @@ WHERE the review mode is Manual, a chunk SHALL hold exactly one segment. The dia
 
 WHILE a run translates, the live card SHALL list the run's segments in reading order, the chunk being translated last and earlier chunks above it (the latest 500 rows), one line each with formatting marks left out and the full text in the tooltip, each with a marker: waiting, translating…, drafted, checking…, translated, to review, translated again alone, or kept as is.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`, `docs/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Live card), `docs/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1–T4). In plain words: a book takes hours, and watching sentences go by is how a person judges the model before the run ends; the card shows every segment of the call with its state instead of two rows, keeps what was translated earlier in the run to scroll back to, and shows a draft as soon as it arrives, so a chunk whose check decides all its segments at once does not look as if nothing happened until then.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`, `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Live card), `docs/spec_baseline/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1–T4). In plain words: a book takes hours, and watching sentences go by is how a person judges the model before the run ends; the card shows every segment of the call with its state instead of two rows, keeps what was translated earlier in the run to scroll back to, and shows a draft as soon as it arrives, so a chunk whose check decides all its segments at once does not look as if nothing happened until then.
 
 #### Scenario: The decided segment above the one in progress
 
@@ -356,7 +356,7 @@ WHILE a run translates, the live card SHALL list the run's segments in reading o
 
 WHILE no translation has started for the open project, the Translating screen SHALL show the Ready state with Start translation. WHEN a translation completes, it SHALL show the outcome with Review (n) and Continue to Export. WHEN it ends Failed, it SHALL show "Did not finish", the banner "The translation stopped because of an error. Finished segments are saved." with Show details, and Continue translation, which starts a new run at the first pending segment.
 
-**Source**: FR-ALGO-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-RESUME-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/mockups/README.md#run-states-a`, ADR-0035, ADR-0043. In plain words: the screen always says what can happen next; after a failure nothing finished is lost and the person can carry on from where the run stopped, a start and not a resume. How every run state looks across the window is the app-shell capability's "Show each of the sixteen run states the same way everywhere".
+**Source**: FR-ALGO-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-RESUME-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/mockups/README.md#run-states-a`, ADR-0035, ADR-0043. In plain words: the screen always says what can happen next; after a failure nothing finished is lost and the person can carry on from where the run stopped, a start and not a resume. How every run state looks across the window is the app-shell capability's "Show each of the sixteen run states the same way everywhere".
 
 #### Scenario: Idle shows the ready card
 
@@ -411,7 +411,7 @@ WHILE no translation has started for the open project, the Translating screen SH
 
 WHILE the run is running and a model call has been outstanding for at least `10` seconds, the live line SHALL read "Waiting for the model… m:ss", updated once a second and counting across the client's own retries, and the screen SHALL withdraw it when the segment is decided, a new call starts, or a pause or stop is requested; from a minute without an answer the stuck line ("The model is taking longer than usual with segments …") replaces the waiting text.
 
-**Source**: FR-ALGO-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/mockups/README.md#run-states-a`. In plain words: a slow local model can make the counters stand still for minutes; ten seconds in the live line tells the person it is waiting, and the stuck state beside this one, at a minute without an answer, says when to look closer.
+**Source**: FR-ALGO-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/mockups/README.md#run-states-a`. In plain words: a slow local model can make the counters stand still for minutes; ten seconds in the live line tells the person it is waiting, and the stuck state beside this one, at a minute without an answer, says when to look closer.
 
 #### Scenario: Nothing is said for a normal answer
 
@@ -453,7 +453,7 @@ WHEN a translation starts from the window, the system SHALL take the review mode
 | When something needs review | Assisted | `assisted`, `semi-manual` |
 | After every segment | Manual | `manual` |
 
-**Source**: FR-REVIEW-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, ADR-0036, ADR-0045, `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, "Translate one book from the command line". In plain words: the careful modes are now a saved choice in Settings, read each time a translation starts, so a change applies to the next translation. A launch flag set on purpose still wins in the window, for evaluations and testing; the command line has nobody to stop for, so it always runs Unattended and logs that it ignored the flag. A typo must not silently change how the run behaves.
+**Source**: FR-REVIEW-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, ADR-0036, ADR-0045, `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`, "Translate one book from the command line". In plain words: the careful modes are now a saved choice in Settings, read each time a translation starts, so a change applies to the next translation. A launch flag set on purpose still wins in the window, for evaluations and testing; the command line has nobody to stop for, so it always runs Unattended and logs that it ignored the flag. A typo must not silently change how the run behaves.
 
 #### Scenario: A spelled-out alias is accepted
 
@@ -494,7 +494,7 @@ WHEN a translation starts from the window, the system SHALL take the review mode
 
 WHEN the engine starts a model call, it SHALL emit one event naming the call's kind (draft, structural repair, placeholder repair, reviewer, directed fix, pre-scan, summary or revision) and its segments, before waiting for the answer, SHALL NOT emit it for a call refused because a pause or stop was requested, and SHALL NOT emit another for the client's own retries.
 
-**Source**: FR-ALGO-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`. In plain words: between two segment decisions the engine may make several calls, and naming the kind lets the screen and the log say what the model is doing; the step announcements and batch results are stated beside this one.
+**Source**: FR-ALGO-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`. In plain words: between two segment decisions the engine may make several calls, and naming the kind lets the screen and the log say what the model is doing; the step announcements and batch results are stated beside this one.
 
 #### Scenario: One event before each decision
 
@@ -525,7 +525,7 @@ WHEN the engine starts a model call, it SHALL emit one event naming the call's k
 
 Every entry the activity log holds SHALL carry one kind from a fixed vocabulary of seven, each shown by its tag, with both a status role from the token catalogue and a mark that is not its colour. The run SHALL produce each kind at its own event, and the text of every entry SHALL come from the message catalogue by key. An answered draft, review, summary or revision call, a call interrupted by a pause or stop, and a repair round starting SHALL be technical `info` lines, listed only while Show technical details is on; a failed attempt and each step of an automatic recovery SHALL be `retry` lines. The log SHALL retain its most recent entries up to a fixed bound and SHALL drop the oldest first.
 
-**Source**: FR-NOTIF-6a, FR-NOTIF-6b, FR-NOTIF-6c (`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#activity-log`), FR-A11Y-6 (`docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#accessibility`), FR-UI-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`). In plain words: the log is the only record of what a multi-hour run decided. A fixed vocabulary of seven short tags, lined up in a column, is what makes it scannable, and now that the engine repairs, remembers and summarises, every one of the seven actually appears. Colour alone cannot carry the kind, and the text comes from the catalogue so a Ukrainian window never shows an English log. An entry names a segment the way the review dialog does, by its locator, because a file name and an ordinal mean nothing to the person reading it.
+**Source**: FR-NOTIF-6a, FR-NOTIF-6b, FR-NOTIF-6c (`docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#activity-log`), FR-A11Y-6 (`docs/spec_baseline/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#accessibility`), FR-UI-08 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`). In plain words: the log is the only record of what a multi-hour run decided. A fixed vocabulary of seven short tags, lined up in a column, is what makes it scannable, and now that the engine repairs, remembers and summarises, every one of the seven actually appears. Colour alone cannot carry the kind, and the text comes from the catalogue so a Ukrainian window never shows an English log. An entry names a segment the way the review dialog does, by its locator, because a file name and an ordinal mean nothing to the person reading it.
 
 #### Scenario: An accepted segment logs its kind and role
 

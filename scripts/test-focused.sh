@@ -34,7 +34,7 @@ LOG_FILE="${REPO_ROOT}/build/test-focused.log"
 ALL_MODULES="api util document llm persistence pipeline ui app"
 
 # The modules that depend on each module, directly or not — the reverse of the project dependencies in
-# modules/*/build.gradle.kts (docs/implementation_plan/01_MODULE_INVENTORY.md). Kept as a table, not derived, so the
+# modules/*/build.gradle.kts (docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md). Kept as a table, not derived, so the
 # script needs no Gradle run to plan one.
 dependents_of() {
     case "$1" in

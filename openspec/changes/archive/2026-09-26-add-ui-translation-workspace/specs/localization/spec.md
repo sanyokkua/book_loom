@@ -24,8 +24,8 @@ substituted into a catalogue-owned frame, not text the interface wrote. This bui
 language the port that built them wrote them in, which is English, and SHALL NOT attempt to translate them in the
 window.
 
-**Source:** FR-UI-06, FR-UI-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-I18N-1,
-FR-I18N-9 (`docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#internationalization`).
+**Source:** FR-UI-06, FR-UI-08 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-I18N-1,
+FR-I18N-9 (`docs/spec_baseline/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#internationalization`).
 In plain words: a sentence assembled from pieces at runtime cannot be translated, because other languages put the
 pieces in a different order and inflect them differently. One key, one whole sentence, with the variable parts
 marked inside it, is the only shape a translator can actually work with. A failure's text is carved out because
@@ -60,8 +60,8 @@ The application SHALL ship a catalogue in English and a catalogue in Ukrainian. 
 Both catalogues SHALL define exactly the same set of keys: a key present in one and absent from the other is a
 defect, as is a key defined in a catalogue that nothing displays.
 
-**Source:** FR-UI-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-I18N-2, FR-I18N-9
-(`docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#internationalization`).
+**Source:** FR-UI-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-I18N-2, FR-I18N-9
+(`docs/spec_baseline/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#internationalization`).
 In plain words: a missing key does not fail loudly — it shows the raw key or an English word in the middle of a
 Ukrainian sentence, and nobody notices until a user does. Checking both directions catches both the untranslated
 string and the translation nobody uses any more.
@@ -83,8 +83,8 @@ number, in the language being displayed.
 
 The Ukrainian catalogue SHALL provide every plural form Ukrainian distinguishes for such a message.
 
-**Source:** FR-UI-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-I18N-8, DD-48
-(`docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#icu-messages`).
+**Source:** FR-UI-08 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-I18N-8, DD-48
+(`docs/spec_baseline/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#icu-messages`).
 In plain words: English has two forms and Ukrainian has four, so "1 segment / 2 segments" translated as a pair
 is wrong for most numbers in Ukrainian. Naming the forms in the catalogue is what makes `21 сегмент`,
 `23 сегменти` and `25 сегментів` all come out right from the same key.
@@ -116,8 +116,8 @@ The application SHALL NOT ask which language to use on first launch.
 The operating system SHALL be the only thing that chooses the displayed language in this build: the application
 SHALL offer no control that changes it, and SHALL NOT record a chosen language anywhere.
 
-**Source:** FR-UI-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-I18N-4
-(`docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#internationalization`).
+**Source:** FR-UI-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-I18N-4
+(`docs/spec_baseline/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#internationalization`).
 In plain words: guessing correctly from the desktop is right almost always and costs the person nothing, whereas
 a language question before the first screen is a dialog in a language they may not read. FR-UI-06 also asks for
 an in-app switch in Settings -> Appearance, and this build does not have one: a switch is worth little until the
@@ -149,7 +149,7 @@ control and a stored value, not a re-translation.
 A number, a count or a duration the application displays SHALL be formatted for the language currently being
 displayed, not for the machine's own region.
 
-**Source:** FR-I18N-6 (`docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#locale-formatted-fields`).
+**Source:** FR-I18N-6 (`docs/spec_baseline/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#locale-formatted-fields`).
 In plain words: an interface reading Ukrainian with American thousands separators is half-translated. Following
 the displayed language rather than the machine keeps a single choice in charge of everything a person reads.
 

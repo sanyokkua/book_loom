@@ -16,8 +16,8 @@ position in reading order. The screen SHALL NOT show a chapter title, because a 
 The screen SHALL be read-only: it SHALL NOT offer to include or exclude a unit, nor to change anything about the
 book.
 
-**Source:** FR-DOC-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-structure`.
+**Source:** FR-DOC-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-structure`.
 In plain words: this is where a person checks the application understood their book before spending hours on it —
 an EPUB that opened with three segments instead of five thousand is visible here in a second, and was previously
 only visible in a log. The row is labelled with the resource path because that is the only name a parsed unit

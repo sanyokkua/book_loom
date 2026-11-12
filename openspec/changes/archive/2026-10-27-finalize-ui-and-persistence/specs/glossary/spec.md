@@ -4,7 +4,7 @@
 
 WHILE a translation of the project is at work (running, pausing, stopping, waiting on a stuck call, or waiting for the model), the Names & style screen SHALL keep the Glossary and the Recurring terms editable under the banner "Translating is going on. Changes apply to the next segments translated."
 
-**Source**: `docs/specification/mockups/README.md#changes-while-translating-i`, `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1–N5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: hand edits stay possible because the next group of segments reads the glossary again. Which model actions are disabled while a translation runs is the `app-shell` capability's rule ("Disable model actions while a translation runs"), and the read-only screen while the names pass runs hidden is also the `app-shell` capability's rule ("Make the screen that hidden work writes to read-only").
+**Source**: `docs/spec_baseline/specification/mockups/README.md#changes-while-translating-i`, `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1–N5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: hand edits stay possible because the next group of segments reads the glossary again. Which model actions are disabled while a translation runs is the `app-shell` capability's rule ("Disable model actions while a translation runs"), and the read-only screen while the names pass runs hidden is also the `app-shell` capability's rule ("Make the screen that hidden work writes to read-only").
 
 #### Scenario: Typing a translation stays possible
 
@@ -15,7 +15,7 @@ WHILE a translation of the project is at work (running, pausing, stopping, waiti
 
 The glossary table SHALL let every column be resized, the last filling the remaining width, with minimum widths (Term 140 px, Kind 96, Translation 170, Gender 110, Locked 64, remove 36), grid lines, a header that stays visible and fixed row heights.
 
-**Source**: `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, `docs/specification/mockups/README.md#g9--two-kinds-of-table-jx-g4`, N2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person can widen what is cut, and a column can never be dragged so narrow that its content disappears.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, `docs/spec_baseline/specification/mockups/README.md#g9--two-kinds-of-table-jx-g4`, N2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person can widen what is cut, and a column can never be dragged so narrow that its content disappears.
 
 #### Scenario: A column can be resized
 
@@ -26,7 +26,7 @@ The glossary table SHALL let every column be resized, the last filling the remai
 
 The Recurring terms card SHALL show the purpose line "Words the book repeats — kept the same all through the book. Learned while translating, or set here." and the columns Term, Translation, Used and a link to the glossary, Used being the number of times the term occurs in the book's text, ignoring letter case and matching exact word forms only (a term of several words counts the mentions of the whole phrase); an empty card SHALL read "No recurring terms yet. They are found when you prepare names, or while translating."
 
-**Source**: `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person sees how often each repeated word occurs and where such words come from. Used counts the words as written: `Warden` and `warden` count together, while an inflected form such as `wardens` is a different word and is not counted.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person sees how often each repeated word occurs and where such words come from. Used counts the words as written: `Warden` and `warden` count together, while an inflected form such as `wardens` is a different word and is not counted.
 
 #### Scenario: An empty lexicon says where terms come from
 
@@ -42,7 +42,7 @@ The Recurring terms card SHALL show the purpose line "Words the book repeats —
 
 The progress dialog of the names pass SHALL list eight steps in order — Find candidates in the book, Decide the names, Find repeated words, Clean up repeated words, Read repeated words in context, Suggest translations for names, Suggest translations for repeated words, Write the results — each with the number of requests it sent ("25 requests so far" while it runs, "6 requests" when it has ended, "no request" when it sent none, "Not started" before it begins; no step knows its total up front, so a count never reads "of N") and a figures line such as "53 % · 26 of about 49 steps · Left about 1 min".
 
-**Source**: `docs/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`, N4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person sees which part of the pass is running and how much is left. The dialog itself follows the progress-dialog pattern of the `app-shell` capability.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`, N4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person sees which part of the pass is running and how much is left. The dialog itself follows the progress-dialog pattern of the `app-shell` capability.
 
 #### Scenario: The eight steps are listed with counts
 
@@ -53,7 +53,7 @@ The progress dialog of the names pass SHALL list eight steps in order — Find c
 
 WHEN the pass finishes, its dialog SHALL become a Results view with the subtitle "5 added · 0 removed · 1 changed · 49 steps · 1 min 48 s", the tabs Changes (Entry, Change, Before, After, grouped; a Why column when some row has a reason, and a Revert on each row) and Steps (the eight stages with their request counts), and the actions Undo all, Show changed rows and Done.
 
-**Source**: `docs/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`, N5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person sees every change the pass made and can give all of them back.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`, N5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person sees every change the pass made and can give all of them back.
 
 #### Scenario: Results list the changes
 
@@ -69,7 +69,7 @@ WHEN the pass finishes, its dialog SHALL become a Results view with the subtitle
 
 WHEN every row an operation of Names & style changed is put back, by Undo all or one Revert at a time, the screen's line that announced the operation SHALL be replaced by "Undone: <operation> · every change it made is put back".
 
-**Source**: `docs/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`. In plain words: "Names prepared · model calls: 15" is no longer true once all of it is undone, and a line that claims work the tables no longer hold misleads.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`. In plain words: "Names prepared · model calls: 15" is no longer true once all of it is undone, and a line that claims work the tables no longer hold misleads.
 
 #### Scenario: Undo all replaces the names pass's line
 
@@ -80,7 +80,7 @@ WHEN every row an operation of Names & style changed is put back, by Undo all or
 
 The Scan, Review and Translate actions on a card SHALL run the progress dialog with two steps, the action's requests and then the write, and SHALL NOT be hideable.
 
-**Source**: `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, N4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: every model action looks the same, and only the long names pass can be hidden.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: every model action looks the same, and only the long names pass can be hidden.
 
 #### Scenario: A card action runs two steps and cannot be hidden
 
@@ -91,7 +91,7 @@ The Scan, Review and Translate actions on a card SHALL run the progress dialog w
 
 WHEN the person edits the glossary while a run is paused or translating, the application SHALL apply the edit from the first chunk that starts after it, SHALL NOT change segments already decided except through backward revision on the Max dial or the export's last check, and SHALL keep the glossary stored with the project across a restart; a person's edit and a name the run adds SHALL never overwrite each other.
 
-**Source**: FR-GLOSS-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), ADR-0043, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, `docs/specification/mockups/README.md#changes-while-translating-i`. In plain words: a person who spots a wrong spelling mid-run can fix it, and the rest of the book follows; earlier segments are corrected by the last check or review, not silently. A chunk reads the glossary once, when it starts. Each change is written to the stored entry in one step, so the run adding a name at the end of a chapter and the person typing a target at the same moment both survive.
+**Source**: FR-GLOSS-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), ADR-0043, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, `docs/spec_baseline/specification/mockups/README.md#changes-while-translating-i`. In plain words: a person who spots a wrong spelling mid-run can fix it, and the rest of the book follows; earlier segments are corrected by the last check or review, not silently. A chunk reads the glossary once, when it starts. Each change is written to the stored entry in one step, so the run adding a name at the end of a chapter and the person typing a target at the same moment both survive.
 
 #### Scenario: A pause-time lock affects later chunks only
 
@@ -129,7 +129,7 @@ WHEN the person edits the glossary while a run is paused or translating, the app
 
 The application SHALL keep, for each project, a stored lexicon of recurring common terms and titles that a model would otherwise render differently from one page to the next, SHALL propose them with a deterministic scan and no model, and SHALL show them in a "Recurring terms" card; a term the glossary holds SHALL NOT be asked about or shown from the lexicon.
 
-**Source**: `additional-work.md` 15d.9, `docs/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`, `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, ADR-0043. In plain words: a book that calls a warden "наглядач" in chapter one and "сторож" in chapter nine reads as two characters; the app finds the words a book keeps repeating and keeps every later request to one rendering. The lexicon is stored with the project, so it is still there after a restart.
+**Source**: `additional-work.md` 15d.9, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`, `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, ADR-0043. In plain words: a book that calls a warden "наглядач" in chapter one and "сторож" in chapter nine reads as two characters; the app finds the words a book keeps repeating and keeps every later request to one rendering. The lexicon is stored with the project, so it is still there after a restart.
 
 #### Scenario: The scan proposes a title and a dual-use word
 
@@ -190,7 +190,7 @@ The application SHALL keep, for each project, a stored lexicon of recurring comm
 
 The Names & style screen SHALL offer "Prepare names automatically" in a card above both tables that says what it does and how long it takes for the brief's quality dial ("About 1 min. You can undo it all afterwards."), and a press SHALL run the names pass on the chosen model in the progress dialog, whose Cancel ("Cancel writes nothing.") stops the pass and leaves both tables as they were.
 
-**Source**: `additional-work.md` 15i.U6, `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, N4, N5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: one button replaces five presses and gives every change back one by one or all together. Hiding the dialog with Continue in background or Esc, and the activity chip, are the `app-shell` capability's progress-dialog rules.
+**Source**: `additional-work.md` 15i.U6, `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N4, N5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: one button replaces five presses and gives every change back one by one or all together. Hiding the dialog with Continue in background or Esc, and the activity chip, are the `app-shell` capability's progress-dialog rules.
 
 #### Scenario: The press fills both tables and Undo all gives both back
 
@@ -246,7 +246,7 @@ the target, take off the quote put before a formula-like value, and keep the las
 such terms; IF the file is not UTF-8 or its header does not name the five columns once each, THEN it SHALL store nothing
 and say which; IF storing fails part-way, THEN it SHALL put the glossary back as it was.
 
-**Source**: FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/02_Architecture/09_ERROR_HANDLING.md#safe-details-allowlist`. In plain words: a glossary file comes back from spreadsheets and other people, so its columns may be reordered, its cells padded, a name repeated, its encoding wrong; each of these is either read the way the person meant or refused with a reason they can act on, in their display language, and a file is never half imported.
+**Source**: FR-GLOSS-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#safe-details-allowlist`. In plain words: a glossary file comes back from spreadsheets and other people, so its columns may be reordered, its cells padded, a name repeated, its encoding wrong; each of these is either read the way the person meant or refused with a reason they can act on, in their display language, and a file is never half imported.
 
 #### Scenario: A header in another order is read by its names
 
@@ -278,7 +278,7 @@ and say which; IF storing fails part-way, THEN it SHALL put the glossary back as
 
 WHEN a CSV is imported, the application SHALL read the stored glossary once and store all of the file's entries in one write, keeping the rules an edit follows (a row locked with no target refused, a changed target deferring the decided segments that used it, a person's gender shared with the other spellings of the person); IF the file holds no row (it is empty or holds only its header), THEN the result line SHALL say so after the count.
 
-**Source**: FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`). In plain words: row by row, every row read and wrote the whole stored glossary, so a 5,000-row file took about two and a half minutes with no sign of progress; in one write it takes seconds. And "Imported 0 rows." alone never said why nothing came in.
+**Source**: FR-GLOSS-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`). In plain words: row by row, every row read and wrote the whole stored glossary, so a 5,000-row file took about two and a half minutes with no sign of progress; in one write it takes seconds. And "Imported 0 rows." alone never said why nothing came in.
 
 #### Scenario: Five thousand rows import in seconds
 
@@ -301,7 +301,7 @@ source term, add the others, and report the malformed and refused rows by their 
 at most ten spans named, with each cause of a malformed row said once (for an unknown type or gender, with the values a
 file may use), while importing the rest.
 
-**Source**: FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`. In plain words: a series keeps its names across books, so a glossary must travel as a plain file any spreadsheet can open; one bad line must not throw away a hundred good ones, and a file whose every row has the same mistake gets one sentence naming it, not five thousand line numbers. A row that would lock a term with no target is refused like a malformed one (see "Lock only an entry that has a target").
+**Source**: FR-GLOSS-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`. In plain words: a series keeps its names across books, so a glossary must travel as a plain file any spreadsheet can open; one bad line must not throw away a hundred good ones, and a file whose every row has the same mistake gets one sentence naming it, not five thousand line numbers. A row that would lock a term with no target is refused like a malformed one (see "Lock only an entry that has a target").
 
 #### Scenario: A term with a comma is quoted
 
@@ -328,7 +328,7 @@ file may use), while importing the rest.
 
 The Names & style screen SHALL show the glossary as a table with the columns Term, Kind, Translation (an empty one shows the placeholder "No target"), Gender, Locked and a remove cross, under the purpose line "Names of people and places — written the same way every time. Set the gender so names take the right grammatical form."
 
-**Source**: FR-GLOSS-02, FR-GLOSS-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1, N3 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: this is where the person settles spellings before translating; the table explains its purpose, a changed row is marked on its edge so the term is never cut, an empty table says what to do, and the two cards sit side by side only when the content is at least 1440 px wide.
+**Source**: FR-GLOSS-02, FR-GLOSS-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1, N3 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: this is where the person settles spellings before translating; the table explains its purpose, a changed row is marked on its edge so the term is never cut, an empty table says what to do, and the two cards sit side by side only when the content is at least 1440 px wide.
 
 #### Scenario: A scanned entry appears unlocked
 

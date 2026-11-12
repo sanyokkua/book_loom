@@ -2,7 +2,7 @@
 name: adr-authoring
 description: >-
   Use when a decision is architecturally significant and NOT already settled by the
-  specification, and you must record it as an ADR under `docs/adr/`. Covers the
+  specification, and you must record it as an ADR under `docs/spec_baseline/adr/`. Covers the
   ADR template and headings, `ADR-NNNN` numbering, the proposed -> accepted ->
   superseded/deprecated status lifecycle, and linking an ADR to design decisions
   (DD-NN), spec clauses, and stories.
@@ -13,7 +13,7 @@ allowed-tools: Read, Write, Bash, Glob, Grep
 
 An Architecture Decision Record captures one significant, non-obvious decision with its
 context, the options weighed, and the consequences. ADRs are the heavy counterpart to the
-lightweight `DD-NN` log in `docs/specification/00_Foundation/04_DESIGN_DECISIONS.md`.
+lightweight `DD-NN` log in `docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md`.
 
 ## When to use
 
@@ -26,7 +26,7 @@ lightweight `DD-NN` log in `docs/specification/00_Foundation/04_DESIGN_DECISIONS
 ## When NOT to use
 
 - Do NOT write an ADR for something the spec already decides. The `DD-NN` entries
-  (DD-01..DD-49) and the architecture docs under `docs/specification/02_Architecture/`
+  (DD-01..DD-49) and the architecture docs under `docs/spec_baseline/specification/02_Architecture/`
   are settled facts — cite them, do not re-litigate them.
 - Do NOT use an ADR for routine implementation choices with no cross-module impact — those
   belong in the story's Design-constraints section.
@@ -38,10 +38,10 @@ lightweight `DD-NN` log in `docs/specification/00_Foundation/04_DESIGN_DECISIONS
 
 1. **Confirm significance and novelty.** Read the relevant `DD-NN` entries and
    `02_Architecture/*` clauses. If they already answer the question, stop and cite them.
-2. **Pick the number.** Scan `docs/adr/` for the highest `ADR-NNNN` and assign the next
+2. **Pick the number.** Scan `docs/spec_baseline/adr/` for the highest `ADR-NNNN` and assign the next
    zero-padded integer (the log currently ends at `ADR-0015-app-environment-and-paths.md`,
    so the next free number is **ADR-0016** — always re-verify by scanning). Filename:
-   `docs/adr/ADR-NNNN-<slug>.md`. Numbers are permanent.
+   `docs/spec_baseline/adr/ADR-NNNN-<slug>.md`. Numbers are permanent.
 3. **Write the headings in this exact order:**
    - `# ADR-NNNN — <imperative title>`
    - `**Status:** proposed | accepted | superseded by ADR-MMMM | deprecated`
@@ -62,12 +62,12 @@ lightweight `DD-NN` log in `docs/specification/00_Foundation/04_DESIGN_DECISIONS
 
 ## Reference index
 
-- `docs/adr/template.md` — the full heading skeleton to copy.
-- `docs/implementation_plan/04_ADR_FORMAT.md` — the ADR format and the
+- `docs/spec_baseline/adr/template.md` — the full heading skeleton to copy.
+- `docs/spec_baseline/implementation_plan/04_ADR_FORMAT.md` — the ADR format and the
   proposed/accepted/superseded/deprecated lifecycle rules.
-- In-repo authorities: `docs/specification/00_Foundation/04_DESIGN_DECISIONS.md` (the DD
-  log the ADR elaborates), `docs/specification/00_Foundation/05_SPEC_INDEX.md` (clause
-  anchors to cite), `docs/specification/02_Architecture/` (settled architecture).
+- In-repo authorities: `docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md` (the DD
+  log the ADR elaborates), `docs/spec_baseline/specification/00_Foundation/05_SPEC_INDEX.md` (clause
+  anchors to cite), `docs/spec_baseline/specification/02_Architecture/` (settled architecture).
 
 ## Mandatory validation checklist
 
@@ -79,7 +79,7 @@ lightweight `DD-NN` log in `docs/specification/00_Foundation/04_DESIGN_DECISIONS
 - [ ] Each considered option has a pros/cons subsection.
 - [ ] `## Links` cites at least one `DD-NN` and the relevant spec clause(s)/story ids.
 - [ ] The ADR decides something the spec does NOT already decide (novelty confirmed).
-- [ ] No file under `docs/specification/` was modified.
+- [ ] No file under `docs/spec_baseline/specification/` was modified.
 
 ## Gotchas
 

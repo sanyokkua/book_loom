@@ -31,7 +31,7 @@ MAIN_CLASS="ua.bookloom.app.bootstrap.Launcher"
 # ADR-0021 supersedes all four — the nine code directories moved under `modules/` immediately before this change.
 INPUT_DIR="${REPO_ROOT}/modules/app/build/dist/libs"
 OUTPUT_DIR="${REPO_ROOT}/build/package"
-ICON_DIR="${REPO_ROOT}/docs/specification/assets/icon/dist"
+ICON_DIR="${REPO_ROOT}/docs/spec_baseline/specification/assets/icon/dist"
 
 # --- Version ------------------------------------------------------------------------------------------------------
 

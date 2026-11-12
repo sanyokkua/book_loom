@@ -4,7 +4,7 @@
 
 WHEN the person saves or tests a provider in Settings › Providers, or presses Detect again, the system SHALL decide which server engine answers at its address — Ollama, LM Studio, llama-server, Unsloth, OpenRouter or a generic OpenAI-compatible server — with at most 7 GET requests of 2 seconds each that carry no body, no book text and the key only when the provider has one, and SHALL store the engine and its version on the provider; it SHALL never detect at start-up or in the background.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#provider-kinds-and-presets`, `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#outbound-scope`, `design.md#d17--server-engines-detection-and-traits`. In plain words: every local server speaks the same chat format but needs different fields for the same wish (turning thinking off, capping the answer), so BookLoom must know which program answers. It asks a few short questions only when the person acts, which keeps the offline rule; the one first-launch listing of ADR-0044 (the single allowed look at the two local addresses) is unchanged and llama-server's port is not added to it.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#provider-kinds-and-presets`, `docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#outbound-scope`, `design.md#d17--server-engines-detection-and-traits`. In plain words: every local server speaks the same chat format but needs different fields for the same wish (turning thinking off, capping the answer), so BookLoom must know which program answers. It asks a few short questions only when the person acts, which keeps the offline rule; the one first-launch listing of ADR-0044 (the single allowed look at the two local addresses) is unchanged and llama-server's port is not added to it.
 
 #### Scenario: A llama-server is recognised by its header and its properties
 
@@ -45,7 +45,7 @@ WHEN the person saves or tests a provider in Settings › Providers, or presses 
 
 The system SHALL detect the engine for a saved provider under the full and connection policies, for an unsaved draft also under the connection-and-models policy, and always for the connection check; it SHALL NOT detect in a run's recovery probe or preflight, and after a connection failure it SHALL detect again unless the failure was `unreachable`, `timeout`, `missingCredential`, `cancelled` or `auth`.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`, `design.md#d17--server-engines-detection-and-traits`. In plain words: detection belongs to the checks the person starts. A run's own recovery probe and preflight stay quiet. After a failure that says the server cannot be reached or refuses the key, looking at the engine would only repeat the same failure, but a failure that may come from a wrong engine (a 404, a refused body) is worth one more look.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`, `design.md#d17--server-engines-detection-and-traits`. In plain words: detection belongs to the checks the person starts. A run's own recovery probe and preflight stay quiet. After a failure that says the server cannot be reached or refuses the key, looking at the engine would only repeat the same failure, but a failure that may come from a wrong engine (a 404, a refused body) is worth one more look.
 
 #### Scenario: A run's preflight does not detect
 
@@ -66,7 +66,7 @@ The system SHALL detect the engine for a saved provider under the full and conne
 
 The system SHALL count a detection probe as a hit only when the reply body has the shape that engine sends, never on the HTTP status or the port alone, and SHALL NOT take a server for Ollama when its model list carries another server's marker or its OpenAI-shaped model list holds a row without the `owned_by` field.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#provider-kinds-and-presets`, `design.md#d17--server-engines-detection-and-traits`. In plain words: LM Studio answers every unknown path with HTTP 200 and an error body, and LocalAI and KoboldCpp imitate Ollama's own routes. A server that only pretends to be Ollama would be sent Ollama's native fields and fail, so it is treated as a generic OpenAI-compatible server instead.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#provider-kinds-and-presets`, `design.md#d17--server-engines-detection-and-traits`. In plain words: LM Studio answers every unknown path with HTTP 200 and an error body, and LocalAI and KoboldCpp imitate Ollama's own routes. A server that only pretends to be Ollama would be sent Ollama's native fields and fail, so it is treated as a generic OpenAI-compatible server instead.
 
 #### Scenario: A KoboldCpp server that imitates Ollama is not Ollama
 
@@ -92,7 +92,7 @@ The system SHALL count a detection probe as a hit only when the reply body has t
 
 WHEN the person chooses an engine under "Treat this server as…", the system SHALL store that engine on the provider, SHALL build every request from it until the person presses Detect again, and SHALL log the choice once at INFO with the source `override`.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: detection can be wrong for an unusual proxy or a new server, so the person can always say what the server is; detection never overrides that choice by itself.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: detection can be wrong for an unusual proxy or a new server, so the person can always say what the server is; detection never overrides that choice by itself.
 
 #### Scenario: The person's choice wins over detection
 
@@ -109,7 +109,7 @@ WHEN the person chooses an engine under "Treat this server as…", the system SH
 
 WHEN detection finds GPT4All (its model rows carry `"owned_by":"humanity"`) or AnythingLLM (a base address whose path is `/api/v1/openai`), the system SHALL fail the connection stage with `ErrorCode.validation` and the reason `not-suitable-structured` or `not-suitable-documents`, store no engine for the provider, and send no chat request.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#provider-kinds-and-presets`, `design.md#d17--server-engines-detection-and-traits`. In plain words: GPT4All's server refuses the answer schema every translation call needs and is no longer maintained; AnythingLLM's "model" is a workspace that chats over the person's documents, not a model. Both look like an OpenAI-compatible server, so they are recognised by what their replies and addresses show and stopped at the first test, before any book text is sent. The sentence the form shows is the `settings` capability's "Say in one sentence why an app cannot be used".
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#provider-kinds-and-presets`, `design.md#d17--server-engines-detection-and-traits`. In plain words: GPT4All's server refuses the answer schema every translation call needs and is no longer maintained; AnythingLLM's "model" is a workspace that chats over the person's documents, not a model. Both look like an OpenAI-compatible server, so they are recognised by what their replies and addresses show and stopped at the first test, before any book text is sent. The sentence the form shows is the `settings` capability's "Say in one sentence why an app cannot be used".
 
 #### Scenario: GPT4All is refused by its model list
 
@@ -135,7 +135,7 @@ WHEN detection finds GPT4All (its model rows carry `"owned_by":"humanity"`) or A
 
 WHEN detection finds Ollama at a provider saved as OpenAI-compatible, the system SHALL offer once to use Ollama's own connection, SHALL never switch the provider by itself, and, IF the person keeps it as it is, THEN SHALL keep it OpenAI-compatible with the engine Ollama and SHALL not offer again for that provider, also after Detect again.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#provider-kinds-and-presets`, `design.md#d17--server-engines-detection-and-traits`. In plain words: Ollama's OpenAI-shaped path drops the context size, the answer cap field `max_completion_tokens`, most samplers and the thinking levels, so its native connection translates better; the person decides, once. Declining is remembered on its own, apart from the person's engine choice, so Detect again (which clears that choice) never brings the offer back and never shows Ollama as a choice the person made. The offer's words and where the form shows them are the `settings` capability's "Offer Ollama's own connection once when Ollama is behind an OpenAI-compatible provider".
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#provider-kinds-and-presets`, `design.md#d17--server-engines-detection-and-traits`. In plain words: Ollama's OpenAI-shaped path drops the context size, the answer cap field `max_completion_tokens`, most samplers and the thinking levels, so its native connection translates better; the person decides, once. Declining is remembered on its own, apart from the person's engine choice, so Detect again (which clears that choice) never brings the offer back and never shows Ollama as a choice the person made. The offer's words and where the form shows them are the `settings` capability's "Offer Ollama's own connection once when Ollama is behind an OpenAI-compatible provider".
 
 #### Scenario: The offer appears once
 
@@ -156,7 +156,7 @@ WHEN detection finds Ollama at a provider saved as OpenAI-compatible, the system
 
 WHERE the answering engine is recognised and is not Ollama (a generic server does not count), IF a provider saved as Ollama-native is tested, THEN the system SHALL fail the test with a message that names the engine found.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#provider-kinds-and-presets`, `design.md#d17--server-engines-detection-and-traits`. In plain words: Ollama's native requests mean nothing to LM Studio or llama-server, so a mismatch is caught in Settings instead of on the first segment.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#provider-kinds-and-presets`, `design.md#d17--server-engines-detection-and-traits`. In plain words: Ollama's native requests mean nothing to LM Studio or llama-server, so a mismatch is caught in Settings instead of on the first segment.
 
 #### Scenario: LM Studio saved as Ollama
 
@@ -177,7 +177,7 @@ WHERE the answering engine is recognised and is not Ollama (a generic server doe
 
 WHERE the engine is LM Studio, the system SHALL post each chat request, unstreamed, to `/api/v0/chat/completions` at the server's root with the same body it would post to `/v1`, and, IF that route answers with `{"error":"Unexpected endpoint…"}` or a non-JSON body and the status is 2xx, 404 or 405, THEN SHALL use `<baseUrl>/chat/completions` for that provider for the rest of the session; a plain-text 401, 403, 429 or 5xx does not switch.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `design.md#d17--server-engines-detection-and-traits`, `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: LM Studio's own route takes the same body and adds the time to the first word (`stats.time_to_first_token`, kept as the call's first-token timing) and the loaded window to its reply; an older or changed LM Studio that lacks it still works through the usual route.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `design.md#d17--server-engines-detection-and-traits`, `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: LM Studio's own route takes the same body and adds the time to the first word (`stats.time_to_first_token`, kept as the call's first-token timing) and the loaded window to its reply; an older or changed LM Studio that lacks it still works through the usual route.
 
 #### Scenario: A draft goes to the native route
 
@@ -203,7 +203,7 @@ WHERE the engine is LM Studio, the system SHALL post each chat request, unstream
 
 WHERE the engine answers any id with its loaded model (LM Studio, Unsloth) or routes by id (a llama-server router), WHEN the person tests the provider (the models stage) or a run makes its first chat call for that provider and model, the system SHALL check the id against the server's list and, IF it is missing, THEN end that call with `ErrorCode.modelNotFound`, reason `model-not-listed`, naming the id before any chat request (the run pauses); IF the list cannot be read, THEN the call goes ahead.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`, `design.md#d17--server-engines-detection-and-traits`. In plain words: LM Studio does not refuse a misspelt id — it answers with the loaded model — so a whole book could be translated by the wrong model without a word. Checking the list first stops that before it starts. The message's words are the `settings` capability's "Say that LM Studio has no model with the typed id".
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`, `design.md#d17--server-engines-detection-and-traits`. In plain words: LM Studio does not refuse a misspelt id — it answers with the loaded model — so a whole book could be translated by the wrong model without a word. Checking the list first stops that before it starts. The message's words are the `settings` capability's "Say that LM Studio has no model with the typed id".
 
 #### Scenario: A misspelt LM Studio id ends the first call
 
@@ -224,7 +224,7 @@ WHERE the engine answers any id with its loaded model (LM Studio, Unsloth) or ro
 
 WHERE the engine is LM Studio only, the system SHALL remove an `@variant` suffix from a model id before it is stored or sent, and SHALL say once that it was removed; the Providers form strips the stored id after a passing models check or Save, not while the person types.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: an id like `model@4bit` makes LM Studio load a second copy of the model beside the first, which can exhaust memory; the loaded model is what translates. The words the form shows are the `settings` capability's "Say that a typed LM Studio variant was removed".
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: an id like `model@4bit` makes LM Studio load a second copy of the model beside the first, which can exhaust memory; the loaded model is what translates. The words the form shows are the `settings` capability's "Say that a typed LM Studio variant was removed".
 
 #### Scenario: A typed variant is stripped
 
@@ -235,7 +235,7 @@ WHERE the engine is LM Studio only, the system SHALL remove an `@variant` suffix
 
 WHERE the engine answers any model id with its loaded model (LM Studio, Unsloth), IF a reply's `model` names a model other than the one requested, THEN the system SHALL refuse the reply with `ErrorCode.modelNotFound` and the reason `wrong-model-served`, and SHALL say "{engine} answered with {other model}, not {chosen model}. Check the model id."
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: the comparison ignores case, an `@variant` and a publisher prefix (`Google/Gemma-4-E4B@4bit` and `google/gemma-4-e4b` are the same model). The id check before a run is the first guard; this is the second, for a model swapped in LM Studio during a run. A translation written by a model the person did not choose is not kept.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: the comparison ignores case, an `@variant` and a publisher prefix (`Google/Gemma-4-E4B@4bit` and `google/gemma-4-e4b` are the same model). The id check before a run is the first guard; this is the second, for a model swapped in LM Studio during a run. A translation written by a model the person did not choose is not kept.
 
 #### Scenario: A swapped model is refused
 
@@ -246,7 +246,7 @@ WHERE the engine answers any model id with its loaded model (LM Studio, Unsloth)
 
 WHERE the engine is Ollama and the provider is OpenAI-compatible, the system SHALL send an output cap only as `max_tokens`, even when the model's settings choose `max_completion_tokens`.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `design.md#d17--server-engines-detection-and-traits`. In plain words: Ollama's OpenAI-shaped path silently ignores `max_completion_tokens`, so a call capped that way runs without a cap; only `max_tokens` stops it.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `design.md#d17--server-engines-detection-and-traits`. In plain words: Ollama's OpenAI-shaped path silently ignores `max_completion_tokens`, so a call capped that way runs without a cap; only `max_tokens` stops it.
 
 #### Scenario: The stored field choice is not used on Ollama's OpenAI path
 
@@ -257,7 +257,7 @@ WHERE the engine is Ollama and the provider is OpenAI-compatible, the system SHA
 
 WHERE the engine runs tools of its own by default (Unsloth), the system SHALL send `"enable_tools":false` in every chat request to it.
 
-**Source**: `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#outbound-scope`, `design.md#d17--server-engines-detection-and-traits`. In plain words: Unsloth Desktop runs web search, Python and terminal tools by default when it listens on this computer, so a translation request could start a web search with book text. BookLoom turns them off on every request; the key stays an environment-variable reference as for every provider.
+**Source**: `docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#outbound-scope`, `design.md#d17--server-engines-detection-and-traits`. In plain words: Unsloth Desktop runs web search, Python and terminal tools by default when it listens on this computer, so a translation request could start a web search with book text. BookLoom turns them off on every request; the key stays an environment-variable reference as for every provider.
 
 #### Scenario: An Unsloth draft turns tools off and carries the key
 
@@ -268,7 +268,7 @@ WHERE the engine runs tools of its own by default (Unsloth), the system SHALL se
 
 WHEN the person runs the Advanced features stage of a test for a model, the system SHALL send at most four short checks with invented text and at most 64 output tokens each — answer schema, turning reasoning off, the extra samplers `top_k` and `min_p`, and the answer-cap field — and SHALL store each verdict on the model with the source `test`; a recognised engine runs C1 and C2 only, and a generic server runs all four.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`, `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: a server BookLoom does not know may ignore a schema or a thinking switch without saying so. Four tiny calls the person starts find out, and their answers decide what later calls send. The native Ollama kind runs C1 through its format field and C2 as one `think:false` call, stored as switch `think`. The cap check also stores the winning field as the model's output field. Verdicts of an unsaved draft apply once a provider with that id is saved. The stage is refused while a run translates and runs while it is paused.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`, `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: a server BookLoom does not know may ignore a schema or a thinking switch without saying so. Four tiny calls the person starts find out, and their answers decide what later calls send. The native Ollama kind runs C1 through its format field and C2 as one `think:false` call, stored as switch `think`. The cap check also stores the winning field as the model's output field. Verdicts of an unsaved draft apply once a provider with that id is saved. The stage is refused while a run translates and runs while it is paused.
 
 #### Scenario: A schema check that is honoured
 
@@ -299,7 +299,7 @@ WHEN the person runs the Advanced features stage of a test for a model, the syst
 
 WHERE the engine is a generic OpenAI-compatible server, the system SHALL send no answer schema and no reasoning control until a stored check verdict shows the server honours it; this applies to a run's calls, while the Test's own checks send what they ask for.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `design.md#d17--server-engines-detection-and-traits`. In plain words: an unknown server gets the plain request every OpenAI-shaped server understands, and the JSON contract is stated in the prompt; a field is added only once the server has proved it works.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `design.md#d17--server-engines-detection-and-traits`. In plain words: an unknown server gets the plain request every OpenAI-shaped server understands, and the JSON contract is stated in the prompt; a field is added only once the server has proved it works.
 
 #### Scenario: No verdict, plain request
 
@@ -315,7 +315,7 @@ WHERE the engine is a generic OpenAI-compatible server, the system SHALL send no
 
 IF an OpenAI-compatible reply reports more completion tokens than the request's cap (for a thinking call the limit is the cap plus 1,024 reasoning-headroom tokens) and a normal finish, THEN the system SHALL write one WARN line with the reason `cap-ignored` once per provider and model, and SHALL use the reply.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: a server that ignores the cap lets a looping model write until its own limit; the person learns it from one line and the Models tab, without a pause.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: a server that ignores the cap lets a looping model write until its own limit; the person learns it from one line and the Models tab, without a pause.
 
 #### Scenario: A cap ignored twice is said once
 
@@ -326,7 +326,7 @@ IF an OpenAI-compatible reply reports more completion tokens than the request's 
 
 WHEN a call fails, the system SHALL attach exactly one reason token chosen by the catalogue row that matched (for example `context-overflow` or `model-not-pulled`), carry it in the error's details and on every WARN line about that failure, keep the server's own sentence out of the details (TRACE only), and use `unclassified` when no row matches.
 
-**Source**: `docs/specification/02_Architecture/09_ERROR_HANDLING.md#safe-details-allowlist`, `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: the error code says what kind of failure it was; the reason says which one, so the run decides well (flag, wait, retry or ask) and the run log explains it. The token is chosen by BookLoom, never copied from the server, so no secret or book text can leak through it.
+**Source**: `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#safe-details-allowlist`, `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: the error code says what kind of failure it was; the reason says which one, so the run decides well (flag, wait, retry or ask) and the run log explains it. The token is chosen by BookLoom, never copied from the server, so no secret or book text can leak through it.
 
 #### Scenario: An Ollama model that is not pulled
 
@@ -352,7 +352,7 @@ WHEN a call fails, the system SHALL attach exactly one reason token chosen by th
 
 IF a reply says the prompt did not fit the model's window — in any word order, as a `400`, as llama-server's `exceed_context_size_error`, or as an error event inside an LM Studio `200` — THEN the system SHALL answer `ErrorCode.contextWindow` with the reason `context-overflow` and no retry, and the run SHALL flag that segment and go on rather than pause for the person.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: today an overflow worded "exceeds the available context size" is missed because the word "context" comes after the verb, and a misread error once paused a run for 43 minutes. One passage too long for the window is that passage's problem; the rest of the book goes on.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: today an overflow worded "exceeds the available context size" is missed because the word "context" comes after the verb, and a misread error once paused a run for 43 minutes. One passage too long for the window is that passage's problem; the rest of the book goes on.
 
 #### Scenario: Ollama's overflow wording with the verb first
 
@@ -373,7 +373,7 @@ IF a reply says the prompt did not fit the model's window — in any word order,
 
 IF a reply's body is `{"error":"terminated"}`, whatever its HTTP status, THEN the system SHALL answer `ErrorCode.upstream` with the reason `terminated` and send the request once more, and IF that is terminated too, THEN SHALL hand the failure to the run as an outage.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`, the owner's decision that this reply is mapped by its body text whatever its status. In plain words: LM Studio stops a reply with this body; sent as a `400` it used to read as a bad request and pause the run for the person, although nothing about the request was wrong.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`, the owner's decision that this reply is mapped by its body text whatever its status. In plain words: LM Studio stops a reply with this body; sent as a `400` it used to read as a bad request and pause the run for the person, although nothing about the request was wrong.
 
 #### Scenario: Terminated as a 400
 
@@ -389,7 +389,7 @@ IF a reply's body is `{"error":"terminated"}`, whatever its HTTP status, THEN th
 
 IF a reply says the model hit its token repeat limit, THEN the system SHALL answer `ErrorCode.upstream` with the reason `repeat-limit`, send the request once more with a new seed, and, IF that fails the same way, THEN the run SHALL flag the segment with "The model kept repeating itself here." and go on.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: a model caught in a loop on one passage needs a different random path, not three identical retries; if it still loops, that passage goes to review.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: a model caught in a loop on one passage needs a different random path, not three identical retries; if it still loops, that passage goes to review.
 
 #### Scenario: A loop then an answer
 
@@ -405,7 +405,7 @@ IF a reply says the model hit its token repeat limit, THEN the system SHALL answ
 
 IF a reply says the model needs more memory than is free, THEN the system SHALL answer `ErrorCode.modelUnavailable` with the reason `out-of-memory`, SHALL not retry, and the run SHALL pause for the person rather than wait for the model to load.
 
-**Source**: `docs/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: waiting does not free memory; the person has to close something or choose a smaller build, so BookLoom says so with the numbers instead of waiting forever.
+**Source**: `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: waiting does not free memory; the person has to close something or choose a smaller build, so BookLoom says so with the numbers instead of waiting forever.
 
 #### Scenario: Not enough memory
 
@@ -416,7 +416,7 @@ IF a reply says the model needs more memory than is free, THEN the system SHALL 
 
 WHEN llama-server answers `503` with `Loading model`, the system SHALL answer `ErrorCode.modelUnavailable` with the reason `model-loading`, so the run waits for the model as it does for an unloaded LM Studio model, and SHALL send the request again once the server's `/health` no longer says it is loading.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: a llama-server answers `503` on every route while it loads a model; that is a wait, not a server fault worth three quick retries.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: a llama-server answers `503` on every route while it loads a model; that is a wait, not a server fault worth three quick retries.
 
 #### Scenario: A loading server is waited for
 
@@ -427,7 +427,7 @@ WHEN llama-server answers `503` with `Loading model`, the system SHALL answer `E
 
 IF a reply says a request BookLoom built is malformed — an Ollama option of the wrong type, a duration without a unit, an answer schema the server cannot use, or a grammar too large to build — THEN the system SHALL answer `ErrorCode.validation` with that row's reason, write one ERROR line for it once per model, and never send the same body again.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: these are BookLoom's own bugs. Today Ollama's `500` for a wrongly typed option is retried three times as a server fault; it will fail every time, so it is reported once, loudly, and the request changes or stops.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: these are BookLoom's own bugs. Today Ollama's `500` for a wrongly typed option is retried three times as a server fault; it will fail every time, so it is reported once, loudly, and the request changes or stops.
 
 #### Scenario: A wrongly typed option is not retried
 
@@ -443,7 +443,7 @@ IF a reply says a request BookLoom built is malformed — an Ollama option of th
 
 IF Ollama answers `403` with an empty body, THEN the system SHALL answer `ErrorCode.auth` with the reason `host-forbidden`; IF it says its cloud features are disabled or asks to sign in for a cloud model, THEN `auth` with the reason `cloud-disabled` or `cloud-signin`; each SHALL pause the run for the person with a message naming what to change.
 
-**Source**: `docs/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`, the owner's decision that Ollama cloud models are listed like any model with a neutral label and no consent step. In plain words: Ollama refuses addresses it does not trust and cloud models when the person is not signed in; neither is a wrong key, so the message says what actually fixes it.
+**Source**: `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`, the owner's decision that Ollama cloud models are listed like any model with a neutral label and no consent step. In plain words: Ollama refuses addresses it does not trust and cloud models when the person is not signed in; neither is a wrong key, so the message says what actually fixes it.
 
 #### Scenario: An address Ollama does not accept
 
@@ -459,7 +459,7 @@ IF Ollama answers `403` with an empty body, THEN the system SHALL answer `ErrorC
 
 WHERE the engine is OpenRouter, IF a `200` reply's body holds only an `error` object, or a choice finished with `error`, THEN the system SHALL read that error before any choice and classify it by its `error.metadata.error_type`, so that a provider outage is `ErrorCode.upstream` with the reason `provider-unavailable`.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `design.md#d21--openrouter-correctness-essentials`, the owner's decision that OpenRouter gets only what correctness needs. In plain words: OpenRouter reports some failures with HTTP 200; read as a normal reply, an outage would look like an empty or unreadable translation.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `design.md#d21--openrouter-correctness-essentials`, the owner's decision that OpenRouter gets only what correctness needs. In plain words: OpenRouter reports some failures with HTTP 200; read as a normal reply, an outage would look like an empty or unreadable translation.
 
 #### Scenario: An outage inside a 200
 
@@ -475,7 +475,7 @@ WHERE the engine is OpenRouter, IF a `200` reply's body holds only an `error` ob
 
 WHERE the engine is OpenRouter, the system SHALL send `"provider":{"require_parameters":true}` with every chat request, and, IF OpenRouter answers that no endpoint supports them, THEN SHALL answer `ErrorCode.validation` with the reason `no-endpoint-for-parameters` and pause the run for the person.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#provider-kinds-and-presets`, `design.md#d21--openrouter-correctness-essentials`. In plain words: one OpenRouter model can be served by several hosting companies, and one that cannot honour the answer schema or the thinking switch would silently drop it. Asking for endpoints that honour everything turns that silent loss into a clear message.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#provider-kinds-and-presets`, `design.md#d21--openrouter-correctness-essentials`. In plain words: one OpenRouter model can be served by several hosting companies, and one that cannot honour the answer schema or the thinking switch would silently drop it. Asking for endpoints that honour everything turns that silent loss into a clear message.
 
 #### Scenario: Parameters are required
 
@@ -491,7 +491,7 @@ WHERE the engine is OpenRouter, the system SHALL send `"provider":{"require_para
 
 WHERE the engine is OpenRouter, the system SHALL send `"plugins":[{"id":"context-compression","enabled":false}]` with every chat request.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#effective-context`, `design.md#d21--openrouter-correctness-essentials`. In plain words: OpenRouter shortens long prompts by default by cutting their middle, which would silently drop text BookLoom sent for translation.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#effective-context`, `design.md#d21--openrouter-correctness-essentials`. In plain words: OpenRouter shortens long prompts by default by cutting their middle, which would silently drop text BookLoom sent for translation.
 
 #### Scenario: Compression is off
 
@@ -502,7 +502,7 @@ WHERE the engine is OpenRouter, the system SHALL send `"plugins":[{"id":"context
 
 WHERE the engine is OpenRouter, the system SHALL lower a call's output cap to the endpoint's `max_completion_tokens` when the cap is larger, and SHALL take the window from the endpoint's `context_length`, not the model's.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#effective-context`, `design.md#d21--openrouter-correctness-essentials`. In plain words: a hosting company may serve a model with a smaller window or answer limit than the model's own; planning for the larger figure would cut replies.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#effective-context`, `design.md#d21--openrouter-correctness-essentials`. In plain words: a hosting company may serve a model with a smaller window or answer limit than the model's own; planning for the larger figure would cut replies.
 
 #### Scenario: The cap is clamped
 
@@ -513,7 +513,7 @@ WHERE the engine is OpenRouter, the system SHALL lower a call's output cap to th
 
 WHERE the engine is OpenRouter, the system SHALL write on each call's DEBUG line the served provider's slug, the served model's slug and the reply's `usage.cost`, as slugs and numbers only, and the run summary SHALL total the cost.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-construction`, `design.md#d21--openrouter-correctness-essentials`. In plain words: the hosting company behind one model can change from call to call, and a cloud run costs money; the log says who answered and what it cost, without any book text.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#client-construction`, `design.md#d21--openrouter-correctness-essentials`. In plain words: the hosting company behind one model can change from call to call, and a cloud run costs money; the log says who answered and what it cost, without any book text.
 
 #### Scenario: A call's cost is logged
 
@@ -524,7 +524,7 @@ WHERE the engine is OpenRouter, the system SHALL write on each call's DEBUG line
 
 WHERE the engine is OpenRouter, the system SHALL NOT send `data_collection`, a quantisation filter, provider pinning (`order`, `allow_fallbacks`) or `session_id`, and SHALL show no free-tier warning.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#provider-kinds-and-presets`, `design.md#d21--openrouter-correctness-essentials`, the owner's decision that OpenRouter gets correctness essentials only and no routing controls. In plain words: the model the person picks is the model used; how OpenRouter routes among hosting companies stays OpenRouter's business.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#provider-kinds-and-presets`, `design.md#d21--openrouter-correctness-essentials`, the owner's decision that OpenRouter gets correctness essentials only and no routing controls. In plain words: the model the person picks is the model used; how OpenRouter routes among hosting companies stays OpenRouter's business.
 
 #### Scenario: Only the essentials are sent
 
@@ -535,7 +535,7 @@ WHERE the engine is OpenRouter, the system SHALL NOT send `data_collection`, a q
 
 IF OpenRouter answers `402`, THEN the system SHALL answer `ErrorCode.auth` with the reason `credits` and pause the run for the person; IF it answers `403` for a content-policy or moderation refusal, THEN SHALL answer `ErrorCode.validation` with the reason `blocked`, and the run SHALL flag that segment and go on.
 
-**Source**: `docs/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`, `design.md#d21--openrouter-correctness-essentials`. In plain words: no credits stops everything until the person acts; a refused passage concerns that passage only.
+**Source**: `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`, `design.md#d21--openrouter-correctness-essentials`. In plain words: no credits stops everything until the person acts; a refused passage concerns that passage only.
 
 #### Scenario: No credits
 
@@ -551,7 +551,7 @@ IF OpenRouter answers `402`, THEN the system SHALL answer `ErrorCode.auth` with 
 
 The system SHALL read a model's facts from its server (thinking control, template, quant, size, loaded window) only when the person selects the model, opens Settings › Models, tests a provider, presses Detect again, or starts or continues a run; SHALL keep them in memory for the session; and SHALL store only the check verdicts and the refused settings.
 
-**Source**: `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#outbound-scope`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: the server's own facts are the best guide to a model, but asking for them is network traffic, so it happens only on the person's action; a stored copy would go stale when the server is updated.
+**Source**: `docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#outbound-scope`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: the server's own facts are the best guide to a model, but asking for them is network traffic, so it happens only on the person's action; a stored copy would go stale when the server is updated.
 
 #### Scenario: Selecting a model reads its facts
 
@@ -567,7 +567,7 @@ The system SHALL read a model's facts from its server (thinking control, templat
 
 WHEN the person types or pastes a model id, a Hugging Face or Ollama link, a command such as `ollama run`, `lms get` or `llama-server -hf`, or a file name, the system SHALL read from it the model id to use, the family, size and kind of model, and the quant token with its flags, without opening the link, running the command or sending any request.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#model-discovery-and-slots`, `design.md#d19--model-identity-reading-model-names`. In plain words: people copy whatever they have at hand — a link from a model page, a command from a guide, a downloaded file's name. BookLoom understands each form offline, so the model's handling and advice follow from what was pasted.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#model-discovery-and-slots`, `design.md#d19--model-identity-reading-model-names`. In plain words: people copy whatever they have at hand — a link from a model page, a command from a guide, a downloaded file's name. BookLoom understands each form offline, so the model's handling and advice follow from what was pasted.
 
 #### Scenario: A Hugging Face link with a file
 
@@ -614,7 +614,7 @@ WHEN the person types or pastes a model id, a Hugging Face or Ollama link, a com
 
 WHERE the provider is Ollama, WHEN a pasted model is not in the server's list, the system SHALL show the matching `ollama pull` command as text the person can copy, and SHALL never run it or download anything.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d19--model-identity-reading-model-names`. In plain words: a download of several gigabytes is the person's decision; BookLoom only writes the command out.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d19--model-identity-reading-model-names`. In plain words: a download of several gigabytes is the person's decision; BookLoom only writes the command out.
 
 #### Scenario: A link becomes a pull command
 
@@ -625,7 +625,7 @@ WHERE the provider is Ollama, WHEN a pasted model is not in the server's list, t
 
 The system SHALL build each model's profile — its thinking switch, samplers, window, answer cap, message shaping, quirks and batch size — from the stored engine's traits, the server's facts about the model, the built-in row its name reading picks and the person's overrides on Settings › Models; the facts SHALL win over a row and the override over everything, and a row SHALL never match a name whose variant (such as `reasoning`) its pattern does not name.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-profile`, `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`, the owner's decision that per-model handling comes from model profiles and the person's per-model overrides, with no free-text instruction field. In plain words: models differ in how thinking is switched off, in templates and in samplers; one order decides which source counts, so the same model gets the same handling every time and the person can always correct it.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-profile`, `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`, the owner's decision that per-model handling comes from model profiles and the person's per-model overrides, with no free-text instruction field. In plain words: models differ in how thinking is switched off, in templates and in samplers; one order decides which source counts, so the same model gets the same handling every time and the person can always correct it.
 
 #### Scenario: The server's facts beat the row the name picked
 
@@ -651,7 +651,7 @@ The system SHALL build each model's profile — its thinking switch, samplers, w
 
 WHEN a model has no row of its own and its name or facts identify it as a fine-tune of a known base model, the system SHALL give it the base model's handling, SHALL say "recognised as a fine-tune of <base> (behaviour of <base>)", and SHALL give it the verdict "unknown fine-tune", never the base model's verdict.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a fine-tune keeps its base's chat template and thinking switch, so that handling is right; how well it translates is not inherited, so BookLoom does not vouch for it.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a fine-tune keeps its base's chat template and thinking switch, so that handling is right; how well it translates is not inherited, so BookLoom does not vouch for it.
 
 #### Scenario: A Hermes 4 70B build
 
@@ -662,7 +662,7 @@ WHEN a model has no row of its own and its name or facts identify it as a fine-t
 
 The system SHALL NOT select a model family's built-in row only because the server reports an architecture name that unrelated families share, such as `llama` or `deepseek2`.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: Ollama reports the architecture `llama` for many unrelated GGUF models; treating each as Llama would give it Llama's handling and Llama's language warnings by mistake.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: Ollama reports the architecture `llama` for many unrelated GGUF models; treating each as Llama would give it Llama's handling and Llama's language warnings by mistake.
 
 #### Scenario: A Mistral build reported as llama
 
@@ -678,7 +678,7 @@ The system SHALL NOT select a model family's built-in row only because the serve
 
 WHEN a model's name reads a family no built-in row knows, the system SHALL NOT give it another family's row or that family's declared languages because its server reports that family's architecture, and SHALL give it the default profile until a row of its own exists.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a model built on another family's architecture may still behave differently — its thinking switch, its template, its languages — so an architecture alone is not proof of handling. An unknown name with no family of its own may still be recognised by its architecture, as the Models tab's "recognised as …, not this exact model" says.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a model built on another family's architecture may still behave differently — its thinking switch, its template, its languages — so an architecture alone is not proof of handling. An unknown name with no family of its own may still be recognised by its architecture, as the Models tab's "recognised as …, not this exact model" says.
 
 #### Scenario: A new family on a known architecture keeps the default profile
 
@@ -689,7 +689,7 @@ WHEN a model's name reads a family no built-in row knows, the system SHALL NOT g
 
 WHEN no row matches a model, the system SHALL give it the default profile: no thinking control, answers asked through the prompt rather than a schema, BookLoom's own temperatures, a batch of 2 segments, and the verdict "unknown model".
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a model BookLoom knows nothing about still translates; it gets the handling least likely to fail, and its own facts, when the server reports them, still apply.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a model BookLoom knows nothing about still translates; it gets the handling least likely to fail, and its own facts, when the server reports them, still apply.
 
 #### Scenario: An unknown model on a generic server
 
@@ -700,7 +700,7 @@ WHEN no row matches a model, the system SHALL give it the default profile: no th
 
 The system SHALL judge a model's quant as excellent, good, acceptable, poor, unusable, not measured or not supported from the bundled quant table, by the quant token and its flags from the model's name, the base type from the server's facts (the facts winning when the two disagree on the bit count) and the model's size class; the judgement SHALL never block a choice, change a request or be stored.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d22--quant-and-language-advice`. In plain words: the owner asked to be told how good or bad a model's compressed version is. Small models lose more from compression than large ones, so the size counts too. It is advice only; where it is shown is the `settings` capability's rule.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d22--quant-and-language-advice`. In plain words: the owner asked to be told how good or bad a model's compressed version is. Small models lose more from compression than large ones, so the size counts too. It is advice only; where it is shown is the `settings` capability's rule.
 
 #### Scenario: A dynamic 4-bit build reported under its base name
 
@@ -731,7 +731,7 @@ The system SHALL judge a model's quant as excellent, good, acceptable, poor, unu
 
 For a model and a language, the system SHALL decide declared, not declared or unknown from the bundled declared-languages table — the model's own row first, else its base model's row, named, else the language list in the server's facts, which may only add a language and is ignored when it lists English alone; nothing SHALL be fetched, and the state SHALL never block.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d22--quant-and-language-advice`. In plain words: the owner asked to be warned when a model's maker does not list the book's languages. "Declared" is what the maker says, not a measurement; only BookLoom's own tests count as tested. Which line is shown, and where, is the `settings` capability's rule.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d22--quant-and-language-advice`. In plain words: the owner asked to be warned when a model's maker does not list the book's languages. "Declared" is what the maker says, not a measurement; only BookLoom's own tests count as tested. Which line is shown, and where, is the `settings` capability's rule.
 
 #### Scenario: A model whose maker lists neither language
 
@@ -767,7 +767,7 @@ For a model and a language, the system SHALL decide declared, not declared or un
 
 The system SHALL count a model as tested for a source and target language pair only when its bundled model row's evidence names a run BookLoom itself made on that model for that pair, and SHALL count no pair as tested from a maker's list, a base model's row or another model of the family.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d22--quant-and-language-advice`, the owner's decisions that only BookLoom's own tests count as tested and that a language line is not shown for a pair BookLoom tested. In plain words: "tested" means BookLoom measured this model translating this pair; English into Ukrainian says nothing about Russian into Ukrainian. Where the line is shown is the `settings` capability's rule.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d22--quant-and-language-advice`, the owner's decisions that only BookLoom's own tests count as tested and that a language line is not shown for a pair BookLoom tested. In plain words: "tested" means BookLoom measured this model translating this pair; English into Ukrainian says nothing about Russian into Ukrainian. Where the line is shown is the `settings` capability's rule.
 
 #### Scenario: A measured pair is tested, another pair is not
 
@@ -783,7 +783,7 @@ The system SHALL count a model as tested for a source and target language pair o
 
 The system SHALL read its quant table and its declared-languages table only from files bundled with the application, each headed with a data version; SHALL never fetch or update them while running; and, IF a bundled file cannot be read, THEN SHALL fail the start-up with `ErrorCode.internal` rather than use an empty table.
 
-**Source**: `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#offline-invariant`, `design.md#d22--quant-and-language-advice`. In plain words: the advice must work offline and must not be silently empty; the tables are updated by a new release, and Settings › Models shows their date.
+**Source**: `docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#offline-invariant`, `design.md#d22--quant-and-language-advice`. In plain words: the advice must work offline and must not be silently empty; the tables are updated by a new release, and Settings › Models shows their date.
 
 #### Scenario: The data version is known
 
@@ -799,7 +799,7 @@ The system SHALL read its quant table and its declared-languages table only from
 
 The system SHALL wait for each attempt of a names-pass prescan call 120 seconds, or for a model that thinks on every call the longer of 120 seconds and 60 ms per expected output token; for every other chat call, the longer of the provider's request timeout and 0.5 s per expected output token, at most 600 seconds, the expected output including any reasoning reserve, and, WHEN the request states none, the request timeout.
 
-**Source**: FR-INFER-05, retry and timeouts (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`, `#provider-config`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a page from a slow model can need far longer than the three minutes a line needs, so a call that expects a long answer waits longer, up to ten minutes; the configured timeout is the floor, because the first call after a model reloads can take minutes before the first word. A prescan's reply is short and capped, so one still running after two minutes is stuck — unless the model always thinks first, which can take a minute more. The reviewer's fixed 90 seconds and the rolling summary's fixed 120 seconds end here: until those calls are removed, they take the proportional wait like any other call; a proofread call scales like a draft. A timeout set above ten minutes is kept as set. Which calls state an expected output is the `translation-pipeline` capability's rule; the verification calls state none.
+**Source**: FR-INFER-05, retry and timeouts (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`, `#provider-config`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a page from a slow model can need far longer than the three minutes a line needs, so a call that expects a long answer waits longer, up to ten minutes; the configured timeout is the floor, because the first call after a model reloads can take minutes before the first word. A prescan's reply is short and capped, so one still running after two minutes is stuck — unless the model always thinks first, which can take a minute more. The reviewer's fixed 90 seconds and the rolling summary's fixed 120 seconds end here: until those calls are removed, they take the proportional wait like any other call; a proofread call scales like a draft. A timeout set above ten minutes is kept as set. Which calls state an expected output is the `translation-pipeline` capability's rule; the verification calls state none.
 
 #### Scenario: A medium segment gets a proportional wait
 
@@ -863,7 +863,7 @@ The system SHALL wait for each attempt of a names-pass prescan call 120 seconds,
 
 The system SHALL describe a provider by an id, a display name, a kind (Ollama-native or OpenAI-compatible), a base URL that is absolute and uses `http` or `https`, a connect and a request timeout, both positive, defaulting to 10 and 180 seconds, and its server engine with the engine's version when known; IF a description breaks one of these rules, THEN the system SHALL refuse it with `ErrorCode.validation` and register nothing.
 
-**Source**: FR-PROV-03, the rule that a provider is configuration (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-config`, `design.md#d17--server-engines-detection-and-traits`. In plain words: a provider is a few settings, not code. The kind chooses how BookLoom talks (Ollama's native API or the OpenAI chat format); the engine says which program answers, so each request carries that program's fields. The engine is Ollama for the Ollama-native kind and generic for an OpenAI-compatible one until detection or the person names another. A key is only ever the name of an environment variable, read at call time, and a remote provider needs no consent step: BookLoom is private when used with local models, and the person decides what leaves the machine.
+**Source**: FR-PROV-03, the rule that a provider is configuration (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-config`, `design.md#d17--server-engines-detection-and-traits`. In plain words: a provider is a few settings, not code. The kind chooses how BookLoom talks (Ollama's native API or the OpenAI chat format); the engine says which program answers, so each request carries that program's fields. The engine is Ollama for the Ollama-native kind and generic for an OpenAI-compatible one until detection or the person names another. A key is only ever the name of an environment variable, read at call time, and a remote provider needs no consent step: BookLoom is private when used with local models, and the person decides what leaves the machine.
 
 #### Scenario: A remote OpenAI-compatible endpoint is described by its URL alone
 
@@ -890,7 +890,7 @@ The system SHALL describe a provider by an id, a display name, a kind (Ollama-na
 
 WHERE the application runs from the command line, the system SHALL offer, unconfigured, the provider `ollama` (Ollama-native, engine Ollama, `http://localhost:11434`) and `lmstudio` (OpenAI-compatible, engine LM Studio, `http://localhost:1234/v1`) with the default timeouts; WHERE it runs in the window, the list SHALL start empty and hold only what the first-launch look found and the person adds. A lookup SHALL answer the description or nothing; a registration of a known id SHALL replace it.
 
-**Source**: FR-PROV-02, the two local presets (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-factory`, `#provider-profile`, ADR-0043 (SQLite storage in the window), ADR-0044 (the one first-launch local listing), `design.md#d17--server-engines-detection-and-traits`. In plain words: the command line still starts with the two usual servers and can point at another for one run; it never detects, so its presets name their engines, and LM Studio is spoken to through its own route from the first call. The window lists only real providers: the ones found on this computer and the ones the person saved. The presets keep the address `localhost`; the first-launch look deliberately asks `127.0.0.1`, so it never depends on how the name `localhost` resolves.
+**Source**: FR-PROV-02, the two local presets (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-factory`, `#provider-profile`, ADR-0043 (SQLite storage in the window), ADR-0044 (the one first-launch local listing), `design.md#d17--server-engines-detection-and-traits`. In plain words: the command line still starts with the two usual servers and can point at another for one run; it never detects, so its presets name their engines, and LM Studio is spoken to through its own route from the first call. The window lists only real providers: the ones found on this computer and the ones the person saved. The presets keep the address `localhost`; the first-launch look deliberately asks `127.0.0.1`, so it never depends on how the name `localhost` resolves.
 
 #### Scenario: The presets exist from the start
 
@@ -917,7 +917,7 @@ WHERE the application runs from the command line, the system SHALL offer, unconf
 
 WHEN a program asked by the first-launch look answers with at least one model, the system SHALL store it as a provider with the engine its listing shows — Ollama for the `/api/tags` reply, LM Studio for `/v1/models` rows owned by `organization_owner`, the engine another row owner names (`library` is Ollama), and a generic OpenAI-compatible server for rows that name none — and, IF both programs answer, THEN Ollama SHALL become the current provider; it SHALL select the model when there is exactly one and ask the person when there are several. A program that answers with zero models SHALL count as not found.
 
-**Source**: ADR-0044 (the one first-launch local listing), `docs/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", `design.md#d17--server-engines-detection-and-traits`. In plain words: a program with nothing loaded cannot translate, so it is reported as not found rather than as "ready"; a person with several models chooses one instead of BookLoom guessing. The look labels what answered from the two listings it already asks for, with no extra request, so a provider found at first launch is spoken to correctly from its first call.
+**Source**: ADR-0044 (the one first-launch local listing), `docs/spec_baseline/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", `design.md#d17--server-engines-detection-and-traits`. In plain words: a program with nothing loaded cannot translate, so it is reported as not found rather than as "ready"; a person with several models chooses one instead of BookLoom guessing. The look labels what answered from the two listings it already asks for, with no extra request, so a provider found at first launch is spoken to correctly from its first call.
 
 #### Scenario: Ollama with one model
 
@@ -943,7 +943,7 @@ WHEN a program asked by the first-launch look answers with at least one model, t
 
 WHEN a chat request goes to an Ollama-native provider, the system SHALL `POST` to `<baseUrl>/api/chat` a streamed body with `model`, `messages`, `options` with `temperature`, the profile's samplers, `num_ctx`, `num_predict` and `seed` each only when given (the object left out when none is), `truncate:false` with `num_ctx`, `format` only when the call asks for a schema, `think` only when the reasoning rules give one, `keep_alive` only on a run's calls, and `stop` only as a list; an absent field SHALL be left out, never `null`.
 
-**Source**: FR-INFER-01 to FR-INFER-03, chat calls with their settings (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `#effective-context`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: Ollama is spoken to natively because its OpenAI-shaped path drops native controls and hides Ollama's own error bodies. Its default context is small and silently truncates a long prompt, so every call tells it the context size. Which `think` value is sent, which samplers and when the model is kept loaded are the `inference` capability's rules; a model that has no thinking switch gets no `think` field at all, which is what stops the `400` that used to pause runs.
+**Source**: FR-INFER-01 to FR-INFER-03, chat calls with their settings (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `#effective-context`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: Ollama is spoken to natively because its OpenAI-shaped path drops native controls and hides Ollama's own error bodies. Its default context is small and silently truncates a long prompt, so every call tells it the context size. Which `think` value is sent, which samplers and when the model is kept loaded are the `inference` capability's rules; a model that has no thinking switch gets no `think` field at all, which is what stops the `400` that used to pause runs.
 
 #### Scenario: A full request
 
@@ -985,7 +985,7 @@ WHEN a chat request goes to an Ollama-native provider, the system SHALL `POST` t
 
 WHEN a chat request goes to an OpenAI-compatible provider, the system SHALL post to the stored engine's chat route (`<baseUrl>/chat/completions` or the inference endpoint override, unless the engine has its own) an unstreamed JSON body with `model`, `messages`, `"stream":false`, `temperature` only when given, `response_format` as a strict `json_schema` only when the call asks for a schema, and every field the engine requires on every call; an absent field SHALL be left out, never `null`.
 
-**Source**: FR-INFER-01, FR-INFER-03, FR-INFER-09, chat calls and reply handling (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `#response-handling`, `design.md#d17--server-engines-detection-and-traits`. In plain words: one client covers LM Studio, llama-server, Unsloth, OpenRouter and any other OpenAI-shaped server, but each engine wants its own fields for the same wish. The reasoning switch and the samplers are the `inference` capability's rules; LM Studio's own route, Unsloth's tool switch and OpenRouter's fields are separate requirements here. `json_object` is never sent.
+**Source**: FR-INFER-01, FR-INFER-03, FR-INFER-09, chat calls and reply handling (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `#response-handling`, `design.md#d17--server-engines-detection-and-traits`. In plain words: one client covers LM Studio, llama-server, Unsloth, OpenRouter and any other OpenAI-shaped server, but each engine wants its own fields for the same wish. The reasoning switch and the samplers are the `inference` capability's rules; LM Studio's own route, Unsloth's tool switch and OpenRouter's fields are separate requirements here. `json_object` is never sent.
 
 #### Scenario: A request with structured output and no reasoning parameter
 
@@ -1007,7 +1007,7 @@ WHEN a chat request goes to an OpenAI-compatible provider, the system SHALL post
 
 WHEN a provider answers `200`, the system SHALL take the reply text from `message.content` (Ollama) or `choices[0].message.content` (OpenAI-compatible), the finish from `done_reason` or `finish_reason` (`stop` normal, `length` cut off by length, else other) and the reported usage; a reasoning field or `tool_calls` SHALL never reach the text; IF the text is blank before scrubbing, THEN the answer SHALL be `ErrorCode.emptyCompletion`.
 
-**Source**: FR-INFER-09, reply handling (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `#empty-response-ordering`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: both dialects collapse to text, a finish reason and, when the server says so, how many tokens it read and wrote. The thinking a model writes in its own field (Ollama `message.thinking`, `message.reasoning` on Ollama's OpenAI path and OpenRouter, `reasoning_content` on LM Studio, llama-server and Unsloth) is now read, but only to notice a reply that spent its cap thinking and to time the first token; it is never part of the translation. On an engine that does not serve unknown ids, a reply naming another model is used and one WARN line names both ids; where any id is served, that reply is refused by a separate requirement.
+**Source**: FR-INFER-09, reply handling (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `#empty-response-ordering`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: both dialects collapse to text, a finish reason and, when the server says so, how many tokens it read and wrote. The thinking a model writes in its own field (Ollama `message.thinking`, `message.reasoning` on Ollama's OpenAI path and OpenRouter, `reasoning_content` on LM Studio, llama-server and Unsloth) is now read, but only to notice a reply that spent its cap thinking and to time the first token; it is never part of the translation. On an engine that does not serve unknown ids, a reply naming another model is used and one WARN line names both ids; where any id is served, that reply is refused by a separate requirement.
 
 #### Scenario: An Ollama reply that stopped normally
 
@@ -1059,7 +1059,7 @@ WHEN a provider answers `200`, the system SHALL take the reply text from `messag
 
 WHEN a call fails, the system SHALL answer exactly one error code from the first matching row of one ordered catalogue: interruption, timeout and I/O failure first; then rows matched on the meaning of the body's text in any word order, whatever its status; then the status alone (`401`/`403` auth, `404` modelNotFound, `429` rateLimited, `5xx` upstream, another `400` validation, anything else internal). The details SHALL hold only allowlisted values.
 
-**Source**: FR-INFER-07, typed failures (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`, `#safe-details-allowlist`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: the engine, the screens and the retry policy branch on a code, never on a message. A body says more than a status: LM Studio sends a stopped reply as a `400`, OpenRouter sends errors with `200`, and an overflow can name the verb before the word "context". The allowlisted details are the HTTP status, the endpoint host, the model id, the timeout, the attempt count, the reason token and the typed counts of an overflow; no header, body or secret. No new error code is added. A `200` whose body cannot be read is `upstream`, as "Classify a reply that answered but cannot be read as upstream" says.
+**Source**: FR-INFER-07, typed failures (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`, `#safe-details-allowlist`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: the engine, the screens and the retry policy branch on a code, never on a message. A body says more than a status: LM Studio sends a stopped reply as a `400`, OpenRouter sends errors with `200`, and an overflow can name the verb before the word "context". The allowlisted details are the HTTP status, the endpoint host, the model id, the timeout, the attempt count, the reason token and the typed counts of an overflow; no header, body or secret. No new error code is added. A `200` whose body cannot be read is `upstream`, as "Classify a reply that answered but cannot be read as upstream" says.
 
 #### Scenario: Connection refused
 
@@ -1115,7 +1115,7 @@ WHEN a call fails, the system SHALL answer exactly one error code from the first
 
 WHEN a call answers a retryable code, the system SHALL try again up to 3 attempts in all, each with its full request timeout, waiting the `Retry-After` delay when given (seconds or an HTTP date), else 500 ms doubled per retry, capped at 8 s, with up to 25 % jitter; WHERE the matched catalogue row has its own retry rule (once, once with a new seed, or never), that rule SHALL decide instead; a non-retryable code SHALL NOT be repeated.
 
-**Source**: FR-INFER-05, retry (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: a local server that is still loading a model, or a rate-limited cloud endpoint, deserves a second try; a wrong key or an unknown model does not. Some failures need a different retry: a stopped reply or a crashed runner gets one more try, a looping model one more try with a new seed, and a model that does not fit in memory none. The retryable codes are `timeout`, `rateLimited`, `unreachable`, `upstream` and `discoveryFailed`. A repeat after a refused setting is not an attempt; that rule belongs to the `inference` capability.
+**Source**: FR-INFER-05, retry (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`, `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: a local server that is still loading a model, or a rate-limited cloud endpoint, deserves a second try; a wrong key or an unknown model does not. Some failures need a different retry: a stopped reply or a crashed runner gets one more try, a looping model one more try with a new seed, and a model that does not fit in memory none. The retryable codes are `timeout`, `rateLimited`, `unreachable`, `upstream` and `discoveryFailed`. A repeat after a refused setting is not an attempt; that rule belongs to the `inference` capability.
 
 #### Scenario: Two faults then success
 
@@ -1156,7 +1156,7 @@ WHEN a call answers a retryable code, the system SHALL try again up to 3 attempt
 
 WHEN discovery is asked, the system SHALL read the engine's model listing (Ollama `/api/tags`, LM Studio `/api/v0/models`, otherwise `<baseUrl>/models` or the override) and return only chat models, leaving out every entry that its listing, facts or name show is an embedding, image, video, speech or reranker model or a sidecar file such as `mmproj-*.gguf`, and labelling an Ollama cloud model `cloud`; an empty listing SHALL be a success with no models.
 
-**Source**: FR-MODEL-01, FR-MODEL-02, model discovery (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-model`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#model-discovery`, `design.md#d19--model-identity-reading-model-names`, the owner's decision that Ollama cloud models are listed with a neutral "cloud" label, never hidden and never behind a consent step. In plain words: a picker should offer only models that can translate; an embedding model or a vision projector file chosen by mistake fails on the first segment. LM Studio's OpenAI listing says nothing about type, so its native listing is read; its `llm` and `vlm` entries are chat models. An empty list is not an error, and manual entry stays possible. An Ollama behind an OpenAI-compatible provider is labelled `cloud` by name suffix only. A failure other than `auth`, `unreachable`, `timeout` or `cancelled`, or a body that is not a listing, is `discoveryFailed`.
+**Source**: FR-MODEL-01, FR-MODEL-02, model discovery (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-model`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#model-discovery`, `design.md#d19--model-identity-reading-model-names`, the owner's decision that Ollama cloud models are listed with a neutral "cloud" label, never hidden and never behind a consent step. In plain words: a picker should offer only models that can translate; an embedding model or a vision projector file chosen by mistake fails on the first segment. LM Studio's OpenAI listing says nothing about type, so its native listing is read; its `llm` and `vlm` entries are chat models. An empty list is not an error, and manual entry stays possible. An Ollama behind an OpenAI-compatible provider is labelled `cloud` by name suffix only. A failure other than `auth`, `unreachable`, `timeout` or `cancelled`, or a body that is not a listing, is `discoveryFailed`.
 
 #### Scenario: Ollama lists its models
 
@@ -1192,7 +1192,7 @@ WHEN discovery is asked, the system SHALL read the engine's model listing (Ollam
 
 WHEN verification of a provider and a model is asked for, the system SHALL run in order, up to the stage asked for, stopping at the first failure, the connection stage (the probe), the models stage (listed passes, unlisted fails `modelUnavailable`, an unreadable or empty list passes softly with a note) and the inference stage (a probe for exactly `{"status":"ok"}`, sent as a run sends a call, capped at 64), and the Advanced stage when asked, reporting each stage with its outcome and duration.
 
-**Source**: FR-PROV-06, FR-PROV-07, FR-MODEL-05, FR-MODEL-06, FR-INFER-08, the staged verification (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: three short questions, each with its own answer, so a person sees which one failed: the server, the model name, or generation itself. The probe uses the model's own profile — its reasoning-off value, BookLoom's own system message, its message shaping, and the reasoning reserve added to the cap for a model that always thinks — so a thinking model that spends a capped reply on reasoning fails here instead of flagging a book later. Where any id is served, an unlisted id fails the models stage as `modelNotFound` with `model-not-listed` (the id check's own requirement). An unknown provider id with no description given is `ErrorCode.validation` and runs no stage.
+**Source**: FR-PROV-06, FR-PROV-07, FR-MODEL-05, FR-MODEL-06, FR-INFER-08, the staged verification (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: three short questions, each with its own answer, so a person sees which one failed: the server, the model name, or generation itself. The probe uses the model's own profile — its reasoning-off value, BookLoom's own system message, its message shaping, and the reasoning reserve added to the cap for a model that always thinks — so a thinking model that spends a capped reply on reasoning fails here instead of flagging a book later. Where any id is served, an unlisted id fails the models stage as `modelNotFound` with `model-not-listed` (the id check's own requirement). An unknown provider id with no description given is `ErrorCode.validation` and runs no stage.
 
 #### Scenario: All three stages pass
 
@@ -1248,7 +1248,7 @@ WHEN verification of a provider and a model is asked for, the system SHALL run i
 
 The system SHALL write, for every chat, discovery, probe, detection and verification call: an INFO line when a verification or an engine detection ends, with its outcome; a DEBUG line with the provider id, engine, endpoint host, model id, call kind, attempt, HTTP status, reply length and the cached prompt tokens when reported; a WARN line with the reason token for every retry, refusal, model mismatch and failed stage; and the request and response bodies at TRACE only, never a credential.
 
-**Source**: FR-INFER-10, call logging (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), NFR-PRIV-04 and NFR-PRIV-06, no book text or secret in logs (`docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#no-telemetry`, `#secrets-never-stored`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-construction`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: a wrong translation is explained from the log, so every call leaves a line saying what was asked and what came back, in sizes, codes and reasons. The book's words and the model's words appear only when someone turns TRACE on. A key never appears, whatever the level; the detection line names the host only, never a path, a query or a key.
+**Source**: FR-INFER-10, call logging (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), NFR-PRIV-04 and NFR-PRIV-06, no book text or secret in logs (`docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#no-telemetry`, `#secrets-never-stored`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#client-construction`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: a wrong translation is explained from the log, so every call leaves a line saying what was asked and what came back, in sizes, codes and reasons. The book's words and the model's words appear only when someone turns TRACE on. A key never appears, whatever the level; the detection line names the host only, never a path, a query or a key.
 
 #### Scenario: A TRACE run shows the bodies
 
@@ -1270,7 +1270,7 @@ The system SHALL write, for every chat, discovery, probe, detection and verifica
 
 The system SHALL read an Ollama-native reply as a stream, joining every line's `message.content` and, apart, its `message.thinking`, and taking the finish and token counts from the last line; WHEN no line arrives for the idle gap, or the reply runs past the attempt's timeout, the attempt SHALL end with `timeout`; a line with an `error` field SHALL be classified by its text, and a last line with an empty `done_reason` SHALL be `upstream` with the reason `stream-truncated`.
 
-**Source**: FR-INFER-04a and FR-INFER-05, streamed replies and timeouts (`docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#inference-behaviour`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: the JDK's request timeout stops counting once the reply begins, so a stream shows whether the model is still writing and a stall is caught within a minute. A thinking model's stream starts with thinking lines; they are kept apart from the text and still count as the model being alive. An error line can mean an overflow, a loop or a crash, so it is read like any other error body; a stream that ends without a reason was cut off and gets one more try. An interrupted caller ends the attempt at once with `cancelled`.
+**Source**: FR-INFER-04a and FR-INFER-05, streamed replies and timeouts (`docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#inference-behaviour`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: the JDK's request timeout stops counting once the reply begins, so a stream shows whether the model is still writing and a stall is caught within a minute. A thinking model's stream starts with thinking lines; they are kept apart from the text and still count as the model being alive. An error line can mean an overflow, a loop or a crash, so it is read like any other error body; a stream that ends without a reason was cut off and gets one more try. An interrupted caller ends the attempt at once with `cancelled`.
 
 #### Scenario: Lines are joined in order
 
@@ -1322,7 +1322,7 @@ The system SHALL read an Ollama-native reply as a stream, joining every line's `
 
 WHEN asked for a model's context length, the system SHALL read it from the stored engine's facts — Ollama's `/api/show` and its loaded size in `/api/ps`, LM Studio's `/api/v0/models/<id>` preferring the loaded length, llama-server's per-slot `meta.n_ctx`, Unsloth's `/v1/models` row, OpenRouter's endpoint, or a generic listing's `max_model_len` or `context_length` — and answer unknown when the server cannot say; no outcome is an error, and no chat call triggers it.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#effective-context`, `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#effective-context`, `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#outbound-scope`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: the window a model really has decides how much of the prompt it may be given, and on LM Studio and llama-server it is fixed when the model is loaded or the server starts, so the loaded figure counts, not the model's maximum. A server that cannot say must never stop a run; the one context size then falls back to its default. Detection is user-triggered provider communication, never a background call.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#effective-context`, `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#effective-context`, `docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#outbound-scope`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: the window a model really has decides how much of the prompt it may be given, and on LM Studio and llama-server it is fixed when the model is loaded or the server starts, so the loaded figure counts, not the model's maximum. A server that cannot say must never stop a run; the one context size then falls back to its default. Detection is user-triggered provider communication, never a background call.
 
 #### Scenario: Ollama reports its context length
 
@@ -1368,7 +1368,7 @@ WHEN asked for a model's context length, the system SHALL read it from the store
 
 IF the inference stage's structured probe is rejected or answered nonconformingly, THEN the system SHALL send one plain probe and, for a nonblank reply, report `structured output: not confirmed` and store on the model the verdict refused or ignored with the source `test`; a `modelNotFound` answer SHALL be reported as `modelUnavailable` and any other error as itself.
 
-**Source**: FR-INFER-08, the inference probe (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a server that cannot do structured answers can still translate, so the test says "not confirmed" rather than "failed". The verdict is kept on the model, so later calls ask through the prompt from the start instead of failing once per call kind.
+**Source**: FR-INFER-08, the inference probe (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a server that cannot do structured answers can still translate, so the test says "not confirmed" rather than "failed". The verdict is kept on the model, so later calls ask through the prompt from the start instead of failing once per call kind.
 
 #### Scenario: A server without structured output
 

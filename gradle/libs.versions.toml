@@ -2,7 +2,7 @@
 #
 # No build script may contain an inline `group:artifact:version` string; each references `libs.<alias>`.
 # Every version is an exact pin (no `+`, no ranges) so resolution is identical on every machine
-# (docs/specification/05_Dependencies/02_DEPENDENCY_POLICY.md#exact-versions).
+# (docs/spec_baseline/specification/05_Dependencies/02_DEPENDENCY_POLICY.md#exact-versions).
 #
 # Populated by change `bootstrap-gradle-and-quality-toolchain`. Runtime libraries the application itself needs
 # (Flyway) is NOT here yet (ADR-0043: no migrations before release) — each arrives with the change that first

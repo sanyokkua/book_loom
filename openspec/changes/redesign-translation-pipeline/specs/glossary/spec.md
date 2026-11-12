@@ -4,7 +4,7 @@
 
 WHEN the scan meets several written forms that the source language's name-ending table says can be forms of one name, the application SHALL hold them as one entry whose term is the dictionary (nominative) form and whose forms list the other attested forms, accepting the group when its nominative form is written in the book or at least two different forms point to the same one.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a Russian book writes `Велемир`, `Велемиром` and `Велемиру` for one man; without grouping each spelling became its own "name" and one run reported 381 false name swaps. The table of name endings is a mechanism any language may have; a language whose file sets none keeps one entry per written form.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a Russian book writes `Велемир`, `Велемиром` and `Велемиру` for one man; without grouping each spelling became its own "name" and one run reported 381 false name swaps. The table of name endings is a mechanism any language may have; a language whose file sets none keeps one entry per written form.
 
 #### Scenario: A nominative and an oblique form are one entry
 
@@ -30,7 +30,7 @@ WHEN the scan meets several written forms that the source language's name-ending
 
 WHEN one written form can belong to two different names, the application SHALL decide each mention by the clause around it — a gendered verb ending after it, a preposition before it or a gendered form of address — and SHALL treat a mention with no such evidence as unsure: matched to both entries and giving no gender vote.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: `Велемира` is the genitive of the man `Велемир` and also the nominative of a woman `Велемира`; the clause usually settles which. A mention the clause cannot settle is not guessed: it counts for both names and votes for no gender, so one unclear sentence never decides who a character is. The Names & style table marks such an entry Unsure.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: `Велемира` is the genitive of the man `Велемир` and also the nominative of a woman `Велемира`; the clause usually settles which. A mention the clause cannot settle is not guessed: it counts for both names and votes for no gender, so one unclear sentence never decides who a character is. The Names & style table marks such an entry Unsure.
 
 #### Scenario: A verb ending decides
 
@@ -57,7 +57,7 @@ WHEN one written form can belong to two different names, the application SHALL d
 
 The application SHALL record the origin of an entry's gender, kind and target — person, book, rule or likely — SHALL let the person edit any value at any time, SHALL let an automatic value replace a stored one only when its origin is the same or higher in the order book, rule, likely and the stored one is not the person's, and SHALL let only the person's and the book's genders be enforced by checks.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: the old build used one word, "suggested", for a gender the code proved, a first-name guess and a model's guess, so a model's mistake was enforced and spread over dozens of paragraphs. Now a fact of the book is never confused with a hint: a rule or a likely value is shown to the person and may help, but no check holds the text to it.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: the old build used one word, "suggested", for a gender the code proved, a first-name guess and a model's guess, so a model's mistake was enforced and spread over dozens of paragraphs. Now a fact of the book is never confused with a hint: a rule or a likely value is shown to the person and may help, but no check holds the text to it.
 
 #### Scenario: A higher origin replaces a lower one
 
@@ -88,7 +88,7 @@ The application SHALL record the origin of an entry's gender, kind and target �
 
 The application SHALL give every glossary target one of three states: suggested (a hint nobody accepted), pinned (accepted: the name may take any of its forms, its spelling checked through the forms the target's name table generates) or locked (the exact text, hidden behind a placeholder and restored). A target the person types or imports SHALL be pinned unless the person chooses locked.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`, `design.md#d4--name-forms-stress-marks-and-target-validation`. In plain words: a name that inflects cannot be hidden behind a placeholder, or its endings would be wrong; so accepted names are pinned, which fixes the dictionary form and lets the draft decline it, and only an exact text such as an identifier is locked. Enforcement comes from the state; the origin only says who produced the spelling.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`, `design.md#d4--name-forms-stress-marks-and-target-validation`. In plain words: a name that inflects cannot be hidden behind a placeholder, or its endings would be wrong; so accepted names are pinned, which fixes the dictionary form and lets the draft decline it, and only an exact text such as an identifier is locked. Enforcement comes from the state; the origin only says who produced the spelling.
 
 #### Scenario: A suggested target is a hint
 
@@ -115,7 +115,7 @@ The application SHALL give every glossary target one of three states: suggested 
 
 WHEN the names pass or a model review finds characters with no gender from the person or the book, or entries of type other, the application SHALL ask the model, in batches of up to 40 bare names with no book text, for the most probable gender and kind of each, and SHALL store every answer that repeats its name as a likely value with its confidence.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a model knows that `Ivar` is almost always a man before it has read a page. Asking for the bare name costs about one call per 40 names, and the answer is always a value, never "unknown", because a hint beats a blank; it is marked likely so nobody takes it for a fact, and the book or the person overrides it.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a model knows that `Ivar` is almost always a man before it has read a page. Asking for the bare name costs about one call per 40 names, and the answer is always a value, never "unknown", because a hint beats a blank; it is marked likely so nobody takes it for a fact, and the book or the person overrides it.
 
 #### Scenario: Every answer is a value
 
@@ -148,7 +148,7 @@ WHEN the names pass or a model review finds characters with no gender from the p
 
 WHEN Start translation is pressed and a character the book names at least 5 times has a gender that is only likely or by rule, the application SHALL ask once for those genders, the least confident first and each with its likely value already chosen, and each row SHALL show the name with its current rendering (or that it has none yet).
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: the model's guess is cheap but a wrong one spreads, so before the long run the person sees the characters whose gender nobody has checked and can fix the doubtful ones first.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: the model's guess is cheap but a wrong one spreads, so before the long run the person sees the characters whose gender nobody has checked and can fix the doubtful ones first.
 
 #### Scenario: The least confident comes first
 
@@ -169,7 +169,7 @@ WHEN Start translation is pressed and a character the book names at least 5 time
 
 WHEN the person clicks any gender of a row in the Start question, the offered one included, the application SHALL make that value the person's, and SHALL leave a row nobody clicked as a hint.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a click on the offered gender is a confirmation, a row nobody clicked stays a hint, and the dialog says so.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a click on the offered gender is a confirmation, a row nobody clicked stays a hint, and the dialog says so.
 
 #### Scenario: Confirming makes the person's value
 
@@ -180,7 +180,7 @@ WHEN the person clicks any gender of a row in the Start question, the offered on
 
 WHEN targets are suggested for the glossary or the recurring terms, the application SHALL render a form of address that the language pair's `titleRenderings` lists (`mr`, `mrs`, `ms`, `miss`, `sir`, `dr` and so on) by that data, without asking the model and locked with the rule as its origin, with a capital first letter where the term has one.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a small model sounds `ms` out as `міз` and writes `Mr` in Latin letters. The pair's file states the few certain words once.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a small model sounds `ms` out as `міз` and writes `Mr` in Latin letters. The pair's file states the few certain words once.
 
 #### Scenario: A title of the pair's data is not asked
 
@@ -191,7 +191,7 @@ WHEN targets are suggested for the glossary or the recurring terms, the applicat
 
 WHEN a recurring term is held by the source language's title list, the application SHALL pass it to the model as a title, not as a bare noun.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a title asked as a bare noun is sounded out; asking it as a title gets the form of address.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a title asked as a bare noun is sounded out; asking it as a title gets the form of address.
 
 #### Scenario: A recurring title is passed as a title
 
@@ -202,7 +202,7 @@ WHEN a recurring term is held by the source language's title list, the applicati
 
 WHEN a place, organisation or other name has its word written in lower case in the book at least as often as the scan's limit, the application SHALL treat it as an ordinary word to translate, not to sound out, and SHALL tell the model to translate such a word inside a longer name.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a small model turns the plain word `Houses` into `Хаузиз`; the book itself shows which capitalised words are ordinary words.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a small model turns the plain word `Houses` into `Хаузиз`; the book itself shows which capitalised words are ordinary words.
 
 #### Scenario: A place that is a common word is translated
 
@@ -213,7 +213,7 @@ WHEN a place, organisation or other name has its word written in lower case in t
 
 WHEN a term's lower-case key is already rendered by the glossary (`houses` beside `Houses`), the application SHALL give the term that rendering in its own case and SHALL NOT ask the model for it.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: one word in two cases gets one rendering, with no second call that could disagree.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: one word in two cases gets one rendering, with no second call that could disagree.
 
 #### Scenario: The glossary's rendering is reused
 
@@ -224,7 +224,7 @@ WHEN a term's lower-case key is already rendered by the glossary (`houses` besid
 
 WHEN a target is suggested or Accept all is pressed, the application SHALL reject the target, with a reason, if it holds a letter the target language's file forbids, has no capital letter where the term has one, has a different number of words than the term (a hyphenated word counting as its parts on both sides), or is spelled with the other alternative of a convention the Brief stores.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, `design.md#d4--name-forms-stress-marks-and-target-validation`, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: a suggestion that a small model writes with a Russian letter in a Ukrainian name, a lost word or the wrong hard g reads right and matches nothing, so the code refuses it before it can be accepted and says why. A translated common word may stand in lower case (`місто` for `City`) and the later part of a hyphenated name may too (`Бейкер-стріт`), so only a target with no capital at all for a capitalised term is refused for its capitals. Every rule reads a key the target language's file may set; a language that sets none is not judged by it.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, `design.md#d4--name-forms-stress-marks-and-target-validation`, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: a suggestion that a small model writes with a Russian letter in a Ukrainian name, a lost word or the wrong hard g reads right and matches nothing, so the code refuses it before it can be accepted and says why. A translated common word may stand in lower case (`місто` for `City`) and the later part of a hyphenated name may too (`Бейкер-стріт`), so only a target with no capital at all for a capitalised term is refused for its capitals. Every rule reads a key the target language's file may set; a language that sets none is not judged by it.
 
 #### Scenario: A forbidden letter is rejected
 
@@ -260,7 +260,7 @@ WHEN a target is suggested or Accept all is pressed, the application SHALL rejec
 
 WHERE the target language's file asks for it, the application SHALL remove stress marks from every target it takes in — a model's suggestion, an imported row, a typed edit and a learned rendering — by decomposing the text, dropping the acute and grave combining marks and recomposing it, so that the marks of `й` and `ї` survive.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `design.md#d4--name-forms-stress-marks-and-target-validation`. In plain words: a model writes `Зо́тов` with an invisible accent that matches no text in the book, and the name then fails every comparison. Removing the accents on the way in keeps every stored spelling plain; a language such as Bulgarian, which writes a grave on `ѝ`, does not ask for it.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `design.md#d4--name-forms-stress-marks-and-target-validation`. In plain words: a model writes `Зо́тов` with an invisible accent that matches no text in the book, and the name then fails every comparison. Removing the accents on the way in keeps every stored spelling plain; a language such as Bulgarian, which writes a grave on `ѝ`, does not ask for it.
 
 #### Scenario: An acute accent is removed
 
@@ -286,7 +286,7 @@ WHERE the target language's file asks for it, the application SHALL remove stres
 
 WHERE the target language's file sets a name-ending table, the application SHALL generate from a pinned target and the entry's gender its case forms and its vocative, including the vowel changes the file lists, and SHALL accept any generated form as the entry's rendering; where the file sets none, the only form is the target itself.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `design.md#d4--name-forms-stress-marks-and-target-validation`. In plain words: a pinned name has to be allowed to decline, but only in the ways the language really allows; a table of endings and vowel changes in the language's own file lets the code tell `Зотова` (a form of `Зотов`) from `Зотев` (another spelling). The table is a mechanism any language may have.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `design.md#d4--name-forms-stress-marks-and-target-validation`. In plain words: a pinned name has to be allowed to decline, but only in the ways the language really allows; a table of endings and vowel changes in the language's own file lets the code tell `Зотова` (a form of `Зотов`) from `Зотев` (another spelling). The table is a mechanism any language may have.
 
 #### Scenario: Forms of a masculine name
 
@@ -317,7 +317,7 @@ WHERE the target language's file sets a name-ending table, the application SHALL
 
 WHERE the target language's file sets keys for oblique endings or counts words, the application SHALL flag a target that ends like an oblique or vocative form or has a different number of words than its term (a hyphenated word counting as its parts on both sides), SHALL compute the flag when the row is shown without storing it, and SHALL keep a flagged row out of Accept all.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d4--name-forms-stress-marks-and-target-validation`. In plain words: a person can type `Алєксєю` (a vocative) or paste a form into the Translation cell; the table says "not the dictionary form" instead of silently pinning it. The flag is computed, so changing the language file or the target changes it at once, and a language whose file sets no such key is never flagged.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d4--name-forms-stress-marks-and-target-validation`. In plain words: a person can type `Алєксєю` (a vocative) or paste a form into the Translation cell; the table says "not the dictionary form" instead of silently pinning it. The flag is computed, so changing the language file or the target changes it at once, and a language whose file sets no such key is never flagged.
 
 #### Scenario: An oblique ending is flagged
 
@@ -343,7 +343,7 @@ WHERE the target language's file sets keys for oblique endings or counts words, 
 
 WHERE the source language's file lists past-tense endings that show gender, the application SHALL count the first past-tense verb after a mention of a name, in the same clause, outside speech and with no other name between, as gender evidence for that name, and SHALL add it to the pronoun evidence under the same bars.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: in Russian and Ukrainian the verb itself says who acted (`сказала`, `сказал`), so a book that rarely writes `она` still shows a woman's gender. The endings come from the source language's file, as the pronouns do, so any language with gendered past forms gains by data alone.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: in Russian and Ukrainian the verb itself says who acted (`сказала`, `сказал`), so a book that rarely writes `она` still shows a woman's gender. The endings come from the source language's file, as the pronouns do, so any language with gendered past forms gains by data alone.
 
 #### Scenario: A feminine verb counts for the name before it
 
@@ -379,7 +379,7 @@ WHERE the source language's file lists past-tense endings that show gender, the 
 
 WHERE the source file lists the rows whose declension shows a gender (`paradigmGender`), WHEN a person-like entry of unknown, untried gender has an attested form that reads as an oblique case of its term, those readings and the term's nominative readings share one gender, their rows are listed, and no pronoun or verb after the name shows the other gender, the application SHALL set that gender with the origin rule, without changing the entry's type.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a small book may say a man's name only a few times with no `он` after it, yet its genitive `Велемира` beside `Велемир` already shows the man's declension. That is a rule of the language, not a fact of the book, so it is shown as a rule's hint, no check enforces it, and a pronoun or a verb of the book always wins over it. A row both genders decline by (the Russian `-а`: `Никита`, `Илья`) is left out of the list, so it decides nothing.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a small book may say a man's name only a few times with no `он` after it, yet its genitive `Велемира` beside `Велемир` already shows the man's declension. That is a rule of the language, not a fact of the book, so it is shown as a rule's hint, no check enforces it, and a pronoun or a verb of the book always wins over it. A row both genders decline by (the Russian `-а`: `Никита`, `Илья`) is left out of the list, so it decides nothing.
 
 #### Scenario: A consonant name with an attested genitive is a man's by rule
 
@@ -410,7 +410,7 @@ WHERE the source file lists the rows whose declension shows a gender (`paradigmG
 
 WHEN a name is made of ordinary words but is used as a proper name, the application SHALL sound it out by default under the Transliterate policy and keep its meaning as a note on the entry, and SHALL translate it only when the person answered so; a nickname that is a plain word is translated.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a surname such as `Brightwater` is a name first; a translator sounds it out and remembers what it means. The meaning is kept so the person can decide to translate it, and the person is asked only when the book plays on the meaning (see the Book Brief).
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a surname such as `Brightwater` is a name first; a translator sounds it out and remembers what it means. The meaning is kept so the person can decide to translate it, and the person is asked only when the book plays on the meaning (see the Book Brief).
 
 #### Scenario: A surname is sounded out and its meaning kept
 
@@ -431,7 +431,7 @@ WHEN a name is made of ordinary words but is used as a proper name, the applicat
 
 The application SHALL count and propose recurring terms by form group — the forms of a word that share a stem of at least 4 letters once the source language's noun endings are removed — and SHALL measure each scan's own use floor on the group's total instead of on one form.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a word that a Russian book writes `фонарь`, `фонаря` and `фонарём` is one recurring term; counting each form alone lost it. The floors stay those of each scan (the stored lexicon's scan keeps a word written in lower case at least five times, as "Keep a stored lexicon of recurring terms and show it on Names & style" says); only what is counted changes. The language's own noun-ending table is used, so any language that has one gains by data alone; a language without one counts exact forms.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a word that a Russian book writes `фонарь`, `фонаря` and `фонарём` is one recurring term; counting each form alone lost it. The floors stay those of each scan (the stored lexicon's scan keeps a word written in lower case at least five times, as "Keep a stored lexicon of recurring terms and show it on Names & style" says); only what is counted changes. The language's own noun-ending table is used, so any language that has one gains by data alone; a language without one counts exact forms.
 
 #### Scenario: Three forms make one group
 
@@ -453,7 +453,7 @@ The application SHALL count and propose recurring terms by form group — the fo
 
 WHEN an entry's gender from the person or the book appears or changes after segments naming it were decided, the application SHALL register a gender-changed deferral for each of those segments, except for an entry that had no gender at all, whose waiting deferrals stay, and SHALL register none for a likely or rule value.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a likely gender was never checked, so when the person or the book later confirms it, even to the same value, the text decided meanwhile may disagree and must be looked at. This capability records the deferral; resolving it — by code when the gender check finds the segment clean, else by a proofread window — is the translation-pipeline capability's "Settle every deferral whose fact has arrived in the Proofread stage".
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a likely gender was never checked, so when the person or the book later confirms it, even to the same value, the text decided meanwhile may disagree and must be looked at. This capability records the deferral; resolving it — by code when the gender check finds the segment clean, else by a proofread window — is the translation-pipeline capability's "Settle every deferral whose fact has arrived in the Proofread stage".
 
 #### Scenario: A confirmed likely value defers the segments
 
@@ -489,7 +489,7 @@ WHEN an entry's gender from the person or the book appears or changes after segm
 
 WHEN a names pass ends, the application SHALL write one INFO line to the run log with the numbers of entries, forms, and genders by origin (book, rule, likely), the characters without a gender and the rejected suggestions, and SHALL put no name, rendering or book text in it.
 
-**Source**: `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: the always-on run log must say what the pass did so a bad result can be traced, but it is a file the person may share, so it holds counts and choices only.
+**Source**: `docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: the always-on run log must say what the pass did so a bad result can be traced, but it is a file the person may share, so it holds counts and choices only.
 
 #### Scenario: The counts are written
 
@@ -505,7 +505,7 @@ WHEN a names pass ends, the application SHALL write one INFO line to the run log
 
 WHEN the names pass is about to start, the application SHALL estimate its time as the sum, over the kinds of call the dial's plan makes, of the number of calls times the seconds per call stored for the chosen model, and SHALL label it "measured on this model"; without stored seconds it SHALL scale the built-in constants by the model's measured speed, or else show them, labelled "estimate".
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a fixed guess of "about 1 min" was wrong by a factor of ten on a slow model; the app now stores the seconds each kind of call took on that model and multiplies. At the end of every pass and run the measured seconds per kind are stored again. While the pass runs, the figures line uses the steps left times the measured seconds per kind.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a fixed guess of "about 1 min" was wrong by a factor of ten on a slow model; the app now stores the seconds each kind of call took on that model and multiplies. At the end of every pass and run the measured seconds per kind are stored again. While the pass runs, the figures line uses the steps left times the measured seconds per kind.
 
 #### Scenario: Stored seconds give a measured estimate
 
@@ -531,7 +531,7 @@ WHEN the names pass is about to start, the application SHALL estimate its time a
 
 The application SHALL establish one rendering for each recurring term by this order — the person's, else the one learned from the decided segments, else the model's suggestion, else none — and SHALL show the established rendering of each term a call's window names in every later draft and retry.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: once a book has called a warden `наглядач`, chapter nine must not call him `сторож`; the order says whose word wins. This replaces the old report-and-verify scheme: the model no longer reports its renderings, so the person's word, the decided text and the model's first suggestion are what remain.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: once a book has called a warden `наглядач`, chapter nine must not call him `сторож`; the order says whose word wins. This replaces the old report-and-verify scheme: the model no longer reports its renderings, so the person's word, the decided text and the model's first suggestion are what remain.
 
 #### Scenario: The person's rendering wins
 
@@ -557,7 +557,7 @@ The application SHALL establish one rendering for each recurring term by this or
 
 The progress dialog of the names pass SHALL list ten steps in order — Find candidates in the book, Decide the names, Ask what the model knows about the names, Find repeated words, Clean up repeated words, Read repeated words in context, Suggest translations for names, Suggest translations for repeated words, Check the suggestions, Write the results — each with the number of requests it sent and a done mark once ended, and a figures line that counts those ten steps and times them by the requests.
 
-**Source**: `docs/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`, N4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `design.md#d3--the-book-map-lemma-entries-origin-target-state`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: the person sees which part of the pass is running and how much is left; the new steps are the model's best guess about each name and the check that tests every suggestion against the target language's rules (it sends no request and accepts nothing: the suggestions stay "likely" until the person presses Accept all). Grouping the forms of a name is part of finding candidates and sends no request. The dialog itself follows the progress-dialog pattern of the `app-shell` capability.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`, N4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `design.md#d3--the-book-map-lemma-entries-origin-target-state`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: the person sees which part of the pass is running and how much is left; the new steps are the model's best guess about each name and the check that tests every suggestion against the target language's rules (it sends no request and accepts nothing: the suggestions stay "likely" until the person presses Accept all). Grouping the forms of a name is part of finding candidates and sends no request. The dialog itself follows the progress-dialog pattern of the `app-shell` capability.
 
 #### Scenario: The steps are listed with counts
 
@@ -585,7 +585,7 @@ words that occurs at least 3 times not at the start of a sentence, counting the 
 how often it occurs and then by where it first occurs, each with type other, gender unknown and no target, by the rules
 of the scenarios below.
 
-**Source**: FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#name-term-pre-scan` (offline fallback), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a name that recurs mid-sentence is almost certainly a proper noun, so a frequency count finds most of a book's names instantly and offline; words at the start of a sentence are ignored because every sentence starts with a capital, and the full stop after an abbreviated title does not end a sentence, so `Hale` in `Mr. Hale` still counts. A proposal has no target yet, so it is neither pinned nor locked, and the forms of one name are one proposal, not one per spelling. A term the person removed is never proposed again (see "Keep the person's entries and removals when names are proposed"). A real book of the owner's corpus showed what a bare count gets wrong: `—Well,` and `"Don’t` open speech without a full stop, common nouns are given a capital, a hyphenated place name was cut in two, and a first name was proposed beside the full name. Every real name measured there is written in lower case less than 20% of the time, and every one of those common words at least 25% of the time, which is a test that works in any language with capitals; the stop-word list catches the function words and interjections a book rarely writes in lower case.
+**Source**: FR-GLOSS-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#name-term-pre-scan` (offline fallback), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a name that recurs mid-sentence is almost certainly a proper noun, so a frequency count finds most of a book's names instantly and offline; words at the start of a sentence are ignored because every sentence starts with a capital, and the full stop after an abbreviated title does not end a sentence, so `Hale` in `Mr. Hale` still counts. A proposal has no target yet, so it is neither pinned nor locked, and the forms of one name are one proposal, not one per spelling. A term the person removed is never proposed again (see "Keep the person's entries and removals when names are proposed"). A real book of the owner's corpus showed what a bare count gets wrong: `—Well,` and `"Don’t` open speech without a full stop, common nouns are given a capital, a hyphenated place name was cut in two, and a first name was proposed beside the full name. Every real name measured there is written in lower case less than 20% of the time, and every one of those common words at least 25% of the time, which is a test that works in any language with capitals; the stop-word list catches the function words and interjections a book rarely writes in lower case.
 
 #### Scenario: Common words, contractions and parts of longer names are not proposed
 
@@ -787,7 +787,7 @@ check enforces), and SHALL NEVER change the entry's type.
 
 The Names & style screen SHALL show the glossary as a table with the columns Term, Kind, Forms, Translation (an empty one shows the placeholder "No target"), State (suggested, pinned or locked), Gender and a remove cross, with an origin chip (person, book, rule or likely) on Kind, Translation and Gender, under the purpose line "Names of people and places — written the same way every time. Set the gender so names take the right grammatical form."
 
-**Source**: FR-GLOSS-02, FR-GLOSS-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1, N3 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: each value says where it came from, so the person can tell a fact of the book from a guess; this is where the person settles spellings before translating; the table explains its purpose, a changed row is marked on its edge so the term is never cut, an empty table says what to do, and the two cards sit side by side only when the content is at least 1440 px wide.
+**Source**: FR-GLOSS-02, FR-GLOSS-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1, N3 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: each value says where it came from, so the person can tell a fact of the book from a guess; this is where the person settles spellings before translating; the table explains its purpose, a changed row is marked on its edge so the term is never cut, an empty table says what to do, and the two cards sit side by side only when the content is at least 1440 px wide.
 
 #### Scenario: A scanned entry appears unlocked
 
@@ -873,7 +873,7 @@ for the most probable gender and kind of each entry still lacking a gender from 
 likely. It SHALL change the glossary only after every call has answered; IF any call fails or Stop is pressed, THEN it
 SHALL change nothing.
 
-**Source**: FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-review`, DD-46 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`), `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a frequency count cannot tell a sentence-opening interjection from a name in every case, and it never knows a type or a gender, so the model is asked to clean and classify the list. It sees how often the book uses each word in lower case too, which is the clearest sign of a common word. A set type means someone — the person or an earlier model scan — already judged the entry a name, so only an untouched row is removed; and a row the person locked or gave a target is theirs and is never sent. The model is never allowed to answer "unknown": it gives its most probable value, and the table marks it likely so nobody mistakes it for a fact of the book.
+**Source**: FR-GLOSS-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#glossary-review`, DD-46 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`), `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a frequency count cannot tell a sentence-opening interjection from a name in every case, and it never knows a type or a gender, so the model is asked to clean and classify the list. It sees how often the book uses each word in lower case too, which is the clearest sign of a common word. A set type means someone — the person or an earlier model scan — already judged the entry a name, so only an untouched row is removed; and a row the person locked or gave a target is theirs and is never sent. The model is never allowed to answer "unknown": it gives its most probable value, and the table marks it likely so nobody mistakes it for a fact of the book.
 
 #### Scenario: The review removes a common word and classifies a name
 
@@ -977,7 +977,7 @@ the quality dial's names plan reads (Fast: a likely character written five times
 written three times or more; at most 80) SHALL be read in context, one term per call (`term-reading`), and the code —
 not the model — SHALL decide each from its readings and from the pronoun and past-tense verb evidence, by the rules of the scenarios below.
 
-**Source**: 15i.N5 (`openspec/changes/archive/2026-10-19-complete-translation-workflow/tasks.md`), FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#term-summary`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: the model reads, the code decides. A small model's pronoun answers were wrong one time in ten or more, so for now they only settle what the book's own pronouns leave open. Where the code decides from the book, the value is the book's (a fact); where only the model's reading or a weak tally stands, it is a likely value or a rule's guess, and no check enforces it.
+**Source**: 15i.N5 (`openspec/changes/archive/2026-10-19-complete-translation-workflow/tasks.md`), FR-GLOSS-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#term-summary`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: the model reads, the code decides. A small model's pronoun answers were wrong one time in ten or more, so for now they only settle what the book's own pronouns leave open. Where the code decides from the book, the value is the book's (a fact); where only the model's reading or a weak tally stands, it is a likely value or a rule's guess, and no check enforces it.
 
 #### Scenario: Six windows read a character
 
@@ -1084,7 +1084,7 @@ Brief's name policy for the dictionary form of each target, keep only suggestion
 them as suggested targets of origin likely after every call has answered; IF a call fails or Stop is pressed, THEN it
 SHALL write nothing.
 
-**Source**: FR-GLOSS-01, FR-GLOSS-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, DD-46 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`), `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a glossary of names with no targets leaves every draft to spell each name afresh, so the model proposes one spelling per name, following the policy the person chose. It is a call of its own because a small model does one task per call far better than two. A suggestion is only a hint until Accept all or the person accepts it — the draft may inflect it — and the model never undoes the person's choice. Names are sounded out by default for every language pair; the model adapts a name to the target language's own form only when the person chose that policy, and no list of equivalent names is bundled. On gemma4:e4b every place and thing came back "neuter", masculine Ukrainian nouns included, and a person's gender judged from one sentence took a speaker's `he` (15h.A2), so the reply asks for no gender; and the same model wrote a Latin `e` inside `Венс`, which reads right and matches nothing.
+**Source**: FR-GLOSS-01, FR-GLOSS-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, DD-46 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`), `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a glossary of names with no targets leaves every draft to spell each name afresh, so the model proposes one spelling per name, following the policy the person chose. It is a call of its own because a small model does one task per call far better than two. A suggestion is only a hint until Accept all or the person accepts it — the draft may inflect it — and the model never undoes the person's choice. Names are sounded out by default for every language pair; the model adapts a name to the target language's own form only when the person chose that policy, and no list of equivalent names is bundled. On gemma4:e4b every place and thing came back "neuter", masculine Ukrainian nouns included, and a person's gender judged from one sentence took a speaker's `he` (15h.A2), so the reply asks for no gender; and the same model wrote a Latin `e` inside `Венс`, which reads right and matches nothing.
 
 #### Scenario: Transliterated names get Cyrillic targets
 
@@ -1280,7 +1280,7 @@ name, or a brand, under Keep original), or a verified proper name that is not a 
 and not marked speaking, in a target whose language file says `namesInflect=false`; every other accepted target SHALL be
 pinned. Every path that accepts a suggestion SHALL apply the rule.
 
-**Source**: FR-GLOSS-01, FR-GLOSS-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, DD-46 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`), `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a name locked behind a placeholder cannot inflect, so it is locked only where the target language does not decline names; everywhere else an accepted name is pinned, which fixes its dictionary form and lets the draft use any form the target's name table generates.
+**Source**: FR-GLOSS-01, FR-GLOSS-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, DD-46 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`), `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a name locked behind a placeholder cannot inflect, so it is locked only where the target language does not decline names; everywhere else an accepted name is pinned, which fixes its dictionary form and lets the draft use any form the target's name table generates.
 
 #### Scenario: Which targets decline names
 
@@ -1333,7 +1333,7 @@ in the field with the suggestion unchanged SHALL accept it too, and typing anoth
 the target the person's. An `Accept all` button beside Review with model SHALL check every suggested target against the
 target language's rules, accept those that pass and list the rejected ones with their reasons.
 
-**Source**: FR-GLOSS-01, FR-GLOSS-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, DD-46 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`), `design.md#d3--the-book-map-lemma-entries-origin-target-state`, `design.md#d4--name-forms-stress-marks-and-target-validation`. In plain words: a suggestion is only a hint until it is accepted, and the draft may inflect it; Accept all never lets a spelling through that the checks refuse, and it says which rows it left out and why.
+**Source**: FR-GLOSS-01, FR-GLOSS-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, DD-46 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`), `design.md#d3--the-book-map-lemma-entries-origin-target-state`, `design.md#d4--name-forms-stress-marks-and-target-validation`. In plain words: a suggestion is only a hint until it is accepted, and the draft may inflect it; Accept all never lets a spelling through that the checks refuse, and it says which rows it left out and why.
 
 #### Scenario: Accept all is shown only while a suggestion is
 
@@ -1381,7 +1381,7 @@ trailing punctuation and a trailing possessive `’s` or `'s` removed, inner spa
 matches an entry when its key is that of the entry's lemma or of any attested form; the id stays the project id plus the
 lemma's key.
 
-**Source**: FR-GLOSS-02, FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a spelling the book uses for a known name (`Велемира` for `Велемир`) is that name, not a new one; before, each way in compared differently, so `Lovelace’s` could be held beside `Lovelace` and a removed name could come back in another spelling.
+**Source**: FR-GLOSS-02, FR-GLOSS-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a spelling the book uses for a known name (`Велемира` for `Велемир`) is that name, not a new one; before, each way in compared differently, so `Lovelace’s` could be held beside `Lovelace` and a removed name could come back in another spelling.
 
 #### Scenario: Spellings of one term share a key
 
@@ -1405,7 +1405,7 @@ every tie by the source term, so that storing a change to any other column — a
 row; and it SHALL offer a search field that shows only the rows whose source term, any of its forms or target contains
 the typed text, ignoring case, and that the Escape key clears.
 
-**Source**: FR-GLOSS-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a name is found by any spelling the book uses; a real book yields a hundred rows or more, in the order the scan found them; a person settling them needs to find one name and group the rows by kind. The glossary keeps no count of mentions, so there is no count column.
+**Source**: FR-GLOSS-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a name is found by any spelling the book uses; a real book yields a hundred rows or more, in the order the scan found them; a person settling them needs to find one name and group the rows by kind. The glossary keeps no count of mentions, so there is no count column.
 
 #### Scenario: Sorting by type keeps one type's rows in term order
 
@@ -1434,7 +1434,7 @@ the table, emptying such an entry's target, confirming the Add term dialog with 
 a CSV row that is locked with no target — THEN the application SHALL refuse that change with the message
 `A pinned or locked term needs a target.` and SHALL leave the glossary as it was.
 
-**Source**: FR-GLOSS-03, FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `#dialog-add-glossary-term`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a pinned or locked term is checked or replaced by its target wherever it occurs; with no target there is nothing to put back, so the name would vanish from the book. Every way into the glossary refuses such an entry rather than one of them letting it through.
+**Source**: FR-GLOSS-03, FR-GLOSS-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `#dialog-add-glossary-term`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a pinned or locked term is checked or replaced by its target wherever it occurs; with no target there is nothing to put back, so the name would vanish from the book. Every way into the glossary refuses such an entry rather than one of them letting it through.
 
 #### Scenario: Locking a term with no target is refused in the table
 
@@ -1468,7 +1468,7 @@ application SHALL add that entry as the person's, without stress marks in the ta
 that, and IF the source term has the glossary key of an existing entry or of one of its forms (see "Compare glossary
 terms by one key"), THEN it SHALL refuse the addition and say so in the dialog.
 
-**Source**: FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-add-glossary-term`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a name the scan missed can be added by hand; two entries for the same name would contradict each other, so the second is refused rather than silently merged. A pinned or locked term also needs a target (see "Lock only an entry that has a target").
+**Source**: FR-GLOSS-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-add-glossary-term`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a name the scan missed can be added by hand; two entries for the same name would contradict each other, so the second is refused rather than silently merged. A pinned or locked term also needs a target (see "Lock only an entry that has a target").
 
 #### Scenario: A new term is added
 
@@ -1508,7 +1508,7 @@ RFC 4180 defines it, written whole through a new temporary file, with a single q
 term or form, add the others as the person's entries, and report the malformed and refused rows by their lines while
 importing the rest.
 
-**Source**: FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a row that says locked is locked and any other row with a target is pinned; a series keeps its names across books, so a glossary must travel as a plain file any spreadsheet can open; one bad line must not throw away a hundred good ones, and a file whose every row has the same mistake gets one sentence naming it, not five thousand line numbers. A row that would lock a term with no target is refused like a malformed one (see "Lock only an entry that has a target").
+**Source**: FR-GLOSS-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a row that says locked is locked and any other row with a target is pinned; a series keeps its names across books, so a glossary must travel as a plain file any spreadsheet can open; one bad line must not throw away a hundred good ones, and a file whose every row has the same mistake gets one sentence naming it, not five thousand line numbers. A row that would lock a term with no target is refused like a malformed one (see "Lock only an entry that has a target").
 
 #### Scenario: A term with a comma is quoted
 
@@ -1554,7 +1554,7 @@ as a whole word in the window's source text, each with its type, its target and 
 a rule gave it, and never a likely gender. An entry whose target the model suggested and nobody accepted SHALL be listed
 apart, and neither it nor a pinned entry SHALL be hidden behind a placeholder.
 
-**Source**: FR-GLOSS-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: a small model's context is precious, and a gender the model only guessed is stored and shown to the person but not put in a prompt (the default; a paired test may change it), so a two-hundred-entry glossary is trimmed to the names in play; type and gender let the model agree verbs and adjectives with a character in languages that inflect for them. A locked name is hidden behind a placeholder, so the model is told what that placeholder will read as — otherwise it could not make `відчинив` or `відчинила` agree with it.
+**Source**: FR-GLOSS-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: a small model's context is precious, and a gender the model only guessed is stored and shown to the person but not put in a prompt (the default; a paired test may change it), so a two-hundred-entry glossary is trimmed to the names in play; type and gender let the model agree verbs and adjectives with a character in languages that inflect for them. A locked name is hidden behind a placeholder, so the model is told what that placeholder will read as — otherwise it could not make `відчинив` or `відчинила` agree with it.
 
 #### Scenario: Only present terms are given
 
@@ -1620,7 +1620,7 @@ forms of one word counted as one candidate, in its own call at the Balanced and 
 of the book, and decide from the answers by code. A window SHALL count only when the quote the model gave for it stands
 in that window. A failed call SHALL end the action with its error and write nothing.
 
-**Source**: `additional-work.md` 15i.N7; `docs/specification/01_Product/12_PROMPT_CATALOG.md#lexicon-reading`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a word such as "bank" that means a river's edge in one chapter and a business in another cannot have one rendering, so the model is shown the word in its places and the code, not the model, decides; and a series can carry its recurring terms from one book to the next in a file.
+**Source**: `additional-work.md` 15i.N7; `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#lexicon-reading`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a word such as "bank" that means a river's edge in one chapter and a business in another cannot have one rendering, so the model is shown the word in its places and the code, not the model, decides; and a series can carry its recurring terms from one book to the next in a file.
 
 #### Scenario: A word of one sense is kept with its rendering
 
@@ -1702,7 +1702,7 @@ decide the names, ask the model's most probable gender and kind for the rest, re
 for each name and term without one, and accept the suggestions that pass the checks. It SHALL write both stored tables
 once, after its last step.
 
-**Source**: `additional-work.md` 15i.N8; `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: the last step pins or locks only the suggestions the checks accept, and lists the others; one button should get from a book to a prepared glossary without five separate presses, and an answer that arrives half-way, or a Stop, must not leave half of a result behind; and what the person fixed by hand stays fixed.
+**Source**: `additional-work.md` 15i.N8; `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: the last step pins or locks only the suggestions the checks accept, and lists the others; one button should get from a book to a prepared glossary without five separate presses, and an answer that arrives half-way, or a Stop, must not leave half of a result behind; and what the person fixed by hand stays fixed.
 
 #### Scenario: A pass fills both tables and writes them at the end
 
@@ -1780,7 +1780,7 @@ once, after its last step.
 
 The glossary table SHALL let every column be resized, the last filling the remaining width, each column with a minimum width that keeps its header and a typical value whole, with grid lines, a header that stays visible and fixed row heights.
 
-**Source**: `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, `docs/specification/mockups/README.md#g9--two-kinds-of-table-jx-g4`, N2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person can widen what is cut, and a column can never be dragged so narrow that its content disappears. The minimum width of each column, including the new Forms and State columns, is a value of the task that builds the table, not of this requirement.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, `docs/spec_baseline/specification/mockups/README.md#g9--two-kinds-of-table-jx-g4`, N2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person can widen what is cut, and a column can never be dragged so narrow that its content disappears. The minimum width of each column, including the new Forms and State columns, is a value of the task that builds the table, not of this requirement.
 
 #### Scenario: A column can be resized
 
@@ -1791,7 +1791,7 @@ The glossary table SHALL let every column be resized, the last filling the remai
 
 The Recurring terms card SHALL show the purpose line "Words the book repeats — kept the same all through the book. Learned while translating, or set here." and the columns Term, Forms, Translation, Used and a link to the glossary, Used being the number of times the term or any form of its group occurs in the book's text, ignoring letter case; an empty card SHALL read "No recurring terms yet. They are found when you prepare names, or while translating."
 
-**Source**: `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: the person sees how often each repeated word occurs and where such words come from. Used counts the whole group of forms and ignores letter case: `Warden` and `warden` count together, and for a language with an ending table the inflected forms of a word count too; a language with none counts the forms exactly as written.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: the person sees how often each repeated word occurs and where such words come from. Used counts the whole group of forms and ignores letter case: `Warden` and `warden` count together, and for a language with an ending table the inflected forms of a word count too; a language with none counts the forms exactly as written.
 
 #### Scenario: An empty lexicon says where terms come from
 
@@ -1812,7 +1812,7 @@ The Recurring terms card SHALL show the purpose line "Words the book repeats —
 
 WHEN the person edits the glossary while a run is paused or translating, the application SHALL apply the edit from the first chunk that starts after it, SHALL NOT change segments already decided except through the Proofread stage, and SHALL keep the glossary stored with the project across a restart; a person's edit and a name the run adds SHALL never overwrite each other.
 
-**Source**: FR-GLOSS-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), ADR-0043, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, `docs/specification/mockups/README.md#changes-while-translating-i`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a person who spots a wrong spelling mid-run can fix it, and the rest of the book follows; earlier segments are corrected by the Proofread stage or on the review desk, not silently. A chunk reads the glossary once, when it starts. Each change is written to the stored entry in one step, so the run adding a name at the end of a chapter and the person typing a target at the same moment both survive.
+**Source**: FR-GLOSS-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), ADR-0043, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, `docs/spec_baseline/specification/mockups/README.md#changes-while-translating-i`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a person who spots a wrong spelling mid-run can fix it, and the rest of the book follows; earlier segments are corrected by the Proofread stage or on the review desk, not silently. A chunk reads the glossary once, when it starts. Each change is written to the stored entry in one step, so the run adding a name at the end of a chapter and the person typing a target at the same moment both survive.
 
 #### Scenario: A pause-time lock affects later chunks only
 
@@ -1850,7 +1850,7 @@ WHEN the person edits the glossary while a run is paused or translating, the app
 
 The application SHALL keep, for each project, a stored lexicon of recurring common terms and titles that a model would otherwise render differently from one page to the next, each entry holding its representative form and the forms of its group, SHALL propose them with a deterministic scan and no model, and SHALL show them in a "Recurring terms" card; a term the glossary holds SHALL NOT be asked about or shown from the lexicon.
 
-**Source**: `additional-work.md` 15d.9, `docs/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`, `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, ADR-0043, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a book that calls a warden "наглядач" in chapter one and "сторож" in chapter nine reads as two characters; the app finds the words a book keeps repeating and keeps every later request to one rendering. The lexicon is stored with the project, so it is still there after a restart.
+**Source**: `additional-work.md` 15d.9, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`, `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, ADR-0043, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a book that calls a warden "наглядач" in chapter one and "сторож" in chapter nine reads as two characters; the app finds the words a book keeps repeating and keeps every later request to one rendering. The lexicon is stored with the project, so it is still there after a restart.
 
 #### Scenario: The scan proposes a title and a dual-use word
 
@@ -1916,7 +1916,7 @@ The application SHALL keep, for each project, a stored lexicon of recurring comm
 
 The Names & style screen SHALL offer "Prepare names automatically" in a card above both tables that says what it does and how long it takes for the brief's quality dial ("About 2 min, measured on this model. You can undo it all afterwards." or, with nothing measured, "About 1–2 min, estimate."), and a press SHALL run the names pass on the chosen model in the progress dialog, whose Cancel ("Cancel writes nothing.") stops the pass and leaves both tables as they were.
 
-**Source**: `additional-work.md` 15i.U6, `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, N4, N5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: one button replaces five presses and gives every change back one by one or all together. Hiding the dialog with Continue in background or Esc, and the activity chip, are the `app-shell` capability's progress-dialog rules.
+**Source**: `additional-work.md` 15i.U6, `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N4, N5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: one button replaces five presses and gives every change back one by one or all together. Hiding the dialog with Continue in background or Esc, and the activity chip, are the `app-shell` capability's progress-dialog rules.
 
 #### Scenario: The press fills both tables and Undo all gives both back
 
@@ -1969,7 +1969,7 @@ The Names & style screen SHALL offer "Prepare names automatically" in a card abo
 
 The application SHALL learn a lexicon term's rendering from the decided segments with no model call, so the book stays consistent whatever the model reports: once a chunk's records are stored, each decided pair SHALL be counted by word stems, and a term SHALL get a learned rendering only when at least three of its segments carry one stem, the stem's Dice association with the term is at least 0.6 and at least twice that of any unrelated rival.
 
-**Source**: `additional-work.md` 15d.9; `docs/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: the decided text is read, not the model's report of it, and the majority wins so one early slip does not outvote a book's habit.
+**Source**: `additional-work.md` 15d.9; `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: the decided text is read, not the model's report of it, and the majority wins so one early slip does not outvote a book's habit.
 
 #### Scenario: Which pairs are counted and how
 

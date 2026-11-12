@@ -38,7 +38,7 @@ class MockupPathArgument(
     override fun asArguments(): Iterable<String> = listOf("-Dbookloom.mockup=${mockup.absolutePath}")
 }
 
-val mockupHtml = rootProject.layout.projectDirectory.file("docs/specification/mockups/ui-mockup.html")
+val mockupHtml = rootProject.layout.projectDirectory.file("docs/spec_baseline/specification/mockups/ui-mockup.html")
 
 tasks.withType<Test>().configureEach {
     inputs.file(mockupHtml).withPropertyName("mockupHtml").withPathSensitivity(PathSensitivity.RELATIVE)

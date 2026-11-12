@@ -4,7 +4,7 @@
 
 WHEN a run starts, the system SHALL take the book through three stages in this order — Prepare (inside a run, short code work with no model call: the style sheet from the brief and, on an empty glossary, the code name scan), Translate and Proofread — announcing each stage as it starts, and SHALL end the run Completed only after its Proofread stage has ended; a run that is stopped or fails before then SHALL NOT end Completed.
 
-**Source**: `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#pipeline-overview`, `design.md#d2--the-runs-three-stages-and-the-quality-dial`. In plain words: the last look at the book used to happen only at Max (a backward revision) or inside the export (the last check); it now belongs to every run, so a run is finished only when its text has been through that look, whatever the quality dial says. The brief suggestion and "Prepare names automatically" stay actions the person starts outside a run; a run never starts them.
+**Source**: `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#pipeline-overview`, `design.md#d2--the-runs-three-stages-and-the-quality-dial`. In plain words: the last look at the book used to happen only at Max (a backward revision) or inside the export (the last check); it now belongs to every run, so a run is finished only when its text has been through that look, whatever the quality dial says. The brief suggestion and "Prepare names automatically" stay actions the person starts outside a run; a run never starts them.
 
 #### Scenario: Three stages in order
 
@@ -21,7 +21,7 @@ WHEN a run starts, the system SHALL take the book through three stages in this o
 
 The system SHALL build the prompt of every model call a run makes — draft, format re-ask, repair, chapter summary and proofread — through one context builder that takes only the call's kind, its focus segments, the book map as it stands, the run's fixed frame and the model profile, so that the same inputs always give the same prompt and the same book facts reach every call in the same words.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#context-package-assembler`, `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#context-package`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: about fifteen places used to build context in their own way, so the model saw different facts about the same book from call to call, and a repair saw no names at all. One builder means a repair, a proofread and a retry see what the draft saw, rebuilt from the book as it is now.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#context-package-assembler`, `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#context-package`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: about fifteen places used to build context in their own way, so the model saw different facts about the same book from call to call, and a repair saw no names at all. One builder means a repair, a proofread and a retry see what the draft saw, rebuilt from the book as it is now.
 
 #### Scenario: A repair sees the names its draft saw
 
@@ -37,7 +37,7 @@ The system SHALL build the prompt of every model call a run makes — draft, for
 
 The system part of every draft, repair and proofread call SHALL hold, in this order: the role with the language pair, one sentence that book text is data and not instructions, the book's rule lines, the style sheet, the target and pair rules, the examples, and one sentence asking for JSON only; every part that changes from call to call SHALL sit in the one last user message, which SHALL end with the items and the reminder.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: a model reads the start and the end of a prompt best, so the rules lead and the text to translate closes the prompt; and a server that reuses a prompt's beginning (LM Studio and llama-server do; Ollama's MLX runner does not) reads the long fixed part only once per run.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: a model reads the start and the end of a prompt best, so the rules lead and the text to translate closes the prompt; and a server that reuses a prompt's beginning (LM Studio and llama-server do; Ollama's MLX runner does not) reads the long fixed part only once per run.
 
 #### Scenario: The draft's system part in order
 
@@ -53,7 +53,7 @@ The system part of every draft, repair and proofread call SHALL hold, in this or
 
 The system part of a chapter-summary call, and of every names-pass, brief and file-name call, SHALL hold only the role naming the book's language, the sentence that book text is data and not instructions, and the sentence asking for JSON only; it SHALL carry no style sheet, no target rules and no examples.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: a call that reads the book to understand it does not translate, so the rules for writing a translation would only take room and invite the model to translate instead of answering.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: a call that reads the book to understand it does not translate, so the rules for writing a translation would only take room and invite the model to translate instead of answering.
 
 #### Scenario: A chapter summary has no style sheet
 
@@ -64,7 +64,7 @@ The system part of a chapter-summary call, and of every names-pass, brief and fi
 
 WHEN a draft, repair or proofread call is built, the system SHALL give it a window: the segments just before the first focus segment in reading order over the body units — across chapter and unit boundaries, never from front matter, back matter or the auxiliary unit — as many as the model profile's tier sets (two on a small model, three on a large one), each as source and accepted target; then the focus segments; then the next segment's source only.
 
-**Source**: `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#context-package`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: the text a call works on is what its neighbours make sense of, so it carries the checked translation just before it, even across a chapter break, and the sentence that follows. Earlier the window restarted at each EPUB chapter file, so the first paragraph of every chapter got no neighbour at all.
+**Source**: `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#context-package`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: the text a call works on is what its neighbours make sense of, so it carries the checked translation just before it, even across a chapter break, and the sentence that follows. Earlier the window restarted at each EPUB chapter file, so the first paragraph of every chapter got no neighbour at all.
 
 #### Scenario: The first window of a chapter sees the end of the one before
 
@@ -85,7 +85,7 @@ WHEN a draft, repair or proofread call is built, the system SHALL give it a wind
 
 IF a segment of the window's previous part is FLAGGED, or was repaired and its repair not kept, THEN the window SHALL carry that segment's source only, with no target; a text the Proofread stage kept SHALL count as accepted.
 
-**Source**: `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#context-package`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: a model copies the translation it is shown, so only checked text is offered as an example of how the book reads; an unchecked one would spread its mistake into the next paragraph.
+**Source**: `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#context-package`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: a model copies the translation it is shown, so only checked text is offered as an example of how the book reads; an unchecked one would spread its mistake into the next paragraph.
 
 #### Scenario: A flagged neighbour gives its source
 
@@ -101,7 +101,7 @@ IF a segment of the window's previous part is FLAGGED, or was repaired and its r
 
 The system SHALL inject a glossary or recurring-term entry into a call only when its base form, one of its recorded forms or a form its target generates occurs as a whole word in the window's source text — and, for a proofread call, in its target text too — and SHALL list the injected entries in the order they first occur.
 
-**Source**: `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#context-package`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: a large glossary would drown a short passage, and a name that is not in the passage invites the model to put it there; an inflected form such as `Зотова` still counts as `Зотов` being present.
+**Source**: `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#context-package`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: a large glossary would drown a short passage, and a name that is not in the passage invites the model to put it there; an inflected form such as `Зотова` still counts as `Зотов` being present.
 
 #### Scenario: An inflected form brings its entry
 
@@ -117,7 +117,7 @@ The system SHALL inject a glossary or recurring-term entry into a call only when
 
 The system SHALL write each injected entry as one line `base form → target (type, gender)`, giving a gender only when the person set it, the book proved it or a rule gave it, and WHERE the target language inflects names SHALL add once the sentence that targets are dictionary forms to decline while keeping the stem; a locked entry SHALL reach the model as its protected token, not as a line.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#narrator-and-characters`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: the model is told who a name is in the fewest words. A settled gender is one the person set, the book proved or a rule gave; a rule's gender is sent on the line as a help to the model even though no check holds the text to it (the `glossary` capability's "Record where each glossary value came from" lets only the person's and the book's genders be enforced). A gender the model only guessed ("likely") is kept and shown to the person but is not put in prompts by default, because a wrong guess spread over dozens of paragraphs. Telling the model to write a name "exactly as shown" stopped it declining names, so the line asks it to decline them.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#narrator-and-characters`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: the model is told who a name is in the fewest words. A settled gender is one the person set, the book proved or a rule gave; a rule's gender is sent on the line as a help to the model even though no check holds the text to it (the `glossary` capability's "Record where each glossary value came from" lets only the person's and the book's genders be enforced). A gender the model only guessed ("likely") is kept and shown to the person but is not put in prompts by default, because a wrong guess spread over dozens of paragraphs. Telling the model to write a name "exactly as shown" stopped it declining names, so the line asks it to decline them.
 
 #### Scenario: A likely gender is not sent
 
@@ -148,7 +148,7 @@ The system SHALL write each injected entry as one line `base form → target (ty
 
 WHEN a run starts, the system SHALL choose the rule lines of the fixed system part from what the book holds — formatting marks anywhere, a share of dialogue, numbers, a gendered cast in a target whose language file has gendered past forms, a target language that inflects names — and SHALL keep the same lines for every draft, repair and proofread call of the run, each line's wording taken from the target language's file.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#language-rules`, `design.md#d9--rules-per-book-the-reminder-and-pair-examples`. In plain words: rules a book never needs only distract a small model, and rules that change per call would break a server's reuse of the prompt's beginning; choosing them once per book is the owner's decision unless a paired test shows that choosing them per window is really better (a tie keeps them per book).
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#language-rules`, `design.md#d9--rules-per-book-the-reminder-and-pair-examples`. In plain words: rules a book never needs only distract a small model, and rules that change per call would break a server's reuse of the prompt's beginning; choosing them once per book is the owner's decision unless a paired test shows that choosing them per window is really better (a tie keeps them per book).
 
 #### Scenario: A book with no dialogue gets no dialogue rule
 
@@ -169,7 +169,7 @@ WHEN a run starts, the system SHALL choose the rule lines of the fixed system pa
 
 The system SHALL end the last user message of every draft, repair and proofread call with a reminder of at most three lines naming only what the call's items need: the formatting-mark rule when an item carries a mark, the dialogue line when an item is dialogue, and the narrator's person and gender when the narrator speaks in an item; a call whose items need none of them SHALL carry no reminder.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `design.md#d9--rules-per-book-the-reminder-and-pair-examples`. In plain words: the rules sit far up in a long prompt, and a small model follows best what it read last, so the few rules this passage needs are repeated right after the text.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `design.md#d9--rules-per-book-the-reminder-and-pair-examples`. In plain words: the rules sit far up in a long prompt, and a small model follows best what it read last, so the few rules this passage needs are repeated right after the text.
 
 #### Scenario: Marks and dialogue in the batch
 
@@ -185,7 +185,7 @@ The system SHALL end the last user message of every draft, repair and proofread 
 
 The system part of a draft, repair and proofread call SHALL show the example pairs of the book's language pair from that pair's file, else a target-only illustration from the target language's file labelled as an illustration of that language's conventions and not text to reuse, else no example; WHERE the model profile switches examples off, it SHALL show none.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#few-shot-examples`, `design.md#d9--rules-per-book-the-reminder-and-pair-examples`. In plain words: a small model learns most from the target side of an example, so it is shown sentences in the very pair it translates; the six fixed English-to-Ukrainian examples every pair used to get are gone, and a model class that does worse with examples gets none.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#few-shot-examples`, `design.md#d9--rules-per-book-the-reminder-and-pair-examples`. In plain words: a small model learns most from the target side of an example, so it is shown sentences in the very pair it translates; the six fixed English-to-Ukrainian examples every pair used to get are gone, and a model class that does worse with examples gets none.
 
 #### Scenario: The pair's own examples
 
@@ -211,7 +211,7 @@ The system part of a draft, repair and proofread call SHALL show the example pai
 
 IF a translated item shares a run of four words with the target side of an example its call showed, and its source holds no such four words, THEN the system SHALL ask for that item once more, and IF the new answer copies an example again, THEN the segment SHALL be FLAGGED.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#few-shot-examples`, `design.md#d9--rules-per-book-the-reminder-and-pair-examples`. In plain words: a small model sometimes pastes an example's sentence instead of translating, so code compares each item with the examples and never lets a copied example into the book.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#few-shot-examples`, `design.md#d9--rules-per-book-the-reminder-and-pair-examples`. In plain words: a small model sometimes pastes an example's sentence instead of translating, so code compares each item with the examples and never lets a copied example into the book.
 
 #### Scenario: A copied example is asked again
 
@@ -227,7 +227,7 @@ IF a translated item shares a run of four words with the target side of an examp
 
 The system SHALL estimate the tokens of every message of a call, the system part included, from the characters of the language each message is written in, add the model profile's template overhead, and use that one estimate for the call's budgets and its output cap.
 
-**Source**: `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: Cyrillic and Latin text cost a different number of characters per token, and the system part used to be estimated with no language at all; a wrong estimate cuts replies or wastes the window.
+**Source**: `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: Cyrillic and Latin text cost a different number of characters per token, and the system part used to be estimated with no language at all; a wrong estimate cuts replies or wastes the window.
 
 #### Scenario: A Cyrillic message is estimated as Cyrillic
 
@@ -243,7 +243,7 @@ The system SHALL estimate the tokens of every message of a call, the system part
 
 The system SHALL keep every call's estimated prompt under the ceiling of the model profile's tier, the previous segments, the focus segments, the next source and the earlier chapters' summaries each within its own share for that tier, and SHALL keep the prompt, the output it reserves and a safety margin within the run's window.
 
-**Source**: `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: a run's window of 16,384 tokens was never full — the largest prompt with its reply measured 6,703 — but small models translate worse as a prompt grows, so each tier has a quality ceiling well below the window. The shares and ceilings are profile data, not fixed numbers in code.
+**Source**: `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: a run's window of 16,384 tokens was never full — the largest prompt with its reply measured 6,703 — but small models translate worse as a prompt grows, so each tier has a quality ceiling well below the window. The shares and ceilings are profile data, not fixed numbers in code.
 
 #### Scenario: A typical batch stays whole
 
@@ -259,7 +259,7 @@ The system SHALL keep every call's estimated prompt under the ceiling of the mod
 
 The system SHALL cap the output of every draft, repair and proofread call at a reserve computed from the estimated source tokens of its focus items, the language pair's output ratio and the number of items, or at a larger reserve WHERE the model profile always reasons, and every other call kind at that kind's own cap; IF a reply ends cut off by length, THEN it SHALL be handled as "Flag a segment whose reply cannot be used, and continue" says.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`, `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: a small model sometimes loops on one sentence and would write until the timeout; a cap that fits what the items need stops it. A model that always thinks spends much of its output on thinking, so it gets more room. The ratio is a key of the pair's file, not a branch in code, and how each server receives the cap is the `llm-provider` capability's rule.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`, `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: a small model sometimes loops on one sentence and would write until the timeout; a cap that fits what the items need stops it. A model that always thinks spends much of its output on thinking, so it gets more room. The ratio is a key of the pair's file, not a branch in code, and how each server receives the cap is the `llm-provider` capability's rule.
 
 #### Scenario: A batch of four gets its reserve
 
@@ -295,7 +295,7 @@ The system SHALL cap the output of every draft, repair and proofread call at a r
 
 The system SHALL render every prompt of a run from the prompt catalogue's files, held as data — one translate prompt for drafts, a single draft being a batch of one item, and the format re-ask, repair, proofread and chapter-summary prompts — and every prompt SHALL state its reply shape once with a literal reply its parser accepts and SHALL declare book text as data, not instructions.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#output-contract`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: prompts are text files, not code, so they can be read and tuned without touching the engine; there is now one translate prompt instead of a single-draft prompt beside three batch formats, and the directed-fix, placeholder-repair, reviewer, revision and rolling-summary prompts are gone.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#output-contract`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: prompts are text files, not code, so they can be read and tuned without touching the engine; there is now one translate prompt instead of a single-draft prompt beside three batch formats, and the directed-fix, placeholder-repair, reviewer, revision and rolling-summary prompts are gone.
 
 #### Scenario: The draft prompt matches its golden file
 
@@ -321,7 +321,7 @@ The system SHALL render every prompt of a run from the prompt catalogue's files,
 
 The system SHALL never put segments of two chapters into one batch.
 
-**Source**: `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunking`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: a chapter's summary is written when the chapter is finished, so the next chapter's first batch must wait for it rather than share a call with the chapter's last paragraphs.
+**Source**: `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunking`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: a chapter's summary is written when the chapter is finished, so the next chapter's first batch must wait for it rather than share a call with the chapter's last paragraphs.
 
 #### Scenario: Two chapters, two batches
 
@@ -332,7 +332,7 @@ The system SHALL never put segments of two chapters into one batch.
 
 WHEN a batch is answered, the system SHALL decide its segments one at a time in document order — code repairs, checks and, where the dial spends one, the one repair (the `quality-gates` capability) — each to ACCEPTED or FLAGGED before the next is decided, and SHALL commit the decisions of a chunk together; the previous segments of a later batch SHALL be accepted targets only, never an undecided draft.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: the run no longer drafts a chunk for a reviewer to read whole; a batch is drafted in one call and its segments are then settled in reading order, so a repair of one paragraph never waits behind its neighbours, and only checked text is shown to later calls as the book's own reading.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: the run no longer drafts a chunk for a reviewer to read whole; a batch is drafted in one call and its segments are then settled in reading order, so a repair of one paragraph never waits behind its neighbours, and only checked text is shown to later calls as the book's own reading.
 
 #### Scenario: One call, then each segment in turn
 
@@ -359,7 +359,7 @@ WHEN a batch is answered, the system SHALL decide its segments one at a time in 
 
 IF a reply cannot be read as the required JSON object, THEN the system SHALL send one format re-ask that repeats the same prompt with the rejected reply and the parser's diagnosis, and SHALL NOT count it as the segment's one repair; IF the re-ask's reply cannot be read either, THEN a single segment SHALL be FLAGGED with `ErrorCode.validation` and no wrapper text SHALL reach the document unmasker.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#output-contract`, `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: a reply in the wrong shape is usually a slip, so it gets one plain request for the right shape with no new context; a second slip means the model cannot produce the shape for this text. The re-ask fixes the envelope, not the translation, so it never uses up the repair a failing check earns.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#output-contract`, `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: a reply in the wrong shape is usually a slip, so it gets one plain request for the right shape with no new context; a second slip means the model cannot produce the shape for this text. The re-ask fixes the envelope, not the translation, so it never uses up the repair a failing check earns.
 
 #### Scenario: The re-ask holds the rejected reply
 
@@ -375,7 +375,7 @@ IF a reply cannot be read as the required JSON object, THEN the system SHALL sen
 
 IF a target fails the placeholder gate — a `⟦gN⟧` mark missing, repeated or out of order, or its markup refused — THEN the system SHALL first try the document port's code repairs, putting missing marks back and then placing all of them again, with no model call, keep the first result the unchanged placeholder gate passes, give it a low `markup` finding raised by `placeholder` ("Markup auto-restored") that neither blocks nor lowers confidence, and log what it put back and removed.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#repair-and-gate`, `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: a small model that dropped one mark of a pair usually got every word right, so the mark is put back where the source had it at no cost; only a reply that code cannot fix needs a model call.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#repair-and-gate`, `docs/spec_baseline/specification/02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: a small model that dropped one mark of a pair usually got every word right, so the mark is put back where the source had it at no cost; only a reply that code cannot fix needs a model call.
 
 #### Scenario: A dropped closing mark is put back without a call
 
@@ -393,7 +393,7 @@ IF a target fails the placeholder gate — a `⟦gN⟧` mark missing, repeated o
 
 WHEN a segment's masked text starts a word with a drop cap — a pair wrapping one or two visible characters glued to the rest of the word, such as `⟦g0⟧“A⟦g1⟧bove` — the system SHALL show the model the whole word (`“Above`), leave the drop cap's marks out of the marks the item must keep, and put them back by code with no auto-restored finding.
 
-**Source**: `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: a drop cap cuts a word in two when it is shown with its marks, and a small model then drops a mark or wraps the whole paragraph; showing the whole word and wrapping its first letter again afterwards avoids both.
+**Source**: `docs/spec_baseline/specification/02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: a drop cap cuts a word in two when it is shown with its marks, and a small model then drops a mark or wraps the whole paragraph; showing the whole word and wrapping its first letter again afterwards avoids both.
 
 #### Scenario: A drop cap is shown as a whole word
 
@@ -405,7 +405,7 @@ WHEN a segment's masked text starts a word with a drop cap — a pair wrapping o
 
 IF a segment is FLAGGED because its reply's markup never restored, THEN the system SHALL keep no machine translation from that reply but SHALL keep the last such reply, with its protected spans put back, as the segment's rejected target, so the review desk shows the model's words labelled as no usable translation and export writes the source.
 
-**Source**: `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md#segment-status-machine`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: the translated sentence is often right even when its marks are wrong, so it is kept for the person to fix on the desk instead of being thrown away with the check that refused it.
+**Source**: `docs/spec_baseline/specification/02_Architecture/03_DOCUMENT_MODEL.md#segment-status-machine`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: the translated sentence is often right even when its marks are wrong, so it is kept for the person to fix on the desk instead of being thrown away with the check that refused it.
 
 #### Scenario: The refused words are kept
 
@@ -416,7 +416,7 @@ IF a segment is FLAGGED because its reply's markup never restored, THEN the syst
 
 The system SHALL take a book's chapters from its body structure, a chapter being one node, with everything under it, of the shallowest level of the body's tree that holds at least two nodes; body text before the first such node SHALL join the first chapter, a body file with no navigation entry SHALL continue the chapter before it, a chapter under the fixed minimum length SHALL join the next one, and a book with no such level SHALL be cut into pseudo-chapters at paragraph ends.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#chunk-packing`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: one rule for EPUB, FB2, Markdown and TXT, taken from the book's own navigation, decides where a summary is written; front and back matter are never chapters, and a chapter split over two files stays one chapter.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#chunk-packing`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: one rule for EPUB, FB2, Markdown and TXT, taken from the book's own navigation, decides where a summary is written; front and back matter are never chapters, and a chapter split over two files stays one chapter.
 
 #### Scenario: A sub-heading stays inside its chapter
 
@@ -447,7 +447,7 @@ The system SHALL take a book's chapters from its body structure, a chapter being
 
 WHERE the book's chapter-summaries switch is on (the `book-brief` capability), WHEN every story segment of a chapter has a decided status, the system SHALL make one chapter-summary call before the next batch is drafted, reading the chapter's source text with the map lines of the entries the chapter names, and SHALL keep the reply's two or three sentences, written in the target language, as that chapter's summary; the book's last chapter SHALL get no call.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#rolling-summary`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#rolling-summary-update`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: the owner chose a short summary per finished chapter over a rolling summary that only Max refreshed. It reads the source because the draft may still hold mistakes the Proofread stage fixes later, and it is written in the target language with the glossary's spellings so the names in it are the names the draft must use.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#rolling-summary`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#rolling-summary-update`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: the owner chose a short summary per finished chapter over a rolling summary that only Max refreshed. It reads the source because the draft may still hold mistakes the Proofread stage fixes later, and it is written in the target language with the glossary's spellings so the names in it are the names the draft must use.
 
 #### Scenario: A finished chapter is summarised
 
@@ -473,7 +473,7 @@ WHERE the book's chapter-summaries switch is on (the `book-brief` capability), W
 
 IF a finished chapter's source text exceeds the chapter-summary call's budget for the model's tier, THEN the system SHALL read it in consecutive parts, give each part's call the previous part's summary, and keep the last call's sentences as the chapter's summary.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#rolling-summary`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: a long chapter does not fit one small model's call, so it is read in order and the story so far is carried from part to part.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#rolling-summary`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: a long chapter does not fit one small model's call, so it is read in order and the story so far is carried from part to part.
 
 #### Scenario: A long chapter in three parts
 
@@ -484,7 +484,7 @@ IF a finished chapter's source text exceeds the chapter-summary call's budget fo
 
 WHEN a chapter-summary reply arrives, the system SHALL cut it to at most three whole sentences, ask once more for a sentence that holds a letter outside the target alphabet or a source-only function word and drop that sentence if the second answer has it too, and drop a sentence that names a map entry the chapter does not hold; no rendering SHALL ever be learned from a summary.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#rolling-summary`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: a summary rides into every later call, so a source-language word or an invented event in it would spread; code checks it as it checks a translation.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#rolling-summary`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: a summary rides into every later call, so a source-language word or an invented event in it would spread; code checks it as it checks a translation.
 
 #### Scenario: A fourth sentence is cut
 
@@ -505,7 +505,7 @@ WHEN a chapter-summary reply arrives, the system SHALL cut it to at most three w
 
 IF a chapter-summary call fails or is answered with `ErrorCode.contextWindow`, THEN the system SHALL keep no summary for that chapter, write one WARN line naming the chapter, and go on with the next batch.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#rolling-summary`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: a missing summary only means later calls get one fewer; it is never a reason to stop a book. A later Continue tries it once more (the `resume` capability).
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#rolling-summary`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: a missing summary only means later calls get one fewer; it is never a reason to stop a book. A later Continue tries it once more (the `resume` capability).
 
 #### Scenario: A failed summary does not stop the run
 
@@ -516,7 +516,7 @@ IF a chapter-summary call fails or is answered with `ErrorCode.contextWindow`, T
 
 WHEN a draft, repair or proofread call is built for a segment, the system SHALL carry, under `[Earlier chapters]`, the kept summaries of every finished chapter before the segment's chapter, oldest first, keeping the most recent ones when their share of the prompt runs out; a call in the first chapter, or before any earlier chapter has a summary, SHALL carry none.
 
-**Source**: `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#context-package`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: the model forgets earlier chapters, so who did what reaches every later call in a few sentences per chapter; when there are too many for a small model's prompt, the latest chapters matter most.
+**Source**: `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#context-package`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: the model forgets earlier chapters, so who did what reaches every later call in a few sentences per chapter; when there are too many for a small model's prompt, the latest chapters matter most.
 
 #### Scenario: Chapter 3 sees chapters 1 and 2
 
@@ -537,7 +537,7 @@ WHEN a draft, repair or proofread call is built for a segment, the system SHALL 
 
 WHEN the person changes the target of a pinned or locked entry, the system SHALL replace the old target in the kept chapter summaries the same way the term sweep replaces it in decided text, with no model call.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#rolling-summary`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: a summary that still spelled a name the old way would teach later calls the old spelling.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#rolling-summary`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: a summary that still spelled a name the old way would teach later calls the old spelling.
 
 #### Scenario: A renamed name in a summary
 
@@ -548,7 +548,7 @@ WHEN the person changes the target of a pinned or locked entry, the system SHALL
 
 The system SHALL add to every draft, repair and proofread call, at every dial and with no model call, a recently-present card naming the chapter, the position in it, and the map characters and places seen shortly before the window in the same chapter but not in the window, most recent first and up to the card's fixed size, with the narrator line when the chapter is told in the first person; at a chapter start the card SHALL be left out.
 
-**Source**: `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#context-package`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: a pronoun in the passage often points at someone named a few paragraphs earlier, so the call is told who was just on stage and with which gender, at no cost.
+**Source**: `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#context-package`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: a pronoun in the passage often points at someone named a few paragraphs earlier, so the call is told who was just on stage and with which gender, at no cost.
 
 #### Scenario: A character from a few paragraphs back
 
@@ -569,7 +569,7 @@ The system SHALL add to every draft, repair and proofread call, at every dial an
 
 WHEN the last chunk of a run is committed, the system SHALL start the Proofread stage at every dial: it SHALL first sweep changed renderings through the decided text by code, then infer an unstated narrator's gender, then settle the deferrals whose fact has arrived and build the mark list by code, then read the windows the dial asks for; the final audit SHALL have run when the Translate stage ended, before the mark list is built, and SHALL NOT run again in this stage.
 
-**Source**: `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#deferred-resolution`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: Max's backward revision and the export's last check are replaced by one stage inside every run; what costs nothing (the sweep, the deferrals checked by code, the mark list, the audit) runs at every dial, and only reading windows with the model depends on the dial. The audit's doubts are audit marks the mark list reads, so the audit runs first; every change the stage makes passes the never-worse gate, so it needs no second audit.
+**Source**: `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#deferred-resolution`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: Max's backward revision and the export's last check are replaced by one stage inside every run; what costs nothing (the sweep, the deferrals checked by code, the mark list, the audit) runs at every dial, and only reading windows with the model depends on the dial. The audit's doubts are audit marks the mark list reads, so the audit runs first; every change the stage makes passes the never-worse gate, so it needs no second audit.
 
 #### Scenario: The stage's order
 
@@ -580,7 +580,7 @@ WHEN the last chunk of a run is committed, the system SHALL start the Proofread 
 
 WHEN the Proofread stage starts, the system SHALL read every decided story segment and list, each with its reasons named, the marked ones — FLAGGED, ACCEPTED with a proofread mark, or holding a deferral whose fact has arrived — and the doubtful ones: audit marks (NOTE findings and audit doubts), a map name whose target forms are missing from its target, one source given different targets, a recurring term rendered otherwise, and gender endings against an enforced gender.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#deferred-resolution`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a model asked to "improve" a paragraph with no named defect changes little or the wrong thing, so code first finds what may be wrong and says why.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#deferred-resolution`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a model asked to "improve" a paragraph with no named defect changes little or the wrong thing, so code first finds what may be wrong and says why.
 
 #### Scenario: A negation doubt is listed
 
@@ -607,7 +607,7 @@ WHERE the dial is Fast, the Proofread stage SHALL make no model call: every entr
 
 WHERE the dial is Balanced or Max, the Proofread stage SHALL read the marked and doubtful segments in reading order in windows — marks with at most one unmarked paragraph between them merged, up to the model profile's batch size, with one read-only neighbour on each side — making one proofread call per window that asks the model to correct only what is wrong and to change as little as it can.
 
-**Source**: `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: the owner's decision that the last pass edits only what is wrong; a fresh draft would rewrite text that was already right.
+**Source**: `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: the owner's decision that the last pass edits only what is wrong; a fresh draft would rewrite text that was already right.
 
 #### Scenario: One mark, one window
 
@@ -623,7 +623,7 @@ WHERE the dial is Balanced or Max, the Proofread stage SHALL read the marked and
 
 A proofread call SHALL carry the same system part as the run's drafts, byte for byte, and SHALL put in its last user message the target language's minimal-edit instruction — from that language's file, or an English default for a target without one — with each focus segment's source, current translation and reasons, and each neighbour's source and translation marked read-only.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#backward-revision-consistency`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: the proofread call knows the book exactly as the drafts did, and is told in the target language what a proofreader of that language looks for.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#backward-revision-consistency`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: the proofread call knows the book exactly as the drafts did, and is told in the target language what a proofreader of that language looks for.
 
 #### Scenario: A Ukrainian proofread instruction
 
@@ -639,7 +639,7 @@ A proofread call SHALL carry the same system part as the run's drafts, byte for 
 
 WHEN a proofread reply arrives, the system SHALL read `{"unchanged":true}` as no change for every focus segment and `{"items":[…]}` as changes, SHALL drop an item whose id is not a focus id or whose text equals the current one, and SHALL treat a focus id the reply leaves out as unchanged, never as a failure.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#output-contract`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a small model often drops an id from a long reply, and a proofreader that finds nothing wrong should be able to say so in one word; echoing the paragraph unchanged costs nothing either.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#output-contract`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a small model often drops an id from a long reply, and a proofreader that finds nothing wrong should be able to say so in one word; echoing the paragraph unchanged costs nothing either.
 
 #### Scenario: Unchanged
 
@@ -702,7 +702,7 @@ The Proofread stage SHALL neither mark nor rewrite a segment whose machine text 
 
 IF a proofread rewrite that the never-worse gate would keep concerns a segment the person edited, THEN the system SHALL leave the person's text unchanged and store the rewrite as a proposal, with the verdict proposed.
 
-**Source**: FR-REVIEW-10, the rule that the person's edits are protected from every later pass (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: nothing the program does after a draft ever overwrites what the person wrote by hand; it may only suggest.
+**Source**: FR-REVIEW-10, the rule that the person's edits are protected from every later pass (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: nothing the program does after a draft ever overwrites what the person wrote by hand; it may only suggest.
 
 #### Scenario: The person's text stays
 
@@ -718,7 +718,7 @@ IF a proofread rewrite that the never-worse gate would keep concerns a segment t
 
 WHERE the dial is Max, after the marked windows are done the Proofread stage SHALL read every story paragraph again, for every model, in consecutive windows of at most the model profile's batch size, asking for a minimal edit for consistency with the map, the earlier chapters and the neighbours, for correctness of meaning and for word choice; a mark still open SHALL ride along as a reason.
 
-**Source**: `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#quality-dial-mapping`, `design.md#d2--the-runs-three-stages-and-the-quality-dial`. In plain words: the owner's decision that Max always re-reads the whole book, whatever the model; untranslated content words that no code check can see are found only by a model reading every paragraph.
+**Source**: `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#quality-dial-mapping`, `design.md#d2--the-runs-three-stages-and-the-quality-dial`. In plain words: the owner's decision that Max always re-reads the whole book, whatever the model; untranslated content words that no code check can see are found only by a model reading every paragraph.
 
 #### Scenario: Every paragraph is read in round 2
 
@@ -771,7 +771,7 @@ The system SHALL compute a proofread window's fingerprint from its focus segment
 
 WHEN the Proofread stage starts, the system SHALL replace by code the previous target of each changed entry in the decided segments holding a term deferral for it — whole-word for a locked entry, through its generated forms for a pinned one — never for a suggested entry, storing a proposal for a segment the person edited; a swept FLAGGED segment SHALL become REVISED when its only finding was a `glossary` finding about that entry, and else stay FLAGGED.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#deferred-resolution`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a name the person respelled is fixed everywhere it was already written, at every dial, without asking the model; a pinned name declines, so every declined form is replaced, while a mere suggestion was never binding and is left alone. A swept ACCEPTED segment stays ACCEPTED; a flagged one is cleared only when the old spelling was its one problem.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#deferred-resolution`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a name the person respelled is fixed everywhere it was already written, at every dial, without asking the model; a pinned name declines, so every declined form is replaced, while a mere suggestion was never binding and is left alone. A swept ACCEPTED segment stays ACCEPTED; a flagged one is cleared only when the old spelling was its one problem.
 
 #### Scenario: A locked name is swept
 
@@ -802,7 +802,7 @@ WHEN the Proofread stage starts, the system SHALL replace by code the previous t
 
 WHEN a segment is decided that names a glossary character with no gender value of any origin, the system SHALL record on it a deferral waiting on that character's gender; a likely value or a rule value SHALL NOT create one.
 
-**Source**: FR-ALGO-10, the requirement to keep a register of what a later fact may change (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#deferred-resolution`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: the model always gives its most probable gender now, so almost no character has none; a likely value is a hint, and waiting on it would fill the register with segments nothing will ever settle.
+**Source**: FR-ALGO-10, the requirement to keep a register of what a later fact may change (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#deferred-resolution`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: the model always gives its most probable gender now, so almost no character has none; a likely value is a hint, and waiting on it would fill the register with segments nothing will ever settle.
 
 #### Scenario: No gender at all waits
 
@@ -818,7 +818,7 @@ WHEN a segment is decided that names a glossary character with no gender value o
 
 WHEN the person changes the target of an entry that is pinned or locked after the change and had a non-empty target before it, the system SHALL record, for each decided segment whose target holds the previous target or one of its forms, one term deferral per changed entry; a change to a suggested entry SHALL record nothing.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#deferred-resolution`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: the term sweep needs to know which decided segments hold the old spelling; a suggestion was only ever a hint, so changing it changes nothing already written.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#deferred-resolution`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: the term sweep needs to know which decided segments hold the old spelling; a suggestion was only ever a hint, so changing it changes nothing already written.
 
 #### Scenario: Two changed terms give two deferrals
 
@@ -834,7 +834,7 @@ WHEN the person changes the target of an entry that is pinned or locked after th
 
 WHEN the Proofread stage starts, the system SHALL check by code, at every dial, each deferral whose fact has arrived — a gender now known or changed, a narrator gender now stated or inferred — resolving it with no model call when the gender check finds no mismatch in its segment, and otherwise listing its segment as marked with the reason, such as `gender now known: Корін Ешбі — male`.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#deferred-resolution`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: most segments that wait on a gender hold no verb that agrees with it, so code settles them for free; only a real mismatch costs a proofread window at Balanced and Max, or a line in the review desk's "Worth a second look" at Fast. A deferral for a gender that changed or was confirmed after segments were decided is recorded as the `glossary` capability's "Register a gender-changed deferral when an enforced gender arrives" says; this requirement settles it.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#deferred-resolution`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: most segments that wait on a gender hold no verb that agrees with it, so code settles them for free; only a real mismatch costs a proofread window at Balanced and Max, or a line in the review desk's "Worth a second look" at Fast. A deferral for a gender that changed or was confirmed after segments were decided is recorded as the `glossary` capability's "Register a gender-changed deferral when an enforced gender arrives" says; this requirement settles it.
 
 #### Scenario: No agreeing verb, no call
 
@@ -855,7 +855,7 @@ WHEN the Proofread stage starts, the system SHALL check by code, at every dial, 
 
 WHEN a run starts, the system SHALL write to the run log, at INFO, the model profile it resolved, the server facts it read and the names pass counts, as counts and choices only — never a name, a rendering or any book text.
 
-**Source**: `docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-23-slf4j-logback`, `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#outbound-scope`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: the always-on run log is the one file an installed app keeps for every launch, so it must explain a night's run — which model handling was chosen and why — without holding a word of the book.
+**Source**: `docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-23-slf4j-logback`, `docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#outbound-scope`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: the always-on run log is the one file an installed app keeps for every launch, so it must explain a night's run — which model handling was chosen and why — without holding a word of the book.
 
 #### Scenario: The start lines
 
@@ -867,7 +867,7 @@ WHEN a run starts, the system SHALL write to the run log, at INFO, the model pro
 
 WHEN BookLoom writes a WARN line for a retried, abandoned or refused call, or for a flagged step, the line SHALL carry `reason=<token>` with the reason the error catalogue gave the failure (the `llm-provider` capability), built from typed values only.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: one misread error once paused a run for 43 minutes; a reason in every warning says at a glance why a call failed, and is built so that no reply body or secret can leak into it.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: one misread error once paused a run for 43 minutes; a reason in every warning says at a glance why a call failed, and is built so that no reply body or secret can leak into it.
 
 #### Scenario: A WARN line names its reason
 
@@ -878,7 +878,7 @@ WHEN BookLoom writes a WARN line for a retried, abandoned or refused call, or fo
 
 WHEN a run writes its summary line, the by-kind call totals SHALL count every model call the run made — drafts, format re-asks, repairs, chapter summaries and proofread calls — from what each call reported, with the cached prompt tokens and the source characters per kind, leaving out a figure a call did not report rather than counting it as zero.
 
-**Source**: `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#progress-counting`. In plain words: the cost of each part of a run must be measurable, so the speed of a stage can be reported and compared; a server that reports no cached tokens must not look as if it cached none.
+**Source**: `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#progress-counting`. In plain words: the cost of each part of a run must be measurable, so the speed of a stage can be reported and compared; a server that reports no cached tokens must not look as if it cached none.
 
 #### Scenario: Proofread calls are counted
 
@@ -910,7 +910,7 @@ WHEN the names pass, a brief suggestion or an export ends, the system SHALL writ
 
 The system SHALL write a chapter summary's text to the log only at TRACE, never at DEBUG or above and never to the run log.
 
-**Source**: `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#outbound-scope`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: a summary is book text, and book text stays out of every log a person may share without raising the level on purpose.
+**Source**: `docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#outbound-scope`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: a summary is book text, and book text stays out of every log a person may share without raising the level on purpose.
 
 #### Scenario: The summary text stays at TRACE
 
@@ -921,7 +921,7 @@ The system SHALL write a chapter summary's text to the log only at TRACE, never 
 
 WHEN the command line runs with `--review-names`, the system SHALL accept the suggested targets through the glossary's validated Accept all (the `glossary` capability), and its `names: …` line SHALL give the number of rows accepted and the number rejected.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: the command line is the headless proof tool and must behave as the window does; a suggestion in an oblique form or with a letter of another alphabet is turned down there too, and the person sees how many.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: the command line is the headless proof tool and must behave as the window does; a suggestion in an oblique form or with a letter of another alphabet is turned down there too, and the person sees how many.
 
 #### Scenario: Three rows rejected
 
@@ -945,7 +945,7 @@ WHERE `--report <file>` is given, the JSON report SHALL give the time spent in e
 
 WHEN a job runs, the system SHALL start at the project's first PENDING segment — a segment kept as source by choice is never one — and send the PENDING segments that need a call to the chat model in document order, in batches, whose prompts name the source and target languages by English display name and BCP-47 tag (`English (en)`), and name the source as `the language of this segment (infer it from its text)` when no source language is known.
 
-**Source**: FR-ALGO-01 and FR-ALGO-02, the requirements to translate a book segment by segment in document order (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunking`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#draft-translation`, `design.md#d11--batch-format-and-batch-size`. In plain words: the model sees only text with numbered holes where the markup was, never the book's structure. Segments travel in batches whose size comes from the model's profile, the same at every quality and review mode; a segment with nothing to translate and repeated auxiliary text need no call. Starting at the first pending segment lets a second run carry on where the first stopped. The person's choice of source language wins over the book's own declaration, which is often missing or wrong, and any language the platform can name works, not only a listed one; a tag with no display name is quoted as `language tag "<tag>"`.
+**Source**: FR-ALGO-01 and FR-ALGO-02, the requirements to translate a book segment by segment in document order (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunking`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#draft-translation`, `design.md#d11--batch-format-and-batch-size`. In plain words: the model sees only text with numbered holes where the markup was, never the book's structure. Segments travel in batches whose size comes from the model's profile, the same at every quality and review mode; a segment with nothing to translate and repeated auxiliary text need no call. Starting at the first pending segment lets a second run carry on where the first stopped. The person's choice of source language wins over the book's own declaration, which is often missing or wrong, and any language the platform can name works, not only a listed one; a tag with no display name is quoted as `language tag "<tag>"`.
 
 #### Scenario: The user message is the masked text
 
@@ -1003,7 +1003,7 @@ WHEN a job runs, the system SHALL start at the project's first PENDING segment �
 
 WHEN the model answers an item with a normal finish and its translation is not empty after trimming, the system SHALL trim it, put back the masked text's leading and trailing whitespace, restore the markup through the placeholder gate and Markdown restoration validation, and hand the text to the code repairs and checks; it SHALL become the segment's machine translation once it passes every hard gate, and a later target SHALL replace it only when that one passes every hard gate too.
 
-**Source**: FR-DOC-05, the requirement that markup is restored exactly (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`, `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, `#segment-status-machine`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: models often add or drop spaces and line breaks around their answer, and the book's own spacing wins. Restoring the markup makes a reply a candidate, not a final answer: the code repairs and the checks of the `quality-gates` capability decide whether it is accepted, repaired once or flagged. A segment flagged in the end still keeps the last translation that was at least well formed, so an export writes that rather than the source when one exists.
+**Source**: FR-DOC-05, the requirement that markup is restored exactly (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`, `docs/spec_baseline/specification/02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, `#segment-status-machine`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: models often add or drop spaces and line breaks around their answer, and the book's own spacing wins. Restoring the markup makes a reply a candidate, not a final answer: the code repairs and the checks of the `quality-gates` capability decide whether it is accepted, repaired once or flagged. A segment flagged in the end still keeps the last translation that was at least well formed, so an export writes that rather than the source when one exists.
 
 #### Scenario: A reply is restored and accepted
 
@@ -1026,7 +1026,7 @@ WHEN the model answers an item with a normal finish and its translation is not e
 
 WHILE a job runs, the system SHALL notify every subscriber, in order, when a stage starts (Prepare, Translate or Proofread), a model call starts and finishes, a segment starts, is drafted and is decided, a name scan adds entries, a segment is reused from the translation memory, a chapter summary is kept, the job pauses or resumes, and the job finishes; every decision and pause SHALL carry a progress snapshot, and a job SHALL end with a successful result that names no file.
 
-**Source**: `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `design.md#d2--the-runs-three-stages-and-the-quality-dial`. In plain words: a screen can follow a job live — which stage, which chapter, which chunk, how many were accepted outright and how many needed their one repair — and a job that stopped still tells its caller exactly what was done and why. The snapshot's section counts only the book's own chapters (never the auxiliary unit), the chunk within that unit, and the auto-accepted, repaired-and-accepted, flagged and pending counts, none counting a segment kept as source by choice. A run translates into memory only; writing the book is the separate export.
+**Source**: `docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`, `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `design.md#d2--the-runs-three-stages-and-the-quality-dial`. In plain words: a screen can follow a job live — which stage, which chapter, which chunk, how many were accepted outright and how many needed their one repair — and a job that stopped still tells its caller exactly what was done and why. The snapshot's section counts only the book's own chapters (never the auxiliary unit), the chunk within that unit, and the auto-accepted, repaired-and-accepted, flagged and pending counts, none counting a segment kept as source by choice. A run translates into memory only; writing the book is the separate export.
 
 #### Scenario: Events for a three-segment book
 
@@ -1074,7 +1074,7 @@ WHILE a job runs, the system SHALL notify every subscriber, in order, when a sta
 
 WHEN a reply arrives for a draft or a repair, the system SHALL read it as one JSON object `{"items":[{"id","target"}]}` and take each item's `target` for the segment its `id` names, ignoring any other field of an item; a reply that is not such an object SHALL be invalid structured output, an item with a blank `target` SHALL count as missing, and no candidate SHALL reach the document unmasker before this check passes.
 
-**Source**: FR-INFER-09, the requirement that a reply is read in a fixed shape (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#output-contract`, `#draft-translation`, `design.md#d11--batch-format-and-batch-size`. In plain words: a single draft is a batch of one, so every call that writes book text answers in one flat shape and is read per id; a provider schema constrains the envelope, and the placeholder gate remains the authority on the text itself.
+**Source**: FR-INFER-09, the requirement that a reply is read in a fixed shape (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#output-contract`, `#draft-translation`, `design.md#d11--batch-format-and-batch-size`. In plain words: a single draft is a batch of one, so every call that writes book text answers in one flat shape and is read per id; a provider schema constrains the envelope, and the placeholder gate remains the authority on the text itself.
 
 #### Scenario: The exact shape
 
@@ -1091,7 +1091,7 @@ WHEN a reply arrives for a draft or a repair, the system SHALL read it as one JS
 
 WHEN a pause or a stop is requested while a model request is in flight, the engine SHALL abort that request without waiting for the provider and send no further request after it; WHEN the run resumes after a pause, it SHALL make the interrupted call again — a draft, a format re-ask, a repair, a chapter summary or a proofread window — and WHEN a stop aborted it, the run SHALL end Cancelled with no undecided draft and no undecided proofread window kept as a decision.
 
-**Source**: FR-RESUME-03 and FR-RESUME-05, the requirements that pause and stop are immediate and lose nothing decided (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a local model can take minutes to answer, so the button aborts the waiting request and nothing further is sent. The aborted call has no answer yet, which is why resuming sends it again instead of skipping it. A pause aborts no other work: the wait while paused and the code steps between calls take effect at the next boundary. Export is its own action, so a pause never reaches it.
+**Source**: FR-RESUME-03 and FR-RESUME-05, the requirements that pause and stop are immediate and lose nothing decided (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a local model can take minutes to answer, so the button aborts the waiting request and nothing further is sent. The aborted call has no answer yet, which is why resuming sends it again instead of skipping it. A pause aborts no other work: the wait while paused and the code steps between calls take effect at the next boundary. Export is its own action, so a pause never reaches it.
 
 #### Scenario: A stop aborts a slow request
 
@@ -1132,7 +1132,7 @@ WHEN a pause or a stop is requested while a model request is in flight, the engi
 
 WHEN the engine starts a model call, it SHALL emit one event naming the call's kind (draft, format re-ask, repair, chapter summary, proofread, or a names-pass or brief kind) and its segments, before waiting for the answer, SHALL NOT emit it for a call refused because a pause or stop was requested, and SHALL NOT emit another for the client's own retries.
 
-**Source**: FR-ALGO-01, the requirement to translate segment by segment (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: between two segment decisions the engine may make several calls, and naming the kind lets the screen and the log say what the model is doing. The reviewer, directed-fix, placeholder-repair, rolling-summary and revision kinds are gone.
+**Source**: FR-ALGO-01, the requirement to translate segment by segment (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: between two segment decisions the engine may make several calls, and naming the kind lets the screen and the log say what the model is doing. The reviewer, directed-fix, placeholder-repair, rolling-summary and revision kinds are gone.
 
 #### Scenario: One event before each decision
 
@@ -1163,7 +1163,7 @@ WHEN the engine starts a model call, it SHALL emit one event naming the call's k
 
 WHEN a run prepares, the system SHALL derive one deterministic style sheet from the project's Book Brief — its choices, its policy keys for apostrophe, quotes and default address, the conventions the target language declares, and the narrator line — and SHALL place that same style sheet in the system part of every draft, repair and proofread call of the run; a brief left at its defaults SHALL yield the default style sheet, never an empty one.
 
-**Source**: FR-BRIEF-02 … FR-BRIEF-07, the Book Brief's choices (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-b-prep`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: everything the person says about the book on the Book Brief reaches every call that writes a translation, in the same words. A call that only reads the book, such as a chapter summary, does not translate and carries no style sheet. Building it without a model call keeps it reproducible and free; a brief nobody touched still tells the model how to behave.
+**Source**: FR-BRIEF-02 … FR-BRIEF-07, the Book Brief's choices (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-b-prep`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: everything the person says about the book on the Book Brief reaches every call that writes a translation, in the same words. A call that only reads the book, such as a chapter summary, does not translate and carries no style sheet. Building it without a model call keeps it reproducible and free; a brief nobody touched still tells the model how to behave.
 
 #### Scenario: The brief's words reach every call
 
@@ -1190,7 +1190,7 @@ WHEN a run prepares, the system SHALL derive one deterministic style sheet from 
 
 WHEN a segment's source text and the source texts of both its neighbours in its unit match those of an entry the memory recorded, the system SHALL use that entry's target without a draft call and decide it by the `quality-gates` capability's memory-reuse exception; IF that decision fails, THEN the system SHALL discard the reused target and draft the segment as usual. WHEN only the source text matches, the system SHALL offer the stored target as a hint.
 
-**Source**: FR-ALGO-06, the requirement for a context-aware translation memory (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#context-aware-tm`. In plain words: the same sentence can need a different translation in a different place, so it is reused blindly only when its neighbours say the same thing too — compared by what they say, not by where they sit, so a dialogue repeated in chapter 3 matches its first appearance in chapter 1; otherwise the earlier translation only helps the model. A reused translation still has to pass every automatic check, so memory can never put a broken target into the book. The memory holds what the run accepted; an edit the person makes in review stays with that one segment.
+**Source**: FR-ALGO-06, the requirement for a context-aware translation memory (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#context-aware-tm`. In plain words: the same sentence can need a different translation in a different place, so it is reused blindly only when its neighbours say the same thing too — compared by what they say, not by where they sit, so a dialogue repeated in chapter 3 matches its first appearance in chapter 1; otherwise the earlier translation only helps the model. A reused translation still has to pass every automatic check, so memory can never put a broken target into the book. The memory holds what the run accepted; an edit the person makes in review stays with that one segment.
 
 #### Scenario: A repeated passage in the same context is reused
 
@@ -1249,7 +1249,7 @@ WHEN a segment's source text and the source texts of both its neighbours in its 
 
 The system SHALL set the run's mechanics from the Book Brief's quality dial alone, the same for every model: Fast drafts, runs the free checks and marks what they find, with no fixing call but one re-draft of a piece whose formatting marks are lost; Balanced adds the one repair per failing segment and a proofread of the marked and doubtful windows; Max adds to Balanced a re-read of the whole book. The dial SHALL NOT change the batch size or what is accepted.
 
-**Source**: FR-ALGO-11 and FR-BRIEF-08, the requirements that one dial sets how careful a run is (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`, `#fr-brief`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#quality-dial-mapping`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#quality-dial`, `design.md#d2--the-runs-three-stages-and-the-quality-dial`. In plain words: one control trades time for care, and it means the same on a small and a large model (the owner's decisions on Fast and Max). Fast used to spend a repair round and Balanced a reviewer pass per chunk; now Fast spends no fixing call, the reviewer is off, the backward revision is gone, and the preceding-target count and chunk caps no longer depend on the dial. What is accepted is the acceptance rule's alone, so turning the dial never silently flags more or fewer segments.
+**Source**: FR-ALGO-11 and FR-BRIEF-08, the requirements that one dial sets how careful a run is (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`, `#fr-brief`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#quality-dial-mapping`, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#quality-dial`, `design.md#d2--the-runs-three-stages-and-the-quality-dial`. In plain words: one control trades time for care, and it means the same on a small and a large model (the owner's decisions on Fast and Max). Fast used to spend a repair round and Balanced a reviewer pass per chunk; now Fast spends no fixing call, the reviewer is off, the backward revision is gone, and the preceding-target count and chunk caps no longer depend on the dial. What is accepted is the acceptance rule's alone, so turning the dial never silently flags more or fewer segments.
 
 #### Scenario: Fast skips the reviewer
 
@@ -1275,7 +1275,7 @@ The system SHALL set the run's mechanics from the Book Brief's quality dial alon
 
 IF a segment's masked text alone is estimated above the current-part budget of the model profile's tier, THEN the system SHALL split it at the source language's sentence boundaries without ever separating a paired placeholder, draft each piece with the segment's context, join the pieces in order, and gate and decide the joined target as that one segment.
 
-**Source**: FR-ALGO-03 and FR-ALGO-12, the requirements to fit every call in the model's budget without breaking structure (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunking`, `#token-budget`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#chunk-packing`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: some books hold one paragraph of 26,000 characters, far more than a small model answers well in one go. Splitting only that paragraph, and only between sentences, keeps the book's structure intact because the joined translation still goes back into the one paragraph it came from. The limit is now the current-part budget of the model's tier rather than a fixed 1,200 tokens.
+**Source**: FR-ALGO-03 and FR-ALGO-12, the requirements to fit every call in the model's budget without breaking structure (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunking`, `#token-budget`, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#chunk-packing`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: some books hold one paragraph of 26,000 characters, far more than a small model answers well in one go. Splitting only that paragraph, and only between sentences, keeps the book's structure intact because the joined translation still goes back into the one paragraph it came from. The limit is now the current-part budget of the model's tier rather than a fixed 1,200 tokens.
 
 #### Scenario: A huge paragraph is drafted in pieces
 
@@ -1303,7 +1303,7 @@ IF a segment's masked text alone is estimated above the current-part budget of t
 
 The system SHALL plan every model call a run makes — drafts, format re-asks, repairs, chapter summaries and proofread calls — within the run's one window ("Size a run's calls from the detected window"), and every draft, repair and proofread call SHALL also state the output it expects: the output allowance of its items.
 
-**Source**: `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`, `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#effective-context`, `#service-owned-retry`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: Ollama silently cuts off a prompt longer than its context, which would drop the rules at the top, and a context size that changes from call to call makes a server reload the model; one value for every call of the run avoids both. The window itself, and which server is sent it, are the `inference` capability's "Use one context size for every call to a model"; the timeout the expected output sets is the `llm-provider` capability's.
+**Source**: `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`, `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#effective-context`, `#service-owned-retry`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: Ollama silently cuts off a prompt longer than its context, which would drop the rules at the top, and a context size that changes from call to call makes a server reload the model; one value for every call of the run avoids both. The window itself, and which server is sent it, are the `inference` capability's "Use one context size for every call to a model"; the timeout the expected output sets is the `llm-provider` capability's.
 
 #### Scenario: A draft to Ollama carries the context size
 
@@ -1329,7 +1329,7 @@ The system SHALL plan every model call a run makes — drafts, format re-asks, r
 
 IF a segment's draft gets an unusable reply — empty content, an abnormal finish, a reply that is not the required JSON object after its one format re-ask, or an `emptyCompletion` or `contextWindow` error — THEN the system SHALL mark the segment FLAGGED at once with that error as its reason, with no repair call, and continue with the next segment, after any pause the review mode causes; it SHALL examine a reply for these causes in a fixed order and act on the first that applies.
 
-**Source**: FR-DOC-05, the requirement that markup is restored exactly (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`, `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md#segment-status-machine`, `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#empty-response-ordering`, `#repair-and-gate`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`. In plain words: one bad reply must not stop a book. A reply that holds nothing, that the server cut off, or that twice fails to be the one small JSON object asked for gives a repair nothing to work on, so the segment is flagged at once and an export writes its source rather than broken markup. A reply of only spaces counts as empty: accepting it would silently delete the paragraph. A context overflow belongs to the one segment whose prompt is too long. A reply that lost a mark or refused the task is still a reply the model can fix with the problem named, so at Balanced and Max it gets the one repair first. A provider refusing every request alike is not a bad reply; it pauses the run instead.
+**Source**: FR-DOC-05, the requirement that markup is restored exactly (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`, `docs/spec_baseline/specification/02_Architecture/03_DOCUMENT_MODEL.md#segment-status-machine`, `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#empty-response-ordering`, `#repair-and-gate`, `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`. In plain words: one bad reply must not stop a book. A reply that holds nothing, that the server cut off, or that twice fails to be the one small JSON object asked for gives a repair nothing to work on, so the segment is flagged at once and an export writes its source rather than broken markup. A reply of only spaces counts as empty: accepting it would silently delete the paragraph. A context overflow belongs to the one segment whose prompt is too long. A reply that lost a mark or refused the task is still a reply the model can fix with the problem named, so at Balanced and Max it gets the one repair first. A provider refusing every request alike is not a bad reply; it pauses the run instead.
 
 #### Scenario: A missing token flags the segment and the job goes on
 
@@ -1416,7 +1416,7 @@ IF a segment's draft gets an unusable reply — empty content, an abnormal finis
 
 Every entry the activity log holds SHALL carry one kind from a fixed vocabulary of eight, each shown by its tag, with a status role from the token catalogue, a mark that is not its colour, and text from the message catalogue by key; an answered draft, repair, chapter-summary or proofread call and a call interrupted by a pause or stop SHALL be technical `info` lines shown only while Show technical details is on, and the log SHALL keep its newest entries up to a fixed bound.
 
-**Source**: FR-NOTIF-6a, FR-NOTIF-6b and FR-NOTIF-6c, the activity-log requirements (`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#activity-log`), FR-A11Y-6, the rule that colour never carries meaning alone (`docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#accessibility`), FR-UI-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: the log is the only record of what a multi-hour run decided. A fixed vocabulary of short tags in a column makes it scannable; the run now also proofreads and summarises chapters, so the summary kind now means a chapter summary was kept and a proofread kind is added: eight kinds. Colour alone cannot carry the kind, and the text comes from the catalogue so a Ukrainian window never shows an English log. An entry names a segment by its locator, because a file name and an ordinal mean nothing to the person reading it. A failed attempt and each step of an automatic recovery are `retry` lines.
+**Source**: FR-NOTIF-6a, FR-NOTIF-6b and FR-NOTIF-6c, the activity-log requirements (`docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#activity-log`), FR-A11Y-6, the rule that colour never carries meaning alone (`docs/spec_baseline/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#accessibility`), FR-UI-08 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: the log is the only record of what a multi-hour run decided. A fixed vocabulary of short tags in a column makes it scannable; the run now also proofreads and summarises chapters, so the summary kind now means a chapter summary was kept and a proofread kind is added: eight kinds. Colour alone cannot carry the kind, and the text comes from the catalogue so a Ukrainian window never shows an English log. An entry names a segment by its locator, because a file name and an ordinal mean nothing to the person reading it. A failed attempt and each step of an automatic recovery are `retry` lines.
 
 #### Scenario: An accepted segment logs its kind and role
 
@@ -1488,7 +1488,7 @@ Every entry the activity log holds SHALL carry one kind from a fixed vocabulary 
 
 WHEN a run pauses — on request, for review or on an error — the system SHALL first commit the segments decided since the last commit and keep the batch's undecided drafts in memory while it waits; WHEN the run resumes, it SHALL decide the remaining segments from the drafts already made rather than drafting them again; WHEN a run is stopped, it SHALL commit the segments already decided and drop the undecided drafts, whose segments stay PENDING for the next run to draft.
 
-**Source**: FR-RESUME-03 and FR-RESUME-05, the requirements that pause and stop lose nothing decided (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: a batch is drafted in one call, so a pause in the middle of it keeps the drafts already paid for; an edit made during the pause reaches the batches drafted after it. A decision is never lost to a pause or a stop; a draft that was not yet decided is dropped by a stop and drafted again by the next run.
+**Source**: FR-RESUME-03 and FR-RESUME-05, the requirements that pause and stop lose nothing decided (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: a batch is drafted in one call, so a pause in the middle of it keeps the drafts already paid for; an edit made during the pause reaches the batches drafted after it. A decision is never lost to a pause or a stop; a draft that was not yet decided is dropped by a stop and drafted again by the next run.
 
 #### Scenario: A resume reads the stored decision again
 
@@ -1528,7 +1528,7 @@ WHEN a run pauses — on request, for review or on an error — the system SHALL
 
 WHEN a run decides the last segment of a body unit, the system SHALL run the code name scan the `glossary` capability defines over the source text of every segment decided so far and add each proposed name the glossary does not hold as a new entry — its forms grouped under one base form, its target state suggested, with no target and no gender — with no model call; WHEN it added at least one entry, the system SHALL announce the glossary update with the number added.
 
-**Source**: FR-ALGO-C9, the step that keeps the glossary growing during a run (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), FR-GLOSS-01, the requirement for a name scan (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a person who started from their own list of names still gets the names the book introduces later, found the same free, offline way, with no model call; an inflected form joins its base form instead of becoming a new name. A proposal never replaces what the person entered, and a name the person deleted stays deleted. The new entries are only suggestions with no target, so they tell the model that the word is a name and nothing more.
+**Source**: FR-ALGO-C9, the step that keeps the glossary growing during a run (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), FR-GLOSS-01, the requirement for a name scan (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a person who started from their own list of names still gets the names the book introduces later, found the same free, offline way, with no model call; an inflected form joins its base form instead of becoming a new name. A proposal never replaces what the person entered, and a name the person deleted stays deleted. The new entries are only suggestions with no target, so they tell the model that the word is a name and nothing more.
 
 #### Scenario: A recurring name is added at the end of a chapter
 
@@ -1551,7 +1551,7 @@ WHEN a run decides the last segment of a body unit, the system SHALL run the cod
 
 WHILE a run translates, the live card SHALL list the run's segments in reading order, the chunk being translated last and earlier chunks above it (the latest 500 rows), one line each with formatting marks left out and the full text in the tooltip, each with a marker: waiting, translating…, drafted, checking…, translated, to review, translated again alone, or kept as is.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`, `docs/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Live card), `docs/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1–T4). In plain words: a book takes hours, and watching sentences go by is how a person judges the model before the run ends; the card shows every segment of the call with its state, keeps what was translated earlier in the run to scroll back to, and shows a draft as soon as it arrives, so a batch whose checks and repairs take a while does not look as if nothing happened until then.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`, `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Live card), `docs/spec_baseline/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1–T4). In plain words: a book takes hours, and watching sentences go by is how a person judges the model before the run ends; the card shows every segment of the call with its state, keeps what was translated earlier in the run to scroll back to, and shows a draft as soon as it arrives, so a batch whose checks and repairs take a while does not look as if nothing happened until then.
 
 #### Scenario: The decided segment above the one in progress
 
@@ -1622,7 +1622,7 @@ WHILE a run translates, the live card SHALL list the run's segments in reading o
 
 The system SHALL draft the segments that need a model call in batches: a segment no batch has dealt with yet and the next ones that need a call, up to the current batch size and within the current-part budget of the model's tier, SHALL go in one call whose reply is the JSON object `{"items":[{"id","target"}]}`. A segment kept as it is, an auxiliary text, a translation-memory reuse and a segment larger than the current-part budget SHALL never join a batch.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`, `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunking`, `design.md#d11--batch-format-and-batch-size`. In plain words: a book of short paragraphs does not pay the whole prompt once per paragraph; the model answers several at once, and if it loses one of them only that one is asked again. The reply has one flat shape with nothing but ids and targets: the optional `terms` field and the key-term list the prompt used to ask about are gone, and the lexicon learns renderings from the decided text alone. The size comes from the model's profile, never from the dial or the review mode.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`, `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunking`, `design.md#d11--batch-format-and-batch-size`. In plain words: a book of short paragraphs does not pay the whole prompt once per paragraph; the model answers several at once, and if it loses one of them only that one is asked again. The reply has one flat shape with nothing but ids and targets: the optional `terms` field and the key-term list the prompt used to ask about are gone, and the lexicon learns renderings from the decided text alone. The size comes from the model's profile, never from the dial or the review mode.
 
 #### Scenario: Four paragraphs go in one call
 
@@ -1685,7 +1685,7 @@ The system SHALL draft the segments that need a model call in batches: a segment
 
 The system SHALL validate a batch reply per id — the id exactly once with text, the source's marks in order, the length band and the document's placeholder gate — and SHALL give each segment its own verdict: an id the reply never answered SHALL get one first draft of its own, a batch of one, and an item that came back but failed a check SHALL go to its one repair at Balanced and Max, or, at Fast, be decided from its findings after the one re-draft an item with lost formatting marks gets.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`, `design.md#d11--batch-format-and-batch-size`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: if the model loses one item of a batch only that one is asked again, as a first draft; an item it answered badly already has a draft, so it gets the one repair with the defects named rather than a blind second draft.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`, `design.md#d11--batch-format-and-batch-size`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: if the model loses one item of a batch only that one is asked again, as a first draft; an item it answered badly already has a draft, so it gets the one repair with the defects named rather than a blind second draft.
 
 #### Scenario: An unreadable reply sends every segment to its own draft
 
@@ -1746,7 +1746,7 @@ The system SHALL validate a batch reply per id — the id exactly once with text
 
 The batch size SHALL start at the model profile's batch size, halve when a reply loses an id, repeats one, merges two items or names an id the batch never held, and grow by one after three clean batches, never above the profile's batch size and never below the smaller of 2 and the profile's size; a call that got no reply from the model SHALL leave the size as it was.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`, `design.md#d11--batch-format-and-batch-size`. In plain words: the owner's decision that small models start at 4 segments per batch and that a larger batch is used only where it is shown to be as safe; the size shrinks when a model starts losing items and grows back, but never past what its profile allows. The old start at 8 and the ceiling of 16 are gone.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`, `design.md#d11--batch-format-and-batch-size`. In plain words: the owner's decision that small models start at 4 segments per batch and that a larger batch is used only where it is shown to be as safe; the size shrinks when a model starts losing items and grows back, but never past what its profile allows. The old start at 8 and the ceiling of 16 are gone.
 
 #### Scenario: A run that batches never drafts every segment alone
 
@@ -1782,7 +1782,7 @@ The batch size SHALL start at the model profile's batch size, halve when a reply
 
 The window SHALL hold every prompt: before a call is sent, its prompt, reserved output and a safety margin SHALL fit the run's window and its tier's ceiling; a prompt over it SHALL drop, in order, the next source, the oldest chapter summaries down to the newest, the previous segments from the oldest, the map items with the fewest occurrences (never a pinned or locked entry or a speaker's gender the window names), the last summary, and only then batch segments, down to one.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`, `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: what helps least goes first. The current part is never cut to make room for context, and some facts are never dropped: a pinned or locked name in the window, and the gender of a speaker in the window.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`, `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: what helps least goes first. The current part is never cut to make room for context, and some facts are never dropped: a pinned or locked name in the window, and the gender of a speaker in the window.
 
 #### Scenario: The chunk budget reserves the dynamic context
 
@@ -1803,7 +1803,7 @@ The window SHALL hold every prompt: before a call is sent, its prompt, reserved 
 
 The system SHALL read the model's context length when a run is prepared, through the provider's own detection, a failed detection never being an error, and SHALL plan every call of the run, its prompt and its output, to fit the one window the `inference` capability's "Use one context size for every call to a model" decides for the model, capping each reply at half of that window at most and sending the size only where that requirement says a server receives one.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#effective-context`, `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: the owner's decision that 16k is the default window; a model loaded with a 4k context is never sent prompts for more, and one value for every call keeps a server from reloading the model between call kinds. How the window is chosen (the person's value, else the smallest of the detected length, the profile's cap and 16,384) and that only Ollama's native API is sent it as `num_ctx` are stated once, in the `inference` capability; this requirement is how the run budgets inside it.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#effective-context`, `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: the owner's decision that 16k is the default window; a model loaded with a 4k context is never sent prompts for more, and one value for every call keeps a server from reloading the model between call kinds. How the window is chosen (the person's value, else the smallest of the detected length, the profile's cap and 16,384) and that only Ollama's native API is sent it as `num_ctx` are stated once, in the `inference` capability; this requirement is how the run budgets inside it.
 
 #### Scenario: A 4096 window
 
@@ -1829,7 +1829,7 @@ The system SHALL read the model's context length when a run is prepared, through
 
 The system SHALL leave out of every prompt an empty value, an empty heading, a placeholder line such as `(none)`, `n/a` or a dash, a repeated line, and a map item none of whose forms occurs in the window; the system part of every draft, repair and proofread call SHALL be the same bytes for the whole run, and every part that varies SHALL sit in the one last user message.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: a small model reads every token it is given and may echo it, so nothing is sent that carries no information; and a system part that never changes in a run lets a server that reuses prompt beginnings read it once.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`. In plain words: a small model reads every token it is given and may echo it, so nothing is sent that carries no information; and a system part that never changes in a run lets a server that reuses prompt beginnings read it once.
 
 #### Scenario: Filler never reaches the model
 
@@ -1850,7 +1850,7 @@ The system SHALL leave out of every prompt an empty value, an empty heading, a p
 
 The system SHALL take every language rule a call carries from the bundled language files — the target language's rules, the source language's reading notes and the pair's own file — opening only the files of the run's target, source, pair and the generic file, so that no rule wording is written in code (which lines the fixed system part carries is "Choose the writing rules once per book") and a language with no file is translated with the generic rules.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#language-rules`, `design.md#d7--language-data-function-word-files-and-rule-keys-for-every-language`, `design.md#d9--rules-per-book-the-reminder-and-pair-examples`. In plain words: what to watch for in Ukrainian, or in going from Russian to Ukrainian, is written once as data, sent only for the pair in hand and only where the book needs it, and a language nobody has written rules for is translated with general advice instead of failing. Every language may have such files; none holds another language's words.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#language-rules`, `design.md#d7--language-data-function-word-files-and-rule-keys-for-every-language`, `design.md#d9--rules-per-book-the-reminder-and-pair-examples`. In plain words: what to watch for in Ukrainian, or in going from Russian to Ukrainian, is written once as data, sent only for the pair in hand and only where the book needs it, and a language nobody has written rules for is translated with general advice instead of failing. Every language may have such files; none holds another language's words.
 
 #### Scenario: English to Ukrainian loads only its own files
 
@@ -1902,7 +1902,7 @@ The system SHALL take every language rule a call carries from the bundled langua
 
 WHEN the Translate stage has ended, before the Proofread stage settles deferrals, and the brief's first-person narrator has no gender, or only a likely one (the source shows no gendered past-tense form), the application SHALL count the narrator's «I + past verb» forms in the decided targets by the target language file's past endings and first-person pronouns (the same reader that reads the source in Prepare) and, WHEN at least 20 segments hold the source first-person pronoun in narration, there are at least 8 forms and one gender holds at least 80 % of them, SHALL store that gender as inferred by the run.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#narrator-and-characters`, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a Russian or Ukrainian source usually says the narrator's gender in its own past-tense verbs, and the `book-brief` capability reads it there before Start; an English source does not, and then the translations themselves usually do: most «я пішов» against a few «я пішла» says the narrator is a man and the few are slips, while a book that is only 70 % feminine is left unknown rather than corrected into the wrong gender.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#narrator-and-characters`, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a Russian or Ukrainian source usually says the narrator's gender in its own past-tense verbs, and the `book-brief` capability reads it there before Start; an English source does not, and then the translations themselves usually do: most «я пішов» against a few «я пішла» says the narrator is a man and the few are slips, while a book that is only 70 % feminine is left unknown rather than corrected into the wrong gender.
 
 #### Scenario: A man's book with two feminine slips
 
@@ -1953,7 +1953,7 @@ WHEN the Translate stage has ended, before the Proofread stage settles deferrals
 
 The application SHALL add one narrator line to the run's style sheet when the brief names a narrator person, and no line, with the style sheet and its hash unchanged, while the narrator is unstated; a gender the person set, the book proved or the run inferred SHALL be stated and ordered, a likely gender SHALL read `likely male` or `likely female` and order no form, and who else is present SHALL reach a call only through its map items and its recently-present card.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#narrator-and-characters`, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: a model that is told once that the narrator is a man does not need to guess a verb ending, and nothing is held to a guess. A separate sheet of the characters in the passage is no longer sent: the map items of the window and the recently-present card already say who is there.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#narrator-and-characters`, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: a model that is told once that the narrator is a man does not need to guess a verb ending, and nothing is held to a guess. A separate sheet of the characters in the passage is no longer sent: the map items of the window and the recently-present card already say who is there.
 
 #### Scenario: An unstated narrator changes nothing
 
@@ -1995,7 +1995,7 @@ proofread call SHALL count as progress, since Proofread decides a segment only w
 call ends its window; an answered draft or repair call SHALL NOT, since a segment repaired again and again without a
 decision is a stuck run. The ended call SHALL answer `ErrorCode.timeout` and go through the run's ordinary timeout path.
 
-**Source**: the overnight plan, step 11, the decision that a stalled call must never hold a night's run (`docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`). In plain words: a provider that accepts a request and never finishes it would otherwise keep the run waiting forever; this holds for every call kind, the proofread and chapter-summary calls included.
+**Source**: the overnight plan, step 11, the decision that a stalled call must never hold a night's run (`docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`). In plain words: a provider that accepts a request and never finishes it would otherwise keep the run waiting forever; this holds for every call kind, the proofread and chapter-summary calls included.
 
 #### Scenario: A reviewer call that never returns is ended at 135 s
 
@@ -2049,7 +2049,7 @@ The system SHALL keep nothing that grows with the number of model calls or log l
 segment only what the in-memory store holds for it (its record, targets, snapshot and memory entry). Logging SHALL
 stay synchronous and size-capped, with no queue that a slow disk could fill.
 
-**Source**: the overnight plan, step 13, the decision that a whole book left running all night must not run out of memory (`docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`). In plain words: a 3,700-segment book under injected faults retains about 2.5 KB per decided segment and nothing else that grows; the soak harness (`./gradlew :pipeline:soak`) proves it. A snapshot now stores only what varied per call, so it is smaller.
+**Source**: the overnight plan, step 13, the decision that a whole book left running all night must not run out of memory (`docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`). In plain words: a 3,700-segment book under injected faults retains about 2.5 KB per decided segment and nothing else that grows; the soak harness (`./gradlew :pipeline:soak`) proves it. A snapshot now stores only what varied per call, so it is smaller.
 
 #### Scenario: A night's calls do not grow the run summary
 
@@ -2075,7 +2075,7 @@ stay synchronous and size-capped, with no queue that a slow disk could fill.
 
 WHEN a run starts and as it goes, the system SHALL plan one draft step per segment to translate — a segment kept verbatim being a draft step done at once with no call — one chapter-summary step per chapter while the book's switch is on, the book's last chapter's step and a stored summary's step done at once with no call, and proofread steps: at Max one per window of the whole-book round from Start, and at Balanced and Max one per window marked so far; it SHALL add a step when a repair, a format re-ask or a resend starts, and count the time spent without the time paused.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#progress-counting`, `docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: the time left must count the Proofread stage and the chapter summaries from Start, not only once they begin, so a Max run does not seem nearly done when a whole re-read of the book is still ahead. Max's whole-book round is known at Start; the marked windows grow as the Translate stage marks segments. Until the model has a measured proofread time, a proofread step is estimated from its measured draft time per segment times the batch size and labelled an estimate. How the steps become the bar and the time left is the `app-shell` capability's.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#progress-counting`, `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: the time left must count the Proofread stage and the chapter summaries from Start, not only once they begin, so a Max run does not seem nearly done when a whole re-read of the book is still ahead. Max's whole-book round is known at Start; the marked windows grow as the Translate stage marks segments. Until the model has a measured proofread time, a proofread step is estimated from its measured draft time per segment times the batch size and labelled an estimate. How the steps become the bar and the time left is the `app-shell` capability's.
 
 #### Scenario: A twelve-segment unit on Balanced
 

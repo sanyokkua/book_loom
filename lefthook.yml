@@ -1,6 +1,6 @@
 # Git hooks for BookLoom, managed by Lefthook.
 #
-# Spec: docs/specification/04_Build_and_Release/02_QUALITY_GATES.md#lefthook-stages
+# Spec: docs/spec_baseline/specification/04_Build_and_Release/02_QUALITY_GATES.md#lefthook-stages
 # Design: openspec/changes/bootstrap-gradle-and-quality-toolchain/design.md#d8 (DD-25)
 #
 # Setup after a fresh clone — hooks are NOT active until you run this once:

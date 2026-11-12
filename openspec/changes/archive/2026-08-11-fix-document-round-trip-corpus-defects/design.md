@@ -1,7 +1,7 @@
 ## Context
 
 See `proposal.md` — Why. The evidence, with a minimal hand-authorable repro per defect, is
-`docs/implementation_plan/notes-corpus-verification.md`.
+`docs/spec_baseline/implementation_plan/notes-corpus-verification.md`.
 
 Three constraints shape everything below.
 

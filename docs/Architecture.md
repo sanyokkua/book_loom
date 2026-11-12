@@ -51,7 +51,7 @@ same ports is the next piece of work after the pipeline redesign (§9).
 ```
 
 Edges point downward only. `settings.gradle.kts` maps `:api` … `:app` onto `modules/<name>` (ADR-0021). The package
-map of every module is `docs/implementation_plan/01_MODULE_INVENTORY.md`.
+map of every module is `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md`.
 
 **Nine ArchUnit rules** (`modules/app/src/archTest/java/ua/bookloom/archtest/ArchitectureRules.java`, run by
 `BoundaryRulesTest`; `RuleViolationFixtureTest` proves each one fires on a deliberate violation):
@@ -438,7 +438,7 @@ All test paths are under `modules/<module>/src/test/java/ua/bookloom/<module>/`.
 `Books_Examples` set, now 235 books): 235/235 opened, 235/235 canonical-equal on the zero-edit identity and
 fixed-point probes, 235/235 mutation, marker-strip and idempotence, 235/235 mask/unmask; 826,298 segments and 322,208
 placeholders. The earlier 216-book run (2026-09-12, 197 EPUB, 9 FB2, 9 TXT, 1 Markdown, 367 MB) recorded text coverage per book (words of visible body text reached by segments) min
-0.9808, median 1.0, the two lowest being a word-boundary counting artefact on span-built paragraphs; 2 min 39 s. Details and the defects it found: `docs/implementation_plan/notes-corpus-verification.md`.
+0.9808, median 1.0, the two lowest being a word-boundary counting artefact on span-built paragraphs; 2 min 39 s. Details and the defects it found: `docs/spec_baseline/implementation_plan/notes-corpus-verification.md`.
 
 **The running app**: `./gradlew :app:run` prints `app started`, `injector built and two-phase init complete`,
 `window shown, initialView=…`; `./scripts/launch-smoke.sh` asserts the same three lines against the packaged image and a
@@ -457,4 +457,4 @@ change was archived on 2026-10-19 after the owner's hand checks (task 16.5) pass
 the pipeline redesign as its own change, `redesign-translation-pipeline`
 (`docs/proposals/2026-10-16-translation-pipeline-redesign.md`), and after it the SQLite adapter behind `:persistence`'s
 ports, which is what finally lets a run, the settings and the Projects screen survive a restart. The order beyond that
-is `docs/implementation_plan/CHANGE_BACKLOG.md`.
+is `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md`.

@@ -5,7 +5,7 @@ real books from `.temporary_context/Books_Examples`: *Building Microservices*, `
 `Леся Українка - Дим.epub`, two FB2 books and a zipped copy, two TXT books and a Markdown document. The pipeline did
 what its specification says. The run also showed gaps outside that change, and a few inside it that were deliberately
 left for later. They are recorded here so none is forgotten when real models and the translation screen arrive;
-`docs/implementation_plan/CHANGE_BACKLOG.md#decision-debt` points to this file.
+`docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md#decision-debt` points to this file.
 
 Each entry gives the owning module and specification clause, how to reproduce it, the evidence the review measured,
 and a suggested fix. An entry that is already planned points to its backlog item instead of repeating its design.
@@ -49,7 +49,7 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
 **Fixed by `complete-translation-workflow` (task 5.1):** the package document is written with LF line ends and a declaration only when the source had one, in the encoding it named.
 
 - **Owner:** `:document`, `EpubWriter.java:216-225` (`new XMLOutputter(Format.getRawFormat())`).
-- **Specification:** `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md#xml-round-trip-config` (the declared
+- **Specification:** `docs/spec_baseline/specification/02_Architecture/03_DOCUMENT_MODEL.md#xml-round-trip-config` (the declared
   encoding is echoed on output); DD-43 (canonical-equal output).
 - **What is wrong:** the package document gains `<?xml version="1.0" encoding="UTF-8"?>` when the source had no
   declaration, every line feed in it becomes CRLF (JDOM2's default line separator), and it always declares UTF-8.
@@ -84,7 +84,7 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
 **Fixed by `complete-translation-workflow` (task 5.3):** a content document's prolog is kept verbatim and written ahead of the serialized document.
 
 - **Owner:** `:document`, the EPUB spine writer (jsoup). Already noted in
-  `docs/implementation_plan/notes-corpus-verification.md`; recorded here for its encoding consequence.
+  `docs/spec_baseline/implementation_plan/notes-corpus-verification.md`; recorded here for its encoding consequence.
 - **What is wrong:** `<?xml version='1.0' encoding='utf-8'?>` is written as `<!--?xml version='1.0' encoding='utf-8'?-->`,
   and the DOCTYPE's quotes and line breaks are normalized. A spine document declared in an encoding other than UTF-8
   is still written in that encoding but no longer says so, and an XML reader then decodes it as UTF-8.
@@ -101,7 +101,7 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
 
 - **Owner:** `:document`, `Fb2Reader.java:175-181` (skips the mark), `ParsedFb2.java:26-33` (no field for it),
   `Fb2Writer.java:182-186`.
-- **Specification:** `docs/specification/01_Product/03_DOCUMENT_FORMATS.md#encoding-and-bom` says the presence of a
+- **Specification:** `docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#encoding-and-bom` says the presence of a
   byte-order mark is recorded and re-emitted.
 - **Reproduce:** found by reading the code; no sample book starts with a mark. Prefix one to a copy of
   `Forrest_Gump-John_Escott.fb2` (`printf '\xef\xbb\xbf' | cat - Forrest_Gump-John_Escott.fb2 > Bom.fb2`), translate
@@ -141,7 +141,7 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
 
 **Fixed by `complete-translation-workflow` (group 6, ADR-0041):** every book has an auxiliary unit holding navigation link texts, NCX labels, image alt text, FB2 title-info and annotation, and Markdown frontmatter values, translated behind the brief's "Also translate" switches and written back.
 
-- **Planned in:** DD-47 in `docs/specification/00_Foundation/04_DESIGN_DECISIONS.md` (translate metadata, ToC and nav
+- **Planned in:** DD-47 in `docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md` (translate metadata, ToC and nav
   labels, and image alt text, behind the "also translate" toggles) and the backlog change
   `add-metadata-units-and-language-detection`.
 - **Reproduce:** translate *Building Microservices*. `OEBPS/toc01.html`, the navigation document, carries

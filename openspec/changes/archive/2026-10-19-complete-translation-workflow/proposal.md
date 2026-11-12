@@ -10,7 +10,7 @@ or edit a segment, and no whole-book consistency pass. The window draws most of 
 four Book Brief cards, the Names & style and Review entries, the live chunk panel, throughput, the export options.
 
 The owner asked for one change that closes that gap — the pipeline stages PHASE_06–08 and PHASE_12 and the screens
-PHASE_09–10 of `docs/specification/00_Foundation/06_IMPLEMENTATION_STAGES.md#staged-delivery` — so that at the end a
+PHASE_09–10 of `docs/spec_baseline/specification/00_Foundation/06_IMPLEMENTATION_STAGES.md#staged-delivery` — so that at the end a
 person can import a book, brief it, see its structure, settle its names, watch it translate live, review and edit
 segments, and export it with side files. What remains after it: SQLite persistence, Settings persistence and the other
 settings tabs, Projects, new provider kinds, packaging and release.

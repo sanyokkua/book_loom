@@ -8,7 +8,7 @@
 
 **Tech Stack:** Java 25, Jackson `ObjectMapper`, Guice, JUnit 5, AssertJ.
 
-**Spec:** `openspec/changes/add-real-llm-clients/specs/translation-pipeline/spec.md`; design D7/D10; `docs/specification/01_Product/12_PROMPT_CATALOG.md#draft-translation`.
+**Spec:** `openspec/changes/add-real-llm-clients/specs/translation-pipeline/spec.md`; design D7/D10; `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#draft-translation`.
 
 ## Global Constraints
 

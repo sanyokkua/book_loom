@@ -17,9 +17,9 @@ IF a file already exists at the chosen destination and replacement has not been 
 screen SHALL say so beside the destination, and SHALL do so when the destination is chosen rather than waiting
 for the run to be refused.
 
-**Source:** FR-EXPORT-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`.
+**Source:** FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30,
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`,
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`.
 In plain words: the destination belongs with the brief because it is part of the instruction you give before the
 run, not something you decide afterwards — the run writes the file itself as its last act, so the path has to
 exist before it starts. The reference rendering draws the field on the export screen instead; honouring that
@@ -76,8 +76,8 @@ The screen's auxiliary offerings — a glossary, a bilingual copy, a quality rep
 SHALL be shown and unavailable.
 
 **Source:** FR-EXPORT-01, FR-EXPORT-04, FR-EXPORT-05, FR-EXPORT-06
-(`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`.
+(`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30,
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`.
 In plain words: there is no separate export step to press, because exporting is the run's last act — the file is
 already on disk by the time this screen can show anything. The reference drawing has an export button and a save
 path; keeping either would mean building a second way to write the file, which is engine work this change does

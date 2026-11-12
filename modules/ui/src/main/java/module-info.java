@@ -3,7 +3,7 @@
  *
  * <p>With {@code ua.bookloom.app}, one of only two modules that may {@code requires javafx.*}. It reaches the core
  * through {@code :pipeline} and {@code :api} only — never {@code :document}, {@code :llm} or {@code :persistence}
- * directly (docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md#dependency-direction).
+ * directly (docs/spec_baseline/specification/02_Architecture/02_MODULES_AND_LAYERING.md#dependency-direction).
  */
 module ua.bookloom.ui {
     // Compile-time only: JSpecify supplies the `@NullMarked` package markers that switch

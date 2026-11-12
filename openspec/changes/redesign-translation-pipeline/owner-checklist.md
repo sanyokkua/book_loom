@@ -54,4 +54,4 @@ Everything below needs a person. The change is built, gated and hand-run (17.1 t
     - The finished banner says "1 segment needs your review" when only a second-look item is left.
     - With "gemma4" typed in the model filter the open drop-down showed 1 of 5 rows; it may be cut off at the window bottom.
     - The hand-run agent's scripted click on a Quit dialog landed after the app had closed, at screen point (1014, 363), on whatever window was underneath; check that nothing odd happened.
-15. **After your answers:** run `/opsx:archive`, then the workflow follow-up listed at the end of `tasks.md` (rename stale reviewer-era scenario titles, rewrite three stale Purpose paragraphs, split the long legacy requirements), then start the next change from `docs/implementation_plan/CHANGE_BACKLOG.md`.
+15. **After your answers:** run `/opsx:archive`, then the workflow follow-up listed at the end of `tasks.md` (rename stale reviewer-era scenario titles, rewrite three stale Purpose paragraphs, split the long legacy requirements), then start the next change from `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md`.

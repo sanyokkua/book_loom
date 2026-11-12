@@ -4,7 +4,7 @@
 
 The application SHALL show transient messages stacked in the window's bottom-right corner, 16 pixels from the edges and 360 pixels wide, newest at the bottom, at most four at once. A success or information message SHALL stay 5 seconds; a warning, an error and any message that carries an action SHALL stay 12 seconds. Each SHALL have a close mark and at most one action.
 
-**Source**: `docs/specification/mockups/README.md#g2--toasts-in-the-bottom-right-corner`, FR-NOTIF-01 (`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#toasts`). In plain words: the bottom-centre spot sat on the buttons of dialogs and of the toolbar's neighbours. In the corner a message is seen but covers nothing that is pressed, and the longer times give a person time to read the ones that matter or can be acted on.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g2--toasts-in-the-bottom-right-corner`, FR-NOTIF-01 (`docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#toasts`). In plain words: the bottom-centre spot sat on the buttons of dialogs and of the toolbar's neighbours. In the corner a message is seen but covers nothing that is pressed, and the longer times give a person time to read the ones that matter or can be acted on.
 
 #### Scenario: Placement and size
 
@@ -30,7 +30,7 @@ The application SHALL show transient messages stacked in the window's bottom-rig
 
 WHILE a dialog is open or model work is visible, the application SHALL show feedback about what happens in it as one line in that dialog's own footer and SHALL NOT raise a transient message for it.
 
-**Source**: `docs/specification/mockups/README.md#g2--toasts-in-the-bottom-right-corner`, `docs/specification/mockups/README.md#dialog--test-connection--models--inference-s2`. In plain words: a message in the corner would land on the dialog's buttons or be missed behind its scrim, and the person is looking at the footer anyway. This also replaces the toast that used to confirm an accepted review segment, because review is now a dialog.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g2--toasts-in-the-bottom-right-corner`, `docs/spec_baseline/specification/mockups/README.md#dialog--test-connection--models--inference-s2`. In plain words: a message in the corner would land on the dialog's buttons or be missed behind its scrim, and the person is looking at the footer anyway. This also replaces the toast that used to confirm an accepted review segment, because review is now a dialog.
 
 #### Scenario: Accepting in the review desk answers in the footer
 
@@ -51,7 +51,7 @@ WHILE a dialog is open or model work is visible, the application SHALL show feed
 
 The application SHALL raise a transient message only when a book is opened, a translation starts or finishes, a project's automatic name changes, a retry is refused, a model list cannot be read outside a dialog, a folder is dropped on the import screen, a chosen book cannot be compared with the stored projects, the stored work was set aside at launch, hidden work finishes, or other model work is refused while work is hidden. Each occasion has its severity and wording in the scenarios.
 
-**Source**: FR-NOTIF-01 (`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#toasts`), `docs/specification/mockups/README.md#g2--toasts-in-the-bottom-right-corner`, `docs/specification/mockups/README.md#project-names--one-book-several-translations-pn`. In plain words: a message with no named caller is built, tested for its colour, and then raised from wherever a screen felt like. The list is closed. A provider test reports in its own dialog ("Report a dialog's own feedback in its footer"), so it raises no message. The old start message told a person to keep the application open because progress was lost on closing; progress is now saved as it goes, so it says so instead.
+**Source**: FR-NOTIF-01 (`docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#toasts`), `docs/spec_baseline/specification/mockups/README.md#g2--toasts-in-the-bottom-right-corner`, `docs/spec_baseline/specification/mockups/README.md#project-names--one-book-several-translations-pn`. In plain words: a message with no named caller is built, tested for its colour, and then raised from wherever a screen felt like. The list is closed. A provider test reports in its own dialog ("Report a dialog's own feedback in its footer"), so it raises no message. The old start message told a person to keep the application open because progress was lost on closing; progress is now saved as it goes, so it says so instead.
 
 #### Scenario: The automatic name changes
 
@@ -114,7 +114,7 @@ The application SHALL raise a transient message only when a book is opened, a tr
 
 WHILE a paused translation waits for the AI model by itself, the application SHALL show a warning banner that names the program, says when BookLoom tries again, and offers "Try again now", "Skip these 4 segments" (always the real count) and "Open settings".
 
-**Source**: FR-NOTIF-02 (`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#banners`), `docs/specification/mockups/README.md#run-states-a`. In plain words: the commonest failure by far is that the model program was closed. The banner says which program, when the next try is, and what a person can do, in words that need no knowledge of servers or providers.
+**Source**: FR-NOTIF-02 (`docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#banners`), `docs/spec_baseline/specification/mockups/README.md#run-states-a`. In plain words: the commonest failure by far is that the model program was closed. The banner says which program, when the next try is, and what a person can do, in words that need no knowledge of servers or providers.
 
 #### Scenario: The wait is explained
 
@@ -135,7 +135,7 @@ WHILE a paused translation waits for the AI model by itself, the application SHA
 
 IF a run pauses on a model-call error (the resume capability says which), THEN its counts SHALL be kept and a banner SHALL say in plain words what happened and name the program (for example Ollama), with the progress bar in the danger role and the actions "Try again now", "Skip these N segments" and "Open settings". IF a run ends Failed, THEN the banner "The translation stopped because of an error. Finished segments are saved." SHALL offer Show details, and no dialog SHALL open by itself.
 
-**Source**: FR-NOTIF-02 (`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#banners`), FR-NOTIF-04c (`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#typed-error-surface`), `docs/specification/02_Architecture/09_ERROR_HANDLING.md#ui-surfacing`, ADR-0036, `docs/specification/mockups/README.md#run-states-a`. In plain words: a stopped model server is no reason to lose the translation; the run pauses, says what went wrong, and offers to try again, fix the settings or skip. A run that ends Failed shows its state in the same place; Show details opens the failure's dialog with its folded details ("Show a blocking failure in a dialog carrying its own details"). The exact banner of each run state is the app-shell capability's run states table.
+**Source**: FR-NOTIF-02 (`docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#banners`), FR-NOTIF-04c (`docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#typed-error-surface`), `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#ui-surfacing`, ADR-0036, `docs/spec_baseline/specification/mockups/README.md#run-states-a`. In plain words: a stopped model server is no reason to lose the translation; the run pauses, says what went wrong, and offers to try again, fix the settings or skip. A run that ends Failed shows its state in the same place; Show details opens the failure's dialog with its folded details ("Show a blocking failure in a dialog carrying its own details"). The exact banner of each run state is the app-shell capability's run states table.
 
 #### Scenario: An unreachable server names itself
 
@@ -195,7 +195,7 @@ IF a run pauses on a model-call error (the resume capability says which), THEN i
 
 The application SHALL choose a failure's surface from its typed code: a model-call error a run pauses on SHALL show the run's paused state naming the code; `contextWindow` and `emptyCompletion` on a draft SHALL flag that segment; `cancelled` SHALL show the stopped state; a run that ends Failed SHALL show the failed state; `busy` on a review retry SHALL be a warning message; any other failure SHALL be shown where it was asked for.
 
-**Source**: FR-NOTIF-04a, FR-NOTIF-04c (`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#typed-error-surface`), `docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#error-code-categories`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md#ui-surfacing`, ADR-0022, ADR-0036, `docs/specification/mockups/README.md#run-states-a`. In plain words: a provider failure, a rejected request (`validation`) and a step that threw (`internal`) pause the run; a run that ends Failed — on a code its calls never answer (`busy`, `discoveryFailed`) or a failure outside every step (the translation-pipeline capability) — shows its failed state with Show details; a refusal before any model call (`validation` on a start or an export) is shown on the screen that refused; `discoveryFailed` from a model listing is a note where the list was asked for; any other blocking failure, such as an unreadable file, opens the dialog.
+**Source**: FR-NOTIF-04a, FR-NOTIF-04c (`docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#typed-error-surface`), `docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#error-code-categories`, `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#ui-surfacing`, ADR-0022, ADR-0036, `docs/spec_baseline/specification/mockups/README.md#run-states-a`. In plain words: a provider failure, a rejected request (`validation`) and a step that threw (`internal`) pause the run; a run that ends Failed — on a code its calls never answer (`busy`, `discoveryFailed`) or a failure outside every step (the translation-pipeline capability) — shows its failed state with Show details; a refusal before any model call (`validation` on a start or an export) is shown on the screen that refused; `discoveryFailed` from a model listing is a note where the list was asked for; any other blocking failure, such as an unreadable file, opens the dialog.
 
 #### Scenario: A provider failure takes the provider-error state
 
@@ -262,7 +262,7 @@ The application SHALL choose a failure's surface from its typed code: a model-ca
 
 The application SHALL show transient messages in exactly four severities — success, information, warning and error — each coloured by its matching status role. A transient message SHALL NOT be the only place a failure is reported, and SHALL be raised only on the occasions that "Raise a transient message only on the occasions the application names" lists. An export being written raises none; the export screen reports it.
 
-**Source**: FR-NOTIF-01 (`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#toasts`), FR-A11Y-8, FR-THEME-10 (`docs/specification/01_Product/09_THEMING.md#status-colours`), `docs/specification/mockups/README.md#g2--toasts-in-the-bottom-right-corner`. In plain words: four severities, four status roles, one mapping, so the colour means the same thing on a chip, a banner and a message. A message is gone in seconds, so a failure is always also reported where it stays: a blocking failure in a dialog, a run's failure in the run's banner.
+**Source**: FR-NOTIF-01 (`docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#toasts`), FR-A11Y-8, FR-THEME-10 (`docs/spec_baseline/specification/01_Product/09_THEMING.md#status-colours`), `docs/spec_baseline/specification/mockups/README.md#g2--toasts-in-the-bottom-right-corner`. In plain words: four severities, four status roles, one mapping, so the colour means the same thing on a chip, a banner and a message. A message is gone in seconds, so a failure is always also reported where it stays: a blocking failure in a dialog, a run's failure in the run's banner.
 
 #### Scenario: Each severity takes its status role
 

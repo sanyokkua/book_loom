@@ -47,7 +47,7 @@ the gate (arrives with the first interactive screen); token usage.
 
 ## Decisions
 
-Packages follow `docs/implementation_plan/01_MODULE_INVENTORY.md#module-api`, `#module-llm`, `#module-pipeline` and
+Packages follow `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md#module-api`, `#module-llm`, `#module-pipeline` and
 `#module-app`.
 
 ### D1: contracts in `:api` (ADR-0033, ADR-0005)

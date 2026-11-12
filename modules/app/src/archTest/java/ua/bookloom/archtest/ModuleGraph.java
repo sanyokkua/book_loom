@@ -11,7 +11,7 @@ import java.util.Set;
  * one is allowed to depend on.
  *
  * <p>The table below is a transcription of
- * {@code docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md#dependency-direction}. It is deliberately
+ * {@code docs/spec_baseline/specification/02_Architecture/02_MODULES_AND_LAYERING.md#dependency-direction}. It is deliberately
  * the <em>edge set</em> rather than the four-layer model that section also sketches, because the layered form is
  * strictly weaker: layers Foundation({@code api},{@code util}) / Services / Orchestration / Presentation cannot
  * express {@code :ui} ↛ {@code :document} (both would be legal, Presentation above Services) nor {@code :api} ↛

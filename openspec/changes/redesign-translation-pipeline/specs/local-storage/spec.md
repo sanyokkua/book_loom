@@ -4,7 +4,7 @@
 
 WHEN a run sends model calls, the system SHALL store each distinct fixed part of its prompts (the parts that stay the same across the run's calls) once per project, and store with each segment a key to the fixed part its call used, only the sections that differed for its call, and the keys of the chapter summaries the call carried.
 
-**Source**: `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md#record-shapes`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`, `design.md#d26--stored-shapes-and-database-resets`. In plain words: the writing rules, the style sheet and the examples are the same in every call of a run, so keeping them with every segment would copy them thousands of times; they can change between runs (a brief edit, another model), so a project may hold several fixed parts, and each segment points at the one its call used. The desk's "What the model saw" joins that fixed part and the segment's own sections back together.
+**Source**: `docs/spec_baseline/specification/02_Architecture/06_DATA_MODEL_SQLITE.md#record-shapes`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`, `design.md#d26--stored-shapes-and-database-resets`. In plain words: the writing rules, the style sheet and the examples are the same in every call of a run, so keeping them with every segment would copy them thousands of times; they can change between runs (a brief edit, another model), so a project may hold several fixed parts, and each segment points at the one its call used. The desk's "What the model saw" joins that fixed part and the segment's own sections back together.
 
 #### Scenario: Two segments share one stored frame
 
@@ -30,7 +30,7 @@ WHEN a run sends model calls, the system SHALL store each distinct fixed part of
 
 WHEN a chapter's summary is written, the system SHALL store it as its own record for the project, holding the chapter, its first segment, its segment count, the text and a fingerprint of the chapter's source text, written in its own step.
 
-**Source**: `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md#record-shapes`, `design.md#d10--chapter-summaries-and-the-recently-present-card`, `design.md#d26--stored-shapes-and-database-resets`. In plain words: a summary is expensive to make (one model call), so it is saved the moment it exists and is never made twice; the fingerprint tells whether the chapter it describes has changed since.
+**Source**: `docs/spec_baseline/specification/02_Architecture/06_DATA_MODEL_SQLITE.md#record-shapes`, `design.md#d10--chapter-summaries-and-the-recently-present-card`, `design.md#d26--stored-shapes-and-database-resets`. In plain words: a summary is expensive to make (one model call), so it is saved the moment it exists and is never made twice; the fingerprint tells whether the chapter it describes has changed since.
 
 #### Scenario: A summary survives a restart
 
@@ -51,7 +51,7 @@ WHEN a chapter's summary is written, the system SHALL store it as its own record
 
 WHEN the Proofread stage decides a segment, the system SHALL store with the segment a proofread verdict holding the window's fingerprint, the verdict (kept, proposed, rejected or unchanged), the reason and, for a kept rewrite, the text it replaced and the status the segment had before it.
 
-**Source**: `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md#record-shapes`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`, `design.md#d26--stored-shapes-and-database-resets`. In plain words: the verdict is the stage's receipt for a segment it read (a proofread mark, by contrast, is the note that a segment still has to be read). It lets a restart skip work already done, lets the desk show what changed and why, and lets Undo proofread put the earlier text and status back.
+**Source**: `docs/spec_baseline/specification/02_Architecture/06_DATA_MODEL_SQLITE.md#record-shapes`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`, `design.md#d26--stored-shapes-and-database-resets`. In plain words: the verdict is the stage's receipt for a segment it read (a proofread mark, by contrast, is the note that a segment still has to be read). It lets a restart skip work already done, lets the desk show what changed and why, and lets Undo proofread put the earlier text and status back.
 
 #### Scenario: A kept rewrite stores the text it replaced
 
@@ -72,7 +72,7 @@ WHEN the Proofread stage decides a segment, the system SHALL store with the segm
 
 The system SHALL keep, on each model's stored settings, the person's thinking and sampling overrides for that model, what the checks of that model found (whether the thinking switch works, whether structured answers are honoured, which output cap field is used), the seconds measured for each kind of call, and each setting the model refused together with the kind of call it refused it for.
 
-**Source**: `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md#record-shapes`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`, `design.md#d26--stored-shapes-and-database-resets`. In plain words: what the person chose for a model, and what BookLoom learnt about it by testing, belongs to that model and is still there after a restart, so a model is not tested again for the same fact.
+**Source**: `docs/spec_baseline/specification/02_Architecture/06_DATA_MODEL_SQLITE.md#record-shapes`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`, `design.md#d26--stored-shapes-and-database-resets`. In plain words: what the person chose for a model, and what BookLoom learnt about it by testing, belongs to that model and is still there after a restart, so a model is not tested again for the same fact.
 
 #### Scenario: An override survives a restart
 
@@ -98,7 +98,7 @@ The system SHALL keep, on each model's stored settings, the person's thinking an
 
 The system SHALL NOT store facts read from a server about a model (its context length, its capabilities, its size, its loaded state, its file name); it SHALL read them again at each check.
 
-**Source**: `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md#record-shapes`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`, `design.md#d26--stored-shapes-and-database-resets`. In plain words: a server's answer can be wrong tomorrow, since the person may reload the model with a larger window or swap the file under the same name; keeping yesterday's answer would hide that, so only what the person chose and what BookLoom's own tests found is kept.
+**Source**: `docs/spec_baseline/specification/02_Architecture/06_DATA_MODEL_SQLITE.md#record-shapes`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`, `design.md#d26--stored-shapes-and-database-resets`. In plain words: a server's answer can be wrong tomorrow, since the person may reload the model with a larger window or swap the file under the same name; keeping yesterday's answer would hide that, so only what the person chose and what BookLoom's own tests found is kept.
 
 #### Scenario: A reloaded model shows its new window
 
@@ -142,7 +142,7 @@ The system SHALL keep no global Thinking or Sampling setting, no last-check sett
 
 The system SHALL keep projects, books, briefs, the Glossary, the Recurring terms, segment decisions with their proofread verdicts, the translation memory, chapter summaries, the fixed frames of the runs' prompts, run state, providers, per-model settings with the person's overrides and preferences on this computer, so that each is present again after the application is closed and opened.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-persist`, ADR-0043, `design.md#d26--stored-shapes-and-database-resets`. In plain words: closing BookLoom no longer throws the translation away. Everything a person built up (the book, the names they fixed, the settings they chose, the segments already translated) is still there on the next launch.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-persist`, ADR-0043, `design.md#d26--stored-shapes-and-database-resets`. In plain words: closing BookLoom no longer throws the translation away. Everything a person built up (the book, the names they fixed, the settings they chose, the segments already translated) is still there on the next launch.
 
 #### Scenario: A translation and its names survive a restart
 
@@ -173,7 +173,7 @@ The system SHALL keep projects, books, briefs, the Glossary, the Recurring terms
 
 WHEN a chunk is decided, the system SHALL write its segment decisions, translation memory entries, deferrals, new Glossary names and run record in one step; WHEN a Proofread window is decided, it SHALL write the window's segment texts, proofread verdicts and the deferrals the window resolved in one step; a crash or a forced quit loses at most the decisions of the chunk or window in flight.
 
-**Source**: FR-PERSIST-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-persist`), ADR-0043, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a half-written chunk would leave a segment saved without the memory entry that goes with it. Writing them as one unit means the saved state is always one that makes sense. The guarantee is about the application dying; an operating-system crash or power cut may still lose the last chunk, and the application does not claim otherwise. A proofread window is the same kind of unit: a rewritten text saved without its verdict, or a deferral marked resolved while its text is unchanged, would leave the stage unable to tell what it had done.
+**Source**: FR-PERSIST-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-persist`), ADR-0043, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a half-written chunk would leave a segment saved without the memory entry that goes with it. Writing them as one unit means the saved state is always one that makes sense. The guarantee is about the application dying; an operating-system crash or power cut may still lose the last chunk, and the application does not claim otherwise. A proofread window is the same kind of unit: a rewritten text saved without its verdict, or a deferral marked resolved while its text is unchanged, would leave the stage unable to tell what it had done.
 
 #### Scenario: A forced quit loses only the chunk in flight
 
@@ -199,7 +199,7 @@ WHEN a chunk is decided, the system SHALL write its segment decisions, translati
 
 IF the stored database was made by another schema version or with other stored record shapes than this build uses, or cannot be read, THEN the system SHALL rename it to `bookloom.db.old-<yyyyMMdd-HHmmss>` beside the original, create a fresh database, write one warning line to the log, show no dialog, and raise one warning message, once, that names the renamed file and says that providers and settings were reset with the saved work.
 
-**Source**: ADR-0043, `design.md#d26--stored-shapes-and-database-resets`, `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md#corruption-and-recovery`. In plain words: before the first release the stored layout changes freely and no migrations are written. An old or damaged file is kept aside for diagnosis rather than deleted, and the application starts clean instead of failing on every launch. A fresh database counts as a first launch, so the first-launch look runs once more (the `llm-provider` capability). Each build step of the pipeline redesign that changes a stored record (the glossary's entries, the lemma forms, the brief, a provider, a model's settings, a segment, a chapter summary, a proofread verdict, the export record) changes the shape fingerprint, so the next launch starts clean; providers and settings go with the saved work and must be entered again.
+**Source**: ADR-0043, `design.md#d26--stored-shapes-and-database-resets`, `docs/spec_baseline/specification/02_Architecture/06_DATA_MODEL_SQLITE.md#corruption-and-recovery`. In plain words: before the first release the stored layout changes freely and no migrations are written. An old or damaged file is kept aside for diagnosis rather than deleted, and the application starts clean instead of failing on every launch. A fresh database counts as a first launch, so the first-launch look runs once more (the `llm-provider` capability). Each build step of the pipeline redesign that changes a stored record (the glossary's entries, the lemma forms, the brief, a provider, a model's settings, a segment, a chapter summary, a proofread verdict, the export record) changes the shape fingerprint, so the next launch starts clean; providers and settings go with the saved work and must be entered again.
 
 #### Scenario: A database from another schema version is put aside
 
@@ -227,7 +227,7 @@ IF the stored database was made by another schema version or with other stored r
 
 WHEN a person removes a project, the system SHALL delete that project's stored data — its brief, term lists, segment decisions with their proofread verdicts, translation memory, chapter summaries, the stored prompt frames and run — and SHALL NOT delete the book file, any exported file, or any other project of the same book.
 
-**Source**: `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (Persistence), `design.md#d26--stored-shapes-and-database-resets`, `docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`. In plain words: Remove forgets the translation inside BookLoom; it never reaches out to files the person owns. A second translation of the same book is a different project and stays.
+**Source**: `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (Persistence), `design.md#d26--stored-shapes-and-database-resets`, `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`. In plain words: Remove forgets the translation inside BookLoom; it never reaches out to files the person owns. A second translation of the same book is a different project and stays.
 
 #### Scenario: Removing one of two translations of a book
 

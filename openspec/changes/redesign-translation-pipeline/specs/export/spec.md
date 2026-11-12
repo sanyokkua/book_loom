@@ -4,7 +4,7 @@
 
 WHEN a book is exported, the system SHALL write it by checking and writing alone: the export action SHALL create no model, send no request to any provider and run no pass over the text, at every quality dial and whether or not a provider answers.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: the work that used to wait until export (the last check, the neighbour reread, the backward revision) now happens inside the run, in its Proofread stage, so writing the file is quick, works with the model switched off, and cannot change the text the person has just looked at. ✦ Suggest a name on the Export screen is a separate model call the person starts, not part of writing the book.
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: the work that used to wait until export (the last check, the neighbour reread, the backward revision) now happens inside the run, in its Proofread stage, so writing the file is quick, works with the model switched off, and cannot change the text the person has just looked at. ✦ Suggest a name on the Export screen is a separate model call the person starts, not part of writing the book.
 
 #### Scenario: Export sends no request
 
@@ -25,7 +25,7 @@ WHEN a book is exported, the system SHALL write it by checking and writing alone
 
 WHILE the Proofread stage has planned windows still unread and the run is paused, stopped or ended, the export screen SHALL state before Export book is pressed how many windows were read of how many are planned, and that the person can continue on Translating or export as it is.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: a book written after only part of the proofreading is still a good book, but the person should know that the rest has not been read yet and how to finish it.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: a book written after only part of the proofreading is still a good book, but the person should know that the rest has not been read yet and how to finish it.
 
 #### Scenario: Proofread stopped half-way
 
@@ -47,7 +47,7 @@ WHILE the Proofread stage has planned windows still unread and the run is paused
 
 WHERE segments wait on a fact the person has given since they were decided, the export screen SHALL state before Export book is pressed how many segments wait and which fact each waits on, and that Continue on Translating applies it.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: when the person tells BookLoom a character's gender after those paragraphs were translated, the paragraphs are not corrected until the Proofread stage runs again; the export screen says so instead of letting the person think the fix is already in the file.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: when the person tells BookLoom a character's gender after those paragraphs were translated, the paragraphs are not corrected until the Proofread stage runs again; the export screen says so instead of letting the person think the fix is already in the file.
 
 #### Scenario: Segments wait on a gender
 
@@ -68,7 +68,7 @@ WHERE segments wait on a fact the person has given since they were decided, the 
 
 WHERE a segment's formatting marks could not be kept in any draft of it, the export screen SHALL state before Export book is pressed how many segments will be written in the source language for that reason, and that the person can fix them on the review desk.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: a paragraph whose bold, italic or link marks cannot be put back is written as its original text, because a broken paragraph would spoil the file; the person is told before writing, not only afterwards, and can fix it by hand.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: a paragraph whose bold, italic or link marks cannot be put back is written as its original text, because a broken paragraph would spoil the file; the person is told before writing, not only afterwards, and can fix it by hand.
 
 #### Scenario: Two segments will fall back to the source
 
@@ -89,7 +89,7 @@ WHERE a segment's formatting marks could not be kept in any draft of it, the exp
 
 WHERE segments carry a proofread mark the Proofread stage has not cleared, the export screen SHALL state before Export book is pressed how many there are and that they are written as they are and can be reviewed on the desk.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a proofread mark is the stage's note that a segment deserves a second look. At Fast no model reads those notes, so the person sees how many there are before choosing to write the book; at Balanced and Max the count is what the stage could not settle.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a proofread mark is the stage's note that a segment deserves a second look. At Fast no model reads those notes, so the person sees how many there are before choosing to write the book; at Balanced and Max the count is what the stage could not settle.
 
 #### Scenario: A Fast book with marks
 
@@ -110,7 +110,7 @@ WHERE segments carry a proofread mark the Proofread stage has not cleared, the e
 
 WHEN a book is written, the system SHALL store with the export the number of segments the Proofread stage had read and the number still waiting for the person (FLAGGED, or holding a proofread mark or an open deferral, when the book was written), so that the tiles and the report read them again after a restart.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: what the file contains should be stated from what was true when it was written, not from what the project looks like later; the summary that used to describe the consistency pass now describes the proofreading, and is kept with the export record.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: what the file contains should be stated from what was true when it was written, not from what the project looks like later; the summary that used to describe the consistency pass now describes the proofreading, and is kept with the export record.
 
 #### Scenario: The summary survives a restart
 
@@ -126,7 +126,7 @@ WHEN a book is written, the system SHALL store with the export the number of seg
 
 WHERE the target language's file says stress marks are not written, the system SHALL write every translated segment without combining stress marks, and SHALL leave segments written in the source language as they are.
 
-**Source**: `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-e-export`, `design.md#d4--name-forms-stress-marks-and-target-validation`. In plain words: a model or a person may add an accent over a vowel to show how to say a word, but a printed book does not carry it; every candidate is already cleaned before any check counts (the `quality-gates` capability), so removing it again at the last moment is only a guard that catches any that slipped past, such as one in a person's edit. A paragraph written in its source language is not touched, because it is the author's own text.
+**Source**: `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-e-export`, `design.md#d4--name-forms-stress-marks-and-target-validation`. In plain words: a model or a person may add an accent over a vowel to show how to say a word, but a printed book does not carry it; every candidate is already cleaned before any check counts (the `quality-gates` capability), so removing it again at the last moment is only a guard that catches any that slipped past, such as one in a person's edit. A paragraph written in its source language is not touched, because it is the author's own text.
 
 #### Scenario: A stress mark is removed from a translated segment
 
@@ -277,7 +277,7 @@ WHILE no export of the open book has succeeded in the session, the export screen
 file-validates tile as not yet known, and SHALL offer nothing to reveal or open. WHILE a run is translating, the export
 screen SHALL offer no control that writes a book, and its side-file choices SHALL stay visible and unavailable.
 
-**Source**: FR-EXPORT-01, FR-EXPORT-03, FR-EXPORT-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-export-complete`, `docs/next_features.md#15-left-open-by-the-hand-test`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: after pressing Export the person sees that the book exists, that it was checked, and how much of it the machine did on its own. The check line says what the application actually verified — it re-opens the file — rather than the reference's EPUBCheck, which is not run. Windows Explorer returns 1 even when it succeeds, so treating that as a failure would report an error for a file that was shown. Showing and opening the file use the system's own commands, built from the path alone, never a shell and never the network. The counts say exactly what the file holds — how much the machine translated on its own, what the person reviewed, what is still in the source language because it was not reached, and what is in it because the person chose so — and they are what the tiles, the report side file and the command line's report line show. One success notice is enough: the dialog already names the file, so a transient message on top of it would only repeat it. The proofread line replaces the consistency-pass line: it says how much of the book the Proofread stage read and how much still waits for the person, from the counts stored with the export.
+**Source**: FR-EXPORT-01, FR-EXPORT-03, FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-export-complete`, `docs/next_features.md#15-left-open-by-the-hand-test`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: after pressing Export the person sees that the book exists, that it was checked, and how much of it the machine did on its own. The check line says what the application actually verified — it re-opens the file — rather than the reference's EPUBCheck, which is not run. Windows Explorer returns 1 even when it succeeds, so treating that as a failure would report an error for a file that was shown. Showing and opening the file use the system's own commands, built from the path alone, never a shell and never the network. The counts say exactly what the file holds — how much the machine translated on its own, what the person reviewed, what is still in the source language because it was not reached, and what is in it because the person chose so — and they are what the tiles, the report side file and the command line's report line show. One success notice is enough: the dialog already names the file, so a transient message on top of it would only repeat it. The proofread line replaces the consistency-pass line: it says how much of the book the Proofread stage read and how much still waits for the person, from the counts stored with the export.
 
 #### Scenario: A source fallback is named after the export
 
@@ -388,7 +388,7 @@ The export screen SHALL offer three side files, each with its own choice: "Gloss
 sequels", chosen by default; "Bilingual copy (source + target side by side)", not chosen by default; and "Report (flagged
 items, proofread notes)", not chosen by default.
 
-**Source**: FR-EXPORT-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-GLOSS-04 (`#fr-gloss`), ADR-0035, `design.md#d16--export-validates-and-writes-with-no-model-call`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`. In plain words: the glossary is on by default because it is what makes a sequel translate the same names the same way; the other two are for checking the work. The glossary file uses the import format so it can be loaded straight into the next book. The bilingual copy is self-contained so it opens offline and leaks nothing. The report lists what the Proofread stage left, because there is no consistency pass any more.
+**Source**: FR-EXPORT-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-GLOSS-04 (`#fr-gloss`), ADR-0035, `design.md#d16--export-validates-and-writes-with-no-model-call`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`. In plain words: the glossary is on by default because it is what makes a sequel translate the same names the same way; the other two are for checking the work. The glossary file uses the import format so it can be loaded straight into the next book. The bilingual copy is self-contained so it opens offline and leaks nothing. The report lists what the Proofread stage left, because there is no consistency pass any more.
 
 #### Scenario: The default choices
 
@@ -407,7 +407,7 @@ gender, locked); the bilingual copy SHALL hold one row per segment with its sour
 file or network resource outside itself; and the report SHALL hold the segment counts, the flagged segments with their
 findings, and the proofread notes (each segment the Proofread stage read, with its verdict and reason, and each segment still waiting).
 
-**Source**: FR-EXPORT-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-GLOSS-04 (`#fr-gloss`), ADR-0035, `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: the glossary file uses the import format so it can be loaded straight into the next book, and the bilingual copy is self-contained so it opens offline and leaks nothing.
+**Source**: FR-EXPORT-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-GLOSS-04 (`#fr-gloss`), ADR-0035, `docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: the glossary file uses the import format so it can be loaded straight into the next book, and the bilingual copy is self-contained so it opens offline and leaks nothing.
 
 #### Scenario: The glossary file loads back into Names & style
 
@@ -435,7 +435,7 @@ findings, and the proofread notes (each segment the Proofread stage read, with i
 
 The export screen SHALL show four tiles filled from the project before any export: segments done, translated without changes, reviewed by the person, and "checked when written" ("—" until a file is written). After a written export the first tile SHALL read what the stored export wrote and the fourth "checked: opens, nothing missing", also after a restart. A line under the tiles SHALL give the stored export's proofread summary, "—" before any.
 
-**Source**: docs/specification/mockups/README.md#step-5--export--e1e3-i, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E1), `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: the person sees how much of the book is done before choosing to write it, instead of four empty tiles that only fill after the file exists.
+**Source**: docs/spec_baseline/specification/mockups/README.md#step-5--export--e1e3-i, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E1), `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: the person sees how much of the book is done before choosing to write it, instead of four empty tiles that only fill after the file exists.
 
 #### Scenario: Tiles show the project's figures before an export
 
@@ -466,7 +466,7 @@ The export screen SHALL show four tiles filled from the project before any expor
 
 WHILE the run state is Translating (which covers Prepare, Translate and Proofread), Stuck call, Pausing or Stopping, the export screen SHALL show the banner "Pause or stop the translation to export. You can export what is done so far; the rest keeps the original text." with a Pause button; WHEN some but not all segments are translated and the run state is none of these, it SHALL show "74 of 142 segments are translated. The other segments keep the original text".
 
-**Source**: docs/specification/mockups/README.md#step-5--export--e1e3-i, docs/specification/mockups/README.md#changes-while-translating-i. In plain words: the person is told before writing exactly what a partial book will hold, and how to get to a state where it can be written.
+**Source**: docs/spec_baseline/specification/mockups/README.md#step-5--export--e1e3-i, docs/spec_baseline/specification/mockups/README.md#changes-while-translating-i. In plain words: the person is told before writing exactly what a partial book will hold, and how to get to a state where it can be written.
 
 #### Scenario: The banner follows the run state
 

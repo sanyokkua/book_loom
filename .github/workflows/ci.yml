@@ -1,7 +1,7 @@
 # CI — the merge gate.
 #
-# Spec: docs/specification/04_Build_and_Release/04_CI_CD.md#quality-job
-#       docs/specification/04_Build_and_Release/02_QUALITY_GATES.md#ci-gates
+# Spec: docs/spec_baseline/specification/04_Build_and_Release/04_CI_CD.md#quality-job
+#       docs/spec_baseline/specification/04_Build_and_Release/02_QUALITY_GATES.md#ci-gates
 # Design: openspec/changes/bootstrap-gradle-and-quality-toolchain/design.md#d8
 #
 # This is one of the three workflows of `04_CI_CD.md`. `build.yml` (snapshot packaging on `master`) and

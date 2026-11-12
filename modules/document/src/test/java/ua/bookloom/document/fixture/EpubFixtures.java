@@ -236,7 +236,7 @@ public final class EpubFixtures {
 
     /**
      * A self-closed indexterm anchor immediately before a section boundary (design.md D2b, F12a measured in
-     * docs/adr/ADR-0028-xhtml-self-closed-raw-text-repair.md). Without the pre-parse repair the anchor stays open, absorbing the following section's
+     * docs/spec_baseline/adr/ADR-0028-xhtml-self-closed-raw-text-repair.md). Without the pre-parse repair the anchor stays open, absorbing the following section's
      * {@code <h1>} as its own child and duplicating its {@code id} onto that heading's containing element.
      */
     public static Path selfClosedIndextermAnchor(Path destination) {
@@ -259,7 +259,7 @@ public final class EpubFixtures {
     }
 
     /**
-     * The lossy shape (design.md D7, task 6.2; measured in {@code docs/implementation_plan/notes-corpus-verification.md}, finding F2): a
+     * The lossy shape (design.md D7, task 6.2; measured in {@code docs/spec_baseline/implementation_plan/notes-corpus-verification.md}, finding F2): a
      * {@code <pre>} whose content begins with <strong>two</strong> line breaks, reproducing the poem
      * {@code Alices Adventures in Wonderland.epub}'s {@code chapter06.xhtml} carries verbatim. A fixture with
      * only one leading break would pass whether or not the restore exists — both sides of any comparison

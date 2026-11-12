@@ -33,7 +33,7 @@ STORY-011 (Lefthook) and STORY-012 (CI + license report + SCA). STORY-010 (the `
       `02_Architecture/10_DI_AND_LIFECYCLE.md`
 - [x] 1.6 Add exactly one placeholder public type per module, named from the module inventory rather than invented, so
       each `module-info.java` has something to export and the module compiles. Keep them minimal — they are scaffolding
-      that later changes replace, not API. → all eight modules · `docs/implementation_plan/01_MODULE_INVENTORY.md`
+      that later changes replace, not API. → all eight modules · `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md`
 - [x] 1.7 Add `.editorconfig` and `.gitattributes` fixing LF line endings, UTF-8, and final-newline for all text files.
       Without these, a Windows checkout produces CRLF that Spotless rewrites on every commit, generating churn that
       makes real diffs unreadable. → repo root · `01_BUILD_AND_TOOLING.md`,
@@ -261,7 +261,7 @@ STORY-011 (Lefthook) and STORY-012 (CI + license report + SCA). STORY-010 (the `
       from the PR without re-running locally. → `.github/workflows/` · `04_CI_CD.md#quality-job`
 - [x] 7.6 Do **not** add `./gradlew trace` or `./gradlew traceCheck` to the workflow. ADR-0016 retires that tooling —
       it is never built, and CI step 7 of `04_CI_CD.md#quality-job` is superseded. Verify the workflow contains no
-      reference to it. → `.github/workflows/` · `docs/adr/ADR-0016-openspec-delivery-tracking.md`
+      reference to it. → `.github/workflows/` · `docs/spec_baseline/adr/ADR-0016-openspec-delivery-tracking.md`
 - [x] 7.7 Prove each CI gate fails red using a temporary canary branch per gate — a GPL-licensed test-only coordinate, a
       version bumped without `--write-locks`, and a deliberately failing Monocle widget test — and record the run links
       before deleting the branches. A gate that has only ever been observed green has not been observed at all.
@@ -315,7 +315,7 @@ STORY-011 (Lefthook) and STORY-012 (CI + license report + SCA). STORY-010 (the `
       across all eight empty modules** — Spotless, Checkstyle, Error Prone + NullAway, SpotBugs + FindSecBugs, all eight
       ArchUnit rules, the coverage gate, and every test. There is no "pre-existing failure" exemption; this change *is*
       the baseline, so anything red here is red forever after.
-      → whole project · `docs/implementation_plan/06_DEFINITION_OF_DONE.md#per-change-checklist`
+      → whole project · `docs/spec_baseline/implementation_plan/06_DEFINITION_OF_DONE.md#per-change-checklist`
 
       **Verified 2026-08-03: `BUILD SUCCESSFUL in 1m 3s`, `91 actionable tasks: 91 executed`.** Test totals from that
       run's XML reports: `:build-logic:test` 27 tests, `:app:archTest` 18, `:ui:test` 1 — 0 failures, 0 errors, 0 skips.
@@ -338,9 +338,9 @@ STORY-011 (Lefthook) and STORY-012 (CI + license report + SCA). STORY-010 (the `
       `./gradlew clean build check spotlessCheck --dry-run` enumerates 198 lines, and
       `grep -icE "liveLocal|promptEval|visual"` over it returns **0**. Neither the tasks nor anything named after them
       is reachable from the gate.
-- [x] 8.3 Update `docs/implementation_plan/01_MODULE_INVENTORY.md` to reflect the eight modules, the `build-logic`
+- [x] 8.3 Update `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md` to reflect the eight modules, the `build-logic`
       included build, and the `arch-test` source set as they were actually created — the inventory is the canonical
-      module map every later proposal reads. → `docs/implementation_plan/` ·
+      module map every later proposal reads. → `docs/spec_baseline/implementation_plan/` ·
       `06_DEFINITION_OF_DONE.md#per-change-checklist`
 
       Added `#as-built-baseline`, which separates the forward-looking package tables (still the citation targets) from
@@ -362,7 +362,7 @@ STORY-011 (Lefthook) and STORY-012 (CI + license report + SCA). STORY-010 (the `
 - [x] 8.5 Run `openspec validate bootstrap-gradle-and-quality-toolchain --strict`, confirm it is clean, then archive the
       change with `openspec archive`. Because `skip_specs: true` is set, nothing folds into `openspec/specs/` — that is
       correct: this change added no user-observable behaviour.
-      → `openspec/` · `docs/adr/ADR-0016-openspec-delivery-tracking.md`
+      → `openspec/` · `docs/spec_baseline/adr/ADR-0016-openspec-delivery-tracking.md`
 
       **Unblocked 2026-08-03 by the standing decision recorded under 7.7:** CI is not exercised until the application
       is feature-complete, so the closing bar for this change — and every change until then — is the local gate, which

@@ -5,7 +5,7 @@ paths:
 
 # Architecture & Layering
 
-Scope: all Gradle subprojects — `:api :util :document :llm :pipeline :persistence :ui :app`. Governs the module graph, dependency direction, FX-free core, and port-vs-concrete boundaries. Authoritative spec: `docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md`.
+Scope: all Gradle subprojects — `:api :util :document :llm :pipeline :persistence :ui :app`. Governs the module graph, dependency direction, FX-free core, and port-vs-concrete boundaries. Authoritative spec: `docs/spec_baseline/specification/02_Architecture/02_MODULES_AND_LAYERING.md`.
 
 ## MUST
 

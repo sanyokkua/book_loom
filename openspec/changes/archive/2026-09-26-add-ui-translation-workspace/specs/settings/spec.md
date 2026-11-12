@@ -20,8 +20,8 @@ Exactly one provider SHALL be selected at any time.
 The application SHALL NOT offer to add, edit or delete a provider, and SHALL show those actions as unavailable.
 
 **Source:** FR-PROV-01, FR-PROV-02, FR-PROV-04
-(`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`),
-`docs/specification/01_Product/07_SETTINGS.md#providers-tab`.
+(`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`),
+`docs/spec_baseline/specification/01_Product/07_SETTINGS.md#providers-tab`.
 In plain words: the two servers almost everybody runs locally are already known to the application, so the first
 run needs no setup at all — pick one, pick a model, translate. Adding a third provider is a real feature with a
 dialog, credential handling and validation behind it; leaving its buttons greyed is honest about that, and
@@ -59,9 +59,9 @@ stages after it as passed.
 WHEN the model listing cannot be read but the server answers, the application SHALL report that stage as a
 qualified pass rather than a failure.
 
-**Source:** FR-PROV-06, FR-PROV-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-add-edit-provider`,
-`docs/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`.
+**Source:** FR-PROV-06, FR-PROV-07 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`),
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-add-edit-provider`,
+`docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`.
 In plain words: "it does not work" is useless; "the server answers but that model is not loaded" tells you what
 to do next. A server with no listing endpoint is a normal, working configuration — treating it as a failure would
 refuse the setups that manual model entry exists for. The check waits for a model because two of its three
@@ -111,8 +111,8 @@ WHEN the selected provider changes, the application SHALL discard the previously
 model.
 
 **Source:** FR-MODEL-01, FR-MODEL-02, FR-MODEL-03
-(`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-model`), DD-38,
-`docs/specification/01_Product/07_SETTINGS.md#models-tab`.
+(`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-model`), DD-38,
+`docs/spec_baseline/specification/01_Product/07_SETTINGS.md#models-tab`.
 In plain words: some servers list what they hold and some do not, and a server that holds nothing is a valid
 state rather than a broken one. Typing the identifier has to stay possible in all three cases, or the
 application becomes unusable against exactly the servers it was written for. The chosen model is discarded on a
@@ -155,10 +155,10 @@ The appearance area SHALL carry the theme choice and, beside it, the accent show
 because the accent is not selectable in this version.
 
 **Source:** FR-SETTINGS-02, FR-SETTINGS-04
-(`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-settings`), FR-THEME-4
-(`docs/specification/01_Product/09_THEMING.md#token-model`),
-`docs/specification/01_Product/07_SETTINGS.md#settings-tabs`,
-`docs/specification/01_Product/07_SETTINGS.md#appearance-tab`.
+(`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-settings`), FR-THEME-4
+(`docs/spec_baseline/specification/01_Product/09_THEMING.md#token-model`),
+`docs/spec_baseline/specification/01_Product/07_SETTINGS.md#settings-tabs`,
+`docs/spec_baseline/specification/01_Product/07_SETTINGS.md#appearance-tab`.
 In plain words: the same reasoning as the greyed navigation entries — showing the shape of the finished settings
 screen tells a person what this application will eventually let them control, and an empty tab that opens is
 worse than one that says it is not ready. The accent is named because the appearance tab has exactly three rows
@@ -191,8 +191,8 @@ displayed language from the operating system.
 This build offers no control that changes the displayed language; `localization` states that the language is
 chosen from the operating system alone.
 
-**Source:** FR-PROV-04, FR-MODEL-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`,
-`#fr-model`), FR-UI-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`).
+**Source:** FR-PROV-04, FR-MODEL-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`,
+`#fr-model`), FR-UI-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`).
 In plain words: the application has no storage yet, so it remembers nothing, and this says so instead of leaving
 a person to discover it. Remembering the chosen model per provider is specified behaviour that arrives with local
 storage; until then, pretending otherwise would be the more expensive mistake. The interface language is not

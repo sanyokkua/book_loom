@@ -14,7 +14,7 @@ paired placeholder comes back closing-before-opening or improperly nested with a
 pair rule the document round trip checks — THEN the application SHALL fail its placeholder hard gate, record a high
 `markup` finding, and SHALL NOT accept the segment, whatever its confidence or the reviewer's answer.
 
-**Source**: FR-QA-04, FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, ADR-0040, ADR-0038. In plain words: the placeholder check the document round trip performs before restoring markup (see the document-round-trip capability, which also owns the two pair rules: a pair that held text must still hold text, and a line break stays inside the same pair) is the first quality gate; a pair that comes back crossed would restore broken markup and fail the whole export at the very end, so it is caught here for one segment instead. An atomic placeholder — an image, a line break, a locked term — may move, because word order legitimately changes. A draft that fails this gate first gets its one placeholder repair (the translation-pipeline capability's "Repair invalid structured draft replies once"); only a segment still failing after it reaches self-heal.
+**Source**: FR-QA-04, FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, ADR-0040, ADR-0038. In plain words: the placeholder check the document round trip performs before restoring markup (see the document-round-trip capability, which also owns the two pair rules: a pair that held text must still hold text, and a line break stays inside the same pair) is the first quality gate; a pair that comes back crossed would restore broken markup and fail the whole export at the very end, so it is caught here for one segment instead. An atomic placeholder — an image, a line break, a locked term — may move, because word order legitimately changes. A draft that fails this gate first gets its one placeholder repair (the translation-pipeline capability's "Repair invalid structured draft replies once"); only a segment still failing after it reaches self-heal.
 
 #### Scenario: A crossed pair fails the hard gate
 
@@ -41,7 +41,7 @@ IF a translated segment does not return, exactly once each, the placeholders tha
 locked glossary terms and, under the `Keep as-is` foreign-passage policy, its kept foreign runs — THEN the application
 SHALL fail that segment's protected-span hard gate, record a high finding, and SHALL NOT accept it.
 
-**Source**: FR-GLOSS-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), EC-FOREIGN-3 (`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`, ADR-0037. In plain words: a locked name (see the glossary capability's "Render a locked term exactly as entered") and a foreign phrase the book keeps verbatim (see "Keep an inline foreign run verbatim under the Keep as-is policy") both reach the model as one placeholder, so the model can neither misspell the name nor translate the phrase. A reply that drops or duplicates such a placeholder would lose or double the name or the phrase, so it can never pass. Like any placeholder, a protected one may move.
+**Source**: FR-GLOSS-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), EC-FOREIGN-3 (`docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`, ADR-0037. In plain words: a locked name (see the glossary capability's "Render a locked term exactly as entered") and a foreign phrase the book keeps verbatim (see "Keep an inline foreign run verbatim under the Keep as-is policy") both reach the model as one placeholder, so the model can neither misspell the name nor translate the phrase. A reply that drops or duplicates such a placeholder would lose or double the name or the phrase, so it can never pass. Like any placeholder, a protected one may move.
 
 #### Scenario: A dropped locked term fails
 
@@ -66,7 +66,7 @@ SHALL fail that segment's protected-span hard gate, record a high finding, and S
 WHERE locked terms overlap in a segment, the application SHALL hide the longest match first, so a shorter locked term
 inside a longer one is not hidden separately.
 
-**Source**: FR-GLOSS-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, ADR-0037. In plain words: when one locked term contains another, the longer wins, so `Baker Street` is never split into a placeholder for `Baker` followed by the word `Street`.
+**Source**: FR-GLOSS-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, ADR-0037. In plain words: when one locked term contains another, the longer wins, so `Baker Street` is never split into a placeholder for `Baker` followed by the word `Street`.
 
 #### Scenario: The longest locked term is hidden first
 
@@ -80,7 +80,7 @@ WHILE the Book Brief's foreign-passage policy is `Keep as-is`, the application S
 placeholder before the segment reaches the model, SHALL restore it verbatim, and SHALL decide which runs are foreign
 from those declarations alone, for any language the application recognizes.
 
-**Source**: EC-FOREIGN-3 (`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), DD-26 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-26-foreign-passage-policy`), FR-QA-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), ADR-0037. In plain words: a French farewell inside an English sentence must stay French when the person chose to keep foreign passages, and the surest way is to never show it to the model. Only a run the book itself marks with another language is kept: the application does not detect languages from text (ADR-0037), and a region variant of the source language is not foreign.
+**Source**: EC-FOREIGN-3 (`docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), DD-26 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-26-foreign-passage-policy`), FR-QA-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), ADR-0037. In plain words: a French farewell inside an English sentence must stay French when the person chose to keep foreign passages, and the surest way is to never show it to the model. Only a run the book itself marks with another language is kept: the application does not detect languages from text (ADR-0037), and a region variant of the source language is not foreign.
 
 #### Scenario: A marked French run reaches the model as one placeholder
 
@@ -120,7 +120,7 @@ ancestor's below the document root — differs, after normalizing all three tags
 and the book's declared language, behind one placeholder, SHALL make no model call for it, and SHALL keep it as it is
 (counted as kept as is, path verbatim).
 
-**Source**: EC-FOREIGN-3 (`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), DD-26 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-26-foreign-passage-policy`), FR-QA-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), ADR-0037. In plain words: the fixture book's `<p xml:lang="la">Gravitas omnia trahit, sed nemo videt.</p>` was sent to the model under Keep as-is, translated and reviewed with nothing to edit, because only inline runs were hidden and the prompt's "keep it verbatim" line was not enough for a small model. A marked block is now never sent at all. Comparing with the book's own declared language too keeps a brief whose source was set to another language from leaving every paragraph under a `<body xml:lang="en">` untranslated; a block declaring the book's own language is never foreign.
+**Source**: EC-FOREIGN-3 (`docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), DD-26 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-26-foreign-passage-policy`), FR-QA-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), ADR-0037. In plain words: the fixture book's `<p xml:lang="la">Gravitas omnia trahit, sed nemo videt.</p>` was sent to the model under Keep as-is, translated and reviewed with nothing to edit, because only inline runs were hidden and the prompt's "keep it verbatim" line was not enough for a small model. A marked block is now never sent at all. Comparing with the book's own declared language too keeps a brief whose source was set to another language from leaving every paragraph under a `<body xml:lang="en">` untranslated; a block declaring the book's own language is never foreign.
 
 #### Scenario: A marked Latin paragraph is kept without a model call
 
@@ -140,7 +140,7 @@ WHERE the foreign-passage policy is `Translate` or `Translate with a note`, the 
 foreign run or block like any other text, and under `Translate with a note` SHALL tell the model to add the original
 wording in parentheses after the translation.
 
-**Source**: EC-FOREIGN-3 (`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), DD-26 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-26-foreign-passage-policy`), FR-QA-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), ADR-0037. In plain words: under the other two policies the foreign run is translated like the rest of the sentence; the second adds the original in parentheses so the reader can see what was there.
+**Source**: EC-FOREIGN-3 (`docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), DD-26 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-26-foreign-passage-policy`), FR-QA-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), ADR-0037. In plain words: under the other two policies the foreign run is translated like the rest of the sentence; the second adds the original in parentheses so the reader can see what was there.
 
 #### Scenario: Translate drafts a marked paragraph
 
@@ -165,7 +165,7 @@ while its source's is not, or the target begins with a phrase that talks about t
 the source's display text does not begin with such a phrase, THEN the application SHALL fail that segment's refusal
 hard gate, record a high `meaning` finding, and SHALL NOT accept it.
 
-**Source**: FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`. In plain words: a model that declines, apologises or talks about the text instead of translating it has produced nothing a reader can use; letting it through would put the apology into the book. Only phrases about the task or the model count — the full list per language is in `05_PIPELINE_ENGINE.md#qa-thresholds` — so a character's own apology is translated, not refused, and a book whose own line begins `Translation:` keeps its translated `Переклад:`. A reply that holds only its placeholders would silently delete the paragraph's words. A reply with no text at all, or a blank `target`, is not this gate's case: the translation-pipeline capability flags or repairs it before any check. A segment with nothing to translate — no letter, a Roman numeral or a single character — never reaches this gate: it is kept as it is with no model call (`translation-pipeline` "Keep a segment with nothing to translate as it is"), so an empty reply to the chapter number `2` can no longer flag it.
+**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`. In plain words: a model that declines, apologises or talks about the text instead of translating it has produced nothing a reader can use; letting it through would put the apology into the book. Only phrases about the task or the model count — the full list per language is in `05_PIPELINE_ENGINE.md#qa-thresholds` — so a character's own apology is translated, not refused, and a book whose own line begins `Translation:` keeps its translated `Переклад:`. A reply that holds only its placeholders would silently delete the paragraph's words. A reply with no text at all, or a blank `target`, is not this gate's case: the translation-pipeline capability flags or repairs it before any check. A segment with nothing to translate — no letter, a Roman numeral or a single character — never reaches this gate: it is kept as it is with no model call (`translation-pipeline` "Keep a segment with nothing to translate as it is"), so an empty reply to the chapter number `2` can no longer flag it.
 
 #### Scenario: An English refusal fails
 
@@ -211,7 +211,7 @@ The application SHALL compare the target's start with the refusal phrases trimme
 typographic apostrophe read as `'`, in English, the source language and the target language, and SHALL count a phrase
 only when it is followed by the end of the text or by a character that is neither a letter nor a digit.
 
-**Source**: FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`. In plain words: a phrase must end where a word ends, so `Як ШІ` never catches `Як шість`, and a refusal written with a curly apostrophe is still a refusal.
+**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`. In plain words: a phrase must end where a word ends, so `Як ШІ` never catches `Як шість`, and a refusal written with a curly apostrophe is still a refusal.
 
 #### Scenario: A typographic apostrophe does not hide a refusal
 
@@ -230,7 +230,7 @@ and the target has letters, the application SHALL fail the target-script check w
 letters are written in the target language's script, and otherwise SHALL pass it with a margin of
 (share − 0.60) / 0.20, at most 1.0.
 
-**Source**: FR-QA-01, FR-QA-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`, ADR-0037. In plain words: with no language detector, the only reliable signal is the alphabet — a Ukrainian translation written in Latin letters is plainly wrong. Serbian is catalogued as Cyrillic, so Latin-script Serbian output fails.
+**Source**: FR-QA-01, FR-QA-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`, ADR-0037. In plain words: with no language detector, the only reliable signal is the alphabet — a Ukrainian translation written in Latin letters is plainly wrong. Serbian is catalogued as Cyrillic, so Latin-script Serbian output fails.
 
 #### Scenario: A Cyrillic target for English source passes
 
@@ -251,7 +251,7 @@ the two languages share a script, when the target has no letter, or when the tar
 SHALL never count protected spans toward the share, nor, under the `Keep original` name policy, any
 whole-word occurrence of a glossary term.
 
-**Source**: FR-QA-01, FR-QA-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`, ADR-0037. In plain words: the check cannot tell Polish from Czech, so a same-script pair skips it and a wrong language in the same script is left to the reviewer and to review; short fragments skip it so a name or an exclamation is not misjudged. Names the person chose to keep in their original spelling are Latin by design, so they are not held against a Cyrillic line.
+**Source**: FR-QA-01, FR-QA-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`, ADR-0037. In plain words: the check cannot tell Polish from Czech, so a same-script pair skips it and a wrong language in the same script is left to the reviewer and to review; short fragments skip it so a name or an exclamation is not misjudged. Names the person chose to keep in their original spelling are Latin by design, so they are not held against a Cyrillic line.
 
 #### Scenario: A same-script pair skips the check
 
@@ -294,7 +294,7 @@ longer text's length, over both display texts after Unicode normalization and lo
 untranslated-echo check when the similarity is 0.90 or more, and SHALL otherwise pass it with a margin of
 (0.90 − similarity) / 0.10, at most 1.0.
 
-**Source**: FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: a model that copies the source back has translated nothing; comparing lower-cased text stops a copy in capitals from slipping past. Whether a failed echo blocks the segment depends on the source's length (see "Block acceptance when a soft check fails outright").
+**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: a model that copies the source back has translated nothing; comparing lower-cased text stops a copy in capitals from slipping past. Whether a failed echo blocks the segment depends on the source's length (see "Block acceptance when a soft check fails outright").
 
 #### Scenario: A verbatim copy fails
 
@@ -318,7 +318,7 @@ both texts before comparing them. IF the source's display text has fewer than 20
 whole-word occurrence of a glossary term removed under any name policy, holds no letter, THEN the application SHALL
 skip the echo check: the glossary explains the echo.
 
-**Source**: FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: a line made only of names the person chose to keep is meant to read like its source, so the names are taken out before the comparison. A short line that is only glossary names, such as `Bartimaeus!`, is explained by the glossary whatever the policy — how a name is rendered is the glossary check's question, not the echo's.
+**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: a line made only of names the person chose to keep is meant to read like its source, so the names are taken out before the comparison. A short line that is only glossary names, such as `Bartimaeus!`, is explained by the glossary whatever the policy — how a name is rendered is the glossary check's question, not the echo's.
 
 #### Scenario: A names-only line kept by policy is not an echo
 
@@ -343,7 +343,7 @@ IF any sequence of 3 consecutive words repeats 3 or more times in a row in a tar
 the repetition check for that segment; otherwise it SHALL pass it with a margin of 0.5 when a sequence of 3 words
 repeats exactly twice in a row, and 1.0 when none does.
 
-**Source**: FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: small local models sometimes get stuck repeating a phrase until the output limit; this catches that decode loop without punishing ordinary repetition in prose, while a phrase said twice over lowers confidence a little.
+**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: small local models sometimes get stuck repeating a phrase until the output limit; this catches that decode loop without punishing ordinary repetition in prose, while a phrase said twice over lowers confidence a little.
 
 #### Scenario: Three repeats in a row fail
 
@@ -361,7 +361,7 @@ The application SHALL fail the length-ratio check when target length divided by 
 characters, falls outside the band of the pair's script class, and otherwise SHALL pass it with a margin of the
 distance to the nearer bound divided by one tenth of the band's width, at most 1.0.
 
-**Source**: FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: a translation far shorter than its source has usually dropped content, and one far longer has usually added some; the band differs by writing system because Chinese is naturally much shorter than English. A ratio just inside the band passes, but with less confidence than one comfortably inside it.
+**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: a translation far shorter than its source has usually dropped content, and one far longer has usually added some; the band differs by writing system because Chinese is naturally much shorter than English. A ratio just inside the band passes, but with less confidence than one comfortably inside it.
 
 #### Scenario: Each script class has its band
 
@@ -397,7 +397,7 @@ WHEN the source is shorter than 25 characters, the application SHALL halve the b
 bound; otherwise, WHEN it is shorter than 60 characters, it SHALL set the lower bound at 0.85 times and the upper
 bound at 1.25 times the band's.
 
-**Source**: FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: very short segments get a wider band because one word more or less changes their ratio a lot; a verse line Ukrainian says in half the words keeps its length (`it has been falling night and day` → `вона падає ніч і день`, 0.64, is no omission).
+**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: very short segments get a wider band because one word more or less changes their ratio a lot; a verse line Ukrainian says in half the words keeps its length (`it has been falling night and day` → `вона падає ніч і день`, 0.64, is no omission).
 
 #### Scenario: A short source uses the widened band
 
@@ -417,7 +417,7 @@ letter-word-followed-by-space-then-full-stop-or-comma spots (`помогою .`)
 least 8 words, neither text in a script written without spaces — when the target has fewer than 0.55 words per source
 word while its character ratio is under 0.85, and its finding SHALL name which of the two it saw.
 
-**Source**: FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: a dropped name or phrase can leave the character count inside the band, so the space left before a full stop and a word count far below the source's are read as well; 0.55 sits well below any real pair's word ratio (English to Ukrainian runs about 0.8), and a verse line Ukrainian says in half the words keeps its length (`A stone let go will find the ground,` → `Камінь, відпущений, знайде землю,`), so a faithful translation is not caught by it.
+**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: a dropped name or phrase can leave the character count inside the band, so the space left before a full stop and a word count far below the source's are read as well; 0.55 sits well below any real pair's word ratio (English to Ukrainian runs about 0.8), and a verse line Ukrainian says in half the words keeps its length (`A stone let go will find the ground,` → `Камінь, відпущений, знайде землю,`), so a faithful translation is not caught by it.
 
 #### Scenario: A space left before a full stop fails
 
@@ -433,7 +433,7 @@ application SHALL NOT fail the length-ratio check for a ratio below the band's l
 40 characters or 8 words, for the word-count omission rule; a ratio above the upper bound, and a space left before a
 full stop, SHALL still fail.
 
-**Source**: FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: a compact line such as `Unfortunately, nothing happened.` → `На жаль, нічого.` (0.50) is complete in half the characters because Ukrainian needs fewer function words; one real run flagged 14 such lines as omissions, so below the lower bound a compact line is trusted as long as it keeps half its words.
+**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: a compact line such as `Unfortunately, nothing happened.` → `На жаль, нічого.` (0.50) is complete in half the characters because Ukrainian needs fewer function words; one real run flagged 14 such lines as omissions, so below the lower bound a compact line is trusted as long as it keeps half its words.
 
 #### Scenario: A compact line is complete in half the characters
 
@@ -456,7 +456,7 @@ WHEN a source line has 40 characters or more, or more than 8 words, the applicat
 while its target keeps at least 0.40 of the source's characters and either half of its words or three words and 0.30
 of its words.
 
-**Source**: FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: below the lower bound a compact line is trusted as long as it keeps half its words (or, past 40 characters, three words and a ratio of 0.40). Known tradeoff (2026-10-07 review): the extended range also passes a real omission, and the six short-line cases of the real run (10 words to 3 or 4) were the reason for it; on the Fast dial no reviewer is there to catch such a line.
+**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: below the lower bound a compact line is trusted as long as it keeps half its words (or, past 40 characters, three words and a ratio of 0.40). Known tradeoff (2026-10-07 review): the extended range also passes a real omission, and the six short-line cases of the real run (10 words to 3 or 4) were the reason for it; on the Fast dial no reviewer is there to catch such a line.
 
 #### Scenario: A longer line kept in three words is complete
 
@@ -476,7 +476,7 @@ The application SHALL pass glossary compliance, with a margin of 1.0, when every
 source segment appears in the target as its entered rendering, SHALL fail it otherwise, and SHALL skip it, counting
 1.0, when the segment contains no locked term.
 
-**Source**: FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), FR-GLOSS-03 (`#fr-gloss`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: a name the person locked must read exactly as they entered it; unlocked entries are only guidance for the model and do not lower the score. Because every locked term travels as a placeholder and comes back as its rendering, this check passes whenever the protected-span hard gate did; it stays in the blend because the reference weights include it.
+**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), FR-GLOSS-03 (`#fr-gloss`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: a name the person locked must read exactly as they entered it; unlocked entries are only guidance for the model and do not lower the score. Because every locked term travels as a placeholder and comes back as its rendering, this check passes whenever the protected-span hard gate did; it stays in the blend because the reference weights include it.
 
 #### Scenario: Every locked term rendered
 
@@ -499,7 +499,7 @@ WHILE the Book Brief's foreign-passage policy is `Keep as-is`, the application S
 target-script checks, each counting 1.0, for a segment marked foreign, and SHALL apply both checks to every unmarked
 segment.
 
-**Source**: FR-QA-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds` (foreign-keep vs echo), ADR-0037. In plain words: a French line the author left untranslated in an English novel must stay French when the person chose to keep foreign passages, and that is not a failure; but only a passage the book itself marks, or one in another alphabet, earns that pass — a segment that merely echoes its source is still caught.
+**Source**: FR-QA-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds` (foreign-keep vs echo), ADR-0037. In plain words: a French line the author left untranslated in an English novel must stay French when the person chose to keep foreign passages, and that is not a failure; but only a passage the book itself marks, or one in another alphabet, earns that pass — a segment that merely echoes its source is still caught.
 
 #### Scenario: A marked French block is kept without failing
 
@@ -523,7 +523,7 @@ The application SHALL mark a segment foreign when the block it belongs to declar
 from the brief's source language after both tags are normalized, or when its dominant script differs from the source
 language's; the comparison SHALL apply to any language the application recognizes, not only a listed one.
 
-**Source**: FR-QA-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds` (foreign-keep vs echo), ADR-0037. In plain words: the comparison is with the source language the person confirmed on the brief, not with what the book's package claims, so a book whose package declares the wrong language does not have every paragraph marked foreign.
+**Source**: FR-QA-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds` (foreign-keep vs echo), ADR-0037. In plain words: the comparison is with the source language the person confirmed on the brief, not with what the book's package claims, so a book whose package declares the wrong language does not have every paragraph marked foreign.
 
 #### Scenario: A Latin block in an English book is marked foreign
 
@@ -549,7 +549,7 @@ The application SHALL compute each segment's confidence as 0.30 × glossary + 0.
 script + 0.15 × untranslated echo + 0.10 × repetition, each term the check's margin between 0 and 1, a failed check
 counting 0.0 and a skipped check 1.0, and SHALL NOT fold the hard gates or the reviewer's answer into it; the confidence only orders segments for review and never decides acceptance.
 
-**Source**: FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#confidence`. In plain words: one number says how comfortably a segment clears the deterministic checks; hard gates stay pass/fail because no score can excuse broken markup, and the reviewer stays separate so a confident reviewer cannot hide a failed check; the number is a sort key for the review list, not a bar. Each check's margin is stated in its own requirement above.
+**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#confidence`. In plain words: one number says how comfortably a segment clears the deterministic checks; hard gates stay pass/fail because no score can excuse broken markup, and the reviewer stays separate so a confident reviewer cannot hide a failed check; the number is a sort key for the review list, not a bar. Each check's margin is stated in its own requirement above.
 
 #### Scenario: A worked confidence
 
@@ -580,7 +580,7 @@ IF a soft check fails outright, THEN the application SHALL NOT accept the segmen
 a medium finding of the check's kind, and SHALL send the segment to a directed fix, except as "Let a short echo lower
 confidence without blocking" says.
 
-**Source**: FR-QA-07, FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `#qa-thresholds`, ADR-0038. In plain words: a check that fails is a concrete defect — a copied source, the wrong alphabet, half a sentence missing — and a high score on the other checks must not carry it into the book; confidence decides only the close calls no more: confidence orders segments for review. The reference clauses that accepted on confidence or on a judge score are edited in this change.
+**Source**: FR-QA-07, FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `#qa-thresholds`, ADR-0038. In plain words: a check that fails is a concrete defect — a copied source, the wrong alphabet, half a sentence missing — and a high score on the other checks must not carry it into the book; confidence decides only the close calls no more: confidence orders segments for review. The reference clauses that accepted on confidence or on a judge score are edited in this change.
 
 #### Scenario: A copied source is repaired, then flagged, whatever its confidence
 
@@ -622,7 +622,7 @@ IF the failed check is the untranslated echo and the source's display text, afte
 has fewer than 20 code points, THEN the application SHALL NOT block the segment: the failure SHALL only add its 0.0
 margin to confidence and record a low `language` finding.
 
-**Source**: FR-QA-07, FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `#qa-thresholds`, ADR-0038. In plain words: short lines are the exception for the echo check alone: a name, a Roman numeral or `OK` legitimately reads the same in both languages, so below 20 code points an echo lowers confidence instead of blocking.
+**Source**: FR-QA-07, FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `#qa-thresholds`, ADR-0038. In plain words: short lines are the exception for the echo check alone: a name, a Roman numeral or `OK` legitimately reads the same in both languages, so below 20 code points an echo lowers confidence instead of blocking.
 
 #### Scenario: A short echo lowers confidence without blocking
 
@@ -643,7 +643,7 @@ The application SHALL accept or flag a segment by the acceptance rule alone — 
 verified blockers — and SHALL NOT let the review mode, the quality dial or any confidence threshold move that decision;
 the review mode SHALL decide only when the run pauses for the person.
 
-**Source**: FR-REVIEW-02, FR-QA-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`, `#fr-qa`), `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, ADR-0036. In plain words: the earlier rule asked a segment to reach a confidence of 0.60, 0.75 or 0.85 by review mode, and a judge score besides. A score cannot tell a coined word from a rare one, so on a real book it flagged 170 decisions that a person found correct. What a person wants to check is one choice — the review mode — and it now alone decides when the run stops; whether a segment is accepted depends on facts the code can verify.
+**Source**: FR-REVIEW-02, FR-QA-07 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`, `#fr-qa`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, ADR-0036. In plain words: the earlier rule asked a segment to reach a confidence of 0.60, 0.75 or 0.85 by review mode, and a judge score besides. A score cannot tell a coined word from a rare one, so on a real book it flagged 170 decisions that a person found correct. What a person wants to check is one choice — the review mode — and it now alone decides when the run stops; whether a segment is accepted depends on facts the code can verify.
 
 #### Scenario: A low confidence alone does not flag a segment
 
@@ -663,7 +663,7 @@ source and the candidate of each segment of the chunk that passed its hard gates
 not reused from memory, labelled `s1` to `sk` in document order, together with the glossary renderings of the names in
 the chunk and the language's reviewer checks, at temperature 0 with a fixed seed.
 
-**Source**: FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, ADR-0038; tasks 15d.6. In plain words: a judge that scores a chunk cannot say which word is wrong, so a good sentence and a bad one fell below the same bar and the book filled with false alarms. A reviewer that quotes the word and offers the replacement can be checked by the code, which is the only reason to trust it. One call per chunk keeps the cost tolerable; short local labels are easier for a small model to keep straight than segment ids; each glossary rendering goes in as one `source → target` line.
+**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, ADR-0038; tasks 15d.6. In plain words: a judge that scores a chunk cannot say which word is wrong, so a good sentence and a bad one fell below the same bar and the book filled with false alarms. A reviewer that quotes the word and offers the replacement can be checked by the code, which is the only reason to trust it. One call per chunk keeps the cost tolerable; short local labels are easier for a small model to keep straight than segment ids; each glossary rendering goes in as one `source → target` line.
 
 #### Scenario: A Balanced chunk of three segments is reviewed once
 
@@ -684,7 +684,7 @@ the chunk and the language's reviewer checks, at temperature 0 with a fixed seed
 The application SHALL make no reviewer call for a chunk with no segment that qualifies for review, and WHERE the dial
 is Fast it SHALL make none and decide by the deterministic checks alone.
 
-**Source**: FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, ADR-0038; tasks 15d.6. In plain words: a chunk where nothing is left to review costs no call, and Fast trades the reviewer away for speed.
+**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, ADR-0038; tasks 15d.6. In plain words: a chunk where nothing is left to review costs no call, and Fast trades the reviewer away for speed.
 
 #### Scenario: No reviewer call when no pair qualifies
 
@@ -702,7 +702,7 @@ The application SHALL read back per label `{"id","status","edits","rewrite"}` wh
 of `{"criterion","quote","replacement"}` find-and-replace edits, the default for a defect — or `rewrite`, allowed when
 more than about 40% of the text must change or the structure or meaning is wrong throughout.
 
-**Source**: FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`, ADR-0038; tasks 15d.6. In plain words: a reviewer that quotes the word and offers the replacement can be checked by the code; a rewrite is the exception for a segment wrong throughout.
+**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`, ADR-0038; tasks 15d.6. In plain words: a reviewer that quotes the word and offers the replacement can be checked by the code; a rewrite is the exception for a segment wrong throughout.
 
 #### Scenario: One edit is read for the second segment
 
@@ -717,7 +717,7 @@ edit with no quote or whose replacement equals its quote, and SHALL read a crite
 criterion SHALL otherwise be one of meaning, omission, addition, terminology, gender, agreement, invented-word, quotes,
 language, fluency or style.
 
-**Source**: FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, ADR-0038; tasks 15d.6. In plain words: short local labels are easier for a small model to keep straight than segment ids, and a small model often answers loosely, so a gap in the reply reads as "nothing to fix" and a half-formed edit is dropped rather than guessed at.
+**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, ADR-0038; tasks 15d.6. In plain words: short local labels are easier for a small model to keep straight than segment ids, and a small model often answers loosely, so a gap in the reply reads as "nothing to fix" and a half-formed edit is dropped rather than guessed at.
 
 #### Scenario: A reply that names no segment reads as ok
 
@@ -746,7 +746,7 @@ language, fluency or style.
 The schema sent SHALL be flat — no `maxItems`, `maxLength` or `additionalProperties` — and a structured call that ends
 with `ErrorCode.timeout` SHALL be sent once more without its response format.
 
-**Source**: FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, ADR-0038; tasks 15d.6. In plain words: a small local model stalls on a constrained schema, so the schema stays plain and a stalled structured call is asked once more without it.
+**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, ADR-0038; tasks 15d.6. In plain words: a small local model stalls on a constrained schema, so the schema stays plain and a stalled structured call is asked once more without it.
 
 #### Scenario: The schema is flat
 
@@ -764,7 +764,7 @@ with `ErrorCode.timeout` SHALL be sent once more without its response format.
 WHERE the dial is Max, the application SHALL make a second pass over the same drafts with a narrower checklist (gender,
 terminology, agreement) and SHALL apply that pass's edits after the first pass's.
 
-**Source**: FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`, ADR-0038; tasks 15d.6. In plain words: Max spends a second, narrower look on the defects a small model most often misses.
+**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`, ADR-0038; tasks 15d.6. In plain words: Max spends a second, narrower look on the defects a small model most often misses.
 
 #### Scenario: Max reviews the chunk twice
 
@@ -929,7 +929,7 @@ the system SHALL NOT pause the run for it: it SHALL keep each segment's draft, f
 `reviewer-unavailable` finding raised by `reviewer` (with the timeout as its reason when the call timed out), accept
 none of them, make no repair round for them, and go on with the next segment.
 
-**Source**: FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7. In plain words: a reviewer that does not answer says nothing about the translation, so the translation is kept and handed to the person for review instead of holding the whole book.
+**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7. In plain words: a reviewer that does not answer says nothing about the translation, so the translation is kept and handed to the person for review instead of holding the whole book.
 
 #### Scenario: A chunk's reviewer stalls
 
@@ -949,7 +949,7 @@ IF a reviewer call ends with a provider error other than `ErrorCode.timeout` —
 `upstream`, `rateLimited`) included — THEN the application SHALL pause the run as the `resume` capability says, so the
 outage is waited out and the reviewer call made again, exactly as for a draft call.
 
-**Source**: FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7. In plain words: a provider that is down is another matter than a reviewer that does not answer: overnight it would flag every segment reviewed while it was down, so the run waits for it and reviews again.
+**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7. In plain words: a provider that is down is another matter than a reviewer that does not answer: overnight it would flag every segment reviewed while it was down, so the run waits for it and reviews again.
 
 #### Scenario: A provider outage during review is waited out
 
@@ -962,7 +962,7 @@ outage is waited out and the reviewer call made again, exactly as for a draft ca
 
 On Max, a second reviewer pass that cannot be read SHALL leave the first pass's answers in force.
 
-**Source**: FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7. In plain words: what the first pass already found is not thrown away because the narrower second look failed to answer.
+**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7. In plain words: what the first pass already found is not thrown away because the narrower second look failed to answer.
 
 #### Scenario: An unreadable second pass keeps the first pass's edit
 
@@ -976,7 +976,7 @@ A reviewer reply that stopped with the finish reason `length` SHALL NEVER flag a
 complete entries of the cut reply, ask about the pairs left unread once more in one smaller call of the same pass, and
 take a pair still unread after that as `ok` with a warning in the log.
 
-**Source**: FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7. In plain words: the deterministic checks have passed such a pair, and a flag would hand the person a segment nothing is known to be wrong with (the draft stays unreviewed but accepted by the checks).
+**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7. In plain words: the deterministic checks have passed such a pair, and a flag would hand the person a segment nothing is known to be wrong with (the draft stays unreviewed but accepted by the checks).
 
 #### Scenario: A reply cut by the cap keeps what it answered
 
@@ -995,7 +995,7 @@ The system SHALL size the reviewer's output cap from the batch as 128 tokens plu
 tokens of the pair's candidate (a rewrite may repeat it) and 120 for a possible edit, and SHALL expect a reply of half
 the cap.
 
-**Source**: FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7. In plain words: a cap sized from the pairs bounds every model call, so a small model cannot run on without limit.
+**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7. In plain words: a cap sized from the pairs bounds every model call, so a small model cannot run on without limit.
 
 #### Scenario: The cap grows with the pairs
 
@@ -1009,7 +1009,7 @@ IF a re-ask is answered with an unreadable reply (an empty completion, a context
 the system SHALL take its pairs as `ok` with a warning in the log; IF it fails with a cancellation (Pause or Stop) or a
 provider outage, THEN it SHALL fail the whole review as the first call does, so the step is redone on resume and no unreviewed pair is stored as accepted.
 
-**Source**: FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7. In plain words: a re-ask that cannot answer is no reason to flag, but a Pause, a Stop or an outage must not leave an unreviewed pair stored as accepted.
+**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7. In plain words: a re-ask that cannot answer is no reason to flag, but a Pause, a Stop or an outage must not leave an unreviewed pair stored as accepted.
 
 #### Scenario: An unreadable re-ask takes its pairs as ok
 
@@ -1029,7 +1029,7 @@ gates and, among those, the fewest blocking checks, the checks counting before a
 it by a step's result only when that result has fewer; progress SHALL be judged by the sets of blocking checks, never by
 a score.
 
-**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), ADR-0038; tasks 15b, 15d.7. In plain words: on the hand test a repair that "improved" a segment sometimes left it with more defects than the draft had. A repair is a bet, so the best text seen so far is kept.
+**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), ADR-0038; tasks 15b, 15d.7. In plain words: on the hand test a repair that "improved" a segment sometimes left it with more defects than the draft had. A repair is a bet, so the best text seen so far is kept.
 
 #### Scenario: A repair that breaks a hard gate is discarded
 
@@ -1050,7 +1050,7 @@ regresses, swaps one blocker for another or repeats the text, THEN the applicati
 there and keep the best candidate, which is always the final target, and SHALL write each round's blocker set before and after
 to the log at DEBUG.
 
-**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), ADR-0038; tasks 15b, 15d.7. In plain words: a directed fix once returned the same text three times; a step that does not beat the best candidate ends the attempt.
+**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), ADR-0038; tasks 15b, 15d.7. In plain words: a directed fix once returned the same text three times; a step that does not beat the best candidate ends the attempt.
 
 #### Scenario: A second repair that makes it worse leaves the first
 
@@ -1088,7 +1088,7 @@ The application SHALL send a directed fix only for a blocker with evidence it ho
 reviewer edit it could not verify — never for a concern with no finding, so a segment with nothing to name is decided
 without a repair call, and at most as many fix rounds as the dial allows, none on a review retry.
 
-**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), ADR-0038; tasks 15b, 15d.7. In plain words: the reflect, improve and polish chain could no longer run once acceptance stopped depending on a score, and no measurement showed it helped, so it is gone rather than hidden behind a switch; a fix needs something concrete to name.
+**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), ADR-0038; tasks 15b, 15d.7. In plain words: the reflect, improve and polish chain could no longer run once acceptance stopped depending on a score, and no measurement showed it helped, so it is gone rather than hidden behind a switch; a fix needs something concrete to name.
 
 #### Scenario: A reviewer finding without a quote is never fixed
 
@@ -1110,7 +1110,7 @@ without a repair call, and at most as many fix rounds as the dial allows, none o
 A fix for refused reviewer edits SHALL replace the edited text only when it brings no new blocker and removes at least
 one of the quotes.
 
-**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), ADR-0038; tasks 15b, 15d.7. In plain words: a fix that makes things worse is thrown away.
+**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), ADR-0038; tasks 15b, 15d.7. In plain words: a fix that makes things worse is thrown away.
 
 #### Scenario: A fix that adds a blocker is discarded
 
@@ -1423,7 +1423,7 @@ outright, no deterministic check blocks, and no verified blocker is left — an 
 the code found and that no edit or fix resolved; the confidence the checks derive SHALL NOT be compared with any
 threshold and the reviewer's fluency and style remarks SHALL NOT block.
 
-**Source**: FR-QA-07, FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`, ADR-0038; tasks 15d.6. In plain words: a segment is accepted unless the code can point at something wrong with it. A repaired target is decided by the checks alone: the reviewer read the draft, not the repair. A soft check that fails outright is the one in "Block acceptance when a soft check fails outright". A reuse from memory follows the same rule with no reviewer (see "Accept a context-matched memory reuse without the reviewer").
+**Source**: FR-QA-07, FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`, ADR-0038; tasks 15d.6. In plain words: a segment is accepted unless the code can point at something wrong with it. A repaired target is decided by the checks alone: the reviewer read the draft, not the repair. A soft check that fails outright is the one in "Block acceptance when a soft check fails outright". A reuse from memory follows the same rule with no reviewer (see "Accept a context-matched memory reuse without the reviewer").
 
 #### Scenario: A low-confidence segment whose checks all pass is accepted
 
@@ -1469,7 +1469,7 @@ WHEN a segment's target is reused from memory because its source and both neighb
 accept that target only when its hard gates pass and no soft check failed outright, and SHALL make no reviewer call for
 it nor show it to its chunk's reviewer.
 
-**Source**: FR-ALGO-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#context-aware-tm`, `#tiered-loop`, ADR-0038. In plain words: a sentence already accepted in the very same surroundings needs no second opinion from the reviewer, but it must still clear every deterministic check, so a memory entry can never put a broken or since-forbidden target into the book. When the memory is looked up, and that a reuse which is not accepted is discarded and the segment drafted instead, is the translation-pipeline capability's "Reuse the translation memory only where its context matches"; a segment is recorded as reused from memory only when its reuse is accepted.
+**Source**: FR-ALGO-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#context-aware-tm`, `#tiered-loop`, ADR-0038. In plain words: a sentence already accepted in the very same surroundings needs no second opinion from the reviewer, but it must still clear every deterministic check, so a memory entry can never put a broken or since-forbidden target into the book. When the memory is looked up, and that a reuse which is not accepted is discarded and the segment drafted instead, is the translation-pipeline capability's "Reuse the translation memory only where its context matches"; a segment is recorded as reused from memory only when its reuse is accepted.
 
 #### Scenario: A context match is accepted without the reviewer
 
@@ -1492,7 +1492,7 @@ N being 1 on Fast, 2 on Balanced and 3 on Max — each returning one target for 
 acceptance it SHALL mark the segment FLAGGED with every finding, and a segment accepted after at least one round SHALL
 count as repaired and accepted.
 
-**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#quality-dial-mapping`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#directed-fix-repair`, ADR-0038. In plain words: most failures can be fixed by asking the model again with the problem named. The budget keeps a stubborn segment from eating the run, and the repaired count shows how much the repairs are doing. A segment the checks accept goes to the reviewer instead (see "Verify every reviewer edit in code before applying it").
+**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#quality-dial-mapping`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#directed-fix-repair`, ADR-0038. In plain words: most failures can be fixed by asking the model again with the problem named. The budget keeps a stubborn segment from eating the run, and the repaired count shows how much the repairs are doing. A segment the checks accept goes to the reviewer instead (see "Verify every reviewer edit in code before applying it").
 
 #### Scenario: The budget runs out
 
@@ -1508,7 +1508,7 @@ count as repaired and accepted.
 
 The draft's one structural repair and one placeholder repair SHALL NOT count as self-heal rounds.
 
-**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#directed-fix-repair`, ADR-0038. In plain words: the draft's own two format repairs come first and never use up the budget — their order, and the replies that flag a segment at once, are the translation-pipeline capability's "Repair invalid structured draft replies once" and "Flag a segment whose reply cannot be used, and continue".
+**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#directed-fix-repair`, ADR-0038. In plain words: the draft's own two format repairs come first and never use up the budget — their order, and the replies that flag a segment at once, are the translation-pipeline capability's "Repair invalid structured draft replies once" and "Flag a segment whose reply cannot be used, and continue".
 
 #### Scenario: The draft's format repairs are not rounds
 
@@ -1522,7 +1522,7 @@ Each self-heal round SHALL be a directed fix naming the concrete finding — a f
 placeholder sequence stated when the placeholder or protected-span gate failed, or a soft check failed outright — and
 SHALL have no call when there is nothing concrete to name.
 
-**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#directed-fix-repair`, ADR-0038. In plain words: a model repairs what it is told exactly, and a round with nothing to name would only ask it to guess.
+**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#directed-fix-repair`, ADR-0038. In plain words: a model repairs what it is told exactly, and a round with nothing to name would only ask it to guess.
 
 #### Scenario: A placeholder failure gets a directed fix with the expected tokens
 
@@ -1536,7 +1536,7 @@ SHALL have no call when there is nothing concrete to name.
 A target a round returns SHALL be decided by the checks alone, with no reviewer call, and a round that does not lower
 the blocker set ends the repair there ("Keep the best candidate through the repair path").
 
-**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), ADR-0038. In plain words: the reviewer read the draft, not the repair, so a repaired target is judged by the code alone.
+**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), ADR-0038. In plain words: the reviewer read the draft, not the repair, so a repaired target is judged by the code alone.
 
 #### Scenario: A repaired target gets no reviewer call
 
@@ -1550,7 +1550,7 @@ that raised it, its type, its severity and a short note, SHALL record every edit
 `reviewer-edit` that carries the quote and its replacement, and SHALL keep the findings of a FLAGGED segment for the
 review desk and for any later retry.
 
-**Source**: FR-QA-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`. In plain words: a directed fix needs to know exactly what was wrong, and so does the person reviewing a flagged segment; a flag with no reason would leave them guessing, and an edit made for them should be shown as what it removed and what it put there.
+**Source**: FR-QA-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`. In plain words: a directed fix needs to know exactly what was wrong, and so does the person reviewing a flagged segment; a flag with no reason would leave them guessing, and an edit made for them should be shown as what it removed and what it put there.
 
 #### Scenario: A flagged segment keeps its reasons
 

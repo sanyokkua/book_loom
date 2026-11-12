@@ -7,7 +7,7 @@
 The export screen SHALL carry a Save to field holding the path the translated book is written to, and a Browse action
 that opens the system's save dialog to choose it.
 
-**Source**: FR-EXPORT-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`. In plain words: the translation job no longer writes the book, so the place it is written to belongs with the button that writes it — which is where the reference rendering always drew it. The name matches the command line's because the rule is not the obvious one-liner it looks like: for a `.fb2.zip` book the suffix is two extensions, and the screen and the command line must never disagree about where a book goes. How the one rule is shared is a design matter (`design.md` D13).
+**Source**: FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`. In plain words: the translation job no longer writes the book, so the place it is written to belongs with the button that writes it — which is where the reference rendering always drew it. The name matches the command line's because the rule is not the obvious one-liner it looks like: for a `.fb2.zip` book the suffix is two extensions, and the screen and the command line must never disagree about where a book goes. How the one rule is shared is a design matter (`design.md` D13).
 
 #### Scenario: The Save to field and Browse are present
 
@@ -21,7 +21,7 @@ WHEN a book is open and the person has not edited the Save to path, the export s
 source book whose name is the source name with the target language inserted before the format's suffix, and SHALL
 recompute that proposal whenever the target language changes.
 
-**Source**: FR-EXPORT-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`. In plain words: the person gets a sensible destination without typing, and it follows the target language until they choose their own; for a `.fb2.zip` book the suffix is two extensions and stays whole.
+**Source**: FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`. In plain words: the person gets a sensible destination without typing, and it follows the target language until they choose their own; for a `.fb2.zip` book the suffix is two extensions and stays whole.
 
 #### Scenario: The default path follows the source
 
@@ -43,7 +43,7 @@ recompute that proposal whenever the target language changes.
 WHEN the person has edited the Save to path, by typing or through Browse, the export screen SHALL keep that path when
 the target language changes.
 
-**Source**: FR-EXPORT-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035. In plain words: a destination the person chose is theirs, and changing the target language must not silently move it.
+**Source**: FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035. In plain words: a destination the person chose is theirs, and changing the target language must not silently move it.
 
 #### Scenario: An edited path is kept
 
@@ -55,7 +55,7 @@ the target language changes.
 
 The proposed name SHALL be the name the command line gives its output for the same source file and target language.
 
-**Source**: FR-EXPORT-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035. In plain words: the screen and the command line must never disagree about where a book goes; how the one rule is shared is a design matter (`design.md` D13).
+**Source**: FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035. In plain words: the screen and the command line must never disagree about where a book goes; how the one rule is shared is a design matter (`design.md` D13).
 
 #### Scenario: The command line names its output the same way
 
@@ -70,7 +70,7 @@ IF a file already exists at the Save to path, or at the path of a side file that
 switch is off, THEN the export screen SHALL say so beside the Save to field as soon as the path is chosen, naming the
 occupied path, and SHALL make Export book unavailable until the path changes or the switch is turned on.
 
-**Source**: FR-EXPORT-03, FR-EXPORT-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), ADR-0035, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`. In plain words: an existing book is never replaced by accident, and the person learns the path is taken when they pick it, not after pressing Export and waiting for a refusal. The side files follow the same rule, because a glossary file someone edited by hand is as worth protecting as the book.
+**Source**: FR-EXPORT-03, FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), ADR-0035, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`. In plain words: an existing book is never replaced by accident, and the person learns the path is taken when they pick it, not after pressing Export and waiting for a refusal. The side files follow the same rule, because a glossary file someone edited by hand is as worth protecting as the book.
 
 #### Scenario: Replacing is off by default
 
@@ -101,7 +101,7 @@ IF the Save to path is the source file itself, or its file type differs from the
 export screen SHALL say so beside the Save to field and SHALL make Export book unavailable, and an export requested with
 that path SHALL fail with `ErrorCode.validation` without writing anything.
 
-**Source**: FR-EXPORT-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`. In plain words: these checks used to guard the start of a run, which wrote the book; now the export writes it, so they guard the export. A translation must never be written over the book it was made from, and a book is written back in the container it came in, so a zipped FB2 given a plain name would only fail its own re-open check after writing.
+**Source**: FR-EXPORT-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`. In plain words: these checks used to guard the start of a run, which wrote the book; now the export writes it, so they guard the export. A translation must never be written over the book it was made from, and a book is written back in the container it came in, so a zipped FB2 given a plain name would only fail its own re-open check after writing.
 
 #### Scenario: The source itself is refused
 
@@ -127,7 +127,7 @@ occupied-path rule.
 WHILE a run is running, pausing or stopping, the export screen SHALL make Export book unavailable and SHALL show the note
 "Pause the run to export".
 
-**Source**: FR-REVIEW-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-X1 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), ADR-0035. In plain words: a person can take the book out at any point — before translating a word, halfway, after stopping — and review never blocks it. The one exception is while the run is actively translating, because a book written then would disagree with what the run decides a moment later; pausing first is one click.
+**Source**: FR-REVIEW-07 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-X1 (`docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), ADR-0035. In plain words: a person can take the book out at any point — before translating a word, halfway, after stopping — and review never blocks it. The one exception is while the run is actively translating, because a book written then would disagree with what the run decides a moment later; pausing first is one click.
 
 #### Scenario: A paused run can be exported
 
@@ -155,7 +155,7 @@ WHILE a run is running, pausing or stopping, the export screen SHALL make Export
 WHILE an export is being written, the export screen SHALL make Export book unavailable and SHALL report the export as
 in progress.
 
-**Source**: FR-REVIEW-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-X1 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), ADR-0035. In plain words: a second press while the first export is still writing would start a second write of the same file.
+**Source**: FR-REVIEW-07 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-X1 (`docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), ADR-0035. In plain words: a second press while the first export is still writing would start a second write of the same file.
 
 #### Scenario: Export book is unavailable during a write
 
@@ -169,7 +169,7 @@ Export book is pressed, how many segments will be written in the source language
 ones that have no machine translation — and how many flagged segments will be written with their machine
 translation.
 
-**Source**: FR-REVIEW-X2 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), FR-BRIEF-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), ADR-0035; "kept as source by choice" is defined by `translation-pipeline` (`openspec/changes/archive/2026-10-19-complete-translation-workflow/specs/translation-pipeline/spec.md`). In plain words: a partial book is allowed, but never a surprise — the person reads "312 segments will be written in the source language" before choosing to write it. Auxiliary text the person switched off on the Book Brief — say, every image description — is not waiting for anything, so counting it as pending would make a finished book look unfinished; it is named on its own line instead, so nothing written in the source language goes unmentioned.
+**Source**: FR-REVIEW-X2 (`docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), FR-BRIEF-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), ADR-0035; "kept as source by choice" is defined by `translation-pipeline` (`openspec/changes/archive/2026-10-19-complete-translation-workflow/specs/translation-pipeline/spec.md`). In plain words: a partial book is allowed, but never a surprise — the person reads "312 segments will be written in the source language" before choosing to write it. Auxiliary text the person switched off on the Book Brief — say, every image description — is not waiting for anything, so counting it as pending would make a finished book look unfinished; it is named on its own line instead, so nothing written in the source language goes unmentioned.
 
 #### Scenario: Pending and flagged counts are stated
 
@@ -193,7 +193,7 @@ translation.
 The pending count SHALL leave out every segment kept as source by choice, and WHERE the book has such segments the
 export screen SHALL state their number apart, as `<n> segments are kept as source by choice`.
 
-**Source**: FR-REVIEW-X2 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), FR-BRIEF-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), ADR-0035; "kept as source by choice" is defined by `translation-pipeline` (`openspec/changes/archive/2026-10-19-complete-translation-workflow/specs/translation-pipeline/spec.md`). In plain words: auxiliary text the person switched off on the Book Brief — say, every image description — is not waiting for anything, so counting it as pending would make a finished book look unfinished; it is named on its own line instead.
+**Source**: FR-REVIEW-X2 (`docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), FR-BRIEF-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), ADR-0035; "kept as source by choice" is defined by `translation-pipeline` (`openspec/changes/archive/2026-10-19-complete-translation-workflow/specs/translation-pipeline/spec.md`). In plain words: auxiliary text the person switched off on the Book Brief — say, every image description — is not waiting for anything, so counting it as pending would make a finished book look unfinished; it is named on its own line instead.
 
 #### Scenario: Segments kept by choice are named apart from pending ones
 
@@ -215,7 +215,7 @@ segment with nothing to translate as it is"), the export screen SHALL state thei
 `<n> segments are kept as is: they have nothing to translate (numbers, symbols)`, and SHALL never count them as kept
 as source by choice.
 
-**Source**: FR-REVIEW-X2 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), FR-BRIEF-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), ADR-0035. In plain words: a chapter number or a scene break is neither untranslated work nor a choice of the person, so nothing written in the source language goes unmentioned and nothing is mislabelled.
+**Source**: FR-REVIEW-X2 (`docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), FR-BRIEF-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), ADR-0035. In plain words: a chapter number or a scene break is neither untranslated work nor a choice of the person, so nothing written in the source language goes unmentioned and nothing is mislabelled.
 
 #### Scenario: Segments kept as is are not kept by choice
 
@@ -230,7 +230,7 @@ The export screen SHALL offer three side files, each with its own choice: "Gloss
 sequels", chosen by default; "Bilingual copy (source + target side by side)", not chosen by default; and "Report (flagged
 items, consistency notes)", not chosen by default.
 
-**Source**: FR-EXPORT-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-GLOSS-04 (`#fr-gloss`), ADR-0035, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`. In plain words: the glossary is on by default because it is what makes a sequel translate the same names the same way; the other two are for checking the work. The glossary file uses the import format so it can be loaded straight into the next book. The bilingual copy is self-contained so it opens offline and leaks nothing.
+**Source**: FR-EXPORT-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-GLOSS-04 (`#fr-gloss`), ADR-0035, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`. In plain words: the glossary is on by default because it is what makes a sequel translate the same names the same way; the other two are for checking the work. The glossary file uses the import format so it can be loaded straight into the next book. The bilingual copy is self-contained so it opens offline and leaks nothing.
 
 #### Scenario: The default choices
 
@@ -243,7 +243,7 @@ WHEN an export succeeds, the system SHALL write each chosen side file into the f
 the written book's name with its format suffix removed: `<name>.glossary.csv`, `<name>.bilingual.html` and
 `<name>.report.md`.
 
-**Source**: FR-EXPORT-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-GLOSS-04 (`#fr-gloss`), ADR-0035, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`. In plain words: the side files travel with the book, so they sit in its folder under its name.
+**Source**: FR-EXPORT-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-GLOSS-04 (`#fr-gloss`), ADR-0035, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`. In plain words: the side files travel with the book, so they sit in its folder under its name.
 
 #### Scenario: Side files land beside the book
 
@@ -263,7 +263,7 @@ gender, locked); the bilingual copy SHALL hold one row per segment with its sour
 file or network resource outside itself; and the report SHALL hold the segment counts, the flagged segments with their
 findings, and the consistency notes.
 
-**Source**: FR-EXPORT-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-GLOSS-04 (`#fr-gloss`), ADR-0035, `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`. In plain words: the glossary file uses the import format so it can be loaded straight into the next book, and the bilingual copy is self-contained so it opens offline and leaks nothing.
+**Source**: FR-EXPORT-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-GLOSS-04 (`#fr-gloss`), ADR-0035, `docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`. In plain words: the glossary file uses the import format so it can be loaded straight into the next book, and the bilingual copy is self-contained so it opens offline and leaks nothing.
 
 #### Scenario: The glossary file loads back into Names & style
 
@@ -287,7 +287,7 @@ findings, and the consistency notes.
 
 IF the book itself is not written, THEN the system SHALL write no side file.
 
-**Source**: FR-EXPORT-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), ADR-0035. In plain words: a report or glossary about a book that was never written would describe a file that does not exist.
+**Source**: FR-EXPORT-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), ADR-0035. In plain words: a report or glossary about a book that was never written would describe a file that does not exist.
 
 #### Scenario: A failed export writes no side file
 
@@ -299,7 +299,7 @@ IF the book itself is not written, THEN the system SHALL write no side file.
 The export screen SHALL offer a final consistency pass as a switch labelled "Final consistency pass" with a note and a
 hover explanation saying what it does and that its gender step needs the selected model, off by default, and on by default when the book brief's quality dial is Max.
 
-**Source**: FR-EXPORT-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`), FR-REVIEW-10 (`#fr-review`), FR-BRIEF-08 (`#fr-brief`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`. In plain words: a name settled in chapter 20 can be carried back into chapter 2 before the book is written, which is slow and so off unless the person asked for the best quality. A person's own edit is never overwritten by it. The sweep is a plain text substitution, so it can only find a spelling it knew: the one the glossary held before the change.
+**Source**: FR-EXPORT-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`), FR-REVIEW-10 (`#fr-review`), FR-BRIEF-08 (`#fr-brief`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`. In plain words: a name settled in chapter 20 can be carried back into chapter 2 before the book is written, which is slow and so off unless the person asked for the best quality. A person's own edit is never overwritten by it. The sweep is a plain text substitution, so it can only find a spelling it knew: the one the glossary held before the change.
 
 #### Scenario: The pass follows the quality dial by default
 
@@ -313,7 +313,7 @@ WHEN an export starts with the consistency-pass switch on, the system SHALL run 
 locked-name sweep and the resolution of deferred items — before the book is written, and SHALL leave every segment the
 person edited as the person wrote it.
 
-**Source**: FR-EXPORT-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`), FR-REVIEW-10 (`#fr-review`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`. In plain words: a name settled in chapter 20 can be carried back into chapter 2 before the book is written; a person's own edit is never overwritten by it.
+**Source**: FR-EXPORT-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`), FR-REVIEW-10 (`#fr-review`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`. In plain words: a name settled in chapter 20 can be carried back into chapter 2 before the book is written; a person's own edit is never overwritten by it.
 
 #### Scenario: A locked name is swept through earlier chapters
 
@@ -363,7 +363,7 @@ person edited as the person wrote it.
 The sweep SHALL replace a rendering only where the glossary held a previous target for that term which the person then
 changed; a rendering the model chose on its own for a term that had no glossary target SHALL NOT be swept.
 
-**Source**: FR-EXPORT-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`. In plain words: the sweep is a plain text substitution, so it can only find a spelling it knew: the one the glossary held before the change.
+**Source**: FR-EXPORT-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`. In plain words: the sweep is a plain text substitution, so it can only find a spelling it knew: the one the glossary held before the change.
 
 #### Scenario: A rendering the glossary never held is not swept
 
@@ -378,7 +378,7 @@ WHEN an export runs the consistency pass with a model, the system SHALL, after t
 re-render, draft every machine-owned segment that is FLAGGED or that the final audit doubts again — with the context
 its first draft saw, the run's checks, reviewer and acceptance rule.
 
-**Source**: FR-EXPORT-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`), FR-REVIEW-10 (`#fr-review`). In plain words: the pass now spends its model calls where the run had trouble — it retries what was flagged or looks wrong and keeps the retry only when it is really better — and then reads each such paragraph with everything the run knew about the book, refusing any answer that strips quotes, drops a sentence or a name, or brings in English words, which is what a real pass did to a finished book before.
+**Source**: FR-EXPORT-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`), FR-REVIEW-10 (`#fr-review`). In plain words: the pass now spends its model calls where the run had trouble — it retries what was flagged or looks wrong and keeps the retry only when it is really better — and then reads each such paragraph with everything the run knew about the book, refusing any answer that strips quotes, drops a sentence or a name, or brings in English words, which is what a real pass did to a finished book before.
 
 #### Scenario: A flagged segment with a dropped sentence is drafted again
 
@@ -393,7 +393,7 @@ flagged or the new one fails fewer checks or fewer audit checks, and the new tex
 dialogue dashes and sentences, loses no more than a fifth of its words, brings no new Latin run, fails no check the old
 one passed and raises no audit doubt the old one did not have.
 
-**Source**: FR-EXPORT-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`), FR-REVIEW-10 (`#fr-review`). In plain words: the retry is kept only when it is really better, so a pass can never strip quotes, drop a sentence or bring in English words from a finished book.
+**Source**: FR-EXPORT-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`), FR-REVIEW-10 (`#fr-review`). In plain words: the retry is kept only when it is really better, so a pass can never strip quotes, drop a sentence or bring in English words from a finished book.
 
 #### Scenario: A retry that strips the quote marks is refused
 
@@ -409,7 +409,7 @@ machine-owned paragraph that the run repaired or flagged or that the audit doubt
 every segment (the default on the Max quality dial), every machine-owned decided paragraph; an answer SHALL be stored
 only under the rules for a fresh draft, its counts kept unchanged.
 
-**Source**: FR-EXPORT-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`), FR-REVIEW-10 (`#fr-review`). In plain words: the paragraphs the run had trouble with are read once more beside their neighbours, and every paragraph at Max, because a mistake in context shows only in context.
+**Source**: FR-EXPORT-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`), FR-REVIEW-10 (`#fr-review`). In plain words: the paragraphs the run had trouble with are read once more beside their neighbours, and every paragraph at Max, because a mistake in context shows only in context.
 
 #### Scenario: A clean paragraph is checked only when every segment is asked for
 
@@ -423,7 +423,7 @@ The neighbour check SHALL show the model the previous and the next paragraph eac
 glossary renderings of the names the three paragraphs hold, the established renderings of recurring terms, the genders
 of the characters they name, the rolling summary, the style sheet with the narrator, and the source's immutable tokens.
 
-**Source**: FR-EXPORT-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`), FR-REVIEW-10 (`#fr-review`). In plain words: the model judges a paragraph with everything the run knew about the book, not in isolation.
+**Source**: FR-EXPORT-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`), FR-REVIEW-10 (`#fr-review`). In plain words: the model judges a paragraph with everything the run knew about the book, not in isolation.
 
 #### Scenario: The check shows both neighbours as source and translation
 
@@ -439,7 +439,7 @@ The pass SHALL send only story text: a segment of the auxiliary unit (navigation
 of a front or back matter unit — the split the glossary scan uses — is neither drafted again nor checked, whatever its
 status.
 
-**Source**: FR-EXPORT-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`). In plain words: model calls are spent on the story, not on a table of contents or a title page.
+**Source**: FR-EXPORT-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`). In plain words: model calls are spent on the story, not on a table of contents or a title page.
 
 #### Scenario: Auxiliary and matter segments are not sent
 
@@ -453,7 +453,7 @@ A paragraph that an earlier check, such as the Max run's own backward revision, 
 the export would show the model SHALL NOT be sent again, and the pass SHALL log how many segments it skipped
 as already checked and, per *Send only story text to the consistency pass*, as matter.
 
-**Source**: FR-EXPORT-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`). In plain words: asking the model the same question about the same text twice only costs time.
+**Source**: FR-EXPORT-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`). In plain words: asking the model the same question about the same text twice only costs time.
 
 #### Scenario: An already checked paragraph is not sent again
 
@@ -467,7 +467,7 @@ The system SHALL never change a segment the person edited, SHALL skip a segment 
 with `cancelled` when the person cancels — keeping every change already stored — and SHALL announce each call as a call
 snapshot and each step's progress (the retry counted by segment, the neighbour check by call).
 
-**Source**: FR-EXPORT-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`), FR-REVIEW-10 (`#fr-review`). In plain words: the pass may suggest and improve, but it never overwrites a person's text, one failed call never costs the rest, and cancelling keeps what was already done.
+**Source**: FR-EXPORT-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`), FR-REVIEW-10 (`#fr-review`). In plain words: the pass may suggest and improve, but it never overwrites a person's text, one failed call never costs the rest, and cancelling keeps what was already done.
 
 #### Scenario: A failed call skips one segment and the pass goes on
 
@@ -485,7 +485,7 @@ snapshot and each step's progress (the retry counted by segment, the neighbour c
 The export screen SHALL show the format as a read-only row naming the book's format and stating that it is the same as
 the original, and SHALL offer no choice of format.
 
-**Source**: FR-EXPORT-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30. In plain words: a book always comes out in the format it went in; saying so where a format picker would be answers the question before it is asked.
+**Source**: FR-EXPORT-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30. In plain words: a book always comes out in the format it went in; saying so where a format picker would be answers the question before it is asked.
 
 #### Scenario: An EPUB is exported as EPUB
 
@@ -497,7 +497,7 @@ the original, and SHALL offer no choice of format.
 WHILE no book is open, the export screen SHALL show an empty state saying no book is open, with a way to go to the import
 screen, and SHALL show no Save to field, no side-file choice and no Export book action.
 
-**Source**: FR-NOTIF-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-notif`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`. In plain words: with nothing open there is nothing to write, and an export form over nothing would only invite a press that has to be refused.
+**Source**: FR-NOTIF-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-notif`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`. In plain words: with nothing open there is nothing to write, and an export form over nothing would only invite a press that has to be refused.
 
 #### Scenario: The export screen with no book
 
@@ -733,7 +733,7 @@ file-validates tile as not yet known, and SHALL offer nothing to reveal or open.
 screen SHALL offer no control that writes a book, and its side-file choices and consistency-pass switch SHALL stay
 visible and unavailable.
 
-**Source**: FR-EXPORT-01, FR-EXPORT-03, FR-EXPORT-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-export-complete`, `docs/next_features.md#15-left-open-by-the-hand-test`. In plain words: after pressing Export the person sees that the book exists, that it was checked, and how much of it the machine did on its own. The check line says what the application actually verified — it re-opens the file — rather than the reference's EPUBCheck, which is not run. Windows Explorer returns 1 even when it succeeds, so treating that as a failure would report an error for a file that was shown. Showing and opening the file use the system's own commands, built from the path alone, never a shell and never the network. The counts say exactly what the file holds — how much the machine translated on its own, what the person reviewed, what is still in the source language because it was not reached, and what is in it because the person chose so — and they are what the tiles, the report side file and the command line's report line show. One success notice is enough: the dialog already names the file, so a transient message on top of it would only repeat it.
+**Source**: FR-EXPORT-01, FR-EXPORT-03, FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-export-complete`, `docs/next_features.md#15-left-open-by-the-hand-test`. In plain words: after pressing Export the person sees that the book exists, that it was checked, and how much of it the machine did on its own. The check line says what the application actually verified — it re-opens the file — rather than the reference's EPUBCheck, which is not run. Windows Explorer returns 1 even when it succeeds, so treating that as a failure would report an error for a file that was shown. Showing and opening the file use the system's own commands, built from the path alone, never a shell and never the network. The counts say exactly what the file holds — how much the machine translated on its own, what the person reviewed, what is still in the source language because it was not reached, and what is in it because the person chose so — and they are what the tiles, the report side file and the command line's report line show. One success notice is enough: the dialog already names the file, so a transient message on top of it would only repeat it.
 
 #### Scenario: A source fallback is named after the export
 

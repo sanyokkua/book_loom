@@ -15,7 +15,7 @@ words that occurs at least 3 times not at the start of a sentence, ordered by ho
 first occurs, each as an entry of type other, gender unknown, unlocked and with no target, by the rules of the
 scenarios below.
 
-**Source**: FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#name-term-pre-scan` (offline fallback), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`. In plain words: a name that recurs mid-sentence is almost certainly a proper noun, so a frequency count finds most of a book's names instantly and offline; words at the start of a sentence are ignored because every sentence starts with a capital, and the full stop after an abbreviated title does not end a sentence, so `Hale` in `Mr. Hale` still counts. Proposals stay unlocked because a locked term cannot inflect. A term the person removed is never proposed again (see "Keep the person's entries and removals when names are proposed"). A real book (Jonathan Stroud's "The Amulet of Samarkand") showed what a bare count gets wrong: `—Well,` and `"Don’t` open speech without a full stop, `Words`, `Seal` and `Shield` are common nouns given a capital, `Al-Arish` was cut into `Al` and `Arish`, and `Simon` was proposed beside `Simon Lovelace`. Every real name measured there is written in lower case less than 20% of the time, and every one of those common words at least 25% of the time, which is a test that works in any language with capitals; the stop-word list catches the function words and interjections a book rarely writes in lower case.
+**Source**: FR-GLOSS-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#name-term-pre-scan` (offline fallback), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`. In plain words: a name that recurs mid-sentence is almost certainly a proper noun, so a frequency count finds most of a book's names instantly and offline; words at the start of a sentence are ignored because every sentence starts with a capital, and the full stop after an abbreviated title does not end a sentence, so `Hale` in `Mr. Hale` still counts. Proposals stay unlocked because a locked term cannot inflect. A term the person removed is never proposed again (see "Keep the person's entries and removals when names are proposed"). A real book (Jonathan Stroud's "The Amulet of Samarkand") showed what a bare count gets wrong: `—Well,` and `"Don’t` open speech without a full stop, `Words`, `Seal` and `Shield` are common nouns given a capital, `Al-Arish` was cut into `Al` and `Arish`, and `Simon` was proposed beside `Simon Lovelace`. Every real name measured there is written in lower case less than 20% of the time, and every one of those common words at least 25% of the time, which is a test that works in any language with capitals; the stop-word list catches the function words and interjections a book rarely writes in lower case.
 
 #### Scenario: Common words, contractions and parts of longer names are not proposed
 
@@ -140,7 +140,7 @@ the model scan's 1 alike), measured over the whole book through the book index w
 result SHALL be what the glossary scan proposes and the model scan is shown. A joined name SHALL still be found as one
 run by the book index's mentions, so later readings of the name can use it.
 
-**Source**: 15i.N3 (`openspec/changes/archive/2026-10-19-complete-translation-workflow/tasks.md`), FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`). In plain words: a technical book repeats a section name in every heading and a converter credits itself on the title page; neither is a character, and the model should never be asked about them. A shop written `Orrin & Vale` is one name, and a camera printed `KESSEL OPTIK` on the label and `Kessel Optik` in the text is one name with two writings.
+**Source**: 15i.N3 (`openspec/changes/archive/2026-10-19-complete-translation-workflow/tasks.md`), FR-GLOSS-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`). In plain words: a technical book repeats a section name in every heading and a converter credits itself on the title page; neither is a character, and the model should never be asked about them. A shop written `Orrin & Vale` is one name, and a camera printed `KESSEL OPTIK` on the label and `Kessel Optik` in the text is one name with two writings.
 
 #### Scenario: A name that is mostly a heading is dropped
 
@@ -211,7 +211,7 @@ candidates, 40 per call, send every proposal the glossary does not hold and the 
 verdict step, and write the kept proposals only after every call has answered. IF any call fails, THEN it SHALL write
 nothing and show the provider's error in place. It SHALL NOT run on its own, when a run starts included.
 
-**Source**: FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#name-term-pre-scan`, DD-46 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`), `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`. In plain words: the model finds names a frequency count misses, and it can guess type and gender, but it costs time and uses the network, so it only runs on request — the reference's automatic scan at run start is not built. Each name travels with one sentence of context, so a small model can tell a person from a place, and in batches small enough for a local model's context. The model's vocabulary is mapped onto the table's; a failure half-way must not leave half a merge or wipe what the person already has. On the fixture book a small model kept 17 of 28 candidates, among them chapter-title words (`Gravity Formula`, `Long Night`), spelled-out numbers (`Six`, `Seven`) and language names (`Latin`, `French`), and every one became a row: candidates now come from running text only, and every proposal goes through the same verdict the review gives, which sees all the book's uses of a term rather than one sentence, before anything is written.
+**Source**: FR-GLOSS-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#name-term-pre-scan`, DD-46 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`), `docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`. In plain words: the model finds names a frequency count misses, and it can guess type and gender, but it costs time and uses the network, so it only runs on request — the reference's automatic scan at run start is not built. Each name travels with one sentence of context, so a small model can tell a person from a place, and in batches small enough for a local model's context. The model's vocabulary is mapped onto the table's; a failure half-way must not leave half a merge or wipe what the person already has. On the fixture book a small model kept 17 of 28 candidates, among them chapter-title words (`Gravity Formula`, `Long Night`), spelled-out numbers (`Six`, `Seven`) and language names (`Latin`, `French`), and every one became a row: candidates now come from running text only, and every proposal goes through the same verdict the review gives, which sees all the book's uses of a term rather than one sentence, before anything is written.
 
 #### Scenario: The verdict step drops what the proposal stage kept wrongly
 
@@ -381,7 +381,7 @@ each time it is needed (no stored field, and no book index is needed), and SHALL
 gender: a review SHALL end with one gender for the cluster, and a gender the person chooses for one member SHALL be
 written to the others, a gender the person set never being overwritten.
 
-**Source**: 15i.N2 (`openspec/changes/archive/2026-10-19-complete-translation-workflow/tasks.md`), FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`). In plain words: a book calls one woman `Zephra` and `Zephra Quillon`; three "she" after each name are too few to decide either, six together decide both, and the model is never left to give them two genders. A gender the person sets for one spelling is theirs for all of them, but `Mrs Venn` is not joined to `Arlo Venn`: she may be his wife.
+**Source**: 15i.N2 (`openspec/changes/archive/2026-10-19-complete-translation-workflow/tasks.md`), FR-GLOSS-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`). In plain words: a book calls one woman `Zephra` and `Zephra Quillon`; three "she" after each name are too few to decide either, six together decide both, and the model is never left to give them two genders. A gender the person sets for one spelling is theirs for all of them, but `Mrs Venn` is not joined to `Arlo Venn`: she may be his wife.
 
 #### Scenario: A short name and a full name are one person
 
@@ -464,7 +464,7 @@ written to the others, a gender the person set never being overwritten.
 
 The Names & style screen SHALL show the glossary as a table with the columns Term, Kind, Translation (an empty one shows the placeholder "No target"), Gender, Locked and a remove cross, under the purpose line "Names of people and places — written the same way every time. Set the gender so names take the right grammatical form."
 
-**Source**: FR-GLOSS-02, FR-GLOSS-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1, N3 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: this is where the person settles spellings before translating; the table explains its purpose, a changed row is marked on its edge so the term is never cut, an empty table says what to do, and the two cards sit side by side only when the content is at least 1440 px wide.
+**Source**: FR-GLOSS-02, FR-GLOSS-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1, N3 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: this is where the person settles spellings before translating; the table explains its purpose, a changed row is marked on its edge so the term is never cut, an empty table says what to do, and the two cards sit side by side only when the content is at least 1440 px wide.
 
 #### Scenario: A scanned entry appears unlocked
 
@@ -532,7 +532,7 @@ whose pronouns alone decide its gender, read the entries "Decide a read name fro
 the chosen model every other unlocked entry with no target or a suggested one for a verdict. It SHALL change the
 glossary only after every call has answered; IF any call fails or the person presses Stop, THEN it SHALL change nothing.
 
-**Source**: FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-review`, DD-46 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`). In plain words: a frequency count cannot tell a sentence-opening interjection from a name in every case, and it never knows a type or a gender, so the model is asked to clean and classify the list. It sees how often the book uses each word in lower case too, which is the clearest sign of a common word. A set type means someone — the person or an earlier model scan — already judged the entry a name, so only an untouched row is removed; and a row the person locked or gave a target is theirs and is never sent.
+**Source**: FR-GLOSS-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#glossary-review`, DD-46 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`). In plain words: a frequency count cannot tell a sentence-opening interjection from a name in every case, and it never knows a type or a gender, so the model is asked to clean and classify the list. It sees how often the book uses each word in lower case too, which is the clearest sign of a common word. A set type means someone — the person or an earlier model scan — already judged the entry a name, so only an untouched row is removed; and a row the person locked or gave a target is theirs and is never sent.
 
 #### Scenario: The review removes a common word and classifies a name
 
@@ -626,7 +626,7 @@ the quality dial's names plan reads (Fast: a likely character written five times
 written three times or more; at most 80) SHALL be read in context, one term per call (`term-reading`), and the code —
 not the model — SHALL decide each from its readings, by the rules of the scenarios below.
 
-**Source**: 15i.N5 (`openspec/changes/archive/2026-10-19-complete-translation-workflow/tasks.md`), FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#term-summary`. In plain words: the model reads, the code decides. A small model's pronoun answers were wrong one time in ten or more, so for now they only settle what the book's own pronouns leave open.
+**Source**: 15i.N5 (`openspec/changes/archive/2026-10-19-complete-translation-workflow/tasks.md`), FR-GLOSS-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#term-summary`. In plain words: the model reads, the code decides. A small model's pronoun answers were wrong one time in ten or more, so for now they only settle what the book's own pronouns leave open.
 
 #### Scenario: Six windows read a character
 
@@ -730,7 +730,7 @@ entries (unlocked, with no target or a suggested one) to a separate suggestion c
 a dictionary-form target under a strict schema, keep only suggestions that pass the checks below, and write them as
 suggested targets after every call has answered; IF a call fails or the person presses Stop, THEN it SHALL write nothing.
 
-**Source**: FR-GLOSS-01, FR-GLOSS-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, DD-46 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`). In plain words: a glossary of names with no targets leaves every draft to spell each name afresh, so the model proposes one spelling per name, following the policy the person chose. It is a call of its own because a small model does one task per call far better than two. A suggestion is only a hint until the person confirms it — the draft may inflect it — and the model never undoes the person's choice. On gemma4:e4b every place and thing came back "neuter", masculine Ukrainian nouns included, and a person's gender judged from one sentence took a speaker's `he` (15h.A2), so the reply's gender is not written; and the same model wrote a Latin `e` inside `Венс`, which reads right and matches nothing.
+**Source**: FR-GLOSS-01, FR-GLOSS-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, DD-46 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`). In plain words: a glossary of names with no targets leaves every draft to spell each name afresh, so the model proposes one spelling per name, following the policy the person chose. It is a call of its own because a small model does one task per call far better than two. A suggestion is only a hint until the person confirms it — the draft may inflect it — and the model never undoes the person's choice. On gemma4:e4b every place and thing came back "neuter", masculine Ukrainian nouns included, and a person's gender judged from one sentence took a speaker's `he` (15h.A2), so the reply's gender is not written; and the same model wrote a Latin `e` inside `Венс`, which reads right and matches nothing.
 
 #### Scenario: Transliterated names get Cyrillic targets
 
@@ -902,7 +902,7 @@ original), or a verified proper name that is not a common noun, with a checked r
 target whose language file says `namesInflect=false`; otherwise it stays unlocked guidance held by the name checks. Every
 writer of a suggestion SHALL apply the rule.
 
-**Source**: FR-GLOSS-01, FR-GLOSS-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, DD-46 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`). In plain words: a name locked behind a placeholder cannot inflect, so it is locked only where the target language does not decline names.
+**Source**: FR-GLOSS-01, FR-GLOSS-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, DD-46 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`). In plain words: a name locked behind a placeholder cannot inflect, so it is locked only where the target language does not decline names.
 
 #### Scenario: Which targets decline names
 
@@ -949,7 +949,7 @@ The Names & style table SHALL show a suggested target slanted with an `AI` badge
 field with the suggestion unchanged SHALL accept it too, and typing another target or turning the lock on SHALL make the
 target the person's. An `Accept all` button beside Review with model SHALL accept every suggested target.
 
-**Source**: FR-GLOSS-01, FR-GLOSS-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, DD-46 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`). In plain words: a suggestion is only a hint until the person confirms it, and the draft may inflect it.
+**Source**: FR-GLOSS-01, FR-GLOSS-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, DD-46 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`). In plain words: a suggestion is only a hint until the person confirms it, and the draft may inflect it.
 
 #### Scenario: Accept all is shown only while a suggestion is
 
@@ -979,7 +979,7 @@ The application SHALL compare glossary terms — for a duplicate in the reposito
 for a held or removed term in every scan, and for an entry's id — by one key: the term in Unicode NFC, with leading and
 trailing punctuation and a trailing possessive `’s` or `'s` removed, inner spaces collapsed to one, and the case folded.
 
-**Source**: FR-GLOSS-02, FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`). In plain words: before, each way in compared differently, so `Lovelace’s` could be held beside `Lovelace` and a removed name could come back in another spelling.
+**Source**: FR-GLOSS-02, FR-GLOSS-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`). In plain words: before, each way in compared differently, so `Lovelace’s` could be held beside `Lovelace` and a removed name could come back in another spelling.
 
 #### Scenario: Spellings of one term share a key
 
@@ -993,7 +993,7 @@ breaking every tie by the source term, so that storing a change to any other col
 moves its row; and it SHALL offer a search field that shows only the rows whose source term or target contains the
 typed text, ignoring case, and that the Escape key clears.
 
-**Source**: FR-GLOSS-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`. In plain words: a real book yields a hundred rows or more, in the order the scan found them; a person settling them needs to find one name and group the rows by kind. The glossary keeps no count of mentions, so there is no count column.
+**Source**: FR-GLOSS-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`. In plain words: a real book yields a hundred rows or more, in the order the scan found them; a person settling them needs to find one name and group the rows by kind. The glossary keeps no count of mentions, so there is no count column.
 
 #### Scenario: Sorting by type keeps one type's rows in term order
 
@@ -1012,7 +1012,7 @@ emptying a locked entry's target, confirming the Add term dialog with the lock o
 row that is locked with no target — THEN the application SHALL refuse that change with the message
 `A locked term needs a target.` and SHALL leave the glossary as it was.
 
-**Source**: FR-GLOSS-03, FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `#dialog-add-glossary-term`. In plain words: a locked term is replaced by its target wherever it occurs; with no target there is nothing to put back, so the name would vanish from the book. Every way into the glossary refuses such an entry rather than one of them letting it through.
+**Source**: FR-GLOSS-03, FR-GLOSS-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `#dialog-add-glossary-term`. In plain words: a locked term is replaced by its target wherever it occurs; with no target there is nothing to put back, so the name would vanish from the book. Every way into the glossary refuses such an entry rather than one of them letting it through.
 
 #### Scenario: Locking a term with no target is refused in the table
 
@@ -1040,7 +1040,7 @@ WHEN the person confirms the Add term dialog with a source term, a target, a typ
 application SHALL add that entry, and IF the source term has the glossary key of an existing entry (see "Compare
 glossary terms by one key"), THEN it SHALL refuse the addition and say so in the dialog.
 
-**Source**: FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-add-glossary-term`. In plain words: a name the scan missed can be added by hand; two entries for the same name would contradict each other, so the second is refused rather than silently merged. A locked term also needs a target (see "Lock only an entry that has a target").
+**Source**: FR-GLOSS-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-add-glossary-term`. In plain words: a name the scan missed can be added by hand; two entries for the same name would contradict each other, so the second is refused rather than silently merged. A locked term also needs a target (see "Lock only an entry that has a target").
 
 #### Scenario: A new term is added
 
@@ -1066,7 +1066,7 @@ source term, add the others, and report the malformed and refused rows by their 
 at most ten spans named, with each cause of a malformed row said once (for an unknown type or gender, with the values a
 file may use), while importing the rest.
 
-**Source**: FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`. In plain words: a series keeps its names across books, so a glossary must travel as a plain file any spreadsheet can open; one bad line must not throw away a hundred good ones, and a file whose every row has the same mistake gets one sentence naming it, not five thousand line numbers. A row that would lock a term with no target is refused like a malformed one (see "Lock only an entry that has a target").
+**Source**: FR-GLOSS-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`. In plain words: a series keeps its names across books, so a glossary must travel as a plain file any spreadsheet can open; one bad line must not throw away a hundred good ones, and a file whose every row has the same mistake gets one sentence naming it, not five thousand line numbers. A row that would lock a term with no target is refused like a malformed one (see "Lock only an entry that has a target").
 
 #### Scenario: A term with a comma is quoted
 
@@ -1096,7 +1096,7 @@ model scan — finds a term the glossary already holds by its glossary key, the 
 unchanged; and the application SHALL NOT let any scan, deterministic or model, propose a term the person removed in this
 session, until the person adds that term again through Add term or a CSV import.
 
-**Source**: FR-GLOSS-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), FR-ALGO-C9 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, ADR-0034. In plain words: the glossary grows while the book translates — at the end of each chapter the run adds the names it has met (the translation-pipeline capability's "Propose new names at the end of each body unit") — and none of that growth may undo the person's work: a spelling they settled stays, and a false name they deleted does not come back at the next chapter. Adding a found name never costs the chapter's stored decisions either. The model scan, pressed after a removal, honours it the same way: a name the model proposes again is still a name the person deleted (see "Run the model scan only when the person asks for it").
+**Source**: FR-GLOSS-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), FR-ALGO-C9 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, ADR-0034. In plain words: the glossary grows while the book translates — at the end of each chapter the run adds the names it has met (the translation-pipeline capability's "Propose new names at the end of each body unit") — and none of that growth may undo the person's work: a spelling they settled stays, and a false name they deleted does not come back at the next chapter. Adding a found name never costs the chapter's stored decisions either. The model scan, pressed after a removal, honours it the same way: a name the model proposes again is still a name the person deleted (see "Run the model scan only when the person asks for it").
 
 #### Scenario: A chapter-end scan leaves the person's entry alone
 
@@ -1145,7 +1145,7 @@ WHILE a glossary entry is locked, the application SHALL hide each whole-word occ
 placeholder before the segment reaches the model and SHALL restore it with the entry's target rendering, never
 matching the term inside a longer word or inside another placeholder.
 
-**Source**: FR-GLOSS-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), EC-INLINE-3 (`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`. In plain words: the model never sees a locked name, so it cannot misspell it; matching whole words only keeps `Hale` from being substituted inside `Whale`. A model that drops the placeholder fails the protected-span hard gate (see the quality-gates capability's "Treat each protected span's placeholder as a hard gate").
+**Source**: FR-GLOSS-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), EC-INLINE-3 (`docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`. In plain words: the model never sees a locked name, so it cannot misspell it; matching whole words only keeps `Hale` from being substituted inside `Whale`. A model that drops the placeholder fails the protected-span hard gate (see the quality-gates capability's "Treat each protected span's placeholder as a hard gate").
 
 #### Scenario: A locked name is restored exactly
 
@@ -1168,7 +1168,7 @@ WHEN a chunk is sent to the model, the application SHALL include only the glossa
 a whole word in that chunk, each with its type and gender. An entry whose target the model suggested and nobody
 confirmed SHALL be listed apart and SHALL never be hidden behind a placeholder.
 
-**Source**: FR-GLOSS-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`. In plain words: a small model's context is precious, so a two-hundred-entry glossary is trimmed to the names in play; type and gender let the model agree verbs and adjectives with a character in languages that inflect for them. A locked name is hidden behind a placeholder, so the model is told what that placeholder will read as — otherwise it could not make `відчинив` or `відчинила` agree with it.
+**Source**: FR-GLOSS-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`. In plain words: a small model's context is precious, so a two-hundred-entry glossary is trimmed to the names in play; type and gender let the model agree verbs and adjectives with a character in languages that inflect for them. A locked name is hidden behind a placeholder, so the model is told what that placeholder will read as — otherwise it could not make `відчинив` or `відчинила` agree with it.
 
 #### Scenario: Only present terms are given
 
@@ -1218,7 +1218,7 @@ own call at the Balanced and Max quality dials, in numbered windows of the book,
 window SHALL count only when the quote the model gave for it stands in that window. A failed call SHALL end the action
 with its error and write nothing.
 
-**Source**: `additional-work.md` 15i.N7; `docs/specification/01_Product/12_PROMPT_CATALOG.md#lexicon-reading`. In plain words: a word such as "bank" that means a river's edge in one chapter and a business in another cannot have one rendering, so the model is shown the word in its places and the code, not the model, decides; and a series can carry its recurring terms from one book to the next in a file.
+**Source**: `additional-work.md` 15i.N7; `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#lexicon-reading`. In plain words: a word such as "bank" that means a river's edge in one chapter and a business in another cannot have one rendering, so the model is shown the word in its places and the code, not the model, decides; and a series can carry its recurring terms from one book to the next in a file.
 
 #### Scenario: A word of one sense is kept with its rendering
 
@@ -1293,7 +1293,7 @@ The Recurring terms card SHALL search its terms and renderings and SHALL import 
 file dialog seam as the glossary (suggested name `recurring-terms.csv`), as an RFC 4180 CSV file in UTF-8 with the header
 `term,target`.
 
-**Source**: `additional-work.md` 15i.N7; `docs/specification/01_Product/12_PROMPT_CATALOG.md#lexicon-reading`. In plain words: a series can carry its recurring terms from one book to the next in a file.
+**Source**: `additional-work.md` 15i.N7; `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#lexicon-reading`. In plain words: a series can carry its recurring terms from one book to the next in a file.
 
 #### Scenario: The file format
 
@@ -1319,7 +1319,7 @@ run, in this order, on a private copy of the glossary and of the recurring terms
 glossary is empty, read and decide the names, read the recurring terms, ask a rendering for every name and recurring term
 that has none, and lock by rule. It SHALL write the stored glossary and recurring terms once, after its last step.
 
-**Source**: `additional-work.md` 15i.N8; `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md`. In plain words: one button should get from a book to a prepared glossary without five separate presses, and an answer that arrives half-way, or a Stop, must not leave half of a result behind; and what the person fixed by hand stays fixed.
+**Source**: `additional-work.md` 15i.N8; `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md`. In plain words: one button should get from a book to a prepared glossary without five separate presses, and an answer that arrives half-way, or a Stop, must not leave half of a result behind; and what the person fixed by hand stays fixed.
 
 #### Scenario: A pass fills both tables and writes them at the end
 
@@ -1391,7 +1391,7 @@ name, and the model SHALL answer, for each item that holds one, the rendering it
 object; the application SHALL count only verified pairs of an item adopted from the batch, per project, as source →
 rendering, and SHALL show every later draft and retry the established rendering of each term the chunk names.
 
-**Source**: `additional-work.md` 15d.9; `docs/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`. In plain words: the model reports what it used, the app checks the claim against the text so a model cannot teach the book a word it did not write, and the majority wins the conflict so one early slip does not outvote a book's habit; the metric `distinctRenderingsPerTerm` reads 1.0 when every recurring term was written one way.
+**Source**: `additional-work.md` 15d.9; `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`. In plain words: the model reports what it used, the app checks the claim against the text so a model cannot teach the book a word it did not write, and the majority wins the conflict so one early slip does not outvote a book's habit; the metric `distinctRenderingsPerTerm` reads 1.0 when every recurring term was written one way.
 
 #### Scenario: An inflected rendering is accepted
 
@@ -1470,7 +1470,7 @@ returns `terms` still keeps the book consistent: once a chunk's records are stor
 word stems, and a term SHALL get a learned rendering only when at least three of its segments carry one stem, the stem's
 Dice association with the term is at least 0.6 and at least twice that of any unrelated rival.
 
-**Source**: `additional-work.md` 15d.9; `docs/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`. In plain words: the model reports what it used, but a model that never reports still has its decisions read, and the majority wins so one early slip does not outvote a book's habit.
+**Source**: `additional-work.md` 15d.9; `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`. In plain words: the model reports what it used, but a model that never reports still has its decisions read, and the majority wins so one early slip does not outvote a book's habit.
 
 #### Scenario: Which pairs are counted and how
 
@@ -1527,7 +1527,7 @@ Dice association with the term is at least 0.6 and at least twice that of any un
 
 WHILE a translation of the project is at work (running, pausing, stopping, waiting on a stuck call, or waiting for the model), the Names & style screen SHALL keep the Glossary and the Recurring terms editable under the banner "Translating is going on. Changes apply to the next segments translated."
 
-**Source**: `docs/specification/mockups/README.md#changes-while-translating-i`, `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1–N5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: hand edits stay possible because the next group of segments reads the glossary again. Which model actions are disabled while a translation runs is the `app-shell` capability's rule ("Disable model actions while a translation runs"), and the read-only screen while the names pass runs hidden is also the `app-shell` capability's rule ("Make the screen that hidden work writes to read-only").
+**Source**: `docs/spec_baseline/specification/mockups/README.md#changes-while-translating-i`, `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1–N5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: hand edits stay possible because the next group of segments reads the glossary again. Which model actions are disabled while a translation runs is the `app-shell` capability's rule ("Disable model actions while a translation runs"), and the read-only screen while the names pass runs hidden is also the `app-shell` capability's rule ("Make the screen that hidden work writes to read-only").
 
 #### Scenario: Typing a translation stays possible
 
@@ -1538,7 +1538,7 @@ WHILE a translation of the project is at work (running, pausing, stopping, waiti
 
 The glossary table SHALL let every column be resized, the last filling the remaining width, with minimum widths (Term 140 px, Kind 96, Translation 170, Gender 110, Locked 64, remove 36), grid lines, a header that stays visible and fixed row heights.
 
-**Source**: `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, `docs/specification/mockups/README.md#g9--two-kinds-of-table-jx-g4`, N2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person can widen what is cut, and a column can never be dragged so narrow that its content disappears.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, `docs/spec_baseline/specification/mockups/README.md#g9--two-kinds-of-table-jx-g4`, N2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person can widen what is cut, and a column can never be dragged so narrow that its content disappears.
 
 #### Scenario: A column can be resized
 
@@ -1549,7 +1549,7 @@ The glossary table SHALL let every column be resized, the last filling the remai
 
 The Recurring terms card SHALL show the purpose line "Words the book repeats — kept the same all through the book. Learned while translating, or set here." and the columns Term, Translation, Used and a link to the glossary, Used being the number of times the term occurs in the book's text, ignoring letter case and matching exact word forms only (a term of several words counts the mentions of the whole phrase); an empty card SHALL read "No recurring terms yet. They are found when you prepare names, or while translating."
 
-**Source**: `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person sees how often each repeated word occurs and where such words come from. Used counts the words as written: `Warden` and `warden` count together, while an inflected form such as `wardens` is a different word and is not counted.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person sees how often each repeated word occurs and where such words come from. Used counts the words as written: `Warden` and `warden` count together, while an inflected form such as `wardens` is a different word and is not counted.
 
 #### Scenario: An empty lexicon says where terms come from
 
@@ -1565,7 +1565,7 @@ The Recurring terms card SHALL show the purpose line "Words the book repeats —
 
 The progress dialog of the names pass SHALL list eight steps in order — Find candidates in the book, Decide the names, Find repeated words, Clean up repeated words, Read repeated words in context, Suggest translations for names, Suggest translations for repeated words, Write the results — each with the number of requests it sent ("25 requests so far" while it runs, "6 requests" when it has ended, "no request" when it sent none, "Not started" before it begins; no step knows its total up front, so a count never reads "of N") and a figures line such as "53 % · 26 of about 49 steps · Left about 1 min".
 
-**Source**: `docs/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`, N4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person sees which part of the pass is running and how much is left. The dialog itself follows the progress-dialog pattern of the `app-shell` capability.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`, N4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person sees which part of the pass is running and how much is left. The dialog itself follows the progress-dialog pattern of the `app-shell` capability.
 
 #### Scenario: The eight steps are listed with counts
 
@@ -1576,7 +1576,7 @@ The progress dialog of the names pass SHALL list eight steps in order — Find c
 
 WHEN the pass finishes, its dialog SHALL become a Results view with the subtitle "5 added · 0 removed · 1 changed · 49 steps · 1 min 48 s", the tabs Changes (Entry, Change, Before, After, grouped; a Why column when some row has a reason, and a Revert on each row) and Steps (the eight stages with their request counts), and the actions Undo all, Show changed rows and Done.
 
-**Source**: `docs/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`, N5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person sees every change the pass made and can give all of them back.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`, N5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person sees every change the pass made and can give all of them back.
 
 #### Scenario: Results list the changes
 
@@ -1592,7 +1592,7 @@ WHEN the pass finishes, its dialog SHALL become a Results view with the subtitle
 
 WHEN every row an operation of Names & style changed is put back, by Undo all or one Revert at a time, the screen's line that announced the operation SHALL be replaced by "Undone: <operation> · every change it made is put back".
 
-**Source**: `docs/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`. In plain words: "Names prepared · model calls: 15" is no longer true once all of it is undone, and a line that claims work the tables no longer hold misleads.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`. In plain words: "Names prepared · model calls: 15" is no longer true once all of it is undone, and a line that claims work the tables no longer hold misleads.
 
 #### Scenario: Undo all replaces the names pass's line
 
@@ -1603,7 +1603,7 @@ WHEN every row an operation of Names & style changed is put back, by Undo all or
 
 The Scan, Review and Translate actions on a card SHALL run the progress dialog with two steps, the action's requests and then the write, and SHALL NOT be hideable.
 
-**Source**: `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, N4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: every model action looks the same, and only the long names pass can be hidden.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: every model action looks the same, and only the long names pass can be hidden.
 
 #### Scenario: A card action runs two steps and cannot be hidden
 
@@ -1614,7 +1614,7 @@ The Scan, Review and Translate actions on a card SHALL run the progress dialog w
 
 WHEN the person edits the glossary while a run is paused or translating, the application SHALL apply the edit from the first chunk that starts after it, SHALL NOT change segments already decided except through backward revision on the Max dial or the export's last check, and SHALL keep the glossary stored with the project across a restart; a person's edit and a name the run adds SHALL never overwrite each other.
 
-**Source**: FR-GLOSS-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), ADR-0043, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, `docs/specification/mockups/README.md#changes-while-translating-i`. In plain words: a person who spots a wrong spelling mid-run can fix it, and the rest of the book follows; earlier segments are corrected by the last check or review, not silently. A chunk reads the glossary once, when it starts. Each change is written to the stored entry in one step, so the run adding a name at the end of a chapter and the person typing a target at the same moment both survive.
+**Source**: FR-GLOSS-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), ADR-0043, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`, `docs/spec_baseline/specification/mockups/README.md#changes-while-translating-i`. In plain words: a person who spots a wrong spelling mid-run can fix it, and the rest of the book follows; earlier segments are corrected by the last check or review, not silently. A chunk reads the glossary once, when it starts. Each change is written to the stored entry in one step, so the run adding a name at the end of a chapter and the person typing a target at the same moment both survive.
 
 #### Scenario: A pause-time lock affects later chunks only
 
@@ -1652,7 +1652,7 @@ WHEN the person edits the glossary while a run is paused or translating, the app
 
 The application SHALL keep, for each project, a stored lexicon of recurring common terms and titles that a model would otherwise render differently from one page to the next, SHALL propose them with a deterministic scan and no model, and SHALL show them in a "Recurring terms" card; a term the glossary holds SHALL NOT be asked about or shown from the lexicon.
 
-**Source**: `additional-work.md` 15d.9, `docs/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`, `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, ADR-0043. In plain words: a book that calls a warden "наглядач" in chapter one and "сторож" in chapter nine reads as two characters; the app finds the words a book keeps repeating and keeps every later request to one rendering. The lexicon is stored with the project, so it is still there after a restart.
+**Source**: `additional-work.md` 15d.9, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`, `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, ADR-0043. In plain words: a book that calls a warden "наглядач" in chapter one and "сторож" in chapter nine reads as two characters; the app finds the words a book keeps repeating and keeps every later request to one rendering. The lexicon is stored with the project, so it is still there after a restart.
 
 #### Scenario: The scan proposes a title and a dual-use word
 
@@ -1713,7 +1713,7 @@ The application SHALL keep, for each project, a stored lexicon of recurring comm
 
 The Names & style screen SHALL offer "Prepare names automatically" in a card above both tables that says what it does and how long it takes for the brief's quality dial ("About 1 min. You can undo it all afterwards."), and a press SHALL run the names pass on the chosen model in the progress dialog, whose Cancel ("Cancel writes nothing.") stops the pass and leaves both tables as they were.
 
-**Source**: `additional-work.md` 15i.U6, `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, N4, N5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: one button replaces five presses and gives every change back one by one or all together. Hiding the dialog with Continue in background or Esc, and the activity chip, are the `app-shell` capability's progress-dialog rules.
+**Source**: `additional-work.md` 15i.U6, `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`, N4, N5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: one button replaces five presses and gives every change back one by one or all together. Hiding the dialog with Continue in background or Esc, and the activity chip, are the `app-shell` capability's progress-dialog rules.
 
 #### Scenario: The press fills both tables and Undo all gives both back
 
@@ -1769,7 +1769,7 @@ the target, take off the quote put before a formula-like value, and keep the las
 such terms; IF the file is not UTF-8 or its header does not name the five columns once each, THEN it SHALL store nothing
 and say which; IF storing fails part-way, THEN it SHALL put the glossary back as it was.
 
-**Source**: FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/02_Architecture/09_ERROR_HANDLING.md#safe-details-allowlist`. In plain words: a glossary file comes back from spreadsheets and other people, so its columns may be reordered, its cells padded, a name repeated, its encoding wrong; each of these is either read the way the person meant or refused with a reason they can act on, in their display language, and a file is never half imported.
+**Source**: FR-GLOSS-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#safe-details-allowlist`. In plain words: a glossary file comes back from spreadsheets and other people, so its columns may be reordered, its cells padded, a name repeated, its encoding wrong; each of these is either read the way the person meant or refused with a reason they can act on, in their display language, and a file is never half imported.
 
 #### Scenario: A header in another order is read by its names
 
@@ -1801,7 +1801,7 @@ and say which; IF storing fails part-way, THEN it SHALL put the glossary back as
 
 WHEN a CSV is imported, the application SHALL read the stored glossary once and store all of the file's entries in one write, keeping the rules an edit follows (a row locked with no target refused, a changed target deferring the decided segments that used it, a person's gender shared with the other spellings of the person); IF the file holds no row (it is empty or holds only its header), THEN the result line SHALL say so after the count.
 
-**Source**: FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`). In plain words: row by row, every row read and wrote the whole stored glossary, so a 5,000-row file took about two and a half minutes with no sign of progress; in one write it takes seconds. And "Imported 0 rows." alone never said why nothing came in.
+**Source**: FR-GLOSS-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`). In plain words: row by row, every row read and wrote the whole stored glossary, so a 5,000-row file took about two and a half minutes with no sign of progress; in one write it takes seconds. And "Imported 0 rows." alone never said why nothing came in.
 
 #### Scenario: Five thousand rows import in seconds
 

@@ -65,7 +65,7 @@ run and explicit pause/resume (`FR-ALGO-01`, `FR-RESUME-03`, `01_Product/01_FUNC
 - **Dependencies:** no new third-party library. `:llm` and `:pipeline` add `slf4j-api` (MIT); `:document`, `:llm` and
   `:pipeline` add `logback-classic` (EPL-1.0, a recorded exception) to their test runtime only. Both are already in
   the version catalog, and the three lockfiles are regenerated.
-- **Decision record:** ADR-0033 (`docs/adr/ADR-0033-bound-chat-model-and-pausable-translation-job.md`) records the
+- **Decision record:** ADR-0033 (`docs/spec_baseline/adr/ADR-0033-bound-chat-model-and-pausable-translation-job.md`) records the
   decisions that are costly to reverse: the engine gets a chat model already bound to a provider and model, with
   per-call settings as optional request fields, and a translation runs as a job that halts in place when paused.
 - **Unchanged:** the desktop window and persistence. No network connection is added.
@@ -75,6 +75,6 @@ run and explicit pause/resume (`FR-ALGO-01`, `FR-RESUME-03`, `01_Product/01_FUNC
     `02_Architecture/04_LLM_INTEGRATION.md#provider-architecture`, `#chat-contracts`,
     `02_Architecture/09_ERROR_HANDLING.md#partial-results`, `02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`
     and `02_Architecture/10_DI_AND_LIFECYCLE.md#guice-modules`;
-  - `docs/Architecture.md`, `docs/DEVELOPMENT.md`, `AGENTS.md`, `docs/implementation_plan/CHANGE_BACKLOG.md` and
-    `docs/implementation_plan/01_MODULE_INVENTORY.md`;
+  - `docs/Architecture.md`, `docs/DEVELOPMENT.md`, `AGENTS.md`, `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md` and
+    `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md`;
   - a new `docs/next_features.md`, recording the gaps this change's review found and left for later.

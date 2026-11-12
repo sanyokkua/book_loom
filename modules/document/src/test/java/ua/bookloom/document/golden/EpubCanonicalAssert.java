@@ -281,7 +281,7 @@ public final class EpubCanonicalAssert {
      * does not pick up self-close contagion from a self-closed tag production's parser deliberately leaves alone
      * (an unknown or void one), which would otherwise serialize differently from production's already-normalized
      * output for the same reason F12b did
-     * ({@code docs/implementation_plan/notes-corpus-verification.md}).
+     * ({@code docs/spec_baseline/implementation_plan/notes-corpus-verification.md}).
      */
     private static void clearSeenSelfCloseOnNonVoidElements(Document doc) {
         for (final Element element : doc.getAllElements()) {

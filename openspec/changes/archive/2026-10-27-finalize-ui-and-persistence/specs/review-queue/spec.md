@@ -4,7 +4,7 @@
 
 The application SHALL open the review desk as a large in-window dialog from the toolbar's "Review (n)" and from "n to review" on the Translating screen, and SHALL have no review panel on the Translating screen and no review step in the navigation.
 
-**Source**: docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/specification/mockups/README.md#g1--dialogs-live-in-the-window-on-two-layers, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (decision 5, T6), ADR-0045. In plain words: reviewing is a task of its own that needs the whole window, so it is a dialog and not a panel squeezed beside the run.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/spec_baseline/specification/mockups/README.md#g1--dialogs-live-in-the-window-on-two-layers, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (decision 5, T6), ADR-0045. In plain words: reviewing is a task of its own that needs the whole window, so it is a dialog and not a panel squeezed beside the run.
 
 #### Scenario: Review (n) opens the desk
 
@@ -25,7 +25,7 @@ The application SHALL open the review desk as a large in-window dialog from the 
 
 WHEN a translation finishes with at least one segment to review and the setting "Open the review desk when a translation finishes" is on, the application SHALL open the review desk by itself as soon as no other dialog and no progress dialog is shown, with the first segment to review selected; it SHALL NOT open it by itself when 0 segments need review or the setting is off.
 
-**Source**: docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/specification/mockups/README.md#run-states-a, docs/specification/mockups/README.md#generation--appearance--automation--storage--logs. In plain words: the desk appears at the end of a run so the person does not have to look for it, but it never covers something they are already doing, and it stays away when there is nothing to do or when they asked it to.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/spec_baseline/specification/mockups/README.md#run-states-a, docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs. In plain words: the desk appears at the end of a run so the person does not have to look for it, but it never covers something they are already doing, and it stays away when there is nothing to do or when they asked it to.
 
 #### Scenario: The desk opens by itself at the end of a run
 
@@ -56,7 +56,7 @@ WHEN a translation finishes with at least one segment to review and the setting 
 
 The review desk SHALL offer the filters "To review (n)", "Worth a second look (n)" and "All segments", and ‹ › controls that move to the previous and next segment of the filter shown; what "Worth a second look" lists is "List in Worth a second look the accepted segments the final audit doubts", and what "All segments" lists is "Browse every segment after an Unattended run".
 
-**Source**: docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/specification/mockups/README.md#words-w--user-facing-vocabulary, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (F1). In plain words: the person works through what needs them first, can look at what the last check doubted, and can still read everything else.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/spec_baseline/specification/mockups/README.md#words-w--user-facing-vocabulary, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (F1). In plain words: the person works through what needs them first, can look at what the last check doubted, and can still read everything else.
 
 #### Scenario: Filters show their counts
 
@@ -72,7 +72,7 @@ The review desk SHALL offer the filters "To review (n)", "Worth a second look (n
 
 Each row of the desk's list SHALL show the segment's location, a state marker — to review, accepted, your edit or later — and a one-line "why · text", with formatting marks left out of the line and the full text in the tooltip.
 
-**Source**: docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/specification/mockups/README.md#g11--state-markers-and-one-colour-map. In plain words: each row says at a glance what has been done with it.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/spec_baseline/specification/mockups/README.md#g11--state-markers-and-one-colour-map. In plain words: each row says at a glance what has been done with it.
 
 #### Scenario: Markers follow the person's actions
 
@@ -88,7 +88,7 @@ Each row of the desk's list SHALL show the segment's location, a state marker �
 
 WHEN the person chooses "Leave for later", the desk SHALL write nothing, SHALL keep the segment FLAGGED and counted as to review, SHALL select the next segment of the filter, and SHALL show the marker later on its row until the application closes; after a restart the row SHALL show to review again.
 
-**Source**: docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12. In plain words: putting a segment aside is a bookmark for this sitting, not a decision, so nothing about the book changes and the bookmark is gone next time BookLoom opens.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12. In plain words: putting a segment aside is a bookmark for this sitting, not a decision, so nothing about the book changes and the bookmark is gone next time BookLoom opens.
 
 #### Scenario: Leave for later changes nothing stored
 
@@ -109,7 +109,7 @@ WHEN the person chooses "Leave for later", the desk SHALL write nothing, SHALL k
 
 The desk's translation editor SHALL treat each formatting mark such as `⟦0⟧` as one protected unit: a deletion that touches any part of a mark SHALL remove the whole mark, cutting a whole mark and pasting it elsewhere SHALL move it, and a paste SHALL insert only the marks the editor is missing.
 
-**Source**: docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (decision 12, F1). In plain words: a mark that is half deleted breaks the book's bold, links or italics, so the editor never allows half a mark, and the person can still move a mark to where the formatting belongs.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (decision 12, F1). In plain words: a mark that is half deleted breaks the book's bold, links or italics, so the editor never allows half a mark, and the person can still move a mark to where the formatting belongs.
 
 #### Scenario: Deleting part of a mark removes all of it
 
@@ -130,7 +130,7 @@ The desk's translation editor SHALL treat each formatting mark such as `⟦0⟧`
 
 The desk's footer SHALL offer a "More ▾" menu with Leave for later, Try again, Try again with a note… and Undo my edit, each with a line saying what it does; Try again with a note… SHALL open an inline panel inside the desk, not a second dialog, and Undo my edit SHALL be disabled while the segment holds no saved edit.
 
-**Source**: docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (F1). In plain words: the common path is one button, and the rarer actions are one click away without crowding the footer or stacking a second window on the desk.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (F1). In plain words: the common path is one button, and the rarer actions are one click away without crowding the footer or stacking a second window on the desk.
 
 #### Scenario: Try again with a note stays inside the desk
 
@@ -146,7 +146,7 @@ The desk's footer SHALL offer a "More ▾" menu with Leave for later, Try again,
 
 The desk SHALL run its main button on Ctrl+Enter (⌘+Enter on macOS) and SHALL move to the next or previous row on Ctrl+Alt+↓ and Ctrl+Alt+↑, without using Alt+↑ or Alt+↓, which belong to the editor on macOS.
 
-**Source**: docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (F1). In plain words: a person who reviews dozens of segments can stay on the keyboard, and the shortcuts do not collide with text editing.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (F1). In plain words: a person who reviews dozens of segments can stay on the keyboard, and the shortcuts do not collide with text editing.
 
 #### Scenario: Ctrl+Enter runs Accept & next
 
@@ -177,7 +177,7 @@ The desk SHALL run its main button on Ctrl+Enter (⌘+Enter on macOS) and SHALL 
 
 The desk's "What the model saw" tab SHALL show the segment's stored context snapshot, parsed into its sections; for a segment that was drafted in a batch, it SHALL show the batch context that was actually sent to the model.
 
-**Source**: docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (T8). In plain words: to judge a translation the person must see what the model was told, and for a batch that is the batch's package, not a reconstruction.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/spec_baseline/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (T8). In plain words: to judge a translation the person must see what the model was told, and for a batch that is the batch's package, not a reconstruction.
 
 #### Scenario: A batch-drafted segment shows the batch's context
 
@@ -193,7 +193,7 @@ The desk's "What the model saw" tab SHALL show the segment's stored context snap
 
 The review editor SHALL show each stored formatting mark `⟦gN⟧` as the text `⟦N⟧` with the same number, and saving SHALL map each `⟦N⟧` back to `⟦gN⟧` before the placeholder check.
 
-**Source**: docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (decision 12, F1). In plain words: the stored text keeps its internal mark names, while the person sees short numbered marks that are easy to move and recognise.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (decision 12, F1). In plain words: the stored text keeps its internal mark names, while the person sees short numbered marks that are easy to move and recognise.
 
 #### Scenario: The editor shows numbers and saving maps them back
 
@@ -204,7 +204,7 @@ The review editor SHALL show each stored formatting mark `⟦gN⟧` as the text 
 
 The desk SHALL offer one main button: "✓ Accept & next" keeps the machine text and moves to the next segment, and once the translation is edited the same button SHALL read "✓ Save my edit & next" and save the text instead; re-reading the list or the segment SHALL NOT replace text the person has typed and not saved.
 
-**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (T7). In plain words: Accept means "the machine was right", so while the person's own typing is pending the button changes its meaning to saving it, and a refresh must never eat what they typed.
+**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (T7). In plain words: Accept means "the machine was right", so while the person's own typing is pending the button changes its meaning to saving it, and a refresh must never eat what they typed.
 
 #### Scenario: An unedited segment offers Accept
 
@@ -225,7 +225,7 @@ The desk SHALL offer one main button: "✓ Accept & next" keeps the machine text
 
 IF a saved edit reaches the placeholder check with a formatting mark missing or doubled, THEN the system SHALL refuse it with `ErrorCode.validation`, store nothing, and keep the segment's stored translation and status.
 
-**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (decision 12). In plain words: the desk's editor cannot produce such an edit, because its main button stays off until every mark is present once; this check is the safety net behind it, so a broken text is never stored by any path.
+**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (decision 12). In plain words: the desk's editor cannot produce such an edit, because its main button stays off until every mark is present once; this check is the safety net behind it, so a broken text is never stored by any path.
 
 #### Scenario: A save with a missing mark is refused
 
@@ -241,7 +241,7 @@ IF a saved edit reaches the placeholder check with a formatting mark missing or 
 
 WHEN the desk refuses a save with `ErrorCode.validation`, the review desk SHALL show the reason under the editors in words that fit a save as well as a restore, and SHALL remove it as soon as the editor holds any other text; the list and the detail SHALL keep their widths, and the reason SHALL end before the detail's scroll bar.
 
-**Source**: `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`; the window re-test of `finalize-ui-and-persistence` (G2-2). In plain words: the reason once began "Restoring this translated passage…" after a save, stayed after the text was corrected until Save was pressed again, ran into the scroll bar and narrowed the list.
+**Source**: `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`; the window re-test of `finalize-ui-and-persistence` (G2-2). In plain words: the reason once began "Restoring this translated passage…" after a save, stayed after the text was corrected until Save was pressed again, ran into the scroll bar and narrowed the list.
 
 #### Scenario: A corrected text clears the reason at once
 
@@ -257,7 +257,7 @@ WHEN the desk refuses a save with `ErrorCode.validation`, the review desk SHALL 
 
 IF the editor's text is empty or only spaces, THEN the desk SHALL keep the main button disabled and show under the editor "The edit is empty. Type the translation to save it, or choose Leave for later.", and a blank save that reaches the review desk by any path SHALL be refused with `ErrorCode.validation` with nothing stored.
 
-**Source**: `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`. In plain words: a blank edit would export an empty paragraph where the book had text; leaving the segment for later is the way to put it off.
+**Source**: `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`. In plain words: a blank edit would export an empty paragraph where the book had text; leaving the segment for later is the way to put it off.
 
 #### Scenario: The editor is cleared
 
@@ -273,7 +273,7 @@ IF the editor's text is empty or only spaces, THEN the desk SHALL keep the main 
 
 WHILE the editor lacks a formatting mark of the source or holds one twice, the desk SHALL show under it a line naming each such mark and what to do — "⟦0⟧ is missing — paste it back where the formatting ends." — and SHALL keep the main button disabled until every mark is present exactly once.
 
-**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (decision 12). In plain words: the line names the wrong mark and says where to put it back, and the button cannot save a broken text.
+**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (decision 12). In plain words: the line names the wrong mark and says where to put it back, and the button cannot save a broken text.
 
 #### Scenario: A missing mark is named and blocks the button
 
@@ -294,7 +294,7 @@ WHILE the editor lacks a formatting mark of the source or holds one twice, the d
 
 The Translating screen's outcome card SHALL show the count as "worth a second look" with a hover explanation, and the review desk SHALL show the "Worth a second look" filter with the same hover explanation, both in English and Ukrainian.
 
-**Source**: FR-REVIEW-A1, docs/specification/mockups/README.md#words-w--user-facing-vocabulary. In plain words: the finished run says how many accepted segments a last check still doubts, in words a reader understands, and what the phrase means is one hover away.
+**Source**: FR-REVIEW-A1, docs/spec_baseline/specification/mockups/README.md#words-w--user-facing-vocabulary. In plain words: the finished run says how many accepted segments a last check still doubts, in words a reader understands, and what the phrase means is one hover away.
 
 #### Scenario: The outcome card counts them
 
@@ -310,7 +310,7 @@ The Translating screen's outcome card SHALL show the count as "worth a second lo
 
 The application SHALL refuse with `ErrorCode.validation`, changing nothing, an action on a segment whose status it does not start from: Accept on a PENDING or REVISED segment, Save my edit on a PENDING one, Undo my edit on one that is not REVISED, and Try again on a PENDING or REVISED one.
 
-**Source**: FR-REVIEW-06, FR-REVIEW-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-status-state-machine`. In plain words: a segment a run has not decided yet is never accepted by a person, and undoing or trying again makes sense only on a segment that has something to undo or try again.
+**Source**: FR-REVIEW-06, FR-REVIEW-08 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-status-state-machine`. In plain words: a segment a run has not decided yet is never accepted by a person, and undoing or trying again makes sense only on a segment that has something to undo or try again.
 
 #### Scenario: A pending segment cannot be accepted
 
@@ -341,7 +341,7 @@ The application SHALL refuse with `ErrorCode.validation`, changing nothing, an a
 
 Accept, Save my edit, Undo my edit, a passing Try again and an accepted proposal SHALL mark the segment reviewed; Leave for later and a failing Try again SHALL NOT.
 
-**Source**: FR-REVIEW-05, FR-REVIEW-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12. In plain words: "reviewed" counts the segments a person actually dealt with, so putting one aside or an attempt that failed must not inflate it.
+**Source**: FR-REVIEW-05, FR-REVIEW-08 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12. In plain words: "reviewed" counts the segments a person actually dealt with, so putting one aside or an attempt that failed must not inflate it.
 
 #### Scenario: Accept marks the segment reviewed
 
@@ -362,7 +362,7 @@ Accept, Save my edit, Undo my edit, a passing Try again and an accepted proposal
 
 The review desk's "Worth a second look" filter SHALL list, in document order, the ACCEPTED segments no person has reviewed that hold an audit finding, each opened with its findings so the check that fired is named, and SHALL count them in its label; a listed segment SHALL leave the list once a person accepts or edits it.
 
-**Source**: FR-REVIEW-A1, docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/specification/mockups/README.md#words-w--user-facing-vocabulary. In plain words: a segment that passed every gate can still hold a leak, so there is one more list to open after a run, and its label says how long it is.
+**Source**: FR-REVIEW-A1, docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/spec_baseline/specification/mockups/README.md#words-w--user-facing-vocabulary. In plain words: a segment that passed every gate can still hold a leak, so there is one more list to open after a run, and its label says how long it is.
 
 #### Scenario: The filter lists the audited segments
 
@@ -393,7 +393,7 @@ The review desk's "Worth a second look" filter SHALL list, in document order, th
 
 IF the review desk opens with no segment to review, THEN it SHALL show "Nothing needs your review" and keep "All segments" available.
 
-**Source**: FR-REVIEW-Q4 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#empty-states`, docs/specification/mockups/README.md#run-states-a. In plain words: an empty list must say that is good news, not look broken, and the person can still read what was translated.
+**Source**: FR-REVIEW-Q4 (`docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#empty-states`, docs/spec_baseline/specification/mockups/README.md#run-states-a. In plain words: an empty list must say that is good news, not look broken, and the person can still read what was translated.
 
 #### Scenario: The empty state
 
@@ -405,7 +405,7 @@ IF the review desk opens with no segment to review, THEN it SHALL show "Nothing 
 
 WHILE the run state is Translating, Stuck call, Pausing or Stopping, or a retry is in flight, the desk SHALL be read-only. WHILE the run state is Translating, Stuck call, Pausing or Stopping, its header SHALL read "read-only while translating", and a banner SHALL say "Pause the translation to edit, accept or try again." with a Pause button; WHILE a retry is in flight on a run that is not translating, the banner SHALL say "Trying again… the desk is available when the model answers." with no Pause button.
 
-**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, docs/specification/mockups/README.md#run-states-a, docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12. In plain words: an edit made while the run decides the same segment would race it, so the desk waits for the pause and says so, with the button that gets there.
+**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, docs/spec_baseline/specification/mockups/README.md#run-states-a, docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12. In plain words: an edit made while the run decides the same segment would race it, so the desk waits for the pause and says so, with the button that gets there.
 
 #### Scenario: The target is read-only while a run translates
 
@@ -426,7 +426,7 @@ WHILE the run state is Translating, Stuck call, Pausing or Stopping, or a retry 
 
 WHEN a run pauses for review naming a segment, the application SHALL open the review desk with that segment selected; WHILE the review mode is Manual, the desk SHALL offer Accept & continue, which confirms the segment as Accept does and then resumes the run.
 
-**Source**: FR-REVIEW-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`, ADR-0036, ADR-0045. In plain words: when the run stops for the person, the thing to look at is already in front of them. When each review mode pauses is the resume capability's "Pause for review as the review mode says"; this requirement covers only what the desk does.
+**Source**: FR-REVIEW-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`, ADR-0036, ADR-0045. In plain words: when the run stops for the person, the thing to look at is already in front of them. When each review mode pauses is the resume capability's "Pause for review as the review mode says"; this requirement covers only what the desk does.
 
 #### Scenario: Assisted opens the flagged segment
 
@@ -443,7 +443,7 @@ WHEN a run pauses for review naming a segment, the application SHALL open the re
 
 The review desk SHALL show each finding once, with one label made of its kind, its severity and what raised it, and SHALL NOT show the same finding again as a separate plain row or badge; the rule code and the ratio SHALL appear only with the "Show technical details" setting on.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`, docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/specification/mockups/README.md#g12--simple-first-technical-details-on-request. In plain words: a person sees why a segment needs them in one clear line per finding, and never has to read the same fact twice or a rule code they did not ask for.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`, docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, docs/spec_baseline/specification/mockups/README.md#g12--simple-first-technical-details-on-request. In plain words: a person sees why a segment needs them in one clear line per finding, and never has to read the same fact twice or a rule code they did not ask for.
 
 #### Scenario: A glossary finding shows the name badge
 
@@ -464,7 +464,7 @@ The review desk SHALL show each finding once, with one label made of its kind, i
 
 Each row of the review desk SHALL carry its state marker and, as its one label, the segment's worst finding, the finding of the highest severity; a tie SHALL go first to a glossary finding (`name`), then a language finding (`wrong lang?`), then an omission finding (`omission`), and any other finding, or a stored score with no finding, SHALL show `low score`.
 
-**Source**: FR-REVIEW-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, ADR-0036, docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12. In plain words: the label shows the worst problem, and among equally bad ones the kind a reader notices first — a wrong name before a wrong language before a missing clause.
+**Source**: FR-REVIEW-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, ADR-0036, docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12. In plain words: the label shows the worst problem, and among equally bad ones the kind a reader notices first — a wrong name before a wrong language before a missing clause.
 
 #### Scenario: The worst finding decides the badge
 
@@ -485,7 +485,7 @@ Each row of the review desk SHALL carry its state marker and, as its one label, 
 
 WHEN a segment is selected in the review desk, the application SHALL show its source read-only in the Original pane, with each formatting mark as a chip, beside its translation in the editor, marked EDITABLE, with no inline diff, each formatting mark shown where it stands as `⟦N⟧` and each locked name shown as its rendering.
 
-**Source**: FR-REVIEW-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#side-by-side-compare`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`, docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12. In plain words: two plain texts side by side are what a translator reads fastest; the marks stay visible so the person keeps the bold, italics and links in place, and a locked name reads as the name.
+**Source**: FR-REVIEW-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#side-by-side-compare`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`, docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12. In plain words: two plain texts side by side are what a translator reads fastest; the marks stay visible so the person keeps the bold, italics and links in place, and a locked name reads as the name.
 
 #### Scenario: A flagged segment in the compare
 
@@ -501,7 +501,7 @@ WHEN a segment is selected in the review desk, the application SHALL show its so
 
 The desk's translation editor SHALL hold the person's saved edit when there is one, else the machine target, else the model's refused reply under the note "No usable translation: the model's last reply is shown below, but it broke the formatting.", else the segment's source under the note "No translation kept — showing the source."
 
-**Source**: FR-REVIEW-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#side-by-side-compare`, docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12. In plain words: the editor opens on the most useful text and says so when it is not a translation; a refused reply, labelled, lets the person put back the one mark instead of retyping the paragraph.
+**Source**: FR-REVIEW-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#side-by-side-compare`, docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12. In plain words: the editor opens on the most useful text and says so when it is not a translation; a refused reply, labelled, lets the person put back the one mark instead of retyping the paragraph.
 
 #### Scenario: A segment with only a refused reply shows it, labelled
 
@@ -523,7 +523,7 @@ The desk's translation editor SHALL hold the person's saved edit when there is o
 
 WHEN the person presses "✓ Accept & next" on a FLAGGED or ACCEPTED segment, the application SHALL keep the machine target and mark it ACCEPTED; WHEN they press "✓ Save my edit & next", it SHALL store their text, marks included, as the target and mark it REVISED, keeping the machine target; WHEN they choose "Undo my edit" under More, it SHALL clear the edit and mark the segment ACCEPTED.
 
-**Source**: FR-REVIEW-05, FR-REVIEW-08, FR-REVIEW-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12. In plain words: the machine target is never thrown away, so an edit can always be undone, and a saved edit keeps its marks, so the person can come back and edit it again without losing the formatting.
+**Source**: FR-REVIEW-05, FR-REVIEW-08, FR-REVIEW-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12. In plain words: the machine target is never thrown away, so an edit can always be undone, and a saved edit keeps its marks, so the person can come back and edit it again without losing the formatting.
 
 #### Scenario: Saving an edit keeps the machine target
 
@@ -541,7 +541,7 @@ WHEN the person presses "✓ Accept & next" on a FLAGGED or ACCEPTED segment, th
 
 WHEN the person chooses Try again or Try again with a note… under the desk's More menu on a FLAGGED or ACCEPTED segment, the application SHALL draft that one segment again with the brief, glossary entries, recurring-term renderings, preceding targets, memory and summary it first saw, as they read then, adding the note as an extra instruction and lowering the temperature when `Lower temperature for this retry` is checked in the note panel.
 
-**Source**: FR-REVIEW-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-A1, FR-REVIEW-A2 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`), docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, ADR-0038. In plain words: trying again must be a fair second attempt at the same problem, not a translation with different context; the note lets the person steer it ("keep it more formal"). The temperature values are the inference capability's.
+**Source**: FR-REVIEW-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-A1, FR-REVIEW-A2 (`docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`), docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12, ADR-0038. In plain words: trying again must be a fair second attempt at the same problem, not a translation with different context; the note lets the person steer it ("keep it more formal"). The temperature values are the inference capability's.
 
 #### Scenario: Retry with a note passes
 
@@ -564,7 +564,7 @@ WHEN the person chooses Try again or Try again with a note… under the desk's M
 
 WHILE no run of the project is running — its latest run is paused, stopped, completed or failed, or it has none — the application SHALL allow Try again and Try again with a note…; IF one is requested while a run of the project is running, THEN it SHALL refuse it with `ErrorCode.busy` and make no model call; WHILE a retry is in flight, the desk's actions and the toolbar's Resume SHALL be unavailable.
 
-**Source**: FR-REVIEW-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-INFER-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#inference-gate`, ADR-0036. In plain words: only one model call runs at a time; a paused run holds no place, so a retry reaches the model at once, and resuming during it would queue two calls. The busy refusal guards the desk's read-only state.
+**Source**: FR-REVIEW-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-INFER-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#inference-gate`, ADR-0036. In plain words: only one model call runs at a time; a paused run holds no place, so a retry reaches the model at once, and resuming during it would queue two calls. The busy refusal guards the desk's read-only state.
 
 #### Scenario: Retry during a review pause is allowed
 
@@ -590,7 +590,7 @@ WHILE no run of the project is running — its latest run is paused, stopped, co
 
 A segment of a body unit SHALL be located as `ch<n> · p<mm>`, where `n` is its unit's 1-based position among the book's body units and `mm` is the segment's 1-based position within its unit, zero-padded to two digits, and SHALL be named the same way in the review desk, in messages and in the export's report; an auxiliary segment is located by "Locate an auxiliary segment by its kind".
 
-**Source**: FR-REVIEW-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, ADR-0036. In plain words: a locator like `ch5 · p12` is what a reader can find in the book — chapter five, twelfth paragraph — and one rule keeps the desk, a toast and the report from naming the same paragraph three ways.
+**Source**: FR-REVIEW-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, ADR-0036. In plain words: a locator like `ch5 · p12` is what a reader can find in the book — chapter five, twelfth paragraph — and one rule keeps the desk, a toast and the report from naming the same paragraph three ways.
 
 #### Scenario: Locators count from one and pad the paragraph
 
@@ -606,7 +606,7 @@ A segment of a body unit SHALL be located as `ch<n> · p<mm>`, where `n` is its 
 
 WHEN an Unattended run has finished, the review desk's "All segments" filter SHALL list in document order every decided segment and every segment kept as source by choice, the latter marked `kept as source` and shown by no other filter; the counts SHALL report segments kept as source by choice on their own, never as to review.
 
-**Source**: FR-REVIEW-Q4 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#empty-states`, ADR-0036, docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12. In plain words: in the default mode nobody watched the run, so the person may still want to read and correct segments that passed; text the brief chose not to translate is neither a problem nor unfinished work, so only All segments shows it.
+**Source**: FR-REVIEW-Q4 (`docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#empty-states`, ADR-0036, docs/spec_baseline/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12. In plain words: in the default mode nobody watched the run, so the person may still want to read and correct segments that passed; text the brief chose not to translate is neither a problem nor unfinished work, so only All segments shows it.
 
 #### Scenario: Browsing an accepted segment after an Unattended run
 
@@ -623,7 +623,7 @@ WHEN an Unattended run has finished, the review desk's "All segments" filter SHA
 
 WHEN backward revision proposes a change to a segment the person edited, the application SHALL show the proposal in the review desk beside the person's text and SHALL change that segment only when the person accepts the proposal, keeping the accepted proposal, like a saved edit, marks included.
 
-**Source**: FR-REVIEW-10 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-ALGO-D1, FR-ALGO-D3 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`). In plain words: a whole-book consistency pass may fix a pronoun once a character's gender is known, but a person's own edit is theirs — the pass may suggest, never overwrite.
+**Source**: FR-REVIEW-10 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-ALGO-D1, FR-ALGO-D3 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`). In plain words: a whole-book consistency pass may fix a pronoun once a character's gender is known, but a person's own edit is theirs — the pass may suggest, never overwrite.
 
 #### Scenario: A proposal waits for the person
 
@@ -648,7 +648,7 @@ WHEN backward revision proposes a change to a segment the person edited, the app
 
 The review desk SHALL show under the two panes a readable view of the source and the target in which every formatting mark is a chip (`0`, `1`), not raw text, and the words a finding quotes — the quoted opening of its note, or the replacement of an applied edit — are marked in the target at their first occurrence; the target view SHALL follow what is typed in the editor.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`, docs/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only. In plain words: a person sees why a segment was flagged on the words themselves, and never has to read a raw mark as if it were part of the book.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`, docs/spec_baseline/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only. In plain words: a person sees why a segment was flagged on the words themselves, and never has to read a raw mark as if it were part of the book.
 
 #### Scenario: A quoted word is marked and the tokens are chips
 
@@ -664,7 +664,7 @@ The review desk SHALL show under the two panes a readable view of the source and
 
 The application SHALL read the to-review count from the stored segments again whenever the run state becomes Paused, Stopped, Finished or Did not finish, because a run stores its decisions in its last flush, after its last event, and SHALL show only the newest read when two reads finish out of order.
 
-**Source**: task 15d.13 (`openspec/changes/archive/2026-10-19-complete-translation-workflow/additional-work.md`), docs/specification/mockups/README.md#words-w--user-facing-vocabulary. In plain words: the number on the Review (n) button at the end of a run is the number of segments to review that the book holds; a real run once showed 169 on the screen and 170 in the book.
+**Source**: task 15d.13 (`openspec/changes/archive/2026-10-19-complete-translation-workflow/additional-work.md`), docs/spec_baseline/specification/mockups/README.md#words-w--user-facing-vocabulary. In plain words: the number on the Review (n) button at the end of a run is the number of segments to review that the book holds; a real run once showed 169 on the screen and 170 in the book.
 
 #### Scenario: The final flush stored one more flagged segment
 

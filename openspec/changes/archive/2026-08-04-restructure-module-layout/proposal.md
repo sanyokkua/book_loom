@@ -79,9 +79,9 @@ live in a spec lives in `tasks.md`, where each task states its own check.
   `modules/build-logic/src/test/java/ua/bookloom/buildlogic/DependencyLockingFunctionalTest.java`,
   `tooling/hooks-test/pre-commit-formats-staged-file.sh`,
   `tooling/hooks-test/pre-push-blocks-checkstyle-violation.sh`,
-  `.github/workflows/ci.yml`, `.gitignore`, `docs/implementation_plan/01_MODULE_INVENTORY.md`,
-  `docs/implementation_plan/CHANGE_BACKLOG.md`, `AGENTS.md`, `README.md`.
-- **Files added:** `docs/adr/ADR-0021-modules-under-a-single-parent-directory.md`.
+  `.github/workflows/ci.yml`, `.gitignore`, `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md`,
+  `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md`, `AGENTS.md`, `README.md`.
+- **Files added:** `docs/spec_baseline/adr/ADR-0021-modules-under-a-single-parent-directory.md`.
 - **Verified unaffected, deliberately untouched:** root `build.gradle.kts` (it references subprojects through the
   Gradle object graph and `config/` through the root project directory, neither of which moves); `config/**`
   (`config/checkstyle/suppressions.xml` matches source sets with a depth-agnostic regex, and nothing under `config/`
@@ -100,7 +100,7 @@ live in a spec lives in `tasks.md`, where each task states its own check.
 - **Frozen spec:** unedited, as required. Five passages are superseded by ADR-0021 rather than changed —
   `01_BUILD_AND_TOOLING.md#project-layout` (the directory tree), and the `app/build/dist/libs/` staging path at all
   four of its occurrences: `01_BUILD_AND_TOOLING.md#javafx-plugin` and `#task-surface`, and
-  `03_PACKAGING_JPACKAGE.md#approach` (twice). `grep -rn 'build/dist' docs/specification/` returns exactly those four
+  `03_PACKAGING_JPACKAGE.md#approach` (twice). `grep -rn 'build/dist' docs/spec_baseline/specification/` returns exactly those four
   staging-path lines, so the set is exhaustive rather than assumed.
 - **ADRs:** ADR-0021 (new, this decision), ADR-0002 (Gradle Kotlin DSL — unchanged), ADR-0016 (a spec gap is remedied
   by an ADR, never a spec edit), ADR-0017 (this change is Stage A, before any feature work).

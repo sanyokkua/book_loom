@@ -56,7 +56,7 @@ file, no `module-info.java`, and no per-module `build.gradle.kts` needs a single
   stays where it is.
 - **Not implementing `collectDist`.** ADR-0021 settles that it will stage into `modules/app/build/dist/libs/`; writing
   the task is change 2's job (`bootstrap-app-launch-and-empty-window`).
-- **Not editing `docs/specification/**`.** It is frozen. ADR-0021 supersedes the two affected clauses.
+- **Not editing `docs/spec_baseline/specification/**`.** It is frozen. ADR-0021 supersedes the two affected clauses.
 - **Not renaming projects to `:modules:api`.** See D2.
 
 ## Decisions

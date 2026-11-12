@@ -70,8 +70,8 @@ instead ([§7](#test-speed)). Note your own baseline: a run materially longer th
 
 ```
 AGENTS.md                  operating manual (agents)         docs/Architecture.md   what is built, how to verify it
-docs/specification/        the spec — editable reference     docs/adr/              decisions (ADR-0001 …)
-docs/implementation_plan/  CHANGE_BACKLOG.md (order of work), 01_MODULE_INVENTORY.md (as-built log), 07_ROADMAP.md,
+docs/spec_baseline/specification/        the spec — editable reference     docs/spec_baseline/adr/              decisions (ADR-0001 …)
+docs/spec_baseline/implementation_plan/  CHANGE_BACKLOG.md (order of work), 01_MODULE_INVENTORY.md (as-built log), 07_ROADMAP.md,
                            notes-corpus-verification.md (235-book sweep results), 04_ADR_FORMAT.md
 openspec/                  changes/<name>/ = a unit of work; specs/ = ledger of built behaviour; archive/ = history
 modules/                   all code (see below)              scripts/               jpackage per OS, launch smoke, agent-file sync
@@ -2367,7 +2367,7 @@ The `liveLocal` provider suites use the four `BOOKLOOM_LIVE_OLLAMA_URL`, `BOOKLO
 `BOOKLOOM_LIVE_LMSTUDIO_URL`, and `BOOKLOOM_LIVE_LMSTUDIO_MODEL` variables; URL absence skips that provider's cases.
 They are excluded from `check` and CI. Without `BOOKLOOM_CORPUS_DIR` the corpus test skips via a JUnit assumption; a
 set-but-missing directory is a hard failure. The last recorded corpus run is in
-`docs/implementation_plan/notes-corpus-verification.md`.
+`docs/spec_baseline/implementation_plan/notes-corpus-verification.md`.
 
 **Conventions** (full rules in `.claude/rules/testing.md`):
 
@@ -2613,7 +2613,7 @@ what failed and ends the smoke at once. The image runs on the **module path**, w
 a resource left out of the image, a Guice binding that cannot be built in the production stage, a screen whose FXML
 or controller cannot load. (`ResolveAllTest` in `:app` runs the same step in the test JVM.) On Linux the packaged app starts the real GTK toolkit, so a
 display is required — CI starts Xvfb before the smoke. The app icons `jpackage` reads are committed under
-`docs/specification/assets/icon/dist/`; regenerate them from `appicon.png` with the scripts beside it.
+`docs/spec_baseline/specification/assets/icon/dist/`; regenerate them from `appicon.png` with the scripts beside it.
 
 ---
 
@@ -2655,7 +2655,7 @@ convention configure it; do not reach for Monocle.
 Windows. Install Liberica 25 Full there ([§1](#prerequisites)); never copy jmods by hand.
 
 **Packaging fails with `Specified icon file … does not exist`** — the committed icons are missing from your checkout;
-regenerate them (`docs/specification/assets/icon/README.md`).
+regenerate them (`docs/spec_baseline/specification/assets/icon/README.md`).
 
 **`scripts/*.sh` or the hooks do not run on Windows** — run them from Git Bash or WSL, with Python 3 installed.
 

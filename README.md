@@ -63,7 +63,7 @@ tooling/hooks/                Helper scripts the hooks call: file-size guard, co
 `AGENTS.md` is the operating manual. In short: a change is one short brief (an OpenSpec proposal under `openspec/`
 when the owner wants one), an acceptance test seen red before the implementation, a green gate, and the change
 exercised in the running app. The specification is a reference that is edited when the code legitimately differs from
-it; `docs/adr/` records the decisions that are costly to reverse.
+it; `docs/spec_baseline/adr/` records the decisions that are costly to reverse.
 
 ## Local setup
 
@@ -92,7 +92,7 @@ lefthook install                 # writes .git/hooks — run once after cloning
 lefthook validate                # optional: check lefthook.yml parses
 ```
 
-What each stage does, and why (`docs/specification/04_Build_and_Release/02_QUALITY_GATES.md#lefthook-stages`):
+What each stage does, and why (`docs/spec_baseline/specification/04_Build_and_Release/02_QUALITY_GATES.md#lefthook-stages`):
 
 | Stage | Runs | Budget |
 |---|---|---|

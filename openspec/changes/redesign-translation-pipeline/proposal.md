@@ -194,7 +194,7 @@ None. Every requirement lands in an existing capability.
   - A new ADR (server engines and per-model profiles) amends ADR-0005 (two provider kinds only), ADR-0013 (reasoning
     set low or off for every call) and ADR-0033 (provider-neutral call settings).
 - **Words:** every new word is added in English and Ukrainian under the existing localization requirements (complete bundles, Ukrainian plural forms); no localization requirement changes.
-- **Specification:** the contradicted clauses of `docs/specification/**`, the pipeline diagrams, the mockup README and
+- **Specification:** the contradicted clauses of `docs/spec_baseline/specification/**`, the pipeline diagrams, the mockup README and
   `.claude/rules/{llm-provider-integration,offline-and-privacy}.md` are fixed by the group that changes each behaviour.
 - **Out of scope:**
   - the document layer (for example FB2 inline code);

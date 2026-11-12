@@ -2,7 +2,7 @@
 //
 // Pinning the toolchain means a contributor with JDK 21 installed still builds against 25 — Gradle downloads it —
 // so "works on my machine" cannot diverge on language level
-// (docs/specification/04_Build_and_Release/01_BUILD_AND_TOOLING.md#build-system, ADR-0001).
+// (docs/spec_baseline/specification/04_Build_and_Release/01_BUILD_AND_TOOLING.md#build-system, ADR-0001).
 //
 // Also owns the compiler-facing quality stack per design decision D2: Lombok as the sole annotation processor,
 // Error Prone + NullAway as javac plugins, Checkstyle and SpotBugs + FindSecBugs bound into `check`.

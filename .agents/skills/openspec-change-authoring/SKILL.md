@@ -13,7 +13,7 @@ allowed-tools: Read, Write, Bash, Glob, Grep
 # OpenSpec Change Authoring
 
 An `openspec/changes/<name>/` directory is the unit of tracked work (ADR-0016). The
-specification under `docs/specification/` is the reference; a change translates its `FR-*`
+specification under `docs/spec_baseline/specification/` is the reference; a change translates its `FR-*`
 clauses into EARS requirements, concrete scenarios, and an implementation checklist.
 
 **The one rule everything else serves:** every artifact must be readable **without opening
@@ -30,7 +30,7 @@ as the content of a requirement, a scenario, or a task is a defect.
 
 - Do NOT record a spec deviation somewhere else: when the shipped code legitimately differs
   from a clause, fix the clause in the same change. A decision that is costly to reverse is a
-  **new ADR** under `docs/adr/` (use the `adr-authoring` skill).
+  **new ADR** under `docs/spec_baseline/adr/` (use the `adr-authoring` skill).
 - Do NOT hand-edit `openspec/specs/**` — it is written by `openspec archive`. The exception
   is fixing a leftover `TBD` Purpose placeholder.
 - Do NOT reopen an archived change; follow-up work is a new change.
@@ -151,12 +151,12 @@ artifact where class names, library names, and module paths belong.
 ## Reference index
 
 - `openspec/config.yaml` — the rules that steer generation, plus project context.
-- `docs/adr/ADR-0016-openspec-delivery-tracking.md` — R1–R4 and the superseded spec clauses;
+- `docs/spec_baseline/adr/ADR-0016-openspec-delivery-tracking.md` — R1–R4 and the superseded spec clauses;
   `ADR-0032-tests-are-the-evidence.md` — why there are no test markers or coverage script.
-- `docs/adr/ADR-0017-infrastructure-first-delivery-order.md` — the five stages.
-- `docs/implementation_plan/CHANGE_BACKLOG.md` — the ordered backlog and capability map.
+- `docs/spec_baseline/adr/ADR-0017-infrastructure-first-delivery-order.md` — the five stages.
+- `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md` — the ordered backlog and capability map.
 - `AGENTS.md` — the Definition of Done.
-- `docs/specification/00_Foundation/05_SPEC_INDEX.md` — resolve any `FR-*`/`NFR-*`/`DD-*`.
+- `docs/spec_baseline/specification/00_Foundation/05_SPEC_INDEX.md` — resolve any `FR-*`/`NFR-*`/`DD-*`.
 
 ## Mandatory validation checklist
 
@@ -169,7 +169,7 @@ artifact where class names, library names, and module paths belong.
 - [ ] Every `tasks.md` checkbox is a sentence with module and spec pointer; final group is the green gate.
 - [ ] `skip_specs: true` is set **iff** there is genuinely no user-observable behaviour.
 - [ ] `openspec validate <change> --strict` is clean.
-- [ ] No spec file under `docs/specification/**` was touched.
+- [ ] No spec file under `docs/spec_baseline/specification/**` was touched.
 - [ ] No retired machinery reintroduced (story file, generated traceability yaml, trace tasks, `Proves:` marker).
 
 ## Gotchas

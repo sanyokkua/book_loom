@@ -16,8 +16,8 @@ declares as the source without letting it be edited.
 WHERE the book declares no language, the screen SHALL show the source as undeclared rather than guessing one,
 and SHALL still allow a target language to be chosen.
 
-**Source:** FR-BRIEF-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`.
+**Source:** FR-BRIEF-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`),
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`.
 In plain words: the target is the one thing a run genuinely cannot start without, so it is the one control on
 this screen that does anything. The source is shown and locked because the book already answered that question
 and the application has no better answer — detection is not built, so an editable field would invite a person to
@@ -40,10 +40,10 @@ route to the import screen, and SHALL NOT present an empty brief.
 
 The structure screen SHALL report the same state on the same condition.
 
-**Source:** FR-BRIEF-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-DOC-01
-(`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-structure`.
+**Source:** FR-BRIEF-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-DOC-01
+(`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`,
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-structure`.
 In plain words: the navigation is always live, so a person can open the brief or the structure before opening any
 book — and both screens are built entirely out of one. An empty brief with a greyed-out language picker looks
 broken; saying "open a book first" and offering the way there is the same number of controls and tells the truth.
@@ -78,8 +78,8 @@ settings screen, and a second, read-only copy of that choice on the brief would 
 there.
 
 **Source:** FR-BRIEF-02, FR-BRIEF-03, FR-BRIEF-04, FR-BRIEF-05, FR-BRIEF-06, FR-BRIEF-07, FR-BRIEF-08
-(`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`.
+(`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`),
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`.
 In plain words: the engine reads a source language, a target language and a destination, and nothing else on
 this screen — so every other control is drawn and switched off. Showing them is how a person learns what the
 brief is going to be; enabling one that nothing reads would be a control that silently does nothing, which is

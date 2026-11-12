@@ -2,7 +2,7 @@
 
 Status: proposed (owner review pending) · 2026-10-19 · evidence: the owner's annotated review
 `.temporary_context/NewObservations/*.pdf` with the screenshots in `BookLoomLastBuild/` (owner-local), and the updated
-mockup `docs/specification/mockups/ui-mockup.html` with its `README.md`.
+mockup `docs/spec_baseline/specification/mockups/ui-mockup.html` with its `README.md`.
 
 ## Why
 

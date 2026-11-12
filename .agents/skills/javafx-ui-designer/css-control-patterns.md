@@ -1,7 +1,7 @@
 # CSS & Control Patterns
 
 Supporting reference for `javafx-ui-designer/SKILL.md`. Everything here is expressed in terms of BookLoom's
-**existing** fixed palette and token catalogue (`docs/specification/01_Product/09_THEMING.md#token-catalog`) and the
+**existing** fixed palette and token catalogue (`docs/spec_baseline/specification/01_Product/09_THEMING.md#token-catalog`) and the
 AtlantaFX base theme it sits on top of — no new token role is introduced by this file. Token references below use the
 `-color-<role>` naming already used in `theming-tokens.md` and `SKILL.md` (e.g. `-color-primary`, `-color-surface`);
 the exact CSS custom-property names are fixed when the `:ui` stylesheet is authored, but the *roles* are the

@@ -11,7 +11,7 @@ import org.jsoup.nodes.TextNode;
 /**
  * Restores the one leading U+000A the HTML parser discards immediately after a preformatted block's start tag —
  * the serialization-time counterpart the HTML serialization spec requires and jsoup 1.23.1 does not implement
- * (task 6.1, DD-49; the measurement is recorded in {@code docs/implementation_plan/notes-corpus-verification.md},
+ * (task 6.1, DD-49; the measurement is recorded in {@code docs/spec_baseline/implementation_plan/notes-corpus-verification.md},
  * finding F2). Left unrestored, a {@code pre} or {@code listing} block whose content begins with two or more line
  * breaks loses one every time the document is written, silently deleting a line from inside a poem or verse block
  * on every export.

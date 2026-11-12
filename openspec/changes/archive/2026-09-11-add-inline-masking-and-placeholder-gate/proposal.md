@@ -78,7 +78,7 @@ and the port surface an unmask step needs is cheapest to add now, before `:pipel
 ### Non-goals, each with an owner
 
 - **Translating text inside a Markdown raw-HTML block** (the second half of EC-MD-2).
-  `docs/implementation_plan/CHANGE_BACKLOG.md`'s Stage B section assigns this here on the grounds that "change 5
+  `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md`'s Stage B section assigns this here on the grounds that "change 5
   introduces exactly that mechanism".
   **That premise turned out to be false**: `BlockSegmentWalker` emits a `NodeAnchor` and a re-serialized
   `sourceInner`, and Markdown reassembles by splicing bytes at a `ByteSpanAnchor`, so nothing in the masking work is
@@ -160,7 +160,7 @@ None. `openspec/specs/document-round-trip/` already exists.
   `ErrorCode` — `validation` already documents "including a QA hard-gate failure", and ADR-0022 fixed the enum at
   fifteen constants.
 - **`:document`** (`modules/document`) — a new `ua.bookloom.document.mask` package, already reserved in
-  `docs/implementation_plan/01_MODULE_INVENTORY.md` and named in `document/package-info.java`, but never created and
+  `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md` and named in `document/package-info.java`, but never created and
   **not** in fact named in `module-info.java`. `TreeNode` gains the two accessors an open/close split needs;
   `BlockSegmentWalker`, `MarkdownWalker` and `TxtReader` populate `masked`/`placeholders`; `BlockSegmentWalker` stops
   descending into an inline code span; `Jdom2TreeNode` carries the source's entity declarations into a restored fragment's parse.

@@ -4,7 +4,7 @@
 
 The system SHALL decide each call's reasoning from the model's profile — off for every call kind, or the lowest level for a model that cannot turn thinking off — unless the person's thinking choice for that model on Settings › Models says to allow thinking on proofreading and names (then on for the proofread and names-pass calls only) or always (then on for every call); no environment variable and no app-wide setting SHALL change it.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#models-tab`, `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#inference-behaviour`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`, the owner's decision that thinking and sampling are a built-in default per model plus the person's per-model override, with Settings › Generation keeping only app-wide items. In plain words: thinking costs time and can leave the answer empty, so it stays off unless the person turns it on for a model that translates better with it. The evaluation scripts set it through their own harness; the `BOOKLOOM_REASONING` variable is no longer read by the app.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#models-tab`, `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#inference-behaviour`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`, the owner's decision that thinking and sampling are a built-in default per model plus the person's per-model override, with Settings › Generation keeping only app-wide items. In plain words: thinking costs time and can leave the answer empty, so it stays off unless the person turns it on for a model that translates better with it. The evaluation scripts set it through their own harness; the `BOOKLOOM_REASONING` variable is no longer read by the app.
 
 #### Scenario: The default is off
 
@@ -25,7 +25,7 @@ The system SHALL decide each call's reasoning from the model's profile — off f
 
 WHERE a model declares a thinking control and a call's reasoning is Off, the system SHALL send the off value its profile names, on every engine, else the engine's own: Ollama native `"think":false` (else the lowest listed level); Ollama's OpenAI path, LM Studio and a generic server proved by its check `"reasoning_effort":"none"`; llama-server `chat_template_kwargs.enable_thinking` as JSON `false`; Unsloth `"enable_thinking":false`; OpenRouter its catalog's `reasoning` object.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#inference-behaviour`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: the same wish is spelled differently by every engine, and a missing switch is not neutral — llama-server thinks by default, and Gemma 4 on LM Studio reasons when the field is left out. A profile's own off value comes first on every engine: gpt-oss always gets `low` (on llama-server `none` would erase the switch and fall back to medium), and muse-glimmer gets `low` whenever a schema is sent. A model with no thinking control gets nothing, by the next requirement.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#inference-behaviour`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: the same wish is spelled differently by every engine, and a missing switch is not neutral — llama-server thinks by default, and Gemma 4 on LM Studio reasons when the field is left out. A profile's own off value comes first on every engine: gpt-oss always gets `low` (on llama-server `none` would erase the switch and fall back to medium), and muse-glimmer gets `low` whenever a schema is sent. A model with no thinking control gets nothing, by the next requirement.
 
 #### Scenario: llama-server gets the template switch as a boolean
 
@@ -66,7 +66,7 @@ WHERE a model declares a thinking control and a call's reasoning is Off, the sys
 
 The system SHALL send no reasoning control — no `think`, `reasoning_effort`, `enable_thinking`, template variable or `reasoning` object — that the model's facts or the stored engine do not declare, including a llama-server template variable the model's template does not read.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a control a model does not have is refused with a `400` that used to pause runs, and a template variable the template ignores does nothing at all. Preventing it is better than repairing it.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a control a model does not have is refused with a `400` that used to pause runs, and a template variable the template ignores does nothing at all. Preventing it is better than repairing it.
 
 #### Scenario: A model without thinking on Ollama
 
@@ -87,7 +87,7 @@ The system SHALL send no reasoning control — no `think`, `reasoning_effort`, `
 
 WHEN a model's facts or profile show it thinks on every call, the system SHALL raise each call's output cap by the profile's reasoning reserve and send its lowest offered level, or no reasoning control when it offers none, and SHALL remove the reasoning from the reply.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#inference-behaviour`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: some models cannot stop thinking — gpt-oss, a reasoning build, or a downloaded GGUF that Ollama serves without its own thinking switch. With the usual cap they would spend the whole answer thinking and return nothing, so they get extra room; the reply is slower but complete.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#inference-behaviour`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: some models cannot stop thinking — gpt-oss, a reasoning build, or a downloaded GGUF that Ollama serves without its own thinking switch. With the usual cap they would spend the whole answer thinking and return nothing, so they get extra room; the reply is slower but complete.
 
 #### Scenario: A reasoning-only model on LM Studio
 
@@ -103,7 +103,7 @@ WHEN a model's facts or profile show it thinks on every call, the system SHALL r
 
 IF a capped reply has blank text, reasoning present (in a reasoning field or as an opener with no closer) and the finish `length`, THEN the system SHALL send the request once more — with reasoning off when it was on and the model can turn it off, otherwise with its cap raised to four times, within the context size — and IF that reply is the same, THEN answer `emptyCompletion` with the reason `reasoning-exhausted`.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `#empty-response-ordering`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a model that used its whole answer budget thinking left no translation; one more try with no thinking, or with more room, usually gives one. Both of Ollama's dialects and every OpenAI-compatible engine follow the same rule (today Ollama flags at once because it ignores the thinking field). After the second empty reply the segment is flagged with "The model spent its whole answer budget thinking."
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `#empty-response-ordering`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a model that used its whole answer budget thinking left no translation; one more try with no thinking, or with more room, usually gives one. Both of Ollama's dialects and every OpenAI-compatible engine follow the same rule (today Ollama flags at once because it ignores the thinking field). After the second empty reply the segment is flagged with "The model spent its whole answer budget thinking."
 
 #### Scenario: Thinking that was on is turned off for the repeat
 
@@ -129,7 +129,7 @@ IF a capped reply has blank text, reasoning present (in a reasoning field or as 
 
 The system SHALL take each call's samplers from the model's profile, or from the person's Custom values for that model on Settings › Models, and WHERE an engine's own default for a sampler is not neutral (Ollama's OpenAI-compatible path, LM Studio, llama-server, Unsloth), SHALL send that sampler explicitly, at the profile's or the person's value or else a neutral one, under that engine's field name.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#generation-parameters`, `docs/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`, the owner's decision that sampling has a built-in default per model and a per-model override. In plain words: llama-server's own defaults include a temperature of 0.8 and `min_p` 0.05, LM Studio adds a repeat penalty of 1.1, and Ollama's OpenAI path puts in its own `top_p`; a sampler left out silently takes those values. There is no "server's own sampling" choice, because on those engines it would bring those values back. Which numbers each model's profile holds is profile data measured by the project's paired tests, not a rule here; the scenarios say "the profile's value". The temperature per call kind is a separate requirement.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#generation-parameters`, `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`, the owner's decision that sampling has a built-in default per model and a per-model override. In plain words: llama-server's own defaults include a temperature of 0.8 and `min_p` 0.05, LM Studio adds a repeat penalty of 1.1, and Ollama's OpenAI path puts in its own `top_p`; a sampler left out silently takes those values. There is no "server's own sampling" choice, because on those engines it would bring those values back. Which numbers each model's profile holds is profile data measured by the project's paired tests, not a rule here; the scenarios say "the profile's value". The temperature per call kind is a separate requirement.
 
 #### Scenario: llama-server gets every sampler
 
@@ -160,7 +160,7 @@ The system SHALL take each call's samplers from the model's profile, or from the
 
 The system SHALL size every call to a model from that model's one context window — the person's window for that model, else the smallest of the detected or loaded window, the profile's hard cap and 16,384 — whatever the call kind, before, during or after a run; it SHALL send the size only to Ollama's native API, as `num_ctx`, never to an OpenAI-compatible server, and SHALL never stamp a fixed size on one kind of call.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#effective-context`, `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#effective-context`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`, the owner's decision that the default window is 16k. In plain words: today the names pass, the brief and the file-name call always send 16,384, so a model loaded with 8k gets a prompt planned for twice its room, and on GGUF a size that changes between calls reloads the model. On LM Studio, llama-server and the other OpenAI-compatible servers the window is fixed when the model is loaded, so they are planned for but never sent a size (the llm-provider capability's "Never send a context size to an OpenAI-compatible server" says the same). How a run fits its prompts and replies inside this window is the translation-pipeline capability's "Size a run's calls from the detected window"; this is the one place the size itself is decided.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#effective-context`, `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#effective-context`, `design.md#d8--one-context-builder-block-plan-window-and-budgets`, the owner's decision that the default window is 16k. In plain words: today the names pass, the brief and the file-name call always send 16,384, so a model loaded with 8k gets a prompt planned for twice its room, and on GGUF a size that changes between calls reloads the model. On LM Studio, llama-server and the other OpenAI-compatible servers the window is fixed when the model is loaded, so they are planned for but never sent a size (the llm-provider capability's "Never send a context size to an OpenAI-compatible server" says the same). How a run fits its prompts and replies inside this window is the translation-pipeline capability's "Size a run's calls from the detected window"; this is the one place the size itself is decided.
 
 #### Scenario: A preparation call follows the detected window
 
@@ -186,7 +186,7 @@ The system SHALL size every call to a model from that model's one context window
 
 WHILE a translation run calls a model on Ollama's native API, the system SHALL send each of the run's calls with a keep-alive that holds the model loaded between calls, and SHALL send none on an interactive call or a call made before the run starts.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: Ollama unloads an idle model after a few minutes, and a run that pauses for a long proofread window would reload it for nothing; outside a run the person's own Ollama settings decide. LM Studio and llama-server keep a model loaded by their own settings, so they get no such field.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: Ollama unloads an idle model after a few minutes, and a run that pauses for a long proofread window would reload it for nothing; outside a run the person's own Ollama settings decide. LM Studio and llama-server keep a model loaded by their own settings, so they get no such field.
 
 #### Scenario: A run's draft keeps the model loaded
 
@@ -202,7 +202,7 @@ WHILE a translation run calls a model on Ollama's native API, the system SHALL s
 
 The system SHALL ask for structured answers per model and call kind on one of two rungs — with the answer schema, or with the answer contract stated only in the prompt — and SHALL move one call kind down when its schema fails (refused, unusable, or not applied twice in a row), every call kind of the model down when the failure is model-wide, and remember the step as a refused setting with that scope.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`, `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a server may fail one schema and handle the others; dropping the schema for every call because one failed throws away the help it gives. Every reply is checked by code the same way on both rungs, and `json_object` is never a rung.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`, `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a server may fail one schema and handle the others; dropping the schema for every call because one failed throws away the help it gives. Every reply is checked by code the same way on both rungs, and `json_object` is never a rung.
 
 #### Scenario: One call kind steps down
 
@@ -223,7 +223,7 @@ The system SHALL ask for structured answers per model and call kind on one of tw
 
 WHILE a call has reasoning on, the system SHALL send it with the answer contract in the prompt only, with no answer schema.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: with a schema enforced from the first token, some models must write their thinking inside the answer's grammar and lose the answer; when thinking is on, the code checks the reply instead.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: with a schema enforced from the first token, some models must write their thinking inside the answer's grammar and lose the answer; when thinking is on, the code checks the reply instead.
 
 #### Scenario: A proofread call with thinking allowed
 
@@ -234,7 +234,7 @@ WHILE a call has reasoning on, the system SHALL send it with the answer contract
 
 The system SHALL send its own system text on every chat call, including the verification probe, so that no default system prompt baked into the model or its template is used.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: some model downloads carry their maker's chat persona — a long "you are a chat assistant, ask the user to clarify" text — which a translation call must not inherit; BookLoom's own system text replaces it.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: some model downloads carry their maker's chat persona — a long "you are a chat assistant, ask the user to clarify" text — which a translation call must not inherit; BookLoom's own system text replaces it.
 
 #### Scenario: A model with a baked chat persona
 
@@ -245,7 +245,7 @@ The system SHALL send its own system text on every chat call, including the veri
 
 WHERE a model's profile marks no system role (for example Gemma 2, Gemma 3 and their tunes), or the model refused one, the system SHALL send the system text as the start of the first user message, followed by a blank line and the user text, and SHALL never send two user messages in a row.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: these templates refuse a system message or render it as a second user turn, which confuses the model; one user message that starts with the instructions works on every server. A template that refuses the system role with "System role not supported" is resent folded at no attempt cost, and the fold is remembered for that model.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: these templates refuse a system message or render it as a second user turn, which confuses the model; one user message that starts with the instructions works on every server. A template that refuses the system role with "System role not supported" is resent folded at no attempt cost, and the fold is remembered for that model.
 
 #### Scenario: Gemma 3 gets one user message
 
@@ -261,7 +261,7 @@ WHERE a model's profile marks no system role (for example Gemma 2, Gemma 3 and t
 
 IF a chat template refuses a request because its roles do not alternate, THEN the system SHALL send it once more with consecutive messages of the same role merged into one, and, IF it is refused again, THEN SHALL answer `ErrorCode.validation` with the reason `template-rejected`.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: some templates insist that user and assistant take turns; merging two neighbouring messages keeps their content and satisfies the template.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: some templates insist that user and assistant take turns; merging two neighbouring messages keeps their content and satisfies the template.
 
 #### Scenario: Ministral's template wants alternation
 
@@ -272,7 +272,7 @@ IF a chat template refuses a request because its roles do not alternate, THEN th
 
 WHERE a model's profile marks that its template switches thinking on the words `/think` and `/no_think` in the text, the system SHALL insert a word joiner (U+2060) after the slash of each such word in the text it sends, and SHALL remove it from the reply.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#inference-behaviour`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: older Nemotron templates turn thinking on or off when these words appear anywhere in a message, so a book that mentions them would flip the model's mode; the invisible joiner keeps the words as text.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#inference-behaviour`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: older Nemotron templates turn thinking on or off when these words appear anywhere in a message, so a book that mentions them would flip the model's mode; the invisible joiner keeps the words as text.
 
 #### Scenario: A book line that names the switch
 
@@ -283,7 +283,7 @@ WHERE a model's profile marks that its template switches thinking on the words `
 
 WHEN a model call ends, the system SHALL record its time to first token and its prompt-reading time where the engine reports them — Ollama from its first streamed line with text or thinking and its prompt duration, LM Studio from its reply's `stats`, llama-server from its reply's `timings` — and SHALL record them as missing, never as 0, where the engine reports neither.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: how long a model takes to start answering, and how long it spends reading the prompt, show whether a slow run is the model or the prompt. Ollama's OpenAI path, OpenRouter and generic servers do not say, and a 0 would read as instant.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: how long a model takes to start answering, and how long it spends reading the prompt, show whether a slow run is the model or the prompt. Ollama's OpenAI path, OpenRouter and generic servers do not say, and a 0 would read as instant.
 
 #### Scenario: Ollama's first line is timed
 
@@ -309,7 +309,7 @@ WHEN a model call ends, the system SHALL record its time to first token and its 
 
 WHEN the pseudo model receives messages, the system SHALL upper-case the text inside the last user message's `<Text>…</Text>` block, or the whole last user message when it has none, and SHALL reply with that text, or, WHEN the request carries a response format, with a well-formed answer of that format's shape built from it; it SHALL keep every `⟦gN⟧` token and character reference, ignore the machine's locale, report a normal finish and no usage, and never fail or open a connection.
 
-**Source**: FR-INFER-01, the offline pseudo model (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#offline-invariant`, `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, `design.md#d2--the-runs-three-stages-and-the-quality-dial`. In plain words: a book translated by the pseudo model is easy to recognise: it shows the original text in capitals, with its formatting intact. It answers every call kind of the three stages in its expected shape, so a whole run — Prepare, Translate, Proofread and export — works without any server. A draft or a repair answers `{"items":[{"id":"<id>","target":"<text>"}]}` with one item per `<s id="…">` of the last `<Items>` block (one item for a single segment); a format with a single `target` answers `{"target":"<text>"}`; a proofread call answers `{"unchanged":true}`; a chapter summary answers `{"summary":"<text>"}`; the pre-scan answers the capitalised words as candidates; a name-knowledge call answers no items. Its drafts are the source in capitals, which the quality checks rightly call an untranslated echo for a long segment.
+**Source**: FR-INFER-01, the offline pseudo model (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#offline-invariant`, `docs/spec_baseline/specification/02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, `design.md#d2--the-runs-three-stages-and-the-quality-dial`. In plain words: a book translated by the pseudo model is easy to recognise: it shows the original text in capitals, with its formatting intact. It answers every call kind of the three stages in its expected shape, so a whole run — Prepare, Translate, Proofread and export — works without any server. A draft or a repair answers `{"items":[{"id":"<id>","target":"<text>"}]}` with one item per `<s id="…">` of the last `<Items>` block (one item for a single segment); a format with a single `target` answers `{"target":"<text>"}`; a proofread call answers `{"unchanged":true}`; a chapter summary answers `{"summary":"<text>"}`; the pre-scan answers the capitalised words as candidates; a name-knowledge call answers no items. Its drafts are the source in capitals, which the quality checks rightly call an untranslated echo for a long segment.
 
 #### Scenario: Letters are capitalised, tokens and references are kept
 
@@ -350,7 +350,7 @@ WHEN the pseudo model receives messages, the system SHALL upper-case the text in
 
 WHERE a model's temperature choice is Let BookLoom choose, the system SHALL send each call at the temperature of its kind: draft `0.2` (`0.1` for a desk retry that asks for a lower one), repair `0.1` with a seed, proofread `0.1`, and every names-pass, brief, chapter-summary and file-name call `0.2`. WHERE it is My value, every request SHALL carry that value; WHERE it is Don't send, none SHALL.
 
-**Source**: FR-INFER-03, call settings (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#generation-parameters`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#generation-parameters`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: every call stays low and near-deterministic for fidelity; a repair and a proofread, which must change only what is wrong, are the steadiest, and a repair gets a new seed so it does not repeat the failed draft word for word. A person can instead fix one temperature for a model, or send none for models that refuse the setting. The other samplers and the reasoning setting are separate requirements.
+**Source**: FR-INFER-03, call settings (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#generation-parameters`, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#generation-parameters`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: every call stays low and near-deterministic for fidelity; a repair and a proofread, which must change only what is wrong, are the steadiest, and a repair gets a new seed so it does not repeat the failed draft word for word. A person can instead fix one temperature for a model, or send none for models that refuse the setting. The other samplers and the reasoning setting are separate requirements.
 
 #### Scenario: A repair is steadier than a draft
 
@@ -382,7 +382,7 @@ WHERE a model's temperature choice is Let BookLoom choose, the system SHALL send
 
 WHERE a model's profile marks that its engine's answer schema can cut a string at a straight quote mark, IF a reply under the schema holds a target that stops where its source has a straight quote mark `"` while the source goes on, THEN the system SHALL send that call once more on the prompt-only rung and SHALL keep that call kind on it for the model as a refused setting.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: with Gemma 3 on Ollama, the schema's grammar can end a string at the first straight quote mark, so a sentence with dialogue comes back cut short and still reads as valid JSON. The profile says which models do this, and the call is asked again with the contract in the prompt, where the quote mark is just text.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: with Gemma 3 on Ollama, the schema's grammar can end a string at the first straight quote mark, so a sentence with dialogue comes back cut short and still reads as valid JSON. The profile says which models do this, and the call is asked again with the contract in the prompt, where the quote mark is just text.
 
 #### Scenario: A cut target moves the draft to the prompt-only rung
 
@@ -398,7 +398,7 @@ WHERE a model's profile marks that its engine's answer schema can cut a string a
 
 WHERE a model's profile marks that its chat template writes the reasoning level into the system text itself, the system SHALL build that model's system text with no line that names a reasoning level, strength or effort.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#inference-behaviour`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: muse-glimmer's template adds a "Reasoning strength" line from the level the engine was sent, but only when the system text has none, and it rewrites other reasoning wording it finds there; a line of BookLoom's own would replace the `low` that was sent. Which models do this is profile data.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#inference-behaviour`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: muse-glimmer's template adds a "Reasoning strength" line from the level the engine was sent, but only when the system text has none, and it rewrites other reasoning wording it finds there; a line of BookLoom's own would replace the `low` that was sent. Which models do this is profile data.
 
 #### Scenario: muse-glimmer's system text names no level
 
@@ -409,7 +409,7 @@ WHERE a model's profile marks that its chat template writes the reasoning level 
 
 WHERE a model's profile marks the harmony chat format (gpt-oss), the system SHALL send its reasoning level only through the engine's reasoning field and SHALL never write a line that starts with `Reasoning:` into any message.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#inference-behaviour`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: gpt-oss's template turns the system text into its developer instructions and reads a `Reasoning: high` line there as an order; a line written by BookLoom or copied from a guide would override the `low` the engine was sent.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#inference-behaviour`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: gpt-oss's template turns the system text into its developer instructions and reads a `Reasoning: high` line there as an order; a line written by BookLoom or copied from a guide would override the `low` the engine was sent.
 
 #### Scenario: A gpt-oss draft carries its level only in the field
 
@@ -420,7 +420,7 @@ WHERE a model's profile marks the harmony chat format (gpt-oss), the system SHAL
 
 WHEN a run starts or continues, the system SHALL write to the run log, at INFO, one line naming the model's resolved profile (match, quant, reasoning and its value, sampling source, window, batch size) and one line naming the server facts read (server and version, engine, runner, template family), as counts and choices only, never a character name or any book text.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-profile`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: the run log is the one file kept in an installed app; with these two lines a wrong translation can be traced to how the model was handled. This is the one place the exact text of these lines is fixed; other capabilities that mention them say "such as" and do not repeat it. The model id is a choice the person made, not book text, so it is written.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-profile`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: the run log is the one file kept in an installed app; with these two lines a wrong translation can be traced to how the model was handled. This is the one place the exact text of these lines is fixed; other capabilities that mention them say "such as" and do not repeat it. The model id is a choice the person made, not book text, so it is written.
 
 #### Scenario: A run's start lines
 
@@ -433,7 +433,7 @@ WHEN a run starts or continues, the system SHALL write to the run log, at INFO, 
 
 WHEN a caller asks for a chat model by provider id and model id, the system SHALL return a model that answers an ordered list of system, user and assistant messages with reply text and a finish (normal, cut off by length, or other), sending each call in its provider's dialect through the single-flight gate and the retry policy, resolving the model's profile at each call and scrubbing every reply; `pseudo` SHALL give the offline pseudo model, and creating a model SHALL open no connection.
 
-**Source**: FR-INFER-01, one chat contract for every provider (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), FR-PROV-03 (`#fr-prov`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-architecture`, `#chat-contracts`, ADR-0033 (provider-neutral call settings, amended by this change), `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: the caller that starts a translation picks the provider and the model once, and the translation engine only talks to the model it is handed. The profile is looked up at every call, so a thinking or sampling choice the person saves between two calls applies to the next one; the model's facts are kept for the session and never stored. IF the provider id is unknown or the model id is blank, THEN the answer is `ErrorCode.validation` and no model.
+**Source**: FR-INFER-01, one chat contract for every provider (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), FR-PROV-03 (`#fr-prov`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-architecture`, `#chat-contracts`, ADR-0033 (provider-neutral call settings, amended by this change), `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: the caller that starts a translation picks the provider and the model once, and the translation engine only talks to the model it is handed. The profile is looked up at every call, so a thinking or sampling choice the person saves between two calls applies to the next one; the model's facts are kept for the session and never stored. IF the provider id is unknown or the model id is blank, THEN the answer is `ErrorCode.validation` and no model.
 
 #### Scenario: The pseudo provider gives a working model
 
@@ -471,7 +471,7 @@ WHEN a caller asks for a chat model by provider id and model id, the system SHAL
 
 The system SHALL let a request carry, besides its messages, its call kind, a reasoning intent, an optional temperature, an optional response format (a name and a JSON schema), an optional context size, an optional expected output and an optional output cap; a request built from messages alone SHALL carry no call kind, the intent Off and none of the optional settings, an absent setting SHALL be left out of what is sent, and the pseudo model SHALL ignore everything but the format.
 
-**Source**: FR-INFER-03, FR-INFER-09, call settings (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `#effective-context`, `#service-owned-retry`, ADR-0033 (provider-neutral call settings, amended by this change), `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: the engine says what kind of call it is and what it wants (a shape, a size, a length, thinking or not) without knowing which server answers; the model's profile then decides the samplers, the context size and the engine's fields at send time. A setting that is not given is simply not sent, so a strict server never sees a `null`. The verification probe carries no call kind, so it is left out of the per-kind figures.
+**Source**: FR-INFER-03, FR-INFER-09, call settings (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `#effective-context`, `#service-owned-retry`, ADR-0033 (provider-neutral call settings, amended by this change), `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: the engine says what kind of call it is and what it wants (a shape, a size, a length, thinking or not) without knowing which server answers; the model's profile then decides the samplers, the context size and the engine's fields at send time. A setting that is not given is simply not sent, so a strict server never sees a `null`. The verification probe carries no call kind, so it is left out of the per-kind figures.
 
 #### Scenario: A request built from messages alone carries no settings
 
@@ -492,7 +492,7 @@ The system SHALL let a request carry, besides its messages, its call kind, a rea
 
 WHEN a real provider's reply text is not blank, the system SHALL, before returning it, remove thinking blocks and chat-template tokens that never occur in book prose, then the filters the model's profile switches on, then one Markdown code fence that wraps the text and a leading `json` label before a JSON object, and trim it; it SHALL return the result even when empty, with the finish unchanged, and write one DEBUG line with the counts removed.
 
-**Source**: FR-INFER-09, reply handling (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `#empty-response-ordering`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: models narrate their thinking inline in many markups — `<think>`, `[THINK]`, Gemma 4's thought channel, gpt-oss's harmony channels — or leak end-of-turn tokens, and wrap JSON in a fence even when told not to. The engine should never have to know that. A `</think>` with no opener drops everything before it; harmony keeps the text after its last final channel. Two filters run only where the profile says: a hidden `to=self` message (muse-glimmer) and a whole item wrapped in `\boxed{…}` (Magistral). The removed text appears at TRACE only. A reply that was all thinking comes back empty and is handled by the rule for a reply that spent its answer thinking.
+**Source**: FR-INFER-09, reply handling (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `#empty-response-ordering`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: models narrate their thinking inline in many markups — `<think>`, `[THINK]`, Gemma 4's thought channel, gpt-oss's harmony channels — or leak end-of-turn tokens, and wrap JSON in a fence even when told not to. The engine should never have to know that. A `</think>` with no opener drops everything before it; harmony keeps the text after its last final channel. Two filters run only where the profile says: a hidden `to=self` message (muse-glimmer) and a whole item wrapped in `\boxed{…}` (Magistral). The removed text appears at TRACE only. A reply that was all thinking comes back empty and is handled by the rule for a reply that spent its answer thinking.
 
 #### Scenario: An inline thinking block is removed
 
@@ -543,7 +543,7 @@ WHEN a real provider's reply text is not blank, the system SHALL, before returni
 
 IF a server rejects a request with HTTP `400` or `422` whose body names an optional setting the request sent — the words `think` or `thinking` naming the reasoning control — THEN the system SHALL send it once more without that setting, with `max_completion_tokens` for a refused `max_tokens`, or one rung down for a refused answer schema, and SHALL record the step without exposing the response body.
 
-**Source**: FR-INFER-09 and FR-INFER-09e, refused settings (`docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `#effective-context`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: servers differ in which optional knobs they accept. BookLoom first avoids sending a knob the model or the engine does not declare; a refusal that still comes is a hint, not a failure, so the request is sent once more without it. Today Ollama's "does not support thinking" is missed because only the bare word `think` is matched. Which settings count and what the repeat keeps are stated in this capability's refused-setting requirements.
+**Source**: FR-INFER-09 and FR-INFER-09e, refused settings (`docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `#effective-context`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: servers differ in which optional knobs they accept. BookLoom first avoids sending a knob the model or the engine does not declare; a refusal that still comes is a hint, not a failure, so the request is sent once more without it. Today Ollama's "does not support thinking" is missed because only the bare word `think` is matched. Which settings count and what the repeat keeps are stated in this capability's refused-setting requirements.
 
 #### Scenario: An unsupported native thinking control is omitted once
 
@@ -570,7 +570,7 @@ IF a server rejects a request with HTTP `400` or `422` whose body names an optio
 
 WHEN a provider reports figures for a call, the system SHALL return with the reply its prompt tokens, cached prompt tokens, completion tokens, generation time, time to first token and prompt-reading time, each only when reported; a figure not reported SHALL stay missing all the way to the run summary, which shows it as `–` and counts only the calls that reported it, never 0.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: the Translating screen's tokens per second and the run summary's figures come from what the server says. A missing figure must look missing, so an average is taken over the calls that reported it and the engine knows to estimate instead of showing a speed of zero. Which field of each server's reply holds which figure is the `llm-provider` capability's rule and this capability's timing requirement.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: the Translating screen's tokens per second and the run summary's figures come from what the server says. A missing figure must look missing, so an average is taken over the calls that reported it and the engine knows to estimate instead of showing a speed of zero. Which field of each server's reply holds which figure is the `llm-provider` capability's rule and this capability's timing requirement.
 
 #### Scenario: Usage is carried when reported
 
@@ -591,7 +591,7 @@ WHEN a provider reports figures for a call, the system SHALL return with the rep
 
 WHEN a setting is refused and dropped, the system SHALL remember the refusal for that provider and model across restarts — for the whole model, or for one call kind when it concerns that kind's answer schema — and SHALL leave the setting out of the first attempt of every later call it covers until the person chooses Send again; a refused system role SHALL be remembered as a fold.
 
-**Source**: FR-INFER-09e, refused settings (`docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), `docs/specification/mockups/README.md#refused-settings-s6`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a model that rejects `temperature` once will reject it every time; remembering saves a failed request at the start of every later call, and the person can undo it from Settings › Models. A schema one call kind cannot use says nothing about the others, so that refusal keeps its scope.
+**Source**: FR-INFER-09e, refused settings (`docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), `docs/spec_baseline/specification/mockups/README.md#refused-settings-s6`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a model that rejects `temperature` once will reject it every time; remembering saves a failed request at the start of every later call, and the person can undo it from Settings › Models. A schema one call kind cannot use says nothing about the others, so that refusal keeps its scope.
 
 #### Scenario: A later call leaves the setting out from the start
 
@@ -622,7 +622,7 @@ WHEN a setting is refused and dropped, the system SHALL remember the refusal for
 
 WHEN a person saves a change to a model's settings (temperature choice, thinking choice, sampling choice, context window, answer length and its field) while a run is in progress, the system SHALL apply the context window from the next chunk that starts and the other settings from the next request, and SHALL leave decided segments unchanged.
 
-**Source**: decision 6 of the UI finalization proposal, per-model settings apply to what is not translated yet (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#models-decision-6`, `docs/specification/01_Product/07_SETTINGS.md#models-tab`. In plain words: changing a setting mid-book steers the rest of the book without re-translating the part already done, and the screen says so ("to the segments not translated yet"). A chunk is packed for its context window when it starts, so the chunk in flight keeps that window; the thinking and sampling choices, now per model, change nothing about packing and apply from the next request.
+**Source**: decision 6 of the UI finalization proposal, per-model settings apply to what is not translated yet (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#models-decision-6`, `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#models-tab`. In plain words: changing a setting mid-book steers the rest of the book without re-translating the part already done, and the screen says so ("to the segments not translated yet"). A chunk is packed for its context window when it starts, so the chunk in flight keeps that window; the thinking and sampling choices, now per model, change nothing about packing and apply from the next request.
 
 #### Scenario: A change saved during a run reaches the next chunk
 

@@ -13,16 +13,16 @@ context: |
 
   ## Authoritative documents
 
-  - `docs/specification/**` is the reference for requirements, architecture and decisions. It is editable:
+  - `docs/spec_baseline/specification/**` is the reference for requirements, architecture and decisions. It is editable:
     when the shipped code legitimately differs from a clause, fix the clause in the same change. It holds
     the FR-*/NFR-*/DD-*/EC-* ids, the prompt catalog, the SQLite DDL, the theming palette, the mermaid
-    diagrams, and `docs/specification/mockups/ui-mockup.html` (the binding visual reference for every UI
+    diagrams, and `docs/spec_baseline/specification/mockups/ui-mockup.html` (the binding visual reference for every UI
     screen, state, dialog, and the standalone "Component library" screen). Cite it by file and anchor.
-  - `docs/adr/ADR-NNNN-*.md` holds architecture decisions. ADR-0016 governs this delivery process;
+  - `docs/spec_baseline/adr/ADR-NNNN-*.md` holds architecture decisions. ADR-0016 governs this delivery process;
     ADR-0017 governs the delivery order. A decision that is costly to reverse becomes an ADR; a clause
     that is simply wrong is edited.
-  - `docs/implementation_plan/CHANGE_BACKLOG.md` is the ordered change backlog (names and order only).
-  - `docs/implementation_plan/01_MODULE_INVENTORY.md` is the canonical module/package map.
+  - `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md` is the ordered change backlog (names and order only).
+  - `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md` is the canonical module/package map.
   - `AGENTS.md` carries the Definition of Done: the gate green AND the change exercised in the running app.
 
   ## Stack
@@ -115,7 +115,7 @@ context: |
 
   `openspec/specs/` starts EMPTY and grows: each change ADDs only what it actually implements, and
   `openspec archive` folds it in. So `openspec/specs/` always means "what is actually built", while
-  `docs/specification/` means "what is ultimately intended". A `Source:` pointer to the spec file and anchor
+  `docs/spec_baseline/specification/` means "what is ultimately intended". A `Source:` pointer to the spec file and anchor
   is the bridge between them.
 
   ## The authoring standard (R1-R4, from ADR-0016 as amended by ADR-0032)
@@ -206,7 +206,7 @@ rules:
     - No class names, no library names, no method signatures, no step-by-step implementation. A spec is a
       behavior contract; if the implementation can change without changing observable behavior, it does not
       belong here - put it in `design.md`.
-    - When the correct behavior differs from `docs/specification/**`, fix that clause in the same change;
+    - When the correct behavior differs from `docs/spec_baseline/specification/**`, fix that clause in the same change;
       a decision that is costly to reverse gets an ADR. Do not re-specify the spec silently here.
     - New capabilities open with a `## Purpose` section of one or two real sentences (50+ characters)
       describing what the capability is for.
@@ -219,7 +219,7 @@ rules:
     - Name the concrete types, packages, and Gradle modules here - this is the one artifact where
       implementation detail belongs. Anchor them to `01_MODULE_INVENTORY.md`.
     - If the change takes an architecturally significant decision that no existing ADR covers, write the ADR
-      under `docs/adr/` first and cite it - do not bury the decision in design.md.
+      under `docs/spec_baseline/adr/` first and cite it - do not bury the decision in design.md.
     - Open Questions are for genuinely deferrable unknowns. Anything that would change the specs, the
       approach, or the task breakdown must be resolved before tasks.md is written.
   tasks:
@@ -261,7 +261,7 @@ operations:
       - ArchUnit boundary tests must be green - FX-free core, dependency direction, ports-not-concretes,
         no-http-outside-`:llm`, no-sql-outside-`:persistence`, api-framework-free, records-first,
         bootstrap-no-static-logger, no-inline-style-in-ui.
-      - "`:ui` changes must match `docs/specification/mockups/ui-mockup.html` for each named screen, state,
+      - "`:ui` changes must match `docs/spec_baseline/specification/mockups/ui-mockup.html` for each named screen, state,
         and theme, asserted structurally and by looked-up palette token."
       - The offline invariant must hold - no new background, scheduled, or unsolicited network call, and no
         telemetry. The only egress is user-triggered provider communication with the configured provider,
@@ -272,8 +272,8 @@ operations:
         every later check is user-triggered.
       - No secret may be persisted, logged, or placed in an `AppError`. Credentials stay env-var names (keychain
         references allowed later, not built) resolved at call time.
-      - Update `docs/implementation_plan/01_MODULE_INVENTORY.md` if the change adds a module or package.
-      - Cite any ADR the change relies on and make sure it exists under `docs/adr/` with status `accepted`.
+      - Update `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md` if the change adds a module or package.
+      - Cite any ADR the change relies on and make sure it exists under `docs/spec_baseline/adr/` with status `accepted`.
         A decision that is costly to reverse means a new ADR; a spec clause the code legitimately outgrew
         is edited in the same change.
       - "Do not create story files, `docs/traceability.yaml`, a `trace`/`traceCheck` Gradle task, or

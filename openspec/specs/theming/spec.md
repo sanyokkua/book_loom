@@ -19,8 +19,8 @@ holds.
 The application SHALL NOT set any visual style on an individual element from code, and SHALL NOT write a colour
 value anywhere except inside a value block of this catalogue.
 
-**Source:** FR-THEME-1, FR-THEME-9 (`docs/specification/01_Product/09_THEMING.md#token-model`,
-`#token-naming`), `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#theming`.
+**Source:** FR-THEME-1, FR-THEME-9 (`docs/spec_baseline/specification/01_Product/09_THEMING.md#token-model`,
+`#token-naming`), `docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#theming`.
 In plain words: a component says "paint me with the primary-action colour", never "paint me `#a58075`". That one
 discipline is what makes the second theme a list of values rather than a second copy of every screen, and it is
 also what a conformance test can actually check — you can look a role up on the root and compare it, you cannot
@@ -47,14 +47,14 @@ look up a colour somebody typed into a component.
 ### Requirement: Carry the whole published catalogue, not a subset of it
 
 The catalogue SHALL carry **every** role published by
-`docs/specification/01_Product/09_THEMING.md#token-catalog` and `#status-colours` — 32 roles from the first and
+`docs/spec_baseline/specification/01_Product/09_THEMING.md#token-catalog` and `#status-colours` — 32 roles from the first and
 12 from the second, 44 in total — under the published role names.
 
 A role that the reference rendering declares and the catalogue omits is a defect, as is a role the catalogue
 invents that the reference rendering does not declare.
 
-**Source:** FR-THEME-1, FR-THEME-2 (`docs/specification/01_Product/09_THEMING.md#token-catalog`,
-`#status-colours`), `docs/specification/mockups/ui-mockup.html` (the `:root[data-theme="light"]` and
+**Source:** FR-THEME-1, FR-THEME-2 (`docs/spec_baseline/specification/01_Product/09_THEMING.md#token-catalog`,
+`#status-colours`), `docs/spec_baseline/specification/mockups/ui-mockup.html` (the `:root[data-theme="light"]` and
 `:root[data-theme="dark"]` blocks, 44 declarations each, identical in name).
 In plain words: an incomplete catalogue does not fail — it quietly forces the next screen to invent a role,
 which is a hard-coded colour wearing a role name. Fixing the count here, where it can be counted, is what stops
@@ -79,7 +79,7 @@ SHALL have a value in both. Switching the theme SHALL swap the block in force an
 added, removed or renamed, and no element is restyled.
 
 **Source:** FR-THEME-2, FR-THEME-6, FR-THEME-7, FR-THEME-8
-(`docs/specification/01_Product/09_THEMING.md#token-catalog`, `#light-and-dark`).
+(`docs/spec_baseline/specification/01_Product/09_THEMING.md#token-catalog`, `#light-and-dark`).
 In plain words: the two themes are the same interface with different numbers. A role that exists in one block and
 not the other is the defect this requirement exists to prevent, because it shows up as an invisible control in
 exactly one theme and nowhere in any test that only ever renders the other one.
@@ -113,7 +113,7 @@ colour on the scene's root SHALL NOT apply to them.
 
 Each of the three SHALL carry a light and a dark value, exactly as every other role does.
 
-**Source:** FR-THEME-1, FR-THEME-2 (`docs/specification/01_Product/09_THEMING.md#token-catalog`), design
+**Source:** FR-THEME-1, FR-THEME-2 (`docs/spec_baseline/specification/01_Product/09_THEMING.md#token-catalog`), design
 decision D10.
 In plain words: the published catalogue writes these three as `0 3px 10px rgba(58,74,82,.12)` — an offset, a
 blur and a colour — which is a web shadow, not a colour. A looked-up colour cannot hold it: declared as one and
@@ -146,8 +146,8 @@ The application SHALL provide a success, a warning, a danger and an information 
 values — a foreground, a soft background and a border — so a status is expressed the same way wherever it
 appears.
 
-**Source:** FR-THEME-10 (`docs/specification/01_Product/09_THEMING.md#status-colours`),
-`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#toasts`.
+**Source:** FR-THEME-10 (`docs/spec_baseline/specification/01_Product/09_THEMING.md#status-colours`),
+`docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#toasts`.
 In plain words: "this went wrong" has to look the same on a chip, a banner and a toast, or a person learns the
 colour three times. Three shades per status is what lets a filled badge and an outlined banner both read as the
 same severity.
@@ -168,7 +168,7 @@ same severity.
 
 WHEN the window is first shown and no theme has been chosen, the application SHALL apply the value block matching the operating system's current colour scheme, or the light block IF the system reports no preference. WHEN a theme has been chosen and stored, that choice SHALL win over the operating system's scheme on every later launch.
 
-**Source**: FR-THEME-3 (`docs/specification/01_Product/09_THEMING.md#token-model`), FR-SETTINGS-04 (`docs/specification/01_Product/07_SETTINGS.md#appearance-tab`). In plain words: somebody on a dark desktop should not be flashed a white window the first time, and somebody who picked a theme should not have it overruled by the desktop afterwards. Light is the fallback because it is the theme the mockup is drawn in.
+**Source**: FR-THEME-3 (`docs/spec_baseline/specification/01_Product/09_THEMING.md#token-model`), FR-SETTINGS-04 (`docs/spec_baseline/specification/01_Product/07_SETTINGS.md#appearance-tab`). In plain words: somebody on a dark desktop should not be flashed a white window the first time, and somebody who picked a theme should not have it overruled by the desktop afterwards. Light is the fallback because it is the theme the mockup is drawn in.
 
 #### Scenario: A dark desktop opens a dark window
 
@@ -189,7 +189,7 @@ WHEN the window is first shown and no theme has been chosen, the application SHA
 
 The application SHALL offer a two-state control in the window's title bar that moves directly between light and dark, and a three-way choice in the appearance settings between light, dark and following the operating system. WHEN either control is used, the application SHALL apply the new block at once, without a restart, and SHALL store the choice so that every later launch applies it.
 
-**Source**: FR-SETTINGS-04 (`docs/specification/01_Product/07_SETTINGS.md#appearance-tab`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`. In plain words: the title-bar control is the one you reach for when the room's light changes; the settings choice is where you say "just follow my desktop". Both are remembered now, because the application keeps its settings on this computer; until a choice is made, the desktop decides.
+**Source**: FR-SETTINGS-04 (`docs/spec_baseline/specification/01_Product/07_SETTINGS.md#appearance-tab`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`. In plain words: the title-bar control is the one you reach for when the room's light changes; the settings choice is where you say "just follow my desktop". Both are remembered now, because the application keeps its settings on this computer; until a choice is made, the desktop decides.
 
 #### Scenario: The title-bar control flips the theme
 
@@ -220,7 +220,7 @@ The application SHALL offer a two-state control in the window's title bar that m
 
 The application SHALL show every state marker, chip and badge as an icon plus a word, in one colour per meaning: grey for waiting, queued or idle; blue for working; green for done; amber for needs you or slow; red for failed or unreachable; sand for kept as is. A colour SHALL mean the same thing on every screen and SHALL take its value from the existing status roles.
 
-**Source**: `docs/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, FR-THEME-10 (`docs/specification/01_Product/09_THEMING.md#status-colours`), theme G (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: a person learns the six colours once and they hold on a list row, a chip in the title bar and a banner. The word and the icon are always there too, so the state never depends on telling two colours apart.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, FR-THEME-10 (`docs/spec_baseline/specification/01_Product/09_THEMING.md#status-colours`), theme G (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: a person learns the six colours once and they hold on a list row, a chip in the title bar and a banner. The word and the icon are always there too, so the state never depends on telling two colours apart.
 
 #### Scenario: A queued segment is grey and says "waiting"
 
@@ -247,7 +247,7 @@ The application SHALL show every state marker, chip and badge as an icon plus a 
 
 The application SHALL underline every link and paint it with the information foreground role, which SHALL reach a contrast of at least 4.5 to 1 on every surface it appears on, in both the light and the dark block.
 
-**Source**: `docs/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, theme G (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: colour alone must not say "this is a link", and the colour chosen must be readable on the white cards and on a selected row. The existing information role already passes, so no new colour is added.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, theme G (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: colour alone must not say "this is a link", and the colour chosen must be readable on the white cards and on a selected row. The existing information role already passes, so no new colour is added.
 
 #### Scenario: A link is underlined
 
@@ -263,7 +263,7 @@ The application SHALL underline every link and paint it with the information for
 
 The application SHALL mark the selected segment of a segmented control with a 2-pixel bar in the strong-text role as well as its fill, because the fill alone differs from its neighbours by only 1.24 to 1.
 
-**Source**: `docs/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, theme G (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the chosen option of Fast · Balanced · Max must be visible to someone who cannot tell the two fills apart. A bar in the primary colour would reach only 2.86 to 1, so the strong-text role is used.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, theme G (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the chosen option of Fast · Balanced · Max must be visible to someone who cannot tell the two fills apart. A bar in the primary colour would reach only 2.86 to 1, so the strong-text role is used.
 
 #### Scenario: The chosen quality shows a bar
 
@@ -274,7 +274,7 @@ The application SHALL mark the selected segment of a segmented control with a 2-
 
 The application SHALL paint a scrollbar's thumb with a contrast of at least 3 to 1 against its track in both the light and the dark block, in the navigation column as well as in the content.
 
-**Source**: `docs/specification/mockups/README.md#g3--visible-scrollbars`, theme G (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: a scrollbar that is always shown is useless if the thumb fades into the track, so its colours are held to the same 3 to 1 as other control edges.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g3--visible-scrollbars`, theme G (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: a scrollbar that is always shown is useless if the thumb fades into the track, so its colours are held to the same 3 to 1 as other control edges.
 
 #### Scenario: The thumb passes in both themes
 

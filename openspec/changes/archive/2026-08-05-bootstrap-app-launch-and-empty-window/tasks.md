@@ -285,7 +285,7 @@ architecture (DD-14, `09_ERROR_HANDLING.md`) rather than product behaviour. **Do
       **`ua.bookloom.app.bootstrap.Launcher`** (the bootstrap package of task 3.1/3.4, not `ua.bookloom.app`), main
       jar auto-discovered in `modules/app/build/dist/libs/`, version from
       `APP_VERSION` falling back to the Gradle project version, the per-OS `--icon` from
-      `docs/specification/assets/icon/dist/`, the jlink trim
+      `docs/spec_baseline/specification/assets/icon/dist/`, the jlink trim
       `--strip-debug --no-header-files --no-man-pages --compress zip-6`, and a prerequisite check that fails fast when
       `dist/libs` is missing. Include `--java-options "-Dbookloom.env=prod"`: without that stamp a launched image
       resolves **dev** paths and everything appears to work while writing to the wrong folder (DD-39).
@@ -352,7 +352,7 @@ architecture (DD-14, `09_ERROR_HANDLING.md`) rather than product behaviour. **Do
       package created by task 3.1 — noting that membership in it is what ArchUnit rule 8 polices, so it is a
       constraint and not merely a folder. The inventory is the citation target every later change resolves against, so
       a stale row there is a broken citation in every proposal that follows.
-      → `docs/implementation_plan/` · `01_MODULE_INVENTORY.md#as-built-baseline`, `#adding-a-module-note`
+      → `docs/spec_baseline/implementation_plan/` · `01_MODULE_INVENTORY.md#as-built-baseline`, `#adding-a-module-note`
 - [x] 7.8 Confirm the offline invariant holds now that the app opens a window: no update check, no telemetry, no
       analytics ping, and no asset fetched at runtime — the stylesheet, icons and every resource are bundled. The
       `no-http-in-core-except-llm` ArchUnit rule keeps `java.net.http` out of every module but `:llm`, which this

@@ -15,7 +15,7 @@ a real single-segment draft prompt from the catalog, and a command line that can
 provider and the model. Provider editing and switching, persisted providers, the repair and fallback loop, and the judge
 belong to later changes. The change consumes backlog rows 10 (`add-llm-provider-abstraction`) and 11
 (`add-inference-gate-and-response-contract`) in this reduced form; the backlog is a reference, not a contract
-(`docs/implementation_plan/CHANGE_BACKLOG.md`, the Stage C table).
+(`docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md`, the Stage C table).
 
 ## What Changes
 
@@ -93,7 +93,7 @@ belong to later changes. The change consumes backlog rows 10 (`add-llm-provider-
   already settle the shape; `design.md` records the choices inside it. ADR-0006 (credentials as a reference) is not
   exercised here, because no credential exists in this change.
 - **Docs:** `02_Architecture/04_LLM_INTEGRATION.md` (the two repairs above and the ports paragraph),
-  `docs/implementation_plan/01_MODULE_INVENTORY.md`, `docs/implementation_plan/CHANGE_BACKLOG.md`, `AGENTS.md`
+  `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md`, `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md`, `AGENTS.md`
   "Where it stands", `docs/DEVELOPMENT.md` (running the command line with a real model; the `liveLocal` variables).
 - **Non-goals:** provider editing, switching and persistence; per-project binding (ADR-0012); the structured-output
   downgrade and the JSON repair call; the judge; streaming; any auth (a later change adds a Bearer path whose

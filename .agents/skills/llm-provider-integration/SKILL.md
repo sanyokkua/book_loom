@@ -148,10 +148,10 @@ empty-after-sanitize repair retry, then an empty text-fallback result that QA fl
 
 ## Reference index
 
-- In-repo authorities: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md`,
-  `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md`,
-  `docs/specification/02_Architecture/09_ERROR_HANDLING.md`,
-  `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md`.
+- In-repo authorities: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md`,
+  `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md`,
+  `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md`,
+  `docs/spec_baseline/specification/02_Architecture/06_DATA_MODEL_SQLITE.md`.
 
 ## Mandatory validation checklist
 

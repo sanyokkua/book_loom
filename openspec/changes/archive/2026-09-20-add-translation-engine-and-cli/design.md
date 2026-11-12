@@ -1,7 +1,7 @@
 ## Context
 
 - `:llm` and `:pipeline` hold only empty Guice modules. `DocumentPort` has `open`, `write` and `unmask`, and no way to
-  release a book (`docs/implementation_plan/CHANGE_BACKLOG.md#decision-debt`, D3). The registries' base class already
+  release a book (`docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md#decision-debt`, D3). The registries' base class already
   has `close(String)`, which nothing can reach.
 - **Decisions already made:**
   - ADR-0005: models sit behind a provider port with two clients.
@@ -45,7 +45,7 @@
 
 ## Decisions
 
-Packages and modules follow `docs/implementation_plan/01_MODULE_INVENTORY.md`: `#module-api`, `#module-document`,
+Packages and modules follow `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md`: `#module-api`, `#module-document`,
 `#module-llm`, `#module-pipeline` and `#module-app`.
 
 ### D1: the chat model (ADR-0033)

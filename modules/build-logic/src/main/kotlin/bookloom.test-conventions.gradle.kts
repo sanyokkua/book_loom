@@ -2,7 +2,7 @@
 //
 // Fixing the stack here means no later change re-argues which assertion library or mocking framework to use, and
 // no module hand-rolls its own JUnit Platform wiring
-// (docs/specification/04_Build_and_Release/06_TESTING_STRATEGY.md#test-types).
+// (docs/spec_baseline/specification/04_Build_and_Release/06_TESTING_STRATEGY.md#test-types).
 //
 // Owns design decision D5: `liveLocal`, `promptEval` and `visual` are kept out of `check` by the TASK GRAPH and by
 // nothing else. See the exclusion block below for why that distinction is load-bearing.

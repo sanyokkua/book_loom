@@ -25,7 +25,7 @@ before the next model call or before the job ends, with the reason "requested".
 A pause requested before the job runs SHALL take effect at the first boundary, before the first model call. The export,
 which is a separate action, is never paused.
 
-**Source**: FR-RESUME-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, ADR-0035, ADR-0038. In plain words: pausing does not wait for a slow model. The request that is waiting is aborted at once and nothing more is sent, so the Pause button acts within seconds even when a local model takes minutes. The call that was aborted has no answer yet, so resuming makes it again rather than skipping it; a segment already decided is never redone, and a draft already made for the chunk is not made twice (the translation-pipeline capability's "Decide a chunk's segments in document order"). A screen may ask for a pause before it starts the job, and that request must not be lost. The run no longer writes the book, so its last boundary is the end of the job.
+**Source**: FR-RESUME-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, `docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, ADR-0035, ADR-0038. In plain words: pausing does not wait for a slow model. The request that is waiting is aborted at once and nothing more is sent, so the Pause button acts within seconds even when a local model takes minutes. The call that was aborted has no answer yet, so resuming makes it again rather than skipping it; a segment already decided is never redone, and a draft already made for the chunk is not made twice (the translation-pipeline capability's "Decide a chunk's segments in document order"). A screen may ask for a pause before it starts the job, and that request must not be lost. The run no longer writes the book, so its last boundary is the end of the job.
 
 #### Scenario: Pause after the first of three segments
 
@@ -80,7 +80,7 @@ A section is one EPUB spine document, one FB2 body, or a whole Markdown or TXT f
 title, navigation labels, page titles and image descriptions — is not a section. A section with no segments SHALL
 cause no pause. A pause at after-segment or on-flagged SHALL name the segment just decided.
 
-**Source**: FR-RESUME-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md#data-model`, ADR-0036, ADR-0041. In plain words: a screen can let the person look at each flagged segment, each segment, each section, or the whole translation before revision. With nothing enabled a job never waits, which is how the command line runs. The book's title and labels are translated after its body; they are not a chapter the person reads through, so finishing them is no section's end.
+**Source**: FR-RESUME-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/02_Architecture/03_DOCUMENT_MODEL.md#data-model`, ADR-0036, ADR-0041. In plain words: a screen can let the person look at each flagged segment, each segment, each section, or the whole translation before revision. With nothing enabled a job never waits, which is how the command line runs. The book's title and labels are translated after its body; they are not a chapter the person reads through, so finishing them is no section's end.
 
 #### Scenario: Pause after each section of an EPUB
 
@@ -125,7 +125,7 @@ the widest point that applies: between-stages, then after-section, then after-se
 WHEN the enabled pause points change while a job runs or is paused, the system SHALL apply the new set from the next
 boundary.
 
-**Source**: FR-RESUME-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), ADR-0036. In plain words: the last segment of a book ends a segment, a section and a stage at once, and the person should see one pause. A flagged segment is named as flagged even when another point applies too, because that is what the person has to act on. "Resume and stop pausing" means clearing the pause points, then resuming.
+**Source**: FR-RESUME-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), ADR-0036. In plain words: the last segment of a book ends a segment, a section and a stage at once, and the person should see one pause. A flagged segment is named as flagged even when another point applies too, because that is what the person has to act on. "Resume and stop pausing" means clearing the pause points, then resuming.
 
 #### Scenario: Coinciding pause points pause once
 
@@ -147,7 +147,7 @@ boundary.
 
 WHERE pause on error is enabled, IF a model call, after the retry policy, answers `ErrorCode.unreachable`, `timeout`, `auth`, `rateLimited`, `upstream`, `modelNotFound`, `modelUnavailable`, `missingCredential` or `validation`, or a step throws and so answers `ErrorCode.internal`, THEN the system SHALL pause with that error, keep every count as it stood, and on resume make the interrupted call again from its first request — except a reviewer call answered `timeout`, which flags its chunk's segments instead.
 
-**Source**: `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, FR-RESUME-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/implementation_plan/CHANGE_BACKLOG.md` (D19). In plain words: a stopped local server or an unloaded model is often fixed in a minute, and a step that threw may well succeed when tried again, so the run waits instead of failing. The window always enables this pause; the command line enables it too and stops at a pause only a person can end. Only the failed call is made again. A reviewer timeout flags as the quality-gates capability's "Flag a segment the reviewer could not review" says. The errors that end a run Failed instead, and the replies that flag one segment at once, are the translation-pipeline capability's.
+**Source**: `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, FR-RESUME-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md` (D19). In plain words: a stopped local server or an unloaded model is often fixed in a minute, and a step that threw may well succeed when tried again, so the run waits instead of failing. The window always enables this pause; the command line enables it too and stops at a pause only a person can end. Only the failed call is made again. A reviewer timeout flags as the quality-gates capability's "Flag a segment the reviewer could not review" says. The errors that end a run Failed instead, and the replies that flag one segment at once, are the translation-pipeline capability's.
 
 #### Scenario: The model is unreachable once
 
@@ -235,7 +235,7 @@ IF the thread running a paused job is interrupted, THEN the system SHALL treat i
 IF cancellation is requested before the job runs, THEN running it SHALL end the job Cancelled at once, without reading
 the opened book the project holds or calling the model.
 
-**Source**: FR-RESUME-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, ADR-0034. In plain words: stopping is safe and is not an error. A stop does not wait for a slow provider: the request that is waiting is aborted and nothing more is sent. What was decided before the stop is kept for the rest of the session, which is what lets a stopped run be resumed; drafts of the current chunk that were not yet decided are dropped, and those segments stay PENDING and are drafted again by the next run (the translation-pipeline capability's "Decide a chunk's segments in document order"). A job cancelled before it starts does no work at all.
+**Source**: FR-RESUME-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, ADR-0034. In plain words: stopping is safe and is not an error. A stop does not wait for a slow provider: the request that is waiting is aborted and nothing more is sent. What was decided before the stop is kept for the rest of the session, which is what lets a stopped run be resumed; drafts of the current chunk that were not yet decided are dropped, and those segments stay PENDING and are drafted again by the next run (the translation-pipeline capability's "Decide a chunk's segments in document order"). A job cancelled before it starts does no work at all.
 
 #### Scenario: Cancel while paused
 
@@ -273,8 +273,8 @@ run paused or the run returns.
 WHILE a run is pausing or stopping, the screen SHALL keep reporting the counts as they continue to advance, and
 SHALL NOT report the run as paused or stopped.
 
-**Source:** FR-RESUME-03, FR-RESUME-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`),
-`docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, `docs/next_features.md` §14.
+**Source:** FR-RESUME-03, FR-RESUME-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`),
+`docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, `docs/next_features.md` §14.
 In plain words: a pause or a stop is not instant. The engine aborts the model request in flight (see "Pause and stop
 act without waiting for the provider" in the `translation-pipeline` capability) and then reaches a safe point, so
 there is a short visible gap in which the run is still winding down and the person has already asked it to stop.
@@ -313,7 +313,7 @@ The system SHALL pause a run started from the window on a model-call error in ev
 
 A pause on a flagged segment or after a segment SHALL name the segment just decided and SHALL come before any further model call.
 
-**Source**: FR-REVIEW-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, ADR-0036, ADR-0045. In plain words: the default runs to the end and leaves review for afterwards; a careful translator can have it stop on every problem or every segment. A stopped server pauses the run in every mode. The command line always runs Unattended with the same pause on errors and the same recovery from an outage, and stops the run at a pause only a person can end. A segment is decided only after its whole chunk is drafted and, on Balanced and Max, reviewed, so the pause comes after that chunk's calls. Naming the segment lets the review desk open on the right one.
+**Source**: FR-REVIEW-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, ADR-0036, ADR-0045. In plain words: the default runs to the end and leaves review for afterwards; a careful translator can have it stop on every problem or every segment. A stopped server pauses the run in every mode. The command line always runs Unattended with the same pause on errors and the same recovery from an outage, and stops the run at a pause only a person can end. A segment is decided only after its whole chunk is drafted and, on Balanced and Max, reviewed, so the pause comes after that chunk's calls. Naming the segment lets the review desk open on the right one.
 
 #### Scenario: Unattended runs past a flagged segment
 
@@ -352,7 +352,7 @@ WHEN a run paused for review is resumed, the system SHALL continue with the unde
 SHALL make no further model call for the paused segment, and SHALL keep the paused segment's stored decision — the
 person's edit, when they made one — as it stands.
 
-**Source**: FR-REVIEW-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-RESUME-03 (`#fr-resume`), ADR-0036. In plain words: what the person decided during the pause is final for the run — the segment is not drafted or repaired again — and the sentences translated after it follow the corrected one, not the model's rejected draft. Which sentences those are is the translation-pipeline capability's "Decide a chunk's segments in document order": with the reviewer off (Fast) or in Manual it is the very next segment; with the reviewer on, the rest of the paused chunk was already drafted and reviewed before the pause and is not drafted again, so the edit reaches the next chunk.
+**Source**: FR-REVIEW-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-RESUME-03 (`#fr-resume`), ADR-0036. In plain words: what the person decided during the pause is final for the run — the segment is not drafted or repaired again — and the sentences translated after it follow the corrected one, not the model's rejected draft. Which sentences those are is the translation-pipeline capability's "Decide a chunk's segments in document order": with the reviewer off (Fast) or in Manual it is the very next segment; with the reviewer on, the rest of the paused chunk was already drafted and reviewed before the pause and is not drafted again, so the edit reaches the next chunk.
 
 #### Scenario: An edit feeds the next draft
 
@@ -372,7 +372,7 @@ person's edit, when they made one — as it stands.
 
 The system SHALL store, for each run of a project, its current state — running from its start, paused at each pause, running again at each resume, and completed, stopped or failed when it ends — and SHALL let the rest of the application read the state of a project's latest run, also after a restart.
 
-**Source**: FR-RESUME-03, FR-RESUME-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11". In plain words: a review retry needs the model, which a running run is using and a paused or finished one is not, so the current state is kept on every pause and resume (see the review-queue capability's "Allow a retry whenever no run of the project is running"). Because it is stored, a run that was in flight when the application closed is recognised as interrupted ("Treat a run stored as running or paused as interrupted").
+**Source**: FR-RESUME-03, FR-RESUME-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11". In plain words: a review retry needs the model, which a running run is using and a paused or finished one is not, so the current state is kept on every pause and resume (see the review-queue capability's "Allow a retry whenever no run of the project is running"). Because it is stored, a run that was in flight when the application closed is recognised as interrupted ("Treat a run stored as running or paused as interrupted").
 
 #### Scenario: The state follows pauses and resumes
 
@@ -393,7 +393,7 @@ The system SHALL store, for each run of a project, its current state — running
 
 WHILE a run is in progress, the translating screen SHALL offer to pause it and to stop it. WHILE a run is paused, it SHALL offer to resume it and to stop it and, unless the pause is on a model-call error, SHALL show the paused line saying the segments in flight are translated again on resume. The title bar's single Pause or Resume control SHALL do what the screen's control of the same name does.
 
-**Source**: FR-RESUME-03, FR-RESUME-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#typed-error-surface`, `docs/specification/mockups/README.md#run-states-a`. In plain words: Pause is a short break inside this translation; Stop ends translating for now. Everything decided is saved either way, so the old promise "kept until the application closes" is gone, and the paused line tells the person what resume will redo.
+**Source**: FR-RESUME-03, FR-RESUME-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#typed-error-surface`, `docs/spec_baseline/specification/mockups/README.md#run-states-a`. In plain words: Pause is a short break inside this translation; Stop ends translating for now. Everything decided is saved either way, so the old promise "kept until the application closes" is gone, and the paused line tells the person what resume will redo.
 
 #### Scenario: Resuming continues the same run
 
@@ -415,7 +415,7 @@ WHILE a run is in progress, the translating screen SHALL offer to pause it and t
 
 WHEN a run is stopped, the screen SHALL report a neutral outcome, not a failure, and SHALL NOT show an error dialog or a message of error severity. WHILE a run is stopped, the screen SHALL offer Continue translation, which continues the translation with a new run from the first PENDING segment, SHALL keep the flagged segments in the review desk, and SHALL show the stopped line saying where it continues.
 
-**Source**: FR-RESUME-03, FR-RESUME-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#typed-error-surface`, `docs/specification/mockups/README.md#run-states-a`. In plain words: stopping is something a person chose, so telling them it went wrong is both untrue and unpleasant. Decisions are saved, so a stopped run starts a new run at the first undecided segment, today or after a restart.
+**Source**: FR-RESUME-03, FR-RESUME-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#typed-error-surface`, `docs/spec_baseline/specification/mockups/README.md#run-states-a`. In plain words: stopping is something a person chose, so telling them it went wrong is both untrue and unpleasant. Decisions are saved, so a stopped run starts a new run at the first undecided segment, today or after a restart.
 
 #### Scenario: Stopping is not an error
 
@@ -440,7 +440,7 @@ the segment's rounds as they stood in memory and, on resume, SHALL continue at t
 chunk's reviewer verdict and making no second reviewer call for the chunk. WHEN a run is stopped, the system SHALL drop
 the chunk's undecided drafts, as "Decide a chunk's segments in document order" says.
 
-**Source**: FR-RESUME-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `openspec/changes/archive/2026-10-19-complete-translation-workflow/proposal.md#what-changes`; tasks 15b. In plain words: the rounds were once restarted from the first, which on the Bartimaeus hand test paid for the same directed fix again after every resume. The rounds already answered are kept while the application runs, so a resume costs only the call that failed. What the run already paid for at the chunk level — the reviewer's verdict — is kept too, so a pause never costs a second reviewer call for the chunk (a repaired target is decided by the checks alone, as the quality gates say).
+**Source**: FR-RESUME-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `openspec/changes/archive/2026-10-19-complete-translation-workflow/proposal.md#what-changes`; tasks 15b. In plain words: the rounds were once restarted from the first, which on the Bartimaeus hand test paid for the same directed fix again after every resume. The rounds already answered are kept while the application runs, so a resume costs only the call that failed. What the run already paid for at the chunk level — the reviewer's verdict — is kept too, so a pause never costs a second reviewer call for the chunk (a repaired target is decided by the checks alone, as the quality gates say).
 
 #### Scenario: A pause during the second repair round
 
@@ -478,7 +478,7 @@ the chunk's undecided drafts, as "Decide a chunk's segments in document order" s
 
 WHILE a run is paused on an error whose recovery is automatic (an outage, a timeout, an error a step threw, or an unloaded model) and the step has pauses of that kind left, the system SHALL wait and resume by itself, in every review mode, as soon as a probe of the provider passes, the interrupted call being made again. A pause for review, a pause the person asked for and a pause on an error only a person can fix SHALL NOT resume by itself.
 
-**Source**: `docs/specification/mockups/README.md#run-states-a`, `docs/specification/mockups/README.md#words-w--user-facing-vocabulary`, `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`. In plain words: a run left all night is finished in the morning or visibly retrying with a clear reason, never silently stuck. The run waits, checks the server now and then without asking the model anything, and goes on by itself; a wrong key or a missing model still waits for the person. A server that unloaded an idle model usually loads it again on the next request, so the run wakes at most six times for one such outage — about nineteen minutes — and then asks the person to load it ("Stop waking after a twelve-hour outage or six wakes of an unloaded model"); its budget of ten pauses before the step is flagged is a separate count.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#run-states-a`, `docs/spec_baseline/specification/mockups/README.md#words-w--user-facing-vocabulary`, `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`. In plain words: a run left all night is finished in the morning or visibly retrying with a clear reason, never silently stuck. The run waits, checks the server now and then without asking the model anything, and goes on by itself; a wrong key or a missing model still waits for the person. A server that unloaded an idle model usually loads it again on the next request, so the run wakes at most six times for one such outage — about nineteen minutes — and then asks the person to load it ("Stop waking after a twelve-hour outage or six wakes of an unloaded model"); its budget of ten pauses before the step is flagged is a separate count.
 
 #### Scenario: Retry now keeps the outage clock and the segment's budget
 
@@ -541,7 +541,7 @@ WHILE a run is paused on an error whose recovery is automatic (an outage, a time
 
 An outage SHALL last from its first failure until a model call answers again; once it has lasted 12 hours (`RecoverySchedule.MAX_OUTAGE`) the system SHALL stop waking and wait for the person. An unloaded model SHALL wake at most six times in one outage (`PauseDecider.UNLOADED_MODEL_WAKES`), counted across its pauses until a model call answers again, after which the system SHALL announce that it gave up and wait for the person.
 
-**Source**: `docs/implementation_plan` overnight plan step 11 (owner intent: a run left all night is finished in the morning or visibly retrying with a clear reason, never silently stuck). In plain words: a local server that restarts, a laptop that loses its network for a while, or a provider that rate limits are common over a night. The run waits, checks the server now and then without asking the model anything, and goes on by itself; a wrong key or a missing model is not fixed by waiting, so those still wait for the person. A local server that unloaded an idle model usually loads it again on the next request, so the run tries six times — about nineteen minutes — and then asks the person to load it, instead of probing a model nobody loads all night.
+**Source**: `docs/spec_baseline/implementation_plan` overnight plan step 11 (owner intent: a run left all night is finished in the morning or visibly retrying with a clear reason, never silently stuck). In plain words: a local server that restarts, a laptop that loses its network for a while, or a provider that rate limits are common over a night. The run waits, checks the server now and then without asking the model anything, and goes on by itself; a wrong key or a missing model is not fixed by waiting, so those still wait for the person. A local server that unloaded an idle model usually loads it again on the next request, so the run tries six times — about nineteen minutes — and then asks the person to load it, instead of probing a model nobody loads all night.
 
 #### Scenario: An outage longer than twelve hours waits for the person
 
@@ -565,7 +565,7 @@ An outage SHALL last from its first failure until a model call answers again; on
 
 WHEN a project that has at least one decided segment and at least one pending segment is opened after a restart, the system SHALL show it as ready to continue: the title bar reading the share of its steps done, the banner "Welcome back — 74 of 142 segments are done." with that project's figures, the live line naming where it continues, and Continue translation in the toolbar. A project with no pending segment SHALL NOT be shown as ready to continue.
 
-**Source**: FR-RESUME-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", `docs/specification/mockups/README.md#run-states-a`. In plain words: after closing the application a person sees at once how far an unfinished translation got and what the button will do; a finished one has nothing to continue.
+**Source**: FR-RESUME-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", `docs/spec_baseline/specification/mockups/README.md#run-states-a`. In plain words: after closing the application a person sees at once how far an unfinished translation got and what the button will do; a finished one has nothing to continue.
 
 #### Scenario: A project reopens ready to continue
 
@@ -582,7 +582,7 @@ WHEN a project that has at least one decided segment and at least one pending se
 
 WHEN a project is opened, the system SHALL NOT start or resume a run until the person chooses Continue translation, whatever state the project was stored in.
 
-**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", `docs/specification/mockups/README.md#run-states-a`. In plain words: a model call can take a computer's whole attention, so opening a project to look at it must never begin using the AI model without being asked.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", `docs/spec_baseline/specification/mockups/README.md#run-states-a`. In plain words: a model call can take a computer's whole attention, so opening a project to look at it must never begin using the AI model without being asked.
 
 #### Scenario: Opening does not call the model
 
@@ -593,7 +593,7 @@ WHEN a project is opened, the system SHALL NOT start or resume a run until the p
 
 WHEN the person chooses Continue translation on a reopened project, the system SHALL start a new run whose first model call is for the first pending segment, announced as the live line "Continues at Chapter 2, segment 5." before the call.
 
-**Source**: FR-RESUME-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/mockups/README.md#run-states-a`. In plain words: decided segments are never translated twice, and the person sees where the work picks up.
+**Source**: FR-RESUME-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/mockups/README.md#run-states-a`. In plain words: decided segments are never translated twice, and the person sees where the work picks up.
 
 #### Scenario: Continue picks up at Chapter 2, segment 5
 
@@ -604,7 +604,7 @@ WHEN the person chooses Continue translation on a reopened project, the system S
 
 WHEN a project whose last run was stored as running or paused is opened, the system SHALL treat that run as interrupted and show the project as ready to continue, whether the application was closed cleanly or ended by a crash.
 
-**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", FR-PERSIST-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-persist`). In plain words: a run that was in flight when the window closed or the process died is not "still running" on the next launch; it simply stopped, and the decided segments are all kept.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", FR-PERSIST-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-persist`). In plain words: a run that was in flight when the window closed or the process died is not "still running" on the next launch; it simply stopped, and the decided segments are all kept.
 
 #### Scenario: A crash during a run
 
@@ -620,7 +620,7 @@ WHEN a project whose last run was stored as running or paused is opened, the sys
 
 WHEN a project is opened after a restart, the system SHALL make the run's step plan again from the book and the brief and count as done the draft of every decided segment and the checks of every chunk whose segments are all decided; it SHALL show no time left until the new run has timed its own steps.
 
-**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D3", `docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`. In plain words: the steps are not stored, but the decisions are, so the bar after a restart starts where the work really stands; the speed of the earlier run is not measured in this one, so no time left is guessed.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D3", `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`. In plain words: the steps are not stored, but the decisions are, so the bar after a restart starts where the work really stands; the speed of the earlier run is not measured in this one, so no time left is guessed.
 
 #### Scenario: The bar starts from the stored decisions
 
@@ -636,7 +636,7 @@ WHEN a project is opened after a restart, the system SHALL make the run's step p
 
 WHEN the person chooses Continue translation and the AI model the project's stored run used does not answer, the system SHALL show the dialog "AI model not answering" with Try again, Use another AI model… and Not now, and SHALL start no run until the person has chosen. "Does not answer" means the model's program fails to list its models, or lists some and not this one (a listing, never a model call); a program that lists none counts as answering. The stored model is read from the project's latest run each time Continue is chosen. Escape counts as Not now. Try again here asks only that one model again: it does not look for programs and saves nothing (it is not the Projects screen's Try again).
 
-**Source**: FR-PROV-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", `docs/specification/mockups/README.md#other-dialogs`. In plain words: instead of failing on the first call, the person is told right away that Ollama is not open and can fix that, pick another model, or leave.
+**Source**: FR-PROV-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", `docs/spec_baseline/specification/mockups/README.md#other-dialogs`. In plain words: instead of failing on the first call, the person is told right away that Ollama is not open and can fix that, pick another model, or leave.
 
 #### Scenario: Ollama is not open
 
@@ -658,7 +658,7 @@ WHEN the person chooses Continue translation and the AI model the project's stor
 
 WHEN the person chooses Continue translation and the current AI model differs from the one the project's stored run used, the system SHALL show the dialog "A different model is chosen" with Use the earlier model and Continue with the new one, and SHALL start the run only on one of them. This question comes first; the answer test of the model that was chosen follows it. Escape starts nothing. Use the earlier model leaves the current model unchanged.
 
-**Source**: FR-PROV-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", `docs/specification/mockups/README.md#other-dialogs`. In plain words: continuing a half-translated book with another model can change its voice, so the person decides whether to keep the earlier model or accept the change.
+**Source**: FR-PROV-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", `docs/spec_baseline/specification/mockups/README.md#other-dialogs`. In plain words: continuing a half-translated book with another model can change its voice, so the person decides whether to keep the earlier model or accept the change.
 
 #### Scenario: The earlier model is kept
 
@@ -679,7 +679,7 @@ WHEN the person chooses Continue translation and the current AI model differs fr
 
 The system SHALL count the pauses of each step — a segment's draft, a segment's decision, or a chunk's reviewer call — by the kind of its error and, on the failure past that kind's budget, flag the step's segment with the error and go on: two pauses for a timeout and for the errors only a person can fix, three for an error the step threw, and ten for an outage and for an unloaded model.
 
-**Source**: `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, FR-RESUME-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/mockups/README.md#run-states-a`. In plain words: one bad segment must not end a night's run, while an outage, not the segment's fault, has its own larger budget. The errors only a person can fix are `auth`, `modelNotFound`, `missingCredential` and `validation`; an outage is `unreachable`, `upstream` or `rateLimited`; an unloaded model is `modelUnavailable`; a step that throws answers `ErrorCode.internal`. For a chunk's reviewer call, flagging means deciding the chunk as if the reviewer were unavailable. A call not tied to one segment has no step to flag, so past its budget it waits for the person.
+**Source**: `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, FR-RESUME-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/mockups/README.md#run-states-a`. In plain words: one bad segment must not end a night's run, while an outage, not the segment's fault, has its own larger budget. The errors only a person can fix are `auth`, `modelNotFound`, `missingCredential` and `validation`; an outage is `unreachable`, `upstream` or `rateLimited`; an unloaded model is `modelUnavailable`; a step that throws answers `ErrorCode.internal`. For a chunk's reviewer call, flagging means deciding the chunk as if the reviewer were unavailable. A call not tied to one segment has no step to flag, so past its budget it waits for the person.
 
 #### Scenario: An error only a person can fix is flagged after two
 
@@ -690,7 +690,7 @@ The system SHALL count the pauses of each step — a segment's draft, a segment'
 
 WHILE the run is paused on a model-call error, the job SHALL offer to skip the step: the run resumes, the step's segments are flagged with the error without their call being sent again, and the run goes on.
 
-**Source**: `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, FR-RESUME-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/mockups/README.md#words-w--user-facing-vocabulary`. In plain words: the person can give up on segments that keep failing and let the book continue, instead of being stuck.
+**Source**: `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, FR-RESUME-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/mockups/README.md#words-w--user-facing-vocabulary`. In plain words: the person can give up on segments that keep failing and let the book continue, instead of being stuck.
 
 #### Scenario: Skipping four segments
 
@@ -701,7 +701,7 @@ WHILE the run is paused on a model-call error, the job SHALL offer to skip the s
 
 WHILE a run from the window is paused on a model-call error, the translating screen SHALL show the provider-error state naming the error, with Try again now (which resumes the run), Open settings, and Skip these N segments, N being the count in flight.
 
-**Source**: `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, FR-RESUME-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/mockups/README.md#words-w--user-facing-vocabulary`, `docs/specification/mockups/README.md#run-states-a`. In plain words: the screen says what went wrong and offers the three things a person can do; leaving the run paused needs no button, because the toolbar's Pause already does it. The banner's wording per state is the notifications capability's.
+**Source**: `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, FR-RESUME-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/mockups/README.md#words-w--user-facing-vocabulary`, `docs/spec_baseline/specification/mockups/README.md#run-states-a`. In plain words: the screen says what went wrong and offers the three things a person can do; leaving the run paused needs no button, because the toolbar's Pause already does it. The banner's wording per state is the notifications capability's.
 
 #### Scenario: The three actions are shown
 

@@ -278,7 +278,7 @@ context. These rules apply to every task:
 
 - [x] 11.1 Add the env-gated `liveLocal` suites: `OllamaLiveTest` and `LmStudioLiveTest` in `:llm` (probe, list, one JSON-schema chat that parses, one `⟦g0⟧…⟦g1⟧` round trip) and `TranslateCommandLiveTest` in `:app` (a three-paragraph Markdown book through the command with each provider, every `⟦gN⟧` surviving). A WireMock stub proves the code matches the recorded shapes; only a real server proves the shapes are still true. → `:llm`, `:app`
   - **Read:** design.md "Test strategy"; `.claude/rules/testing.md#local-only-livelocal`;
-    `docs/specification/04_Build_and_Release/06_TESTING_STRATEGY.md#live-local`;
+    `docs/spec_baseline/specification/04_Build_and_Release/06_TESTING_STRATEGY.md#live-local`;
     `modules/build-logic/src/main/kotlin/bookloom.test-conventions.gradle.kts` (the `liveLocal` task and tag).
   - **Change:** the three `@Tag("liveLocal")` classes with `@EnabledIfEnvironmentVariable(named =
     "BOOKLOOM_LIVE_OLLAMA_URL" | "BOOKLOOM_LIVE_LMSTUDIO_URL", matches = ".+")`, models from
@@ -327,10 +327,10 @@ context. These rules apply to every task:
 ## 12. Spec and document repairs
 
 - [x] 12.1 Fix the clauses this change outgrows and record the new state where readers look for it. A spec that disagrees with the code, and a backlog that calls a shipped change pending, cost every later reader a wrong assumption. → docs
-  - **Read:** `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-architecture`, `#chat-contracts`,
-    `#http-error-mapping`, `#client-construction`; `docs/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`;
-    `docs/implementation_plan/CHANGE_BACKLOG.md#where-this-stands` and the Stage C table;
-    `docs/implementation_plan/01_MODULE_INVENTORY.md#module-api`, `#module-llm`, `#module-pipeline`, `#module-app`;
+  - **Read:** `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-architecture`, `#chat-contracts`,
+    `#http-error-mapping`, `#client-construction`; `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`;
+    `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md#where-this-stands` and the Stage C table;
+    `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md#module-api`, `#module-llm`, `#module-pipeline`, `#module-app`;
     `AGENTS.md` "Where it stands"; `docs/DEVELOPMENT.md#running`, `#testing`; `docs/next_features.md`.
   - **Change:** `04_LLM_INTEGRATION.md`: `discoveryFailed` retryable **yes** in the mapping table (matching
     `09_ERROR_HANDLING.md` and the code); the `Provider.chat(ChatRequest, RequestOptions)` block replaced by the built
@@ -344,11 +344,11 @@ context. These rules apply to every task:
     auth (a Bearer path with an environment-variable name read at call time; keychain never), reasoning control
     (`think`, `reasoning_effort`), context-window sizing (`num_ctx`, `/api/show`, `keep_alive`), and that
     D7/D9/D15 are now reachable with a real model.
-  - **Done when:** every cited anchor exists, and `grep -n "RequestOptions" docs/specification/` finds nothing.
+  - **Done when:** every cited anchor exists, and `grep -n "RequestOptions" docs/spec_baseline/specification/` finds nothing.
 
 ## 13. Gate
 
-- [x] 13.1 Update `docs/implementation_plan/01_MODULE_INVENTORY.md` with the new `:api` types, the `:llm` packages (`provider`, `client.ollama`, `client.openai`, `http`, `dto`, `response`, `retry`, `gate`, `verify`), `ua.bookloom.pipeline.prompt` and `TranslateArguments`, and the as-built status, so the module map matches the code. → docs
+- [x] 13.1 Update `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md` with the new `:api` types, the `:llm` packages (`provider`, `client.ollama`, `client.openai`, `http`, `dto`, `response`, `retry`, `gate`, `verify`), `ua.bookloom.pipeline.prompt` and `TranslateArguments`, and the as-built status, so the module map matches the code. → docs
   - **Done when:** every row names a package or class that exists.
 - [x] 13.2 Re-run `./gradlew clean build check spotlessCheck` and `./gradlew -PstrictLocks verifyLocks` after tasks 6.2, 9.2, 9.3, 9.4 and 9.5, getting both green across the whole project with no pre-existing-failure exemption, including the eight ArchUnit rules and the 0.80 branch-coverage gate on `:llm` and `:pipeline`. A change is not done while any check anywhere is red. → all modules
   - **Evidence (2026-09-24):** `./gradlew clean build check spotlessCheck` — `BUILD SUCCESSFUL in 1m 13s`, 111

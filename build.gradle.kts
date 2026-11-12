@@ -3,7 +3,7 @@
 // Deliberately thin: it carries no `allprojects { }` / `subprojects { }` configuration. Every shared
 // concern (toolchain, JPMS args, formatting, lint, tests) is a convention plugin in `build-logic`
 // applied explicitly by each subproject, so configuration is visible where it takes effect
-// (docs/specification/04_Build_and_Release/01_BUILD_AND_TOOLING.md#convention-plugins).
+// (docs/spec_baseline/specification/04_Build_and_Release/01_BUILD_AND_TOOLING.md#convention-plugins).
 
 import com.github.jk1.license.filter.LicenseBundleNormalizer
 import com.github.jk1.license.render.InventoryHtmlReportRenderer

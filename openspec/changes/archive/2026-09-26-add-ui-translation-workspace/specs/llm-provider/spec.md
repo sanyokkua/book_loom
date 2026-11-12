@@ -16,9 +16,9 @@ IF the provider id names no registered provider, THEN the system SHALL answer `E
 send no request.
 
 **Source:** FR-MODEL-01, FR-MODEL-02
-(`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-model`),
-`docs/specification/02_Architecture/04_LLM_INTEGRATION.md#model-discovery`,
-`docs/specification/01_Product/07_SETTINGS.md#models-tab`.
+(`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-model`),
+`docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#model-discovery`,
+`docs/spec_baseline/specification/01_Product/07_SETTINGS.md#models-tab`.
 In plain words: discovery is already built and already specified, and until now it has had exactly one caller —
 the verification routine, which checks whether the chosen model is in the list and then throws the list away. A
 screen that wants to offer that list has nothing to call. This adds only the way to ask, and the one behaviour

@@ -1,13 +1,13 @@
 #!/usr/bin/env sh
 #
-# Pre-commit file-size guard (docs/specification/04_Build_and_Release/02_QUALITY_GATES.md#lefthook-stages).
+# Pre-commit file-size guard (docs/spec_baseline/specification/04_Build_and_Release/02_QUALITY_GATES.md#lefthook-stages).
 #
 # Rejects a commit that stages a file larger than the threshold. The failure mode this exists to catch is
 # mechanical, not malicious: a build output, a heap dump, a downloaded model, or a packaged artifact dragged in
 # by an over-broad `git add`. Git never forgets a blob, so a 200 MB file committed once is in the clone forever.
 #
 # Threshold: 4096 KB by default. The largest legitimately tracked file in this repository is the 1.5 MB icon
-# source PNG (`docs/specification/assets/icon/BookLoom-source.png`), so 4 MB leaves comfortable headroom for
+# source PNG (`docs/spec_baseline/specification/assets/icon/BookLoom-source.png`), so 4 MB leaves comfortable headroom for
 # derived art while still catching anything that has no business in source control. Override for a one-off with
 # `BOOKLOOM_MAX_FILE_SIZE_KB=8192 git commit ...`; skip the whole hook with `git commit --no-verify`.
 #

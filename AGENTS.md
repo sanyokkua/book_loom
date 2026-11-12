@@ -134,7 +134,7 @@ diagnose; never run two gates at once.
 | `:app` | launcher, composition root, the `archTest` suite | presentation |
 
 Edges point downward only; `:pipeline` sees the three services, services see only `:api`/`:util`. Physical layout is
-`modules/<name>` (ADR-0021); Gradle names are unchanged. As-built history: `docs/implementation_plan/01_MODULE_INVENTORY.md`.
+`modules/<name>` (ADR-0021); Gradle names are unchanged. As-built history: `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md`.
 
 ## Non-negotiables
 
@@ -157,8 +157,8 @@ Edges point downward only; `:pipeline` sees the three services, services see onl
   `/opsx:*` is available, not required), at most ~10 tasks, the acceptance test seen **red** before the implementation,
   then green, then the app run by hand. No task ledger is maintained after a change ships; a checkbox is a claim, the
   test is the evidence.
-- `docs/specification/` is the reference and is **editable**: when the code legitimately differs, fix the clause in the
-  same change. `docs/adr/` records decisions that are costly to reverse, each naming what would falsify it.
+- `docs/spec_baseline/specification/` is the reference and is **editable**: when the code legitimately differs, fix the clause in the
+  same change. `docs/spec_baseline/adr/` records decisions that are costly to reverse, each naming what would falsify it.
 - Sub-agents in `.claude/agents/` exist for read-heavy work (mapping, searching, diagnosing a red gate). The decision
   about the next step is never delegated.
 - Stop and ask only to: resolve an ambiguous spec (propose a default), report a gate red twice for the same cause, or
@@ -192,7 +192,7 @@ step. Never `--no-verify`, never force-push; if a hook is wrong, fix the hook an
 
 ## Where things live
 
-Spec `docs/specification/` · decisions `docs/adr/` · backlog `docs/implementation_plan/CHANGE_BACKLOG.md` · OpenSpec
+Spec `docs/spec_baseline/specification/` · decisions `docs/spec_baseline/adr/` · backlog `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md` · OpenSpec
 `openspec/` · rules `paths:`-scoped in `.claude/rules/` · skills canonical in `.agents/skills/`, which Codex reads
 directly and Claude reads through the `.claude/skills` symlink kept by `python3 scripts/sync-agent-files.py --apply` ·
 the `openspec-*` skills and `/opsx:*` commands are OpenSpec output: refresh with `OPENSPEC_TELEMETRY=0 openspec update`,

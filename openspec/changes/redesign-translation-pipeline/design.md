@@ -1185,7 +1185,7 @@ settings must be entered again. `persistence-sqlite.md` needs no change.
 
 ### D28 — Decision records (ADRs) and specification edits
 
-**ADRs** (`docs/adr/`, `docs/adr/template.md`, each naming what would falsify it; the `docs/adr/README.md` index row
+**ADRs** (`docs/spec_baseline/adr/`, `docs/spec_baseline/adr/template.md`, each naming what would falsify it; the `docs/spec_baseline/adr/README.md` index row
 in the same group):
 
 | ADR | Group | What |
@@ -1205,7 +1205,7 @@ in the same group):
 ADR-0001, ADR-0022, ADR-0039, ADR-0043 and ADR-0044 need no edit. The config rule "write the ADR first" is met per
 group: each ADR is written in the group that first makes its decision real, before that group's code.
 
-**Specification edits.** Each group fixes, in its own commit, the clauses of `docs/specification/**`, the diagrams,
+**Specification edits.** Each group fixes, in its own commit, the clauses of `docs/spec_baseline/specification/**`, the diagrams,
 the mockups, `.claude/rules/` and the docs that its behaviour makes wrong; history in ADR bodies is never rewritten
 (only status and amend lines). By file:
 
@@ -1243,11 +1243,11 @@ the mockups, `.claude/rules/` and the docs that its behaviour makes wrong; histo
 | `.claude/rules/offline-and-privacy.md`, `.claude/rules/testing.md` | 5 |
 | `docs/Architecture.md` | 12, 14 |
 | `AGENTS.md` | 14 (module table row `:pipeline`), 17 ("Where it stands") |
-| `docs/implementation_plan/01_MODULE_INVENTORY.md` | 17 (new packages `llm.engine`, `llm.profile`, `llm.knowledge`, `pipeline.proofread`) |
+| `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md` | 17 (new packages `llm.engine`, `llm.profile`, `llm.knowledge`, `pipeline.proofread`) |
 
 Not edited: the fifteen-error-code clauses, `persistence-sqlite.md`, `01_QUALITY_ATTRIBUTES.md`, the stop-word and
 title-list sentences. Group 14 finds the remaining stale wording by a grep for judge, reviewer, backward revision,
-rolling summary and last check across `docs/specification`, `.claude/rules` and `docs/next_features.md` §11–12,
+rolling summary and last check across `docs/spec_baseline/specification`, `.claude/rules` and `docs/next_features.md` §11–12,
 instead of by the research's unlocated stale-doc ids. A delta cannot edit a capability's `## Purpose`, and OpenSpec
 refuses a MODIFIED block that drops an original scenario name: the stale Purpose paragraphs of
 `openspec/specs/{quality-gates,translation-pipeline,export}/spec.md` and the kept reviewer-era scenario titles are

@@ -2,7 +2,7 @@
 
 ## Context
 
-See `proposal.md` for the motivation. The visual and interaction target is `docs/specification/mockups/README.md`. Its
+See `proposal.md` for the motivation. The visual and interaction target is `docs/spec_baseline/specification/mockups/README.md`. Its
 "Code" column names the existing classes each element builds on, and its "For AI agents" section is the method for
 building and checking every screen.
 

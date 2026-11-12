@@ -1,13 +1,13 @@
 ---
 paths:
   - "openspec/**"
-  - "docs/adr/**"
-  - "docs/implementation_plan/**"
+  - "docs/spec_baseline/adr/**"
+  - "docs/spec_baseline/implementation_plan/**"
 ---
 
 # Spec & Change Authoring
 
-Scope: `openspec/**`, `docs/adr/**`, `docs/implementation_plan/**`. `docs/specification/**` is the reference and is
+Scope: `openspec/**`, `docs/spec_baseline/adr/**`, `docs/spec_baseline/implementation_plan/**`. `docs/spec_baseline/specification/**` is the reference and is
 editable. Rules that steer OpenSpec generation live in `openspec/config.yaml`; the retired ID-tracking machinery is
 recorded in ADR-0032. See also `testing.md`.
 

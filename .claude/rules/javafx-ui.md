@@ -6,7 +6,7 @@ paths:
 
 # JavaFX UI
 
-Scope: `:ui` and `:app` (`**/ui/src/main/java/**`, FXML/CSS under `**/ui/src/main/resources/**`). Spec: `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md`. Visual acceptance: `docs/specification/mockups/ui-mockup.html`.
+Scope: `:ui` and `:app` (`**/ui/src/main/java/**`, FXML/CSS under `**/ui/src/main/resources/**`). Spec: `docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md`. Visual acceptance: `docs/spec_baseline/specification/mockups/ui-mockup.html`.
 
 ## MUST
 
@@ -18,7 +18,7 @@ Scope: `:ui` and `:app` (`**/ui/src/main/java/**`, FXML/CSS under `**/ui/src/mai
   **Carve-out (D12 of `add-ui-translation-workspace`):** a JavaFX `Task`/`Service` is used where the work reports failure by *throwing*; a plain submission returning a typed `Result` is used where it does not (`TranslationJob.run()`, provider verification, opening a book), and then the outcome is logged where the `Result` is read, the one place it exists. The reason is that `Task.setOnFailed` never fires for a call that returns its failure, so a `Task` around it would always succeed and the failure would still have to be read off the `Result`. Off the FX thread, on the injected executor, and through the mirror are not relaxed.
 - **MUST NOT** read or mutate the scene graph (nodes, properties, `ObservableList`s bound to controls) off the FX Application Thread. Bridge every update through `Platform.runLater`/the state mirror. — Rationale: JavaFX controls are not thread-safe; off-thread mutation corrupts or crashes the UI.
 - **MUST** style with **token-only CSS applied at the `Scene` level** (looked-up colors on `.root`); never `node.setStyle("...")` inline. — Rationale: theming stays centralized and swappable; see `theming-tokens.md`.
-- **MUST** bind visual acceptance of every screen/state/dialog to `docs/specification/mockups/ui-mockup.html` (P6 pattern) and back it with a headless TestFX assertion where practical. — Rationale: the mockup is the binding UI source of truth.
+- **MUST** bind visual acceptance of every screen/state/dialog to `docs/spec_baseline/specification/mockups/ui-mockup.html` (P6 pattern) and back it with a headless TestFX assertion where practical. — Rationale: the mockup is the binding UI source of truth.
 
 ## SHOULD
 

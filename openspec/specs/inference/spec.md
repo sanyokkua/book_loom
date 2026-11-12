@@ -72,7 +72,7 @@ The pseudo model SHALL report a normal finish and no token usage. The conversion
 machine's default locale. Every `⟦gN⟧` token and every character or entity reference SHALL be kept exactly as written.
 The pseudo model SHALL never return an error and SHALL never open a network connection.
 
-**Source**: FR-INFER-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#offline-invariant`, `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`, `#name-term-pre-scan`, `#rolling-summary-update`. In plain words: a book translated by the pseudo model is easy to recognise: it shows the original text in capitals, with its formatting intact. Now that a run also reviews, scans and summarises, the pseudo model answers each of those in its expected shape, and its reviewer never asks for an edit, so a whole run — review, memory and export included — works without any server. Its answer to a draft or a repair is the source, or the rejected target, in capitals, which the quality checks rightly call an untranslated echo: a segment whose source has at least 20 characters is flagged in every review mode, and a short one such as `Yes, sir.` is accepted (the `quality-gates` capability). It reports no usage, which exercises the path that estimates throughput.
+**Source**: FR-INFER-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#offline-invariant`, `docs/spec_baseline/specification/02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`, `#name-term-pre-scan`, `#rolling-summary-update`. In plain words: a book translated by the pseudo model is easy to recognise: it shows the original text in capitals, with its formatting intact. Now that a run also reviews, scans and summarises, the pseudo model answers each of those in its expected shape, and its reviewer never asks for an edit, so a whole run — review, memory and export included — works without any server. Its answer to a draft or a repair is the source, or the rejected target, in capitals, which the quality checks rightly call an untranslated echo: a segment whose source has at least 20 characters is flagged in every review mode, and a short one such as `Yes, sir.` is accepted (the `quality-gates` capability). It reports no usage, which exercises the path that estimates throughput.
 
 #### Scenario: Letters are capitalised, tokens and references are kept
 
@@ -120,7 +120,7 @@ output tokens the server may generate. A request built from messages alone SHALL
 sends; WHEN present, the model SHALL pass it on as its provider's dialect takes it. The pseudo model SHALL ignore the
 temperature, the context size, the expected output and the output cap.
 
-**Source**: FR-INFER-03, FR-INFER-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `#response-handling`, `#effective-context`, `#service-owned-retry`, ADR-0033. In plain words: the engine decides how creative the model may be, what shape it wants back, how much context it needs and how long an answer it expects and where the server must stop, without knowing which server answers. A setting that is not given is simply not sent, so an old call site keeps working and a strict server never sees a `null`. Where each dialect puts the context size — Ollama only, never an OpenAI-compatible server — and how the expected output sets the call's timeout and the cap becomes a server field are the `llm-provider` capability's rules. The expected output only sets how long to wait; the cap is what stops a runaway reply.
+**Source**: FR-INFER-03, FR-INFER-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `#response-handling`, `#effective-context`, `#service-owned-retry`, ADR-0033. In plain words: the engine decides how creative the model may be, what shape it wants back, how much context it needs and how long an answer it expects and where the server must stop, without knowing which server answers. A setting that is not given is simply not sent, so an old call site keeps working and a strict server never sees a `null`. Where each dialect puts the context size — Ollama only, never an OpenAI-compatible server — and how the expected output sets the call's timeout and the cap becomes a server field are the `llm-provider` capability's rules. The expected output only sets how long to wait; the cap is what stops a runaway reply.
 
 #### Scenario: A request built from messages alone carries no settings
 
@@ -191,7 +191,7 @@ server that produced nothing at all.
 
 IF a server rejects a request with HTTP `400` or `422` whose body names an optional setting the request sent, THEN the system SHALL send the request once more without that setting, or, for `max_tokens`, with `max_completion_tokens` in its place, and SHALL record the downgrade without exposing the response body.
 
-**Source**: FR-INFER-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), FR-INFER-09e (`docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `#effective-context`, ADR-0013, S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: servers differ in which optional knobs they accept, and a refusal that names the knob is a hint, not a failure, so the request is sent once more without it. Which settings count and what the repeat keeps are stated in this capability's refused-setting requirements.
+**Source**: FR-INFER-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), FR-INFER-09e (`docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `#effective-context`, ADR-0013, S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: servers differ in which optional knobs they accept, and a refusal that names the knob is a hint, not a failure, so the request is sent once more without it. Which settings count and what the repeat keeps are stated in this capability's refused-setting requirements.
 
 #### Scenario: An unsupported native thinking control is omitted once
 
@@ -218,7 +218,7 @@ IF a server rejects a request with HTTP `400` or `422` whose body names an optio
 
 WHERE a model's temperature choice is Let BookLoom choose, the system SHALL send each call at the temperature of its kind: draft `0.2` (`0.1` for a review retry that asks for a lower one), reviewer `0` with a fixed seed, directed fix `0.2`, pre-scan, summary and revision `0.2`. WHERE it is My value, every request SHALL carry that value; WHERE it is Don't send, none SHALL.
 
-**Source**: FR-INFER-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#generation-parameters`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#generation-parameters`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#directed-fix-repair`, S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: by default every call stays low and near-deterministic for fidelity, a scorer being the steadiest. A person can instead fix one temperature for a model, or send none for models that refuse the setting. The reasoning level is a separate requirement ("Carry the reasoning level that the Generation setting chooses").
+**Source**: FR-INFER-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#generation-parameters`, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#generation-parameters`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#directed-fix-repair`, S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: by default every call stays low and near-deterministic for fidelity, a scorer being the steadiest. A person can instead fix one temperature for a model, or send none for models that refuse the setting. The reasoning level is a separate requirement ("Carry the reasoning level that the Generation setting chooses").
 
 #### Scenario: A reviewer call is steadier than a draft
 
@@ -252,7 +252,7 @@ WHEN a provider reports how many tokens a call used, the system SHALL return wit
 completion tokens and its generation time, each only when reported. WHEN the provider reports none of them, the reply
 SHALL carry no usage at all, never zeros.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`. In plain words: the Translating screen's tokens-per-second figure comes from what the server says it generated. A missing figure must look missing, so the engine knows to estimate it instead of showing a speed of zero. Which field of each server's reply holds which figure is the `llm-provider` capability's rule.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`. In plain words: the Translating screen's tokens-per-second figure comes from what the server says it generated. A missing figure must look missing, so the engine knows to estimate it instead of showing a speed of zero. Which field of each server's reply holds which figure is the `llm-provider` capability's rule.
 
 #### Scenario: Usage is carried when reported
 
@@ -268,7 +268,7 @@ SHALL carry no usage at all, never zeros.
 
 The system SHALL recognise as refused only an optional setting the request sent — the temperature, `top_p`, `top_k`, `min_p`, a repeat penalty, `seed`, the output-length field, `num_ctx`, the reasoning control or the structured-output format — named by the body of an HTTP `400` or `422` reply; IF a `400` names nothing the request sent, THEN the system SHALL answer `ErrorCode.validation`, repeat nothing and remember nothing.
 
-**Source**: FR-INFER-09e (`docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#refused-settings-s6`. In plain words: BookLoom drops a setting only when the server's own words name a setting BookLoom sent, so an unrelated 400 is never papered over or guessed at.
+**Source**: FR-INFER-09e (`docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#refused-settings-s6`. In plain words: BookLoom drops a setting only when the server's own words name a setting BookLoom sent, so an unrelated 400 is never papered over or guessed at.
 
 #### Scenario: A refused temperature is recognised
 
@@ -294,7 +294,7 @@ The system SHALL recognise as refused only an optional setting the request sent 
 
 A request sent again without a refused setting SHALL keep everything else it carried — its messages, its other settings, its context size and the output it expects — and that repeat SHALL NOT count as one of the retry policy's attempts.
 
-**Source**: FR-INFER-09, FR-INFER-09e (`docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#effective-context`, `docs/specification/mockups/README.md#refused-settings-s6`. In plain words: dropping one knob must not quietly change the rest, such as shrinking Ollama's context back to its small default. Dropping a refused setting corrects the request; it is not a failure, so it must not use up one of the three tries. The `llm-provider` capability's retry rule defers to this one.
+**Source**: FR-INFER-09, FR-INFER-09e (`docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#effective-context`, `docs/spec_baseline/specification/mockups/README.md#refused-settings-s6`. In plain words: dropping one knob must not quietly change the rest, such as shrinking Ollama's context back to its small default. Dropping a refused setting corrects the request; it is not a failure, so it must not use up one of the three tries. The `llm-provider` capability's retry rule defers to this one.
 
 #### Scenario: Only the refused setting disappears
 
@@ -310,7 +310,7 @@ A request sent again without a refused setting SHALL keep everything else it car
 
 WHEN a setting is refused and dropped, the system SHALL remember the refusal for that provider and that model across restarts, and SHALL leave the setting out of the first attempt of every later call to that model until the person chooses Send again.
 
-**Source**: FR-INFER-09e (`docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#refused-settings-s6`. In plain words: a model that rejects `temperature` once will reject it every time. Remembering saves a failed request at the start of every later call, and the person can undo it from Settings › Models.
+**Source**: FR-INFER-09e (`docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#refused-settings-s6`. In plain words: a model that rejects `temperature` once will reject it every time. Remembering saves a failed request at the start of every later call, and the person can undo it from Settings › Models.
 
 #### Scenario: A later call leaves the setting out from the start
 
@@ -336,7 +336,7 @@ WHEN a setting is refused and dropped, the system SHALL remember the refusal for
 
 WHEN a setting is refused and dropped, the system SHALL write one warning line to the activity log naming the setting and what was done instead, and SHALL NOT raise a toast while a run is in progress.
 
-**Source**: S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#refused-settings-s6`. In plain words: the person watching a long run is not interrupted by a technical detail that BookLoom already handled; it is in the log and the test details for whoever looks.
+**Source**: S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#refused-settings-s6`. In plain words: the person watching a long run is not interrupted by a technical detail that BookLoom already handled; it is in the log and the test details for whoever looks.
 
 #### Scenario: One warning line, no toast
 
@@ -353,7 +353,7 @@ WHEN a setting is refused and dropped, the system SHALL write one warning line t
 
 WHEN a person saves a change to a model's settings (temperature choice, context window, answer length and its field) while a run is in progress, the system SHALL apply the context window from the next chunk that starts and the temperature choice, answer length and its field from the next request, and SHALL leave decided segments unchanged.
 
-**Source**: decision 6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#models-decision-6`. In plain words: changing a setting mid-book steers the rest of the book without re-translating the part already done, and the screen says so ("to the segments not translated yet"). A chunk is packed for its context window when it starts, so the chunk in flight keeps that window; the other settings change nothing about packing and apply from the next request.
+**Source**: decision 6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#models-decision-6`. In plain words: changing a setting mid-book steers the rest of the book without re-translating the part already done, and the screen says so ("to the segments not translated yet"). A chunk is packed for its context window when it starts, so the chunk in flight keeps that window; the other settings change nothing about packing and apply from the next request.
 
 #### Scenario: A change saved during a run reaches the next chunk
 
@@ -369,7 +369,7 @@ WHEN a person saves a change to a model's settings (temperature choice, context 
 
 Every call SHALL carry the reasoning level that Settings › Generation chooses under "Thinking before answering" — Off, Low or On, Off when nothing is stored — and WHERE the reasoning environment variable `BOOKLOOM_REASONING` (or its launch property) is set, it SHALL override the stored setting.
 
-**Source**: S4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/01_Product/07_SETTINGS.md#generation-tab`. In plain words: reasoning stays off by default because it only costs time and can leave the answer empty, but a person can now turn it on for a model that translates better with it. The evaluation scripts keep steering it with the environment variable. How each server is told the level is the `llm-provider` capability's rule.
+**Source**: S4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#generation-tab`. In plain words: reasoning stays off by default because it only costs time and can leave the answer empty, but a person can now turn it on for a model that translates better with it. The evaluation scripts keep steering it with the environment variable. How each server is told the level is the `llm-provider` capability's rule.
 
 #### Scenario: The default is off
 

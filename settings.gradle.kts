@@ -2,7 +2,7 @@
 //
 // Fixes the module set for the whole project: eight Gradle subprojects that are also JPMS modules
 // (`ua.bookloom.<module>`), plus the `build-logic` included build that carries every shared convention.
-// A ninth subproject requires an ADR (docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md).
+// A ninth subproject requires an ADR (docs/spec_baseline/specification/02_Architecture/02_MODULES_AND_LAYERING.md).
 
 pluginManagement {
     // `build-logic` is an included build, not a subproject: its precompiled script plugins
@@ -45,7 +45,7 @@ include(
 // This is deliberately NOT `include(":modules:api")`: that form derives the path from the directory and
 // would rename every project to `:modules:api`, invalidating every `project(":api")` dependency, every
 // `./gradlew :app:run` invocation, and the `:module/package` citation convention the whole corpus uses
-// (docs/implementation_plan/01_MODULE_INVENTORY.md#how-to-cite-a-module).
+// (docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md#how-to-cite-a-module).
 listOf("api", "util", "document", "llm", "pipeline", "persistence", "ui", "app").forEach { module ->
     project(":$module").projectDir = file("modules/$module")
 }

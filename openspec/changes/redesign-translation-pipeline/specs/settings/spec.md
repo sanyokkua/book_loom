@@ -4,7 +4,7 @@
 
 The Models tab SHALL show for the chosen model one identity line, `Understood: {model} · {quant} · {match}`, where the match part reads "exact match", "recognised as {family}, not this exact model" or "recognised as a fine-tune of {base} (behaviour of {base})", and the quant part reads `{label} (server reports {base})` when the name's quant label differs from the one the server reports.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d19--model-identity-reading-model-names`. In plain words: before changing anything, the person sees how BookLoom read the model's name and whether it knows this exact model, a close relative, or only its architecture. That decides how much to trust the advice shown below the line.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d19--model-identity-reading-model-names`. In plain words: before changing anything, the person sees how BookLoom read the model's name and whether it knows this exact model, a close relative, or only its architecture. That decides how much to trust the advice shown below the line.
 
 #### Scenario: An exact match
 
@@ -30,7 +30,7 @@ The Models tab SHALL show for the chosen model one identity line, `Understood: {
 
 The Models tab SHALL show under the identity line the sentence for the model's quant tier, none for excellent, naming the open project's target language where the sentence has one, and SHALL NOT block or change any setting because of it. The tier itself is decided by the llm-provider capability.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d22--quant-and-language-advice`. In plain words: a heavily compressed download translates worse, especially for names and word endings. The person is told plainly and still decides for themselves.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d22--quant-and-language-advice`. In plain words: a heavily compressed download translates worse, especially for names and word endings. The person is told plainly and still decides for themselves.
 
 #### Scenario: A good quant
 
@@ -66,7 +66,7 @@ The Models tab SHALL show under the identity line the sentence for the model's q
 
 The application SHALL show beside each model in every model picker (the Providers model list, the Models chooser and the AI-model choice before Start) a chip with the quant token of the name, or the quant the server's facts report when the name has none, and its tier, such as `Q4_K_M · acceptable`; it SHALL show no chip while no quant is known, and the chip SHALL keep its full width and never be cut short.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d22--quant-and-language-advice`. In plain words: a person choosing among six downloads of one model sees at once which one is the compressed one. A chip that is cut to "Q4_K_…" would defeat the purpose.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d22--quant-and-language-advice`. In plain words: a person choosing among six downloads of one model sees at once which one is the compressed one. A chip that is cut to "Q4_K_…" would defeat the purpose.
 
 #### Scenario: A good chip
 
@@ -97,7 +97,7 @@ The application SHALL show beside each model in every model picker (the Provider
 
 The application SHALL show the neutral label "cloud" beside each model of the Ollama cloud in every model picker, SHALL leave every model listed, and SHALL NOT ask for consent.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, the owner's decision that cloud models are shown with a neutral label, nothing hidden and nothing asked. In plain words: a person can see which models run on someone else's computer, without being warned off or made to click through a dialog.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#providers-tab`, the owner's decision that cloud models are shown with a neutral label, nothing hidden and nothing asked. In plain words: a person can see which models run on someone else's computer, without being warned off or made to click through a dialog.
 
 #### Scenario: A cloud model is labelled
 
@@ -113,7 +113,7 @@ The application SHALL show the neutral label "cloud" beside each model of the Ol
 
 The application SHALL show a text field with the placeholder "Filter models by name" above the list of every model picker (the Providers model list, the Models chooser and the AI-model choice before Start), SHALL narrow the list as the person types to the models whose id contains the typed text ignoring letter case, and WHEN no id matches SHALL show `No model name contains "{text}".`
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d23--timings-interactive-callers-and-the-model-name-filter`, the owner's decision that every model picker has a name filter. In plain words: a server with sixty downloads is hard to scan. Typing `e4b` should leave the e4b models.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d23--timings-interactive-callers-and-the-model-name-filter`, the owner's decision that every model picker has a name filter. In plain words: a server with sixty downloads is hard to scan. Typing `e4b` should leave the e4b models.
 
 #### Scenario: Typing narrows the list
 
@@ -144,7 +144,7 @@ The application SHALL show a text field with the placeholder "Filter models by n
 
 WHEN the person presses Esc in the model-name filter, the application SHALL clear the text and show the whole list; WHEN the person presses the Down key in it, focus SHALL move into the list; and the chosen model SHALL stay chosen while it still matches the typed text.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: a person at the keyboard can filter, step into the list and pick, and a half-typed filter never silently drops the choice already made.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: a person at the keyboard can filter, step into the list and pick, and a half-typed filter never silently drops the choice already made.
 
 #### Scenario: Esc clears the text
 
@@ -170,7 +170,7 @@ WHEN the person presses Esc in the model-name filter, the application SHALL clea
 
 The Models tab SHALL show for the chosen model a neutral line saying whether its maker lists languages — "Declared languages: {count} (includes {codes})", "Declared languages: English only", "Declared languages: not stated by the maker" or "Declared for its base model {base}: {codes}" — and WHERE the open project's language pair is one BookLoom tested the model on, SHALL add "· BookLoom tested it for {source} → {target}".
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d22--quant-and-language-advice`. In plain words: the maker's list is what the maker says, not what was measured, so the line says "declared" and adds BookLoom's own test only where there is one, for the pair it covered. The state and the tested pairs are decided by the llm-provider capability ("Say whether a model's maker declares a language", "Count a language pair as tested only by BookLoom's own runs").
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d22--quant-and-language-advice`. In plain words: the maker's list is what the maker says, not what was measured, so the line says "declared" and adds BookLoom's own test only where there is one, for the pair it covered. The state and the tested pairs are decided by the llm-provider capability ("Say whether a model's maker declares a language", "Count a language pair as tested only by BookLoom's own runs").
 
 #### Scenario: A model with a list
 
@@ -197,7 +197,7 @@ The Models tab SHALL show for the chosen model a neutral line saying whether its
 
 WHERE the project's source and target languages are known, the application SHALL show under the AI-model choice and at Start one line for the side in the worse state, naming both languages when they tie: a warning when the maker lists languages without it, a quieter information line when the maker says nothing or only a base model lists it, and no line when the model's own row declares it or BookLoom tested it for that pair; the line SHALL NOT block Start.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d22--quant-and-language-advice`, the owner's decisions that only BookLoom's own tests count as tested and that a warning is shown only for a real gap. In plain words: a Llama model that lists eight languages, none of them Russian or Ukrainian, deserves a warning. A Gemma model whose maker says nothing deserves a quiet hint, and a pair BookLoom measured deserves silence.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d22--quant-and-language-advice`, the owner's decisions that only BookLoom's own tests count as tested and that a warning is shown only for a real gap. In plain words: a Llama model that lists eight languages, none of them Russian or Ukrainian, deserves a warning. A Gemma model whose maker says nothing deserves a quiet hint, and a pair BookLoom measured deserves silence.
 
 #### Scenario: Both languages are missing from the maker's list
 
@@ -233,7 +233,7 @@ WHERE the project's source and target languages are known, the application SHALL
 
 WHEN a translation is about to start, the application SHALL show under the estimate one line with the sentence of the model's quant tier when the tier is poor, unusable or not supported, or acceptable on a small model of at most 5B, and SHALL NOT show it where BookLoom measured that model at that quant; the line SHALL NOT block Start.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`, `design.md#d22--quant-and-language-advice`. In plain words: a small model at four bits drifts on names and endings, so the person is told once before spending hours. Where BookLoom has itself measured the model at that quant, the warning would only be noise.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`, `design.md#d22--quant-and-language-advice`. In plain words: a small model at four bits drifts on names and endings, so the person is told once before spending hours. Where BookLoom has itself measured the model at that quant, the warning would only be noise.
 
 #### Scenario: A small model at four bits
 
@@ -259,7 +259,7 @@ WHEN a translation is about to start, the application SHALL show under the estim
 
 WHERE an Ollama download belongs to a model family whose library model has a thinking switch but the download has none (its `/api/show` shows no renderer and no thinking capability), the Models tab and Start SHALL show the hint "This download cannot turn thinking off in {engine}, so it is slower. The library model {libraryTag} or a Modelfile with RENDERER and PARSER fixes it." and SHALL NOT block.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: some downloads think at length and cannot be told to stop, only because Ollama serves them without the library model's switch. The person is told why the run is slow and how to get a model that behaves. A model that always thinks by design, such as gpt-oss or a reasoning build, gets no such hint, because nothing fixes it; its Thinking row says so instead.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: some downloads think at length and cannot be told to stop, only because Ollama serves them without the library model's switch. The person is told why the run is slow and how to get a model that behaves. A model that always thinks by design, such as gpt-oss or a reasoning build, gets no such hint, because nothing fixes it; its Thinking row says so instead.
 
 #### Scenario: The hint on the Models tab
 
@@ -285,7 +285,7 @@ WHERE an Ollama download belongs to a model family whose library model has a thi
 
 WHERE a model's licence allows only noncommercial use, the Models tab and Start SHALL show the line "{model} is licensed for noncommercial use only (PolyForm Strict 1.0.0)." and SHALL NOT block.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a person who translates a book to publish it should hear about a licence limit before the run, not after.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a person who translates a book to publish it should hear about a licence limit before the run, not after.
 
 #### Scenario: The note on the Models tab
 
@@ -306,7 +306,7 @@ WHERE a model's licence allows only noncommercial use, the Models tab and Start 
 
 The Models tab SHALL show at its foot "Model facts as of {date}", the date of the model knowledge shipped with the application.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: the advice on this tab comes from tables shipped with the program. A person must be able to tell how old they are.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: the advice on this tab comes from tables shipped with the program. A person must be able to tell how old they are.
 
 #### Scenario: The date is shown
 
@@ -317,7 +317,7 @@ The Models tab SHALL show at its foot "Model facts as of {date}", the date of th
 
 WHERE the provider is Ollama's own connection or a server detected as Ollama, the application SHALL mark as recommended, in the note under the model chooser and at Start, `gemma4:e4b` under 24 GB of memory and `gemma4:26b-a4b` from 24 GB, SHALL offer `gemma4:31b` as an opt-in "best quality, slower, not measured here" from 36 GB, and SHALL offer the `ollama pull` command as text and never run it; for any other provider it SHALL show no such note.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a bigger model that does not fit in memory is slower than a smaller one that does. The computer's memory picks the default, and the person pulls the model themselves. The pull command is Ollama's, so under LM Studio or another server it would tell the person to run something wrong.
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a bigger model that does not fit in memory is slower than a smaller one that does. The computer's memory picks the default, and the person pulls the model themselves. The pull command is Ollama's, so under LM Studio or another server it would tell the person to run something wrong.
 
 #### Scenario: A 16 GB computer
 
@@ -348,7 +348,7 @@ WHERE the provider is Ollama's own connection or a server detected as Ollama, th
 
 The Models tab SHALL show for the chosen model a Thinking row that says what thinking control the model offers and that BookLoom sends thinking off on every call, and SHALL offer "Recommended (off)", "Allow on proofreading and names" and "Always"; WHERE the model has no thinking control, or always thinks, the row SHALL say so, name the level BookLoom sends if any, and offer no choice.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`, the owner's decision that thinking and sampling are set per model on the Models tab. In plain words: thinking helps some tasks and slows all of them, and it differs from model to model. So the choice lives with the model, and the safe default is off.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`, the owner's decision that thinking and sampling are set per model on the Models tab. In plain words: thinking helps some tasks and slows all of them, and it differs from model to model. So the choice lives with the model, and the safe default is off.
 
 #### Scenario: A model with a switch
 
@@ -384,7 +384,7 @@ The Models tab SHALL show for the chosen model a Thinking row that says what thi
 
 The Models tab SHALL show for the chosen model a Sampling row that names what BookLoom sends (the temperature per call kind and the samplers its profile sets) and SHALL offer two choices, Profile default and Custom, Custom with fields for temperature, top_k, top_p and min_p where an empty field keeps the profile's value and a filled temperature is the tab's temperature choice My value.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`, the owner's decision that thinking and sampling are set per model on the Models tab. In plain words: sampling decides how adventurous the wording is. The profile's values are right for most models, and a person with a reason can type their own. There is no "server's own" choice: on LM Studio, llama-server and Ollama's OpenAI path the server's defaults are not neutral, so leaving samplers out would bring back the values the inference capability's "Choose sampling from the model profile" keeps out. The temperature field and the temperature choice already on the tab are one stored value, so they cannot disagree.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`, the owner's decision that thinking and sampling are set per model on the Models tab. In plain words: sampling decides how adventurous the wording is. The profile's values are right for most models, and a person with a reason can type their own. There is no "server's own" choice: on LM Studio, llama-server and Ollama's OpenAI path the server's defaults are not neutral, so leaving samplers out would bring back the values the inference capability's "Choose sampling from the model profile" keeps out. The temperature field and the temperature choice already on the tab are one stored value, so they cannot disagree.
 
 #### Scenario: The default is shown
 
@@ -415,7 +415,7 @@ The Models tab SHALL show for the chosen model a Sampling row that names what Bo
 
 WHERE the provider is treated as llama-server, the address field SHALL show the hint `http://127.0.0.1:9931/v1`.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: llama-server has no fixed port and its address ends in `/v1`. A hint shows the shape of a working address.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: llama-server has no fixed port and its address ends in `/v1`. A hint shows the shape of a working address.
 
 #### Scenario: The hint appears for llama-server
 
@@ -431,7 +431,7 @@ WHERE the provider is treated as llama-server, the address field SHALL show the 
 
 The Providers form SHALL show under the address one line naming the detected engine: "Detected: {engine} {version} · {connection}" for a recognised server, or "Not recognised: generic OpenAI-compatible server".
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: Ollama, LM Studio and llama-server all speak a similar dialect but need different requests. The person sees which one BookLoom thinks is answering, and a wrong guess is visible. Detection itself is the llm-provider capability's "Detect the server engine only when the person saves, tests or asks"; a provider saved as Ollama that answers as another engine fails its test with the message of the llm-provider capability's "Fail the test of an Ollama provider whose server is another engine".
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: Ollama, LM Studio and llama-server all speak a similar dialect but need different requests. The person sees which one BookLoom thinks is answering, and a wrong guess is visible. Detection itself is the llm-provider capability's "Detect the server engine only when the person saves, tests or asks"; a provider saved as Ollama that answers as another engine fails its test with the message of the llm-provider capability's "Fail the test of an Ollama provider whose server is another engine".
 
 #### Scenario: Ollama is recognised
 
@@ -452,7 +452,7 @@ The Providers form SHALL show under the address one line naming the detected eng
 
 WHEN the person uses "Detect again" beside the detected-engine line, the application SHALL ask the server again, SHALL update the line from the answer, and SHALL send no model request.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: after the person upgrades or swaps the program behind an address, one press makes BookLoom look again. It costs no model time.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: after the person upgrades or swaps the program behind an address, one press makes BookLoom look again. It costs no model time.
 
 #### Scenario: The engine changed behind the address
 
@@ -473,7 +473,7 @@ WHEN the person uses "Detect again" beside the detected-engine line, the applica
 
 The Providers form SHALL offer "Treat this server as…" listing the engines Ollama, LM Studio, llama-server, Unsloth, OpenRouter and generic OpenAI-compatible, SHALL show the stored choice as chosen, and SHALL NOT offer it for an app the llm-provider capability refuses as one that cannot translate a book.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: detection can be wrong behind a proxy. The person can say what the server really is; what the choice does to the requests, and that it lasts until Detect again, is the llm-provider capability's "Let the person choose the engine with Treat this server as…", and the apps it refuses are its "Refuse an app that cannot translate a book at the connection test".
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: detection can be wrong behind a proxy. The person can say what the server really is; what the choice does to the requests, and that it lasts until Detect again, is the llm-provider capability's "Let the person choose the engine with Treat this server as…", and the apps it refuses are its "Refuse an app that cannot translate a book at the connection test".
 
 #### Scenario: A choice is stored
 
@@ -494,7 +494,7 @@ The Providers form SHALL offer "Treat this server as…" listing the engines Oll
 
 WHEN the llm-provider capability makes its one offer of Ollama's own connection, the Providers form SHALL show it inline as "This is Ollama. Use Ollama's own connection (recommended)? It keeps the window, overflow and sampling controls." with the buttons Use it and Keep as is.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: Ollama's own connection lets BookLoom set the window and handle overflow, and the OpenAI-style one does not. The person is told, and the choice stays theirs. When the offer is made, that it is made only once and that the provider never switches by itself are the llm-provider capability's "Offer Ollama's own connection once when Ollama answers behind an OpenAI-compatible provider".
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: Ollama's own connection lets BookLoom set the window and handle overflow, and the OpenAI-style one does not. The person is told, and the choice stays theirs. When the offer is made, that it is made only once and that the provider never switches by itself are the llm-provider capability's "Offer Ollama's own connection once when Ollama answers behind an OpenAI-compatible provider".
 
 #### Scenario: The offer is shown
 
@@ -520,7 +520,7 @@ WHEN the llm-provider capability makes its one offer of Ollama's own connection,
 
 WHEN the llm-provider capability's id check stops a test, or ends the first call of a run (which pauses), because LM Studio does not list the model id (reason `model-not-listed`), the application SHALL show `LM Studio has no model "{id}". It would answer with the model that is loaded. Pick a model from the list.`
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: LM Studio answers with whatever is loaded when the id is wrong, so a book could be translated by the wrong model without anyone noticing; the screen says why it stopped. The check itself is the llm-provider capability's "Check the model id against the server's own list where any id is served".
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: LM Studio answers with whatever is loaded when the id is wrong, so a book could be translated by the wrong model without anyone noticing; the screen says why it stopped. The check itself is the llm-provider capability's "Check the model id against the server's own list where any id is served".
 
 #### Scenario: An unknown id
 
@@ -536,7 +536,7 @@ WHEN the llm-provider capability's id check stops a test, or ends the first call
 
 WHEN the llm-provider capability removes a typed `@variant` from an LM Studio model id (after a passing models check or Save, not while typing), the Providers form SHALL say once `"@{variant}" was removed from the model id: it would load a second copy with default settings.`
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: the person typed something and BookLoom changed it, so the screen says what was changed and why. The removal itself is the llm-provider capability's "Never send an LM Studio quant variant".
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: the person typed something and BookLoom changed it, so the screen says what was changed and why. The removal itself is the llm-provider capability's "Never send an LM Studio quant variant".
 
 #### Scenario: A variant is removed
 
@@ -547,7 +547,7 @@ WHEN the llm-provider capability removes a typed `@variant` from an LM Studio mo
 
 WHEN a run has just started on an LM Studio model that is not loaded, the application SHALL show the line "LM Studio will load it with its own default settings; the window may differ." as an information toast (never blocking).
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: LM Studio loads a model on first use with settings of its own, so the window BookLoom budgets for may not be the one in use. The person hears it as the run starts.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: LM Studio loads a model on first use with settings of its own, so the window BookLoom budgets for may not be the one in use. The person hears it as the run starts.
 
 #### Scenario: Toast shown after Start
 
@@ -563,7 +563,7 @@ WHEN a run has just started on an LM Studio model that is not loaded, the applic
 
 The Providers test SHALL offer the optional stage "Advanced features (optional, uses the model)" for the selected model, never started by the other stages, and SHALL show one verdict line per check it ran, also on the Models tab of that model.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#three-stage-verification`, `design.md#d17--server-engines-detection-and-traits`. In plain words: a server of unknown make may or may not honour structured answers, a thinking switch, extra samplers or an answer cap. A few short, invented-text calls tell, and the answer is remembered. They are optional because they use the model. Which checks are sent and how the verdicts are stored is the llm-provider capability's "Check what a server honours only when the person asks".
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#three-stage-verification`, `design.md#d17--server-engines-detection-and-traits`. In plain words: a server of unknown make may or may not honour structured answers, a thinking switch, extra samplers or an answer cap. A few short, invented-text calls tell, and the answer is remembered. They are optional because they use the model. Which checks are sent and how the verdicts are stored is the llm-provider capability's "Check what a server honours only when the person asks".
 
 #### Scenario: Verdicts are listed
 
@@ -589,7 +589,7 @@ The Providers test SHALL offer the optional stage "Advanced features (optional, 
 
 WHILE a translation run is translating, the Providers screen SHALL refuse Test inference and the Advanced features stage before any model call is sent and SHALL show "BookLoom is translating. Try again when the run ends or while it is paused."; WHILE the run is paused, stopped or ended, both SHALL run.
 
-**Source**: `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#three-stage-verification`, `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: a local model answers one call at a time, so BookLoom already refuses a model check while a run translates and lets it run while the run is paused. Two things change: the sentence the Providers screen shows (it read "Unavailable while “Translation” is running. Wait for it to finish or stop it.") and the new Advanced features stage, which is refused the same way. The other model actions keep the `app-shell` capability's "Disable model actions while a translation is at work".
+**Source**: `docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#three-stage-verification`, `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: a local model answers one call at a time, so BookLoom already refuses a model check while a run translates and lets it run while the run is paused. Two things change: the sentence the Providers screen shows (it read "Unavailable while “Translation” is running. Wait for it to finish or stop it.") and the new Advanced features stage, which is refused the same way. The other model actions keep the `app-shell` capability's "Disable model actions while a translation is at work".
 
 #### Scenario: Test inference during a run
 
@@ -610,7 +610,7 @@ WHILE a translation run is translating, the Providers screen SHALL refuse Test i
 
 The Providers area SHALL show for a selected provider whose host is not a loopback address (`127.0.0.1`, `::1` or `localhost`) "Your book stays private when you use a local model. With a provider outside this computer, the text you translate is sent to {host}.", for a loopback host only its first sentence, and no consent dialog or acknowledgement checkbox for any provider.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`, the owner's decision that privacy is stated as "private when used with local models" and that no consent is asked. In plain words: BookLoom keeps books on the machine only when the model is local. For any other provider it says where the text goes, and leaves the choice to the person.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`, the owner's decision that privacy is stated as "private when used with local models" and that no consent is asked. In plain words: BookLoom keeps books on the machine only when the model is local. For any other provider it says where the text goes, and leaves the choice to the person.
 
 #### Scenario: A provider outside this computer
 
@@ -631,7 +631,7 @@ The Providers area SHALL show for a selected provider whose host is not a loopba
 
 WHERE the selected provider is LM Studio, the Providers area SHALL show "LM Studio keeps request text in its own server log unless you turn that off in LM Studio."
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: the book's text stays on the machine, but LM Studio may write it to a log file there. The person is told, and can turn that off in LM Studio.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: the book's text stays on the machine, but LM Studio may write it to a log file there. The person is told, and can turn that off in LM Studio.
 
 #### Scenario: The note is shown for LM Studio
 
@@ -647,7 +647,7 @@ WHERE the selected provider is LM Studio, the Providers area SHALL show "LM Stud
 
 WHERE the provider is treated as Unsloth, the Providers form SHALL show the key hint "Create a key in Unsloth › Settings › API and put its environment-variable name here, for example UNSLOTH_API_KEY.", the line "Unsloth's own chat tools (web search, code) are separate from BookLoom; BookLoom turns them off on every request.", and, WHEN the sign-in is refused, the sentence "Unsloth needs an API key. Create one in Unsloth › Settings › API and put its environment-variable name here."
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: Unsloth needs a key and has its own chat tools. The form says where to make the key, that the key is named by a variable and never typed in, and that BookLoom keeps the tools out of the translation.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: Unsloth needs a key and has its own chat tools. The form says where to make the key, that the key is named by a variable and never typed in, and that BookLoom keeps the tools out of the translation.
 
 #### Scenario: The hint and the tools note
 
@@ -668,7 +668,7 @@ WHERE the provider is treated as Unsloth, the Providers form SHALL show the key 
 
 WHEN the llm-provider capability refuses an app at the connection test, the application SHALL show one plain sentence for its reason: "This app does not support structured replies, so BookLoom cannot use it." for `not-suitable-structured`, or "This address chats with documents, not with a model." for `not-suitable-documents`.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: some desktop apps look like an AI server but cannot do the job. A person told why gives up quickly and does not hunt through error codes. How the apps are recognised is the llm-provider capability's "Refuse an app that cannot translate a book at the connection test".
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: some desktop apps look like an AI server but cannot do the job. A person told why gives up quickly and does not hunt through error codes. How the apps are recognised is the llm-provider capability's "Refuse an app that cannot translate a book at the connection test".
 
 #### Scenario: GPT4All
 
@@ -689,7 +689,7 @@ WHEN the llm-provider capability refuses an app at the connection test, the appl
 
 WHEN a Hugging Face URL, an `ollama run`, `llama-server -hf` or `lms get` command, a file name or a repository id is pasted into the "Add a model id" box, the application SHALL show one line under it saying what was understood, `Understood: Hugging Face repo {repo}, file {file} → {model} · {quant}`, SHALL never fetch the URL, and WHERE the id is not in the server's list SHALL add "Not in this server's list yet."
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d19--model-identity-reading-model-names`. In plain words: people copy a model's link or its pull command from a web page. BookLoom reads it, says what it made of it, and never goes to the internet to check.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#models-tab`, `design.md#d19--model-identity-reading-model-names`. In plain words: people copy a model's link or its pull command from a web page. BookLoom reads it, says what it made of it, and never goes to the internet to check.
 
 #### Scenario: A repository and a file
 
@@ -715,7 +715,7 @@ WHEN a Hugging Face URL, an `ollama run`, `llama-server -hf` or `lms get` comman
 
 The Generation tab SHALL show what Fast, Balanced and Max do as a read-only table with the rows "Fixing calls", "Proofread" and "Extra model calls", SHALL say under it "The same for every model.", and SHALL offer no Thinking and no Sampling choice.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#generation-tab`, `design.md#d2--the-runs-three-stages-and-the-quality-dial`, the owner's decision that the dial means the same for every model. In plain words: the person sees what Fast, Balanced and Max do, and what each costs in calls, without being able to break them. Thinking and sampling moved to the model they belong to.
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#generation-tab`, `design.md#d2--the-runs-three-stages-and-the-quality-dial`, the owner's decision that the dial means the same for every model. In plain words: the person sees what Fast, Balanced and Max do, and what each costs in calls, without being able to break them. Thinking and sampling moved to the model they belong to.
 
 #### Scenario: The rows and their cells
 
@@ -747,7 +747,7 @@ The Generation tab SHALL show what Fast, Balanced and Max do as a read-only tabl
 
 The Generation tab SHALL list the time limits as read-only rules: a prescan waits 120 s, longer for a model that always thinks; every other call waits 0.5 s per expected output token, at least the provider's request timeout and at most 600 s; a stream that sends nothing for 60 s is stopped. It SHALL offer no control to change them.
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#generation-tab`, S4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: how long BookLoom waits for each kind of call follows fixed rules, and the tab says what they are rather than offering a knob that is not there. The rules themselves are the llm-provider capability's "Wait for a chat call by its kind, its expected output and its model" and "Read an Ollama-native reply as a stream that must keep arriving".
+**Source**: `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#generation-tab`, S4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: how long BookLoom waits for each kind of call follows fixed rules, and the tab says what they are rather than offering a knob that is not there. The rules themselves are the llm-provider capability's "Wait for a chat call by its kind, its expected output and its model" and "Read an Ollama-native reply as a stream that must keep arriving".
 
 #### Scenario: The limits cannot be edited
 
@@ -758,7 +758,7 @@ The Generation tab SHALL list the time limits as read-only rules: a prescan wait
 
 The Models tab SHALL show, as found out from the program, how much the model can read at once, who sets that window on this engine, how much is loaded now where the program says so, and for each kind of call whether structured answers come as a schema, as plain JSON or not at all, each from a test or from a refusal. It SHALL NOT store what it read from a server.
 
-**Source**: decision 6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#models-decision-6`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: before changing a number, a person sees what the model itself reports about its limits and who controls them. The structured-answer row follows what BookLoom learned for each kind of call, since a server may take a schema for one and refuse it for another.
+**Source**: decision 6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#models-decision-6`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: before changing a number, a person sees what the model itself reports about its limits and who controls them. The structured-answer row follows what BookLoom learned for each kind of call, since a server may take a schema for one and refuse it for another.
 
 #### Scenario: Reported limits are shown
 
@@ -799,7 +799,7 @@ The Models tab SHALL show, as found out from the program, how much the model can
 
 The Automation tab SHALL offer When to stop and ask you, a default quality, and switches to open the review desk when a translation finishes with segments to review, to Keep the computer awake (on by default) and to Reopen the last project (on by default), and SHALL NOT offer a switch for operating-system notifications or for a last check before saving.
 
-**Source**: S4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/01_Product/07_SETTINGS.md#automation-tab`, ADR-0045, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: how often BookLoom interrupts, and what it does at the end of a run, is the person's choice. Notifications are not offered because BookLoom sends none. The last-check switch is gone because export no longer makes a model call. What the window opens at launch with Reopen the last project on is the `app-shell` capability's rule.
+**Source**: S4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#automation-tab`, ADR-0045, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: how often BookLoom interrupts, and what it does at the end of a run, is the person's choice. Notifications are not offered because BookLoom sends none. The last-check switch is gone because export no longer makes a model call. What the window opens at launch with Reopen the last project on is the `app-shell` capability's rule.
 
 #### Scenario: The stop-and-ask choice is stored
 
@@ -835,7 +835,7 @@ The Automation tab SHALL offer When to stop and ask you, a default quality, and 
 
 The Appearance, Automation and Storage & logs tabs SHALL apply a change at once and SHALL say when it takes effect: "Changes apply at once", "to the segments not translated yet", or "after BookLoom restarts".
 
-**Source**: theme H, option H1 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#settings--s1s5-h1-decisions-67`. In plain words: a switch takes effect when flipped, and the screen is honest about the cases where the next launch is what changes. The Generation tab no longer holds a setting to flip, so it is not in this list.
+**Source**: theme H, option H1 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#settings--s1s5-h1-decisions-67`. In plain words: a switch takes effect when flipped, and the screen is honest about the cases where the next launch is what changes. The Generation tab no longer holds a setting to flip, so it is not in this list.
 
 #### Scenario: A theme change applies at once
 
@@ -853,7 +853,7 @@ The Appearance, Automation and Storage & logs tabs SHALL apply a change at once 
 
 WHEN the person opens a check's details, the settings screen SHALL show a dialog with a verdict banner, the request line (the route actually used) with Copy as curl (key hidden), three columns Body, a table of Status, Time, First token, Speed, Tokens and Structured, and Response, and a footer that switches between the tests that have run and closes; a copy is confirmed in the footer, never a toast. A figure the engine does not report SHALL read –, never 0.
 
-**Source**: S2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#dialog--test-connection--models--inference-s2`, `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: when a test fails, a person or a helper can see exactly what was asked and what came back, and can reproduce it in a terminal without the secret being exposed. A speed the server never reported is shown as missing, not as zero, so it cannot be mistaken for a measurement.
+**Source**: S2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#dialog--test-connection--models--inference-s2`, `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: when a test fails, a person or a helper can see exactly what was asked and what came back, and can reproduce it in a terminal without the secret being exposed. A speed the server never reported is shown as missing, not as zero, so it cannot be mistaken for a measurement.
 
 #### Scenario: The dialog shows the request and the answer
 
@@ -895,7 +895,7 @@ WHEN the person opens a check's details, the settings screen SHALL show a dialog
 
 The Models tab SHALL offer for each model a Use context window number (filled in from what is loaded) from 512 to 1,048,576 tokens, which is the one size every call to that model uses and is read-only where BookLoom cannot set the window on that engine, a Limit answer length switch no larger than the window, and under Advanced the field that carries the answer length, `max_completion_tokens` or `max_tokens`, which SHALL NOT apply to Ollama.
 
-**Source**: decision 6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#models-decision-6`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a person can widen the window a model reads or cap how long it may answer, and for OpenAI-style servers choose the field name the server expects. Ollama has no such choice, so the field is not offered for it. Where the server owns the window, the number is shown but cannot be edited, so it never pretends to be a setting.
+**Source**: decision 6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#models-decision-6`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a person can widen the window a model reads or cap how long it may answer, and for OpenAI-style servers choose the field name the server expects. Ollama has no such choice, so the field is not offered for it. Where the server owns the window, the number is shown but cannot be edited, so it never pretends to be a setting.
 
 #### Scenario: A context window outside its range
 
@@ -941,7 +941,7 @@ The Models tab SHALL offer for each model a Use context window number (filled in
 
 The Models tab SHALL list under "Settings this model refused" each setting the model refused, its scope (the whole model, or one call kind or schema), when it was refused and what BookLoom did instead, with Send again on each row that acts on that scope only, and SHALL say "Nothing refused" when the list is empty.
 
-**Source**: S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), FR-INFER-09e (`docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), `docs/specification/mockups/README.md#refused-settings-s6`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: BookLoom learns by itself that a model rejects a setting, sometimes for every call and sometimes for one kind of call, and the person can see what it learned and undo exactly that part if the model was updated.
+**Source**: S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), FR-INFER-09e (`docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), `docs/spec_baseline/specification/mockups/README.md#refused-settings-s6`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: BookLoom learns by itself that a model rejects a setting, sometimes for every call and sometimes for one kind of call, and the person can see what it learned and undo exactly that part if the model was updated.
 
 #### Scenario: A refusal is listed
 
@@ -982,7 +982,7 @@ The Models tab SHALL list under "Settings this model refused" each setting the m
 
 The settings screen SHALL carry a subtitle saying that books stay private when a local model is used and that BookLoom sends the text only to the AI model chosen here, and SHALL NOT say the text always stays on this computer; it SHALL present six areas — Providers, Models, Generation, Appearance, Automation, and Storage & logs — as a row of tabs whose selected tab is marked by an underline, every one enabled, with no accent row on Appearance.
 
-**Source**: decision 6, S4, S5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#settings--s1s5-h1-decisions-67`, `docs/specification/01_Product/07_SETTINGS.md#settings-tabs`, the owner's decision that privacy is stated as "private when used with local models". In plain words: with the models, generation, automation and storage tabs built, nothing is greyed any more. The subtitle must not promise more than BookLoom can keep: with a remote provider the book's text leaves the computer, so only the local-model case is called private.
+**Source**: decision 6, S4, S5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#settings--s1s5-h1-decisions-67`, `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#settings-tabs`, the owner's decision that privacy is stated as "private when used with local models". In plain words: with the models, generation, automation and storage tabs built, nothing is greyed any more. The subtitle must not promise more than BookLoom can keep: with a remote provider the book's text leaves the computer, so only the local-model case is called private.
 
 #### Scenario: All six areas are listed
 
@@ -1014,7 +1014,7 @@ The settings screen SHALL carry a subtitle saying that books stay private when a
 
 WHEN Test inference passes for a model of a stored provider, the application SHALL store the measured speed in seconds per segment on that model's settings, with where it was measured (the later measurement winning), and the estimate before Start SHALL say where. WHEN a translation ends it SHALL store its seconds per drafted segment, pauses left out, and nothing if none was drafted; a translation or names pass SHALL also store seconds per call of each kind it made.
 
-**Source**: S2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: an estimate needs a measurement behind it. The test the person just ran is one, and a finished run measures each kind of call (draft, repair, proofread, names), which is more exact than one figure per segment. Storing them on the model keeps them after a restart and keeps two models apart.
+**Source**: S2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: an estimate needs a measurement behind it. The test the person just ran is one, and a finished run measures each kind of call (draft, repair, proofread, names), which is more exact than one figure per segment. Storing them on the model keeps them after a restart and keeps two models apart.
 
 #### Scenario: The measured speed is stored and named
 

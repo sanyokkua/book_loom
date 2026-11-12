@@ -4,7 +4,7 @@
 
 The export screen SHALL show four tiles filled from the project before any export: how many segments are done ("74 of 142"), how many were translated without changes, how many were reviewed by the person, and "checked when written", "—" until a file is written. After a written export the first tile SHALL read what the stored export wrote and the fourth "checked: opens, nothing missing", also after a restart.
 
-**Source**: docs/specification/mockups/README.md#step-5--export--e1e3-i, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E1). In plain words: the person sees how much of the book is done before choosing to write it, instead of four empty tiles that only fill after the file exists.
+**Source**: docs/spec_baseline/specification/mockups/README.md#step-5--export--e1e3-i, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E1). In plain words: the person sees how much of the book is done before choosing to write it, instead of four empty tiles that only fill after the file exists.
 
 #### Scenario: Tiles show the project's figures before an export
 
@@ -25,7 +25,7 @@ The export screen SHALL show four tiles filled from the project before any expor
 
 The export screen's title and author card SHALL show the original title and author read-only and the translated title and author editable, SHALL write the translated title the person typed into the exported book, and WHERE the book names no author SHALL say so in one line, "The book names no author".
 
-**Source**: docs/specification/mockups/README.md#step-5--export--e1e3-i, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E1). In plain words: the person can correct the book's translated title before it is written, and an empty author field says the book simply names none instead of looking like a bug.
+**Source**: docs/spec_baseline/specification/mockups/README.md#step-5--export--e1e3-i, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E1). In plain words: the person can correct the book's translated title before it is written, and an empty author field says the book simply names none instead of looking like a bug.
 
 #### Scenario: The translated title is editable and written
 
@@ -46,7 +46,7 @@ The export screen's title and author card SHALL show the original title and auth
 
 The system SHALL take the book's original title from the first source that has one — the book's metadata title, then for Markdown the front-matter title, then for Markdown the first heading, then the file name without its extension — and the card SHALL show under it the reason line of that source: "From the book's details", "From the front matter", "From the first heading" or "The book names no title — the file name is used".
 
-**Source**: docs/specification/mockups/README.md#step-5--export--e1e3-i, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md "K8". In plain words: every book gets a title, a Markdown book still gets one from its own text, a plain-text book uses its file name, and the person can see which of these it was.
+**Source**: docs/spec_baseline/specification/mockups/README.md#step-5--export--e1e3-i, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md "K8". In plain words: every book gets a title, a Markdown book still gets one from its own text, a plain-text book uses its file name, and the person can see which of these it was.
 
 #### Scenario: The metadata title comes first
 
@@ -72,7 +72,7 @@ The system SHALL take the book's original title from the first source that has o
 
 WHEN the person presses "✦ Suggest a name", the application SHALL open a short progress dialog with one step that shows what was sent (title, target language, format) and the answer (the name and how it was made), with the line "Cancel keeps the current name." and the buttons Cancel and "Use this name".
 
-**Source**: docs/specification/mockups/README.md#dialog--suggest-a-file-name-g4-short, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E1, G4). In plain words: a model call that picks a file name is still a model call, so the person sees it and decides whether to take its answer.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--suggest-a-file-name-g4-short, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E1, G4). In plain words: a model call that picks a file name is still a model call, so the person sees it and decides whether to take its answer.
 
 #### Scenario: A suggested name is used only on request
 
@@ -93,7 +93,7 @@ WHEN the person presses "✦ Suggest a name", the application SHALL open a short
 
 WHEN an export runs the last check before saving, the application SHALL show a progress dialog with the groups Steps (Check the translation is complete, Fix he/she forms that became known, Translate unsure segments again), Reread next to the neighbours (one item per segment with its result) and Finish (Write the file), and the figures line "48 % · 12 of 25 steps · Left about 2 min".
 
-**Source**: docs/specification/mockups/README.md#dialog--export--last-check-before-saving-g4-long--e2-e3, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E2, E3, G4). In plain words: the last check can take minutes, so the person sees each step and each reread paragraph rather than a spinner.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--export--last-check-before-saving-g4-long--e2-e3, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E2, E3, G4). In plain words: the last check can take minutes, so the person sees each step and each reread paragraph rather than a spinner.
 
 #### Scenario: The groups and figures are shown
 
@@ -104,7 +104,7 @@ WHEN an export runs the last check before saving, the application SHALL show a p
 
 Selecting a reread item SHALL show a bordered Before | After grid holding the segment before, this segment and the segment after, and a fix SHALL show the old text struck through above the new one; an item that did not change SHALL read "Unchanged — kept as it was".
 
-**Source**: docs/specification/mockups/README.md#dialog--export--last-check-before-saving-g4-long--e2-e3, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E2). In plain words: the person can judge each change the pass made in its place in the story, and unchanged paragraphs are said to be unchanged.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--export--last-check-before-saving-g4-long--e2-e3, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E2). In plain words: the person can judge each change the pass made in its place in the story, and unchanged paragraphs are said to be unchanged.
 
 #### Scenario: A fix shows the old text struck through
 
@@ -120,7 +120,7 @@ Selecting a reread item SHALL show a bordered Before | After grid holding the se
 
 The last-check dialog SHALL offer "Write the file now", which asks first "6 of 18 reread, 1 fixed; the other 12 stay as they are", and Cancel, which asks "Cancel the export? No file is written."; Continue in background SHALL hide the dialog and Esc SHALL hide it too.
 
-**Source**: docs/specification/mockups/README.md#dialog--export--last-check-before-saving-g4-long--e2-e3, docs/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E2, E3). In plain words: stopping early is allowed but never silent: the person is told what stays as it is, and cancelling is confirmed because it throws the work away.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--export--last-check-before-saving-g4-long--e2-e3, docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E2, E3). In plain words: stopping early is allowed but never silent: the person is told what stays as it is, and cancelling is confirmed because it throws the work away.
 
 #### Scenario: Write the file now asks what stays
 
@@ -151,7 +151,7 @@ The last-check dialog SHALL offer "Write the file now", which asks first "6 of 1
 
 WHILE the run state is Translating, Stuck call, Pausing or Stopping, the export screen SHALL show the banner "Pause or stop the translation to export. You can export what is done so far; the rest keeps the original text." with a Pause button; WHEN some but not all segments are translated and the run state is none of these, it SHALL show "74 of 142 segments are translated. The other segments keep the original text".
 
-**Source**: docs/specification/mockups/README.md#step-5--export--e1e3-i, docs/specification/mockups/README.md#changes-while-translating-i. In plain words: the person is told before writing exactly what a partial book will hold, and how to get to a state where it can be written.
+**Source**: docs/spec_baseline/specification/mockups/README.md#step-5--export--e1e3-i, docs/spec_baseline/specification/mockups/README.md#changes-while-translating-i. In plain words: the person is told before writing exactly what a partial book will hold, and how to get to a state where it can be written.
 
 #### Scenario: The banner follows the run state
 
@@ -162,7 +162,7 @@ WHILE the run state is Translating, Stuck call, Pausing or Stopping, the export 
 
 WHEN an export starts with the last check switched on, the system SHALL run the whole-book backward revision — the locked-name sweep and the resolution of deferred items — before the book is written, and SHALL leave every segment the person edited as the person wrote it.
 
-**Source**: FR-EXPORT-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`), FR-REVIEW-10 (`#fr-review`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`, docs/specification/mockups/README.md#dialog--export--last-check-before-saving-g4-long--e2-e3. In plain words: a name settled in chapter 20 can be carried back into chapter 2 before the book is written; a person's own edit is never overwritten by it.
+**Source**: FR-EXPORT-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10 (`#fr-algo`), FR-REVIEW-10 (`#fr-review`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`, docs/spec_baseline/specification/mockups/README.md#dialog--export--last-check-before-saving-g4-long--e2-e3. In plain words: a name settled in chapter 20 can be carried back into chapter 2 before the book is written; a person's own edit is never overwritten by it.
 
 #### Scenario: A locked name is swept through earlier chapters
 
@@ -210,7 +210,7 @@ WHEN an export starts with the last check switched on, the system SHALL run the 
 
 IF a file already exists at the Save to path, or at the path of a side file that is chosen, THEN the export SHALL ask before replacing it, naming the file, and SHALL replace it only when the person answers that it may be replaced; the screen SHALL carry no replace switch.
 
-**Source**: FR-EXPORT-03, FR-EXPORT-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), ADR-0035, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, docs/specification/mockups/README.md#step-5--export--e1e3-i. In plain words: an existing book is never replaced by accident, and the protection is a question at the moment it matters; side files follow the same rule.
+**Source**: FR-EXPORT-03, FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), ADR-0035, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, docs/spec_baseline/specification/mockups/README.md#step-5--export--e1e3-i. In plain words: an existing book is never replaced by accident, and the protection is a question at the moment it matters; side files follow the same rule.
 
 #### Scenario: Replacing is off by default
 
@@ -241,7 +241,7 @@ IF a file already exists at the Save to path, or at the path of a side file that
 
 The system SHALL write the book to a temporary file beside the destination, under a name no file in that folder holds, so a file already there is never written over or removed, open it again, and move it onto the destination — replacing an existing file only when the person agreed — only when it has the source's body segment count and every body segment keeps its placeholders, alt text set aside; a segment whose stored target fails the placeholder gate, or whose placeholders differ, SHALL be written in its source and reported; any other failure SHALL leave the destination unchanged.
 
-**Source**: FR-EXPORT-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), `docs/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`, ADR-0041. In plain words: the book is proven to open with nothing lost before it takes the place of a good one, and one paragraph whose formatting broke is written in its source and named instead of costing the whole book; only body segments are counted, because auxiliary segments can legitimately merge or vanish on re-opening.
+**Source**: FR-EXPORT-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`, ADR-0041. In plain words: the book is proven to open with nothing lost before it takes the place of a good one, and one paragraph whose formatting broke is written in its source and named instead of costing the whole book; only body segments are counted, because auxiliary segments can legitimately merge or vanish on re-opening.
 
 #### Scenario: A segment-count mismatch leaves the destination alone
 
@@ -328,7 +328,7 @@ The system SHALL write the book to a temporary file beside the destination, unde
 
 The proposed name SHALL be the name the command line gives its output for the same source file and target language; WHERE the project is named and another project of the same book has the same pair, it SHALL add after the language code a label: the part of the project name after its automatic name, else after the book title, else the whole name, lower-cased, spaces turned into hyphens, keeping only letters, digits and hyphens.
 
-**Source**: FR-EXPORT-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, docs/specification/mockups/README.md#project-names--one-book-several-translations-pn. In plain words: the screen and the command line never disagree about where a book goes, and a second translation of the same pair never replaces the first on disk.
+**Source**: FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, docs/spec_baseline/specification/mockups/README.md#project-names--one-book-several-translations-pn. In plain words: the screen and the command line never disagree about where a book goes, and a second translation of the same pair never replaces the first on disk.
 
 #### Scenario: The command line names its output the same way
 
@@ -354,7 +354,7 @@ The proposed name SHALL be the name the command line gives its output for the sa
 
 The export screen SHALL show where the book is saved as a short path such as "Books ▸ earth-gravity.uk.md (in your home folder)" whose tooltip holds the full path, with Change… that opens the system's save dialog and "✦ Suggest a name" that proposes a file name.
 
-**Source**: FR-EXPORT-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, docs/specification/mockups/README.md#step-5--export--e1e3-i. In plain words: the person sees a readable place, not a long absolute path, and can still read the full path on hover; the name matches the command line's because for a `.fb2.zip` book the suffix is two extensions and the two must never disagree about where a book goes.
+**Source**: FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, docs/spec_baseline/specification/mockups/README.md#step-5--export--e1e3-i. In plain words: the person sees a readable place, not a long absolute path, and can still read the full path on hover; the name matches the command line's because for a `.fb2.zip` book the suffix is two extensions and the two must never disagree about where a book goes.
 
 #### Scenario: The Save to field and Browse are present
 
@@ -370,7 +370,7 @@ The export screen SHALL show where the book is saved as a short path such as "Bo
 
 WHILE the run state is Translating, Stuck call, Pausing or Stopping, Export book SHALL be disabled with the tooltip "Pause or stop the translation to export"; with nothing translated yet it SHALL be disabled with the banner "Nothing is translated yet."; otherwise it SHALL be available.
 
-**Source**: FR-REVIEW-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-X1 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), ADR-0035, docs/specification/mockups/README.md#changes-while-translating-i, docs/specification/mockups/README.md#run-states-a. In plain words: the book can be taken out whenever something is translated and the run is not actively deciding segments.
+**Source**: FR-REVIEW-07 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-X1 (`docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), ADR-0035, docs/spec_baseline/specification/mockups/README.md#changes-while-translating-i, docs/spec_baseline/specification/mockups/README.md#run-states-a. In plain words: the book can be taken out whenever something is translated and the run is not actively deciding segments.
 
 #### Scenario: A paused run can be exported
 
@@ -398,7 +398,7 @@ The export screen SHALL offer the last check before saving as a switch ("Check t
 
 The switch SHALL be off and disabled for a partial export, with the note "Runs when the whole book is translated".
 
-**Source**: FR-EXPORT-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-BRIEF-08 (`#fr-brief`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`, docs/specification/mockups/README.md#step-5--export--e1e3-i. In plain words: the last check is slow, so it starts from the person's saved preference and is not offered while part of the book is untranslated.
+**Source**: FR-EXPORT-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-BRIEF-08 (`#fr-brief`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`, docs/spec_baseline/specification/mockups/README.md#step-5--export--e1e3-i. In plain words: the last check is slow, so it starts from the person's saved preference and is not offered while part of the book is untranslated.
 
 #### Scenario: The pass follows the quality dial by default
 

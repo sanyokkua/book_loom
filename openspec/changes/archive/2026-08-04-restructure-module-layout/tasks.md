@@ -114,16 +114,16 @@ proof that the move is safe is precisely that nothing else moved with it.
 
 ## 5. Update the documentation that describes the layout
 
-- [x] 5.1 Confirm `docs/adr/ADR-0021-modules-under-a-single-parent-directory.md` is present and accurate against what
+- [x] 5.1 Confirm `docs/spec_baseline/adr/ADR-0021-modules-under-a-single-parent-directory.md` is present and accurate against what
       groups 1-4 actually did — in particular that its "Supersedes" header and Links section name all five superseded
       passages: `01_BUILD_AND_TOOLING.md#project-layout` (the directory tree) plus the `app/build/dist/libs/` staging
       path at each of its four occurrences — `01_BUILD_AND_TOOLING.md#javafx-plugin` and `#task-surface`, and
-      `03_PACKAGING_JPACKAGE.md#approach` twice. Re-run `grep -rn 'build/dist' docs/specification/` and check it
+      `03_PACKAGING_JPACKAGE.md#approach` twice. Re-run `grep -rn 'build/dist' docs/spec_baseline/specification/` and check it
       returns exactly those four staging-path lines: an earlier draft of the ADR named only two of them while
       asserting "no other clause in either file is affected", and `#javafx-plugin` is the easy one to miss because the
       path sits mid-sentence in a section otherwise about the JavaFX Gradle plugin. The ADR is the only sanctioned
       record of the divergence from the frozen spec; a clause it fails to name is a divergence nobody recorded.
-      → `docs/adr/` · ADR-0016 (a spec gap is remedied by an ADR, never a spec edit)
+      → `docs/spec_baseline/adr/` · ADR-0016 (a spec gap is remedied by an ADR, never a spec edit)
 - [x] 5.2 Update the "Modules (Gradle subprojects = JPMS modules …)" section of `AGENTS.md` to state that the nine
       code directories live under `modules/` while the Gradle project names stay `:api` … `:app`, and cite ADR-0021.
       `AGENTS.md` is the first file every agent and contributor reads; if it does not say where the code is, the move
@@ -137,11 +137,11 @@ proof that the move is safe is precisely that nothing else moved with it.
       `-p modules/build-logic`, and add one sentence recording that module directories now live under `modules/`
       while the `:module/package` citation convention is unaffected. That convention is the join key the whole corpus
       uses; readers need it stated explicitly that it did *not* change, or they will assume it did.
-      → `docs/implementation_plan/` · `01_MODULE_INVENTORY.md:96-101`, `#how-to-cite-a-module`, ADR-0021
+      → `docs/spec_baseline/implementation_plan/` · `01_MODULE_INVENTORY.md:96-101`, `#how-to-cite-a-module`, ADR-0021
 
 ## 6. Add the backlog entry, changing no existing number
 
-- [x] 6.1 In `docs/implementation_plan/CHANGE_BACKLOG.md`, add this change to the Stage A table as an **unnumbered
+- [x] 6.1 In `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md`, add this change to the Stage A table as an **unnumbered
       row** (number column `—`) placed between change 1 and change 2, with the exit gate "`./gradlew clean build check
       spotlessCheck` green from the new layout" and a one-line note that it runs after change 1 and before change 2.
       Change **1-28 keep their numbers and every prose cross-reference is left exactly as it is** — including the
@@ -153,7 +153,7 @@ proof that the move is safe is precisely that nothing else moved with it.
       numbered slots**, because ADR-0017's "28 changes" counts the planned delivery sequence that this interstitial
       infrastructure change does not join — so a reader who counts rows and gets 29 is not left guessing. Update
       nothing in `07_ROADMAP.md`, `AGENTS.md`, `lefthook.yml`, or any ADR: leaving all of them untouched is the point.
-      → `docs/implementation_plan/` · `CHANGE_BACKLOG.md#stage-a`, `#how-to-use-this`, design.md D5
+      → `docs/spec_baseline/implementation_plan/` · `CHANGE_BACKLOG.md#stage-a`, `#how-to-use-this`, design.md D5
 
 ## 7. Green gate
 
@@ -187,7 +187,7 @@ proof that the move is safe is precisely that nothing else moved with it.
       → repo root · `tooling/hooks-test/README.md`, task 4.3, design.md "Risks"
 - [x] 7.7 Confirm no new module or package was added, so `01_MODULE_INVENTORY.md` needs no inventory edit beyond the
       layout sentence added in task 5.4 — the eight modules, their packages, and the `arch-test` source set at
-      `:app/src/archTest/java` are all unchanged. → `docs/implementation_plan/` · `01_MODULE_INVENTORY.md`
+      `:app/src/archTest/java` are all unchanged. → `docs/spec_baseline/implementation_plan/` · `01_MODULE_INVENTORY.md`
 - [x] 7.8 Confirm the offline invariant is untouched: this change adds no dependency and no code, so no new network
       path exists. The only network access remains Gradle dependency resolution and CI, both build-time.
       → whole project · `03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`, DD-01

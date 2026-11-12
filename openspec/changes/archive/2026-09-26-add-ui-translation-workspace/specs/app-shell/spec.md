@@ -25,8 +25,8 @@ messages appear.
 The actions area SHALL be a region of the shell rather than part of any screen, and SHALL be empty for a screen
 that offers no shell-level action.
 
-**Source:** FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`.
+**Source:** FR-UI-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`.
 In plain words: the furniture never moves. A person learns once where the navigation is and where errors appear,
 and every screen after that is just the middle changing. The actions area is named as a region rather than left
 to each screen because the reference rendering draws it in one place on every screen, and a screen that drew its
@@ -61,8 +61,8 @@ and a screen with a list that grows SHALL still fill the area when it is not too
 At the smallest window size a count tile SHALL keep a width of at least 120 pixels and SHALL show its number and
 its caption whole, without an ellipsis. A progress bar SHALL keep a height of 9 pixels however short the window is.
 
-**Source:** FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`, and the reference rendering's
+**Source:** FR-UI-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`, and the reference rendering's
 `.content` (scrolls, padded), `.sidebar` (scrolls), `.stat` (`min-width: 120px`) and `.bar` (`height: 9px`) rules.
 In plain words: 960 by 640 is the size of the whole window, not of the space the screen is drawn in, and the space
 inside is smaller by the title bar and the borders, by different amounts on different systems. So the promise is
@@ -116,8 +116,8 @@ version SHALL read `dev` in any build that carries no injected release version.
 
 WHEN the application starts, it SHALL write the same version to the log exactly once.
 
-**Source:** FR-UI-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), DD-50,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-about`.
+**Source:** FR-UI-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), DD-50,
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-about`.
 In plain words: when somebody reports a bug, the first question is which build they were running, and there are
 exactly two places that answer can come from — the dialog they can read to you, and the log file they can send
 you. Both have to say the same thing, and the log has to say it once rather than on every screen change.
@@ -142,8 +142,8 @@ SHALL number the workflow entries in the order they are worked through.
 The navigation SHALL mark exactly one entry as the current one, and that mark SHALL follow the screen being
 shown, however the person arrived at it.
 
-**Source:** FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`.
+**Source:** FR-UI-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`.
 In plain words: the numbers tell a first-time user that this is a sequence with an end, not a pile of unrelated
 screens. One highlighted entry, always agreeing with what is on screen, is what stops the navigation from lying
 after a jump. There are two groups and not the reference rendering's three because the third group there lists
@@ -179,10 +179,10 @@ current, and the application SHALL NOT carry a screen, a placeholder screen or a
 The entries covered by this are three, all in the workflow group: projects, names and style, and the review
 queue.
 
-**Source:** FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-projects`,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`.
+**Source:** FR-UI-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-projects`,
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`,
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`.
 In plain words: hiding the unfinished parts would make the application look smaller than it is going to be, and
 would make the numbered steps skip. Showing them greyed says "this is coming, and here is where it will live",
 which is the truth. "Inert" is spelled out because the alternative reading — build a screen that says "not
@@ -211,15 +211,15 @@ screen that is coming and none of them ever will (see "Match the reference rende
 ### Requirement: Use the control each drawn widget stands for
 
 WHERE the reference rendering draws a widget for which
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#control-mapping-summary` names a real control, the
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#control-mapping-summary` names a real control, the
 screen SHALL be built from that control rather than from an approximation of it.
 
 This obligation covers a drawn control whether it is available or unavailable: an unavailable region is built
 from the same control it will be built from when it works.
 
-**Source:** FR-UI-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#control-mapping-summary`,
-`docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#controls-mapping`.
+**Source:** FR-UI-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#control-mapping-summary`,
+`docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#controls-mapping`.
 In plain words: a segmented picker drawn as three radio buttons and a toggle switch drawn as a checkbox both
 "work", and both make the application read as a different program from the one that was designed. Building the
 unavailable regions from the real control is the cheaper half of this: a greyed toggle switch says "this feature
@@ -238,7 +238,7 @@ is coming", and a greyed checkbox says "somebody gave up here".
 ### Requirement: Match the reference rendering
 
 For every screen the application shows, the arrangement of its parts and the roles they refer to SHALL match
-`docs/specification/mockups/ui-mockup.html` for that screen, in both the light and the dark block.
+`docs/spec_baseline/specification/mockups/ui-mockup.html` for that screen, in both the light and the dark block.
 
 The reference rendering SHALL be binding **except where a requirement in this change states a deviation from
 it**. The deviations this change states are exactly five, each carrying its own reason in the requirement that
@@ -259,8 +259,8 @@ states it:
 
 Exact pixel placement is NOT part of this obligation.
 
-**Source:** FR-UI-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), DD-28,
-`docs/specification/mockups/README.md`.
+**Source:** FR-UI-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), DD-28,
+`docs/spec_baseline/specification/mockups/README.md`.
 In plain words: the mockup is the argument settler for how this looks, and it is checkable — which parts are
 present, how they nest, and which role each one paints with. Where it is not checkable is the exact pixel, so
 that is deliberately excluded. The five named deviations exist because the drawing shows behaviour the engine
@@ -295,9 +295,9 @@ No call the application makes to a port SHALL be made on the thread that draws t
 job's own pause, resume and cancel requests and the registration of its progress listener, which only set a flag
 or a list entry under a short lock and never wait on the job.
 
-**Source:** FR-UI-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
-`docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#state-mirror`,
-`docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md`.
+**Source:** FR-UI-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
+`docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#state-mirror`,
+`docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md`.
 In plain words: a book takes hours to translate. If any of that ran where the window is drawn, the window would
 be a grey rectangle the operating system offers to force-quit. The obligation is stated as "which thread called
 the port" rather than "the window kept redrawing" because the first is something a test can read off the call
@@ -330,8 +330,8 @@ This obligation covers opening a book, checking a provider and listing a provide
 WHEN the action answers — with a result or with a failure — the screen SHALL stop reporting it as in progress and
 SHALL make its control available again.
 
-**Source:** FR-UI-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
-`docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#state-mirror`.
+**Source:** FR-UI-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
+`docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#state-mirror`.
 In plain words: the three actions moved off the drawing thread by the requirement above are the three that take
 long enough to notice — checking a provider against a real local model is seconds, and listing models from a
 server that is not answering runs to its timeout. Without this, the previous requirement's reward for doing the
@@ -366,9 +366,9 @@ The control that starts a run SHALL live on the translating screen, not on any e
 The application SHALL NOT require a person to pass through the workflow in order to reach a screen: every
 available entry SHALL remain reachable from the navigation column at any time.
 
-**Source:** FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`.
+**Source:** FR-UI-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`,
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`.
 In plain words: the workflow is numbered one to seven and step four is inert in this build, so "continue" from
 step three has to land on step five or the path stops at a wall. The reference rendering draws the start control
 on step four, which does not exist here — so it moves to the screen that runs the thing, which is also the screen

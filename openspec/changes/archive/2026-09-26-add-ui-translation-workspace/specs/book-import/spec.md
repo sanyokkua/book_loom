@@ -27,8 +27,8 @@ placeholder, and SHALL report the rest without any error.
 The screen SHALL NOT report a chapter count, a word count, an image or font count, a cover image, or a detected
 source language, because the parsed book does not carry them.
 
-**Source:** FR-IMPORT-02, FR-IMPORT-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`.
+**Source:** FR-IMPORT-02, FR-IMPORT-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`),
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`.
 In plain words: the card says what the parse actually learned and nothing else. The reference drawing shows a
 cover, a chapter count and a word count; none of those exists in the parsed book today, and a card that showed
 them would have to invent them. `add-metadata-units-and-language-detection` is what makes those rows real. Title
@@ -88,9 +88,9 @@ text is actually in, and offers a control to continue anyway.
 
 IF no source-language detection exists in the build, THEN no input SHALL place the screen in that state.
 
-**Source:** FR-IMPORT-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1
-(`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`.
+**Source:** FR-IMPORT-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1
+(`docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`),
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`.
 In plain words: the screen is built for a warning it cannot yet raise, because raising it needs language
 detection that is not built. Saying that plainly is better than shipping a state nobody can see and nobody
 remembers to finish — and the state is still covered by a test that puts the screen into it directly.

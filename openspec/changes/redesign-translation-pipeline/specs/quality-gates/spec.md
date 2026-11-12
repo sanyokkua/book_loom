@@ -4,7 +4,7 @@
 
 The application SHALL give every finding one level: BLOCK (the segment cannot be accepted and is FLAGGED if the finding stays), REPAIR (the segment can be accepted, earns the one repair at Balanced and Max, and is accepted with a proofread mark if the finding stays) or NOTE (the segment is accepted with an audit mark and earns no call).
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: the same word, a copied source, a stray letter, a lost question mark, does not deserve the same treatment; the level says whether a segment may be accepted, whether it earns the one model call to fix it, and which mark it carries to the Proofread stage. A level is separate from a finding's severity, which only orders what the person sees.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: the same word, a copied source, a stray letter, a lost question mark, does not deserve the same treatment; the level says whether a segment may be accepted, whether it earns the one model call to fix it, and which mark it carries to the Proofread stage. A level is separate from a finding's severity, which only orders what the person sees.
 
 #### Scenario: A blocking finding that survives the repair flags the segment
 
@@ -134,7 +134,7 @@ WHEN a source paragraph starts with digits or a Roman numeral followed by `.`, `
 
 The application SHALL raise a BLOCK-level `script-purity` finding for a target word written wholly in a script that is neither the target language's, nor Latin, nor common, and for CJK punctuation (U+3000–303F) or fullwidth forms (U+FF00–FFEF), when the source segment does not hold the same word or sign.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: small models sometimes drop a Chinese or Arabic word into a Ukrainian sentence; the mixed-script check sees only a word that mixes alphabets, so this check sees the word that is wholly foreign. A Latin name is fine, and a word the source itself holds is the book's own.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: small models sometimes drop a Chinese or Arabic word into a Ukrainian sentence; the mixed-script check sees only a word that mixes alphabets, so this check sees the word that is wholly foreign. A Latin name is fine, and a word the source itself holds is the book's own.
 
 #### Scenario: A Chinese word in a Ukrainian sentence blocks
 
@@ -160,7 +160,7 @@ The application SHALL raise a BLOCK-level `script-purity` finding for a target w
 
 The application SHALL compute, for each language pair at the start of a run, the source-only set (the source language's function words minus the target language's), SHALL count the whole-word, lower-case hits of that set in each target, with no source exemption, and SHALL raise one `function-word-residue` finding naming the words, at REPAIR level, or at NOTE level for a pair whose language data marks residue as note-level (set when the language-data replay measured a precision below 0.9).
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d7--language-data-function-word-files-and-rule-keys-for-every-language`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: on Russian → Ukrainian a line left half in Russian shares its alphabet with the target, so no letter check sees it; the Russian words that Ukrainian does not also use (`что`, `это`) betray it. The set is computed from each language's own function-word file, never from a list of one pair, so a word both languages use (`просто`, `тебе`) never counts. A hit is a marked segment to repair, not a wrong-language paragraph, so the segment keeps its draft; it is its own finding, separate from the `language` finding of a paragraph in the wrong language. REPAIR is the shipped default, and a pair is made note-level only by its measured data, so a pair nobody measured stays REPAIR.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d7--language-data-function-word-files-and-rule-keys-for-every-language`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: on Russian → Ukrainian a line left half in Russian shares its alphabet with the target, so no letter check sees it; the Russian words that Ukrainian does not also use (`что`, `это`) betray it. The set is computed from each language's own function-word file, never from a list of one pair, so a word both languages use (`просто`, `тебе`) never counts. A hit is a marked segment to repair, not a wrong-language paragraph, so the segment keeps its draft; it is its own finding, separate from the `language` finding of a paragraph in the wrong language. REPAIR is the shipped default, and a pair is made note-level only by its measured data, so a pair nobody measured stays REPAIR.
 
 #### Scenario: A Russian word in a Ukrainian draft earns one repair
 
@@ -196,7 +196,7 @@ The application SHALL compute, for each language pair at the start of a run, the
 
 IF a target starts with a number that differs in value from the number its source starts with, THEN the application SHALL raise a BLOCK-level `number` finding naming both numbers.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a heading `4. Ночной перевал` that comes back as `5. Нічний перевал` has silently renumbered the book; a number that was merely lost is restored by code first, so only a replaced number reaches this check.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a heading `4. Ночной перевал` that comes back as `5. Нічний перевал` has silently renumbered the book; a number that was merely lost is restored by code first, so only a replaced number reaches this check.
 
 #### Scenario: A replaced heading number blocks
 
@@ -212,7 +212,7 @@ IF a target starts with a number that differs in value from the number its sourc
 
 The application SHALL compare the numbers of a source and its target by value (`1,200` equals `1 200`, `3.5` equals `3,5`), SHALL raise a REPAIR-level `number` finding for a number of two or more digits that the target lacks with no replacement, SHALL raise a NOTE-level one for an extra number when none is missing, and SHALL NOT compare spelled-out numbers.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a lost `40` is a fact lost from the story and earns the one repair; an extra number may be a legitimate rewording, so it only marks the segment for the audit. Words such as `forty` are not compared, because their forms differ by language.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a lost `40` is a fact lost from the story and earns the one repair; an extra number may be a legitimate rewording, so it only marks the segment for the audit. Words such as `forty` are not compared, because their forms differ by language.
 
 #### Scenario: A missing two-digit number earns the one repair
 
@@ -238,7 +238,7 @@ The application SHALL compare the numbers of a source and its target by value (`
 
 WHEN the class of a target paragraph's last mark (`?`, `!`, `.` or `…`, with quotes and closing brackets ignored) differs from its source's, the application SHALL raise a REPAIR-level `terminal-mark` finding; an ellipsis against a full stop counts as a difference.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: most of the times a model drops the end of a paragraph, it also drops its question mark; comparing the last mark finds those omissions cheaply. Quotes are ignored so that a different quotation style is not a defect.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: most of the times a model drops the end of a paragraph, it also drops its question mark; comparing the last mark finds those omissions cheaply. Quotes are ignored so that a different quotation style is not a defect.
 
 #### Scenario: A lost question mark is a finding
 
@@ -259,7 +259,7 @@ WHEN the class of a target paragraph's last mark (`?`, `!`, `.` or `…`, with q
 
 WHERE the source and the target language files both list informal and formal address forms, WHEN a source speech uses only informal forms (or only formal ones) and its target speech uses forms of the other kind, the application SHALL raise a REPAIR-level `address-parity` finding; a source speech that mixes both kinds is not judged.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a Russian `— Ты придёшь?` that becomes a polite `— Ви прийдете?` changes how two characters stand to each other; the check compares with the source, which the address-mix check (target only) cannot. It is off for any pair where either language lists no address forms.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a Russian `— Ты придёшь?` that becomes a polite `— Ви прийдете?` changes how two characters stand to each other; the check compares with the source, which the address-mix check (target only) cannot. It is off for any pair where either language lists no address forms.
 
 #### Scenario: A switch from informal to formal is a finding
 
@@ -285,7 +285,7 @@ WHERE the source and the target language files both list informal and formal add
 
 WHERE the pair declares that negations are counted and both language files list negation words, WHEN a source paragraph holds at least two more negation words than its target, the audit SHALL doubt the segment with a NOTE-level `negation` finding, and the draft stage SHALL make no call for it.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a lost `не` turns a sentence into its opposite, but counting negations across two languages is right only for a close pair and wrong as a finding on its own (about one hit in six was a real loss), so it is advice for the Proofread stage, never a repair. It is off for English → Ukrainian, where double negation differs.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a lost `не` turns a sentence into its opposite, but counting negations across two languages is right only for a close pair and wrong as a finding on its own (about one hit in six was a real loss), so it is advice for the Proofread stage, never a repair. It is off for English → Ukrainian, where double negation differs.
 
 #### Scenario: Two lost negations are doubted
 
@@ -306,7 +306,7 @@ WHERE the pair declares that negations are counted and both language files list 
 
 WHEN two or more paragraphs have the same normalised source text of at least six words but different normalised targets, the audit SHALL doubt each paragraph that holds the less used target.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a refrain, a sign or a repeated line should read the same each time; when it was translated two ways, the odd one out is the one worth a second look.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a refrain, a sign or a repeated line should read the same each time; when it was translated two ways, the odd one out is the one worth a second look.
 
 #### Scenario: The odd translation of a repeated line is doubted
 
@@ -327,7 +327,7 @@ WHEN two or more paragraphs have the same normalised source text of at least six
 
 WHEN a drafted segment holds a BLOCK or REPAIR finding, the application SHALL at Balanced and Max send one repair call, the segment's own draft prompt and window plus its previous attempt and its defects, asking for it to be translated again at a low temperature, and SHALL make no further content-changing call for it; at Fast it SHALL make none.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: the earlier flow could spend up to eight calls on one stubborn segment; the research found that a second and third round rarely bring a better text, so a segment gets one well-informed second try with the same context as its draft, and what stays wrong is marked for the Proofread stage. The dial never depends on the model: Max repairs exactly as Balanced does.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: the earlier flow could spend up to eight calls on one stubborn segment; the research found that a second and third round rarely bring a better text, so a segment gets one well-informed second try with the same context as its draft, and what stays wrong is marked for the Proofread stage. The dial never depends on the model: Max repairs exactly as Balanced does.
 
 #### Scenario: One repair fixes a draft
 
@@ -363,7 +363,7 @@ WHEN a drafted segment holds a BLOCK or REPAIR finding, the application SHALL at
 
 The application SHALL NOT count as the one repair a code repair, the one format re-ask for an unreadable reply or for ids a batch reply missed, a transport retry, or the first draft of an id a batch reply missed; it SHALL count a placeholder repair and the re-draft of a batch item that came back but failed its gate as the one repair.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: the repair budget is about changing the text because a check failed; fixing the envelope around a reply, or asking again after a network hiccup, does not use it up. A placeholder repair is a content change, so it is the one repair rather than an extra call beside it.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: the repair budget is about changing the text because a check failed; fixing the envelope around a reply, or asking again after a network hiccup, does not use it up. A placeholder repair is a content change, so it is the one repair rather than an extra call beside it.
 
 #### Scenario: A format re-ask does not use the repair
 
@@ -389,7 +389,7 @@ The application SHALL NOT count as the one repair a code repair, the one format 
 
 The repair call SHALL list every BLOCK and REPAIR finding of the segment with its plain explanation and the exact span it quotes, and, when formatting marks failed, the marks the segment must hold.
 
-**Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: a model told only that its text was wrong improves little; told which word and why, and which marks are missing, it can fix just that.
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: a model told only that its text was wrong improves little; told which word and why, and which marks are missing, it can fix just that.
 
 #### Scenario: Two defects are listed with their spans
 
@@ -618,7 +618,7 @@ paired placeholder comes back closing-before-opening or improperly nested with a
 pair rule the document round trip checks — THEN the application SHALL fail its placeholder hard gate, record a high
 `markup` finding, and SHALL NOT accept the segment, whatever its confidence.
 
-**Source**: FR-QA-04, FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, ADR-0040, ADR-0038. In plain words: the placeholder check the document round trip performs before restoring markup (see the document-round-trip capability, which also owns the two pair rules: a pair that held text must still hold text, and a line break stays inside the same pair) is the first quality gate; a pair that comes back crossed would restore broken markup and fail the whole export at the very end, so it is caught here for one segment instead. An atomic placeholder — an image, a line break, a locked term — may move, because word order legitimately changes. A draft that fails this gate first gets its marks put back by code (the translation-pipeline capability's "Put lost formatting marks back by code before any model call"); only a segment still failing after it earns the one repair at Balanced and Max, or is marked at Fast.
+**Source**: FR-QA-04, FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, ADR-0040, ADR-0038. In plain words: the placeholder check the document round trip performs before restoring markup (see the document-round-trip capability, which also owns the two pair rules: a pair that held text must still hold text, and a line break stays inside the same pair) is the first quality gate; a pair that comes back crossed would restore broken markup and fail the whole export at the very end, so it is caught here for one segment instead. An atomic placeholder — an image, a line break, a locked term — may move, because word order legitimately changes. A draft that fails this gate first gets its marks put back by code (the translation-pipeline capability's "Put lost formatting marks back by code before any model call"); only a segment still failing after it earns the one repair at Balanced and Max, or is marked at Fast.
 
 #### Scenario: A crossed pair fails the hard gate
 
@@ -646,7 +646,7 @@ while its source's is not, or the target begins with a phrase that talks about t
 the source's display text does not begin with such a phrase, THEN the application SHALL fail that segment's refusal
 hard gate, record a high `meaning` finding, and SHALL NOT accept it.
 
-**Source**: FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`. In plain words: a model that declines, apologises or talks about the text instead of translating it has produced nothing a reader can use; letting it through would put the apology into the book. Only phrases about the task or the model count — the full list per language is in `05_PIPELINE_ENGINE.md#qa-thresholds` — so a character's own apology is translated, not refused, and a book whose own line begins `Translation:` keeps its translated `Переклад:`. A reply that holds only its placeholders would silently delete the paragraph's words. A reply with no text at all, or a blank `target`, is not this gate's case: the translation-pipeline capability flags or repairs it before any check. A segment with nothing to translate — no letter, a Roman numeral or a single character — never reaches this gate: it is kept as it is with no model call (`translation-pipeline` "Keep a segment with nothing to translate as it is"), so an empty reply to the chapter number `2` can no longer flag it.
+**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`. In plain words: a model that declines, apologises or talks about the text instead of translating it has produced nothing a reader can use; letting it through would put the apology into the book. Only phrases about the task or the model count — the full list per language is in `05_PIPELINE_ENGINE.md#qa-thresholds` — so a character's own apology is translated, not refused, and a book whose own line begins `Translation:` keeps its translated `Переклад:`. A reply that holds only its placeholders would silently delete the paragraph's words. A reply with no text at all, or a blank `target`, is not this gate's case: the translation-pipeline capability flags or repairs it before any check. A segment with nothing to translate — no letter, a Roman numeral or a single character — never reaches this gate: it is kept as it is with no model call (`translation-pipeline` "Keep a segment with nothing to translate as it is"), so an empty reply to the chapter number `2` can no longer flag it.
 
 #### Scenario: An English refusal fails
 
@@ -694,7 +694,7 @@ the two languages share a script, when the target has no letter, or when the tar
 SHALL never count protected spans toward the share, nor, under the `Keep original` name policy, any
 whole-word occurrence of a glossary term.
 
-**Source**: FR-QA-01, FR-QA-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`, ADR-0037. In plain words: the check cannot tell Polish from Czech, so a same-script pair skips it and a wrong language in the same script is left to the source-only function-word check and to the Proofread stage; short fragments skip it so a name or an exclamation is not misjudged. Names the person chose to keep in their original spelling are Latin by design, so they are not held against a Cyrillic line.
+**Source**: FR-QA-01, FR-QA-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`, ADR-0037. In plain words: the check cannot tell Polish from Czech, so a same-script pair skips it and a wrong language in the same script is left to the source-only function-word check and to the Proofread stage; short fragments skip it so a name or an exclamation is not misjudged. Names the person chose to keep in their original spelling are Latin by design, so they are not held against a Cyrillic line.
 
 #### Scenario: A same-script pair skips the check
 
@@ -737,7 +737,7 @@ both texts before comparing them. IF the source's display text has fewer than 20
 whole-word occurrence of a glossary term removed under any name policy, holds no letter, THEN the application SHALL
 skip the echo check: the glossary explains the echo.
 
-**Source**: FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: a line made only of names the person chose to keep is meant to read like its source, so the names are taken out before the comparison. A short line that is only glossary names, such as `Bartimaeus!`, is explained by the glossary whatever the policy — how a name is rendered is the glossary check's question, not the echo's.
+**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: a line made only of names the person chose to keep is meant to read like its source, so the names are taken out before the comparison. A short line that is only glossary names, such as `Bartimaeus!`, is explained by the glossary whatever the policy — how a name is rendered is the glossary check's question, not the echo's.
 
 #### Scenario: A names-only line kept by policy is not an echo
 
@@ -762,7 +762,7 @@ WHEN a source line has 40 characters or more, or more than 8 words, the applicat
 while its target keeps at least 0.40 of the source's characters and either half of its words or three words and 0.30
 of its words.
 
-**Source**: FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: below the lower bound a compact line is trusted as long as it keeps half its words (or, past 40 characters, three words and a ratio of 0.40). Known tradeoff (2026-10-07 review): the extended range also passes a real omission, and the six short-line cases of the real run (10 words to 3 or 4) were the reason for it; on the Fast dial no later call reads such a line.
+**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: below the lower bound a compact line is trusted as long as it keeps half its words (or, past 40 characters, three words and a ratio of 0.40). Known tradeoff (2026-10-07 review): the extended range also passes a real omission, and the six short-line cases of the real run (10 words to 3 or 4) were the reason for it; on the Fast dial no later call reads such a line.
 
 #### Scenario: A longer line kept in three words is complete
 
@@ -782,7 +782,7 @@ The application SHALL compute each segment's confidence as 0.30 × glossary + 0.
 script + 0.15 × untranslated echo + 0.10 × repetition, each term the check's margin between 0 and 1, a failed check
 counting 0.0 and a skipped check 1.0, and SHALL NOT fold the hard gates into it; the confidence only orders segments for review and never decides acceptance.
 
-**Source**: FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#confidence`. In plain words: one number says how comfortably a segment clears the deterministic checks; hard gates stay pass/fail because no score can excuse broken markup; the number is a sort key for the review list, not a bar; the Proofread stage reads its windows in reading order. Each check's margin is stated in its own requirement above.
+**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#confidence`. In plain words: one number says how comfortably a segment clears the deterministic checks; hard gates stay pass/fail because no score can excuse broken markup; the number is a sort key for the review list, not a bar; the Proofread stage reads its windows in reading order. Each check's margin is stated in its own requirement above.
 
 #### Scenario: A worked confidence
 
@@ -813,7 +813,7 @@ IF the failed check is the untranslated echo and the source's display text, afte
 has fewer than 20 code points, THEN the application SHALL NOT block the segment: the failure SHALL only add its 0.0
 margin to confidence and record a low `language` finding.
 
-**Source**: FR-QA-07, FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `#qa-thresholds`, ADR-0038. In plain words: short lines are the exception for the echo check alone: a name, a Roman numeral or `OK` legitimately reads the same in both languages, so below 20 code points an echo lowers confidence instead of blocking.
+**Source**: FR-QA-07, FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `#qa-thresholds`, ADR-0038. In plain words: short lines are the exception for the echo check alone: a name, a Roman numeral or `OK` legitimately reads the same in both languages, so below 20 code points an echo lowers confidence instead of blocking.
 
 #### Scenario: A short echo lowers confidence without blocking
 
@@ -870,7 +870,7 @@ failed hard gate left on it is `quote-balance` or `script-purity`, and the sourc
 
 IF one of the five confidence checks (glossary, length ratio, target script, untranslated echo, repetition) fails outright, THEN the application SHALL NOT accept the segment, whatever its confidence, SHALL record a medium finding of the check's kind at BLOCK level, and SHALL give it the one repair at Balanced and Max and none at Fast, a segment still blocked after that being FLAGGED, except as "Let a short echo lower confidence without blocking" says.
 
-**Source**: FR-QA-07, FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `#qa-thresholds`, `design.md#d12--checks-levels-and-code-repairs-before-checks`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: a check that fails is a concrete defect — a copied source, the wrong alphabet, half a sentence missing — and a high score on the other checks must not carry it into the book; confidence only orders segments for review. A blocked segment no longer goes through rounds of directed fixes: it gets one repair, and at Fast it is FLAGGED for the desk at once.
+**Source**: FR-QA-07, FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `#qa-thresholds`, `design.md#d12--checks-levels-and-code-repairs-before-checks`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: a check that fails is a concrete defect — a copied source, the wrong alphabet, half a sentence missing — and a high score on the other checks must not carry it into the book; confidence only orders segments for review. A blocked segment no longer goes through rounds of directed fixes: it gets one repair, and at Fast it is FLAGGED for the desk at once.
 
 #### Scenario: A copied source is repaired, then flagged, whatever its confidence
 
@@ -909,7 +909,7 @@ IF one of the five confidence checks (glossary, length ratio, target script, unt
 The application SHALL accept or flag a segment by the acceptance rule alone — hard gates and the checks — and SHALL NOT let the review mode, the quality dial or any confidence threshold move that decision;
 the review mode SHALL decide only when the run pauses for the person.
 
-**Source**: FR-REVIEW-02, FR-QA-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`, `#fr-qa`), `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, ADR-0036. In plain words: the earlier rule asked a segment to reach a confidence of 0.60, 0.75 or 0.85 by review mode, and a judge score besides. A score cannot tell a coined word from a rare one, so on a real book it flagged 170 decisions that a person found correct. What a person wants to check is one choice — the review mode — and it now alone decides when the run stops; whether a segment is accepted depends on facts the code can verify, and there is no reviewer whose opinion could add a blocker.
+**Source**: FR-REVIEW-02, FR-QA-07 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`, `#fr-qa`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, ADR-0036. In plain words: the earlier rule asked a segment to reach a confidence of 0.60, 0.75 or 0.85 by review mode, and a judge score besides. A score cannot tell a coined word from a rare one, so on a real book it flagged 170 decisions that a person found correct. What a person wants to check is one choice — the review mode — and it now alone decides when the run stops; whether a segment is accepted depends on facts the code can verify, and there is no reviewer whose opinion could add a blocker.
 
 #### Scenario: A low confidence alone does not flag a segment
 
@@ -1054,7 +1054,7 @@ model call before the one repair or any mark reads it, SHALL change quote marks 
 
 The application SHALL accept a drafted, edited or repaired segment only when its hard gates pass, no soft check failed outright and no BLOCK-level finding is left; REPAIR-level and NOTE-level findings left on it SHALL NOT stop acceptance and SHALL become its marks, and the confidence the checks derive SHALL NOT be compared with any threshold.
 
-**Source**: FR-QA-07, FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `design.md#d12--checks-levels-and-code-repairs-before-checks`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: a segment is accepted unless the code can point at something blocking in it. A repaired target is decided by the hard gates and the never-worse gate ("Keep a repair only when it passes the hard gates and the never-worse gate keeps it"), then read by the same rule; what stays wrong at repair or note level is accepted with a mark for the Proofread stage. A soft check that fails outright is the one in "Block acceptance when a soft check fails outright". A reuse from memory follows the same rule with no model call (see "Accept a context-matched memory reuse when its checks pass").
+**Source**: FR-QA-07, FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `design.md#d12--checks-levels-and-code-repairs-before-checks`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: a segment is accepted unless the code can point at something blocking in it. A repaired target is decided by the hard gates and the never-worse gate ("Keep a repair only when it passes the hard gates and the never-worse gate keeps it"), then read by the same rule; what stays wrong at repair or note level is accepted with a mark for the Proofread stage. A soft check that fails outright is the one in "Block acceptance when a soft check fails outright". A reuse from memory follows the same rule with no model call (see "Accept a context-matched memory reuse when its checks pass").
 
 #### Scenario: A low-confidence segment whose checks all pass is accepted
 
@@ -1102,7 +1102,7 @@ WHEN a segment's target is reused from memory because its source and both neighb
 accept that target only when its hard gates pass and no soft check failed outright, and SHALL make no model call for
 it.
 
-**Source**: FR-ALGO-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#context-aware-tm`, `#tiered-loop`, ADR-0038. In plain words: a sentence already accepted in the very same surroundings needs no new model call, but it must still clear every deterministic check, so a memory entry can never put a broken or since-forbidden target into the book. When the memory is looked up, and that a reuse which is not accepted is discarded and the segment drafted instead, is the translation-pipeline capability's "Reuse the translation memory only where its context matches"; a segment is recorded as reused from memory only when its reuse is accepted.
+**Source**: FR-ALGO-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#context-aware-tm`, `#tiered-loop`, ADR-0038. In plain words: a sentence already accepted in the very same surroundings needs no new model call, but it must still clear every deterministic check, so a memory entry can never put a broken or since-forbidden target into the book. When the memory is looked up, and that a reuse which is not accepted is discarded and the segment drafted instead, is the translation-pipeline capability's "Reuse the translation memory only where its context matches"; a segment is recorded as reused from memory only when its reuse is accepted.
 
 #### Scenario: A context match is accepted without the reviewer
 
@@ -1122,7 +1122,7 @@ it.
 
 The application SHALL record for every decided segment its confidence and each finding with the check that raised it, its type, its severity, its level (BLOCK, REPAIR or NOTE) and a short note, SHALL keep the findings of a FLAGGED segment for the review desk and for any later retry, and SHALL keep the REPAIR-level findings left on an ACCEPTED segment as its proofread mark and its NOTE-level findings as its audit mark.
 
-**Source**: FR-QA-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, `design.md#d12--checks-levels-and-code-repairs-before-checks`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: the one repair needs to know exactly what was wrong, and so does the Proofread stage and the person reviewing a flagged segment; a flag with no reason would leave them guessing, and a mark with no named defect would give the proofread nothing to look at.
+**Source**: FR-QA-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, `design.md#d12--checks-levels-and-code-repairs-before-checks`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: the one repair needs to know exactly what was wrong, and so does the Proofread stage and the person reviewing a flagged segment; a flag with no reason would leave them guessing, and a mark with no named defect would give the proofread nothing to look at.
 
 #### Scenario: A flagged segment keeps its reasons
 
@@ -1280,7 +1280,7 @@ WHEN exactly one capitalised word of the target is a name's rendering written an
 
 The deterministic text checks SHALL raise a BLOCK-level `alphabet` finding, naming the word and the letter, for every target word that holds a letter listed under `forbiddenLetters` in the target language's file (Ukrainian: `ыъэё`), except a word the source text holds as well when the source and target scripts differ, a glossary rendering and a kept foreign run; a language with no such key is never checked.
 
-**Source**: task 15j.J5 of the archived translation-workflow change (the alphabet check), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`, `design.md#d7--language-data-function-word-files-and-rule-keys-for-every-language`. In plain words: on Russian → Ukrainian the source and the target share an alphabet, so the old rule — forgive any word that also stands in the source — let every Russian word through; the exemption now applies only where the scripts differ (a Cyrillic title quoted in an English source). A finding blocks acceptance and earns the one repair.
+**Source**: task 15j.J5 of the archived translation-workflow change (the alphabet check), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`, `design.md#d7--language-data-function-word-files-and-rule-keys-for-every-language`. In plain words: on Russian → Ukrainian the source and the target share an alphabet, so the old rule — forgive any word that also stands in the source — let every Russian word through; the exemption now applies only where the scripts differ (a Cyrillic title quoted in an English source). A finding blocks acceptance and earns the one repair.
 
 #### Scenario: A Russian letter in a Ukrainian word is repaired or flagged
 

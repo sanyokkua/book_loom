@@ -13,9 +13,9 @@ an error dialog or a message of error severity for it.
 A stopped run SHALL be terminal in this build: the screen SHALL NOT offer to resume it, and starting again
 SHALL start a new run from the beginning.
 
-**Source:** FR-RESUME-03, FR-RESUME-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`,
-`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#typed-error-surface`.
+**Source:** FR-RESUME-03, FR-RESUME-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`),
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`,
+`docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#typed-error-surface`.
 In plain words: stopping is something a person chose, so telling them it went wrong is both untrue and
 unpleasant. The engine reports a stopped run as cancelled, and the screen has to translate that into "you stopped
 it" rather than passing the word through. The reference rendering calls the stopped state "resumable", and it is
@@ -47,8 +47,8 @@ run paused or the run returns.
 WHILE a run is pausing or stopping, the screen SHALL keep reporting the counts as they continue to advance, and
 SHALL NOT report the run as paused or stopped.
 
-**Source:** FR-RESUME-03, FR-RESUME-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`),
-`docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, `docs/next_features.md` §14.
+**Source:** FR-RESUME-03, FR-RESUME-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`),
+`docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, `docs/next_features.md` §14.
 In plain words: a pause or a stop is not instant. The engine aborts the model request in flight (see "Pause and stop
 act without waiting for the provider" in the `translation-pipeline` capability) and then reaches a safe point, so
 there is a short visible gap in which the run is still winding down and the person has already asked it to stop.

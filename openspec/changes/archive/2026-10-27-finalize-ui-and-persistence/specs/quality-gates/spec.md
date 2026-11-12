@@ -7,7 +7,7 @@ that raised it, its type, its severity and a short note, SHALL record every edit
 `reviewer-edit` that carries the quote and its replacement, and SHALL keep the findings of a FLAGGED segment for the
 review desk and for any later retry.
 
-**Source**: FR-QA-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`. In plain words: a directed fix needs to know exactly what was wrong, and so does the person reviewing a flagged segment; a flag with no reason would leave them guessing, and an edit made for them should be shown as what it removed and what it put there.
+**Source**: FR-QA-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`. In plain words: a directed fix needs to know exactly what was wrong, and so does the person reviewing a flagged segment; a flag with no reason would leave them guessing, and an edit made for them should be shown as what it removed and what it put there.
 
 #### Scenario: A flagged segment keeps its reasons
 

@@ -58,4 +58,4 @@ invisible to every fidelity assertion — and it costs 6.2% of this library. The
 change is what would catch it, and would have caught it here, had a fixture carried that shape. A follow-up change
 should add one.
 
-Recorded in `docs/implementation_plan/CHANGE_BACKLOG.md` so it is not lost.
+Recorded in `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md` so it is not lost.

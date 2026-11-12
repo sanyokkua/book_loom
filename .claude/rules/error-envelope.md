@@ -1,6 +1,6 @@
 # Error Envelope
 
-Scope: every module — the shared failure model. Types live in `:api` (`ua.bookloom.api`). Spec: `docs/specification/02_Architecture/09_ERROR_HANDLING.md`, `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`.
+Scope: every module — the shared failure model. Types live in `:api` (`ua.bookloom.api`). Spec: `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md`, `docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`.
 
 ## MUST
 
