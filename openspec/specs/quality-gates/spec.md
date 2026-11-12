@@ -12,9 +12,9 @@ per-chunk model reviewer that fixes in place with edits the code verifies, and t
 IF a translated segment's markup does not restore — its placeholder tokens differ from its source's as a multiset, a
 paired placeholder comes back closing-before-opening or improperly nested with another pair, or the target breaks a
 pair rule the document round trip checks — THEN the application SHALL fail its placeholder hard gate, record a high
-`markup` finding, and SHALL NOT accept the segment, whatever its confidence or the reviewer's answer.
+`markup` finding, and SHALL NOT accept the segment, whatever its confidence.
 
-**Source**: FR-QA-04, FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, ADR-0040, ADR-0038. In plain words: the placeholder check the document round trip performs before restoring markup (see the document-round-trip capability, which also owns the two pair rules: a pair that held text must still hold text, and a line break stays inside the same pair) is the first quality gate; a pair that comes back crossed would restore broken markup and fail the whole export at the very end, so it is caught here for one segment instead. An atomic placeholder — an image, a line break, a locked term — may move, because word order legitimately changes. A draft that fails this gate first gets its one placeholder repair (the translation-pipeline capability's "Repair invalid structured draft replies once"); only a segment still failing after it reaches self-heal.
+**Source**: FR-QA-04, FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, ADR-0040, ADR-0038. In plain words: the placeholder check the document round trip performs before restoring markup (see the document-round-trip capability, which also owns the two pair rules: a pair that held text must still hold text, and a line break stays inside the same pair) is the first quality gate; a pair that comes back crossed would restore broken markup and fail the whole export at the very end, so it is caught here for one segment instead. An atomic placeholder — an image, a line break, a locked term — may move, because word order legitimately changes. A draft that fails this gate first gets its marks put back by code (the translation-pipeline capability's "Put lost formatting marks back by code before any model call"); only a segment still failing after it earns the one repair at Balanced and Max, or is marked at Fast.
 
 #### Scenario: A crossed pair fails the hard gate
 
@@ -203,7 +203,7 @@ hard gate, record a high `meaning` finding, and SHALL NOT accept it.
 
 - **WHEN** the masked source is `He opened the ⟦g0⟧old⟦g1⟧ door.` and the target is `⟦g0⟧⟦g1⟧`
 - **THEN** the refusal hard gate fails, because the target's display text is empty while the source's is not
-- **AND** the segment goes to self-heal
+- **AND** the segment earns the one repair at Balanced and Max and is FLAGGED at Fast
 
 ### Requirement: Match a refusal phrase only as whole words, in any of three languages
 
@@ -251,7 +251,7 @@ the two languages share a script, when the target has no letter, or when the tar
 SHALL never count protected spans toward the share, nor, under the `Keep original` name policy, any
 whole-word occurrence of a glossary term.
 
-**Source**: FR-QA-01, FR-QA-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`, ADR-0037. In plain words: the check cannot tell Polish from Czech, so a same-script pair skips it and a wrong language in the same script is left to the reviewer and to review; short fragments skip it so a name or an exclamation is not misjudged. Names the person chose to keep in their original spelling are Latin by design, so they are not held against a Cyrillic line.
+**Source**: FR-QA-01, FR-QA-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`, ADR-0037. In plain words: the check cannot tell Polish from Czech, so a same-script pair skips it and a wrong language in the same script is left to the source-only function-word check and to the Proofread stage; short fragments skip it so a name or an exclamation is not misjudged. Names the person chose to keep in their original spelling are Latin by design, so they are not held against a Cyrillic line.
 
 #### Scenario: A same-script pair skips the check
 
@@ -325,7 +325,7 @@ skip the echo check: the glossary explains the echo.
 - **WHEN** English → Ukrainian, the name policy is `Keep original`, the glossary holds `Margaret Hale` and
   `Milton Northern`, and `Margaret Hale, Milton Northern.` comes back unchanged
 - **THEN** what remains after removing the names holds no letter, so the untranslated-echo check is skipped
-- **AND** with the reviewer off the segment is accepted in Assisted with confidence 1.0
+- **AND** the segment is accepted in Assisted with confidence 1.0
 
 #### Scenario: A short glossary name is explained by the glossary
 
@@ -456,7 +456,7 @@ WHEN a source line has 40 characters or more, or more than 8 words, the applicat
 while its target keeps at least 0.40 of the source's characters and either half of its words or three words and 0.30
 of its words.
 
-**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: below the lower bound a compact line is trusted as long as it keeps half its words (or, past 40 characters, three words and a ratio of 0.40). Known tradeoff (2026-10-07 review): the extended range also passes a real omission, and the six short-line cases of the real run (10 words to 3 or 4) were the reason for it; on the Fast dial no reviewer is there to catch such a line.
+**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: below the lower bound a compact line is trusted as long as it keeps half its words (or, past 40 characters, three words and a ratio of 0.40). Known tradeoff (2026-10-07 review): the extended range also passes a real omission, and the six short-line cases of the real run (10 words to 3 or 4) were the reason for it; on the Fast dial no later call reads such a line.
 
 #### Scenario: A longer line kept in three words is complete
 
@@ -468,7 +468,7 @@ of its words.
 - **WHEN** the source is `He looked at her for a long time, then left.` and the target is `Він подивився на неї.`
   (44 characters of 10 words kept as 4, ratio 0.48)
 - **THEN** the length-ratio check does not fail it, although part of the sentence is missing, and on the Fast dial no
-  reviewer is there to catch it
+  later call reads it
 
 ### Requirement: Measure glossary compliance over the locked terms in the segment
 
@@ -547,9 +547,9 @@ language's; the comparison SHALL apply to any language the application recognize
 
 The application SHALL compute each segment's confidence as 0.30 × glossary + 0.25 × length ratio + 0.20 × target
 script + 0.15 × untranslated echo + 0.10 × repetition, each term the check's margin between 0 and 1, a failed check
-counting 0.0 and a skipped check 1.0, and SHALL NOT fold the hard gates or the reviewer's answer into it; the confidence only orders segments for review and never decides acceptance.
+counting 0.0 and a skipped check 1.0, and SHALL NOT fold the hard gates into it; the confidence only orders segments for review and never decides acceptance.
 
-**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#confidence`. In plain words: one number says how comfortably a segment clears the deterministic checks; hard gates stay pass/fail because no score can excuse broken markup, and the reviewer stays separate so a confident reviewer cannot hide a failed check; the number is a sort key for the review list, not a bar. Each check's margin is stated in its own requirement above.
+**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#confidence`. In plain words: one number says how comfortably a segment clears the deterministic checks; hard gates stay pass/fail because no score can excuse broken markup; the number is a sort key for the review list, not a bar; the Proofread stage reads its windows in reading order. Each check's margin is stated in its own requirement above.
 
 #### Scenario: A worked confidence
 
@@ -571,49 +571,45 @@ counting 0.0 and a skipped check 1.0, and SHALL NOT fold the hard gates or the r
 
 #### Scenario: The reviewer's answer does not move confidence
 
-- **WHEN** the English → Polish segment above receives a reviewer edit that is applied
-- **THEN** its confidence is computed from the checks on the edited text alone, and the answer adds nothing to it
+- **WHEN** the one repair is kept for the English → Polish segment above
+- **THEN** its confidence is computed from the checks on the repaired text alone, and no model's opinion adds anything to it
 
 ### Requirement: Block acceptance when a soft check fails outright
 
-IF a soft check fails outright, THEN the application SHALL NOT accept the segment, whatever its confidence, SHALL record
-a medium finding of the check's kind, and SHALL send the segment to a directed fix, except as "Let a short echo lower
-confidence without blocking" says.
+IF one of the five confidence checks (glossary, length ratio, target script, untranslated echo, repetition) fails outright, THEN the application SHALL NOT accept the segment, whatever its confidence, SHALL record a medium finding of the check's kind at BLOCK level, and SHALL give it the one repair at Balanced and Max and none at Fast, a segment still blocked after that being FLAGGED, except as "Let a short echo lower confidence without blocking" says.
 
-**Source**: FR-QA-07, FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `#qa-thresholds`, ADR-0038. In plain words: a check that fails is a concrete defect — a copied source, the wrong alphabet, half a sentence missing — and a high score on the other checks must not carry it into the book; confidence decides only the close calls no more: confidence orders segments for review. The reference clauses that accepted on confidence or on a judge score are edited in this change.
+**Source**: FR-QA-07, FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `#qa-thresholds`, `design.md#d12--checks-levels-and-code-repairs-before-checks`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: a check that fails is a concrete defect — a copied source, the wrong alphabet, half a sentence missing — and a high score on the other checks must not carry it into the book; confidence only orders segments for review. A blocked segment no longer goes through rounds of directed fixes: it gets one repair, and at Fast it is FLAGGED for the desk at once.
 
 #### Scenario: A copied source is repaired, then flagged, whatever its confidence
 
-- **WHEN** Fast (N = 1), English → Ukrainian, and the draft for `He opened the old door.` is
-  `He opened the old door.`, with confidence 0.65
+- **WHEN** Balanced, English → Ukrainian, the draft for `He opened the old door.` is `He opened the old door.`, with confidence 0.65
 - **THEN** the segment is not accepted and carries medium `language` findings for the echo and the script checks
-- **AND** its one round is a directed fix, which returns `He opened the old door.` again, and the segment is FLAGGED
+- **AND** its one repair returns `He opened the old door.` again, and the segment is FLAGGED
+
+#### Scenario: Fast makes no repair and flags at once
+
+- **WHEN** Fast and the same draft
+- **THEN** no call follows the draft and the segment is FLAGGED with the same findings
 
 #### Scenario: A Latin-letter translation is flagged
 
-- **WHEN** Fast (N = 1), and both the draft and the directed fix for `He opened the old door.`
-  return `Vin vidchynyv stari dveri.`, with confidence 0.80
+- **WHEN** Balanced, and both the draft and the repair for `He opened the old door.` return `Vin vidchynyv stari dveri.`, with confidence 0.80
 - **THEN** the segment is FLAGGED with a medium `language` finding from the script check
 
 #### Scenario: A half-sentence omission is flagged
 
-- **WHEN** Fast (N = 1), and both the draft and the directed fix for
-  `He opened the old door and walked into the dark hall.` return `Він відчинив старі двері.` (ratio 0.47), with
-  confidence 0.75
+- **WHEN** Balanced, and both the draft and the repair for `He opened the old door and walked into the dark hall.` return `Він відчинив старі двері.` (ratio 0.47), with confidence 0.75
 - **THEN** the segment is FLAGGED with a medium `omission` finding from the length-ratio check
 
 #### Scenario: Each failed check records the finding of its kind
 
-- **WHEN** the target-script, untranslated-echo, repetition, length-ratio and glossary-compliance checks each fail
-  outright
-- **THEN** the findings are medium `language`, medium `language`, medium `fluency`, medium `omission` and medium
-  `glossary` respectively
+- **WHEN** the target-script, untranslated-echo, repetition, length-ratio and glossary-compliance checks each fail outright
+- **THEN** the findings are medium `language`, medium `language`, medium `fluency`, medium `omission` and medium `glossary` respectively
 
 #### Scenario: The pseudo model's echo is flagged in every mode
 
 - **WHEN** the pseudo model translates `He opened the old door.` (23 code points) from English to Ukrainian on Balanced
-- **THEN** its draft `HE OPENED THE OLD DOOR.` fails the echo and script checks, each of its 2 directed fixes returns
-  the same text, and the segment is FLAGGED
+- **THEN** its draft `HE OPENED THE OLD DOOR.` fails the echo and script checks, its one repair returns the same text, and the segment is FLAGGED
 - **AND** this holds in Unattended, Assisted and Manual alike
 
 ### Requirement: Let a short echo lower confidence without blocking
@@ -629,7 +625,7 @@ margin to confidence and record a low `language` finding.
 - **WHEN** English → Ukrainian and the target for `Yes, sir.` (9 code points) is `YES, SIR.`
 - **THEN** the echo check fails with a low `language` finding, the script check is skipped, and confidence is
   0.30 + 0.25 + 0.20 + 0.0 + 0.10 = `0.85`
-- **AND** with the reviewer off the segment is accepted in Unattended, Assisted and Manual
+- **AND** the segment is accepted in Unattended, Assisted and Manual
 
 #### Scenario: The echo floor is 20 code points
 
@@ -639,521 +635,45 @@ margin to confidence and record a low `language` finding.
 
 ### Requirement: Let the review mode decide when the run pauses, never what is accepted
 
-The application SHALL accept or flag a segment by the acceptance rule alone — hard gates, deterministic checks and
-verified blockers — and SHALL NOT let the review mode, the quality dial or any confidence threshold move that decision;
+The application SHALL accept or flag a segment by the acceptance rule alone — hard gates and the checks — and SHALL NOT let the review mode, the quality dial or any confidence threshold move that decision;
 the review mode SHALL decide only when the run pauses for the person.
 
-**Source**: FR-REVIEW-02, FR-QA-07 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`, `#fr-qa`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, ADR-0036. In plain words: the earlier rule asked a segment to reach a confidence of 0.60, 0.75 or 0.85 by review mode, and a judge score besides. A score cannot tell a coined word from a rare one, so on a real book it flagged 170 decisions that a person found correct. What a person wants to check is one choice — the review mode — and it now alone decides when the run stops; whether a segment is accepted depends on facts the code can verify.
+**Source**: FR-REVIEW-02, FR-QA-07 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`, `#fr-qa`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, ADR-0036. In plain words: the earlier rule asked a segment to reach a confidence of 0.60, 0.75 or 0.85 by review mode, and a judge score besides. A score cannot tell a coined word from a rare one, so on a real book it flagged 170 decisions that a person found correct. What a person wants to check is one choice — the review mode — and it now alone decides when the run stops; whether a segment is accepted depends on facts the code can verify, and there is no reviewer whose opinion could add a blocker.
 
 #### Scenario: A low confidence alone does not flag a segment
 
 - **WHEN** a segment passes its hard gates and every soft check with a script margin of 0.5, a length margin of 0.2 and
-  a confidence of `0.70`, and the reviewer answers `ok`
+  a confidence of `0.70`
 - **THEN** it is accepted in Unattended, Assisted and Manual alike
 
 #### Scenario: The quality dial leaves acceptance alone
 
 - **WHEN** the review mode is Unattended and the quality dial is Max
-- **THEN** the same segment is accepted or flagged as it would be on Fast, by the checks and the verified edits
+- **THEN** a draft that passes every check is accepted as it would be on Fast, and the dial decides only whether a failing segment earns the one repair
 
-### Requirement: Review each chunk once per pass when the quality dial enables the reviewer
+### Requirement: Fail a segment on a deterministic text defect before any repair or mark
 
-WHERE the quality dial is Balanced or Max, the application SHALL send the model, in one call per chunk and pass, the
-source and the candidate of each segment of the chunk that passed its hard gates, failed no soft check outright and was
-not reused from memory, labelled `s1` to `sk` in document order, together with the glossary renderings of the names in
-the chunk and the language's reviewer checks, at temperature 0 with a fixed seed.
+The application SHALL run the deterministic text checks on every restored candidate, after the refusal gate and the code repairs and before the one repair or any mark, and SHALL treat a BLOCK-level finding as a failed hard gate.
 
-**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, ADR-0038; tasks 15d.6. In plain words: a judge that scores a chunk cannot say which word is wrong, so a good sentence and a bad one fell below the same bar and the book filled with false alarms. A reviewer that quotes the word and offers the replacement can be checked by the code, which is the only reason to trust it. One call per chunk keeps the cost tolerable; short local labels are easier for a small model to keep straight than segment ids; each glossary rendering goes in as one `source → target` line.
-
-#### Scenario: A Balanced chunk of three segments is reviewed once
-
-- **WHEN** the dial is Balanced and a chunk holds three drafted segments that all passed their checks
-- **THEN** one reviewer call is made at temperature 0, showing the pairs labelled `s1`, `s2`, `s3` and carrying the
-  seed `15`
-- **AND** a reply `{"results":[{"id":"s2","status":"edits","edits":[{"criterion":"omission","quote":"Він відчинив двері.","replacement":"Він відчинив двері й пішов."}]}]}`
-  is read as one edit on the second segment and `ok` for the first and third
-
-#### Scenario: Only pairs the checks do not already refuse are reviewed
-
-- **WHEN** the dial is Balanced and the chunk `ch03.xhtml:10`–`ch03.xhtml:13` holds `ch03.xhtml:10`, whose placeholder
-  gate still failed after its placeholder repair, and `ch03.xhtml:12`, reused from memory
-- **THEN** the reviewer call shows `ch03.xhtml:11` as `s1` and `ch03.xhtml:13` as `s2`, and nothing else
-
-### Requirement: Make no reviewer call when no pair qualifies or the dial is Fast
-
-The application SHALL make no reviewer call for a chunk with no segment that qualifies for review, and WHERE the dial
-is Fast it SHALL make none and decide by the deterministic checks alone.
-
-**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, ADR-0038; tasks 15d.6. In plain words: a chunk where nothing is left to review costs no call, and Fast trades the reviewer away for speed.
-
-#### Scenario: No reviewer call when no pair qualifies
-
-- **WHEN** the dial is Balanced and both segments of a chunk are reused from memory
-- **THEN** no reviewer call is made for that chunk
-
-#### Scenario: Fast makes no reviewer call
-
-- **WHEN** the dial is Fast and a chunk of eight segments is drafted
-- **THEN** no reviewer call is made and each segment is decided by the checks alone
-
-### Requirement: Read the reviewer's reply per label
-
-The application SHALL read back per label `{"id","status","edits","rewrite"}` where `status` is `ok`, `edits` — a list
-of `{"criterion","quote","replacement"}` find-and-replace edits, the default for a defect — or `rewrite`, allowed when
-more than about 40% of the text must change or the structure or meaning is wrong throughout.
-
-**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`, ADR-0038; tasks 15d.6. In plain words: a reviewer that quotes the word and offers the replacement can be checked by the code; a rewrite is the exception for a segment wrong throughout.
-
-#### Scenario: One edit is read for the second segment
-
-- **WHEN** the reviewer replies `{"results":[{"id":"s2","status":"edits","edits":[{"criterion":"omission","quote":"Він відчинив двері.","replacement":"Він відчинив двері й пішов."}]}]}`
-  for three pairs
-- **THEN** it is read as one `omission` edit on `s2` and `ok` for `s1` and `s3`
-
-### Requirement: Tolerate an incomplete reviewer reply
-
-The application SHALL read a label the reply leaves out as `ok`, SHALL drop an answer whose status names nothing and an
-edit with no quote or whose replacement equals its quote, and SHALL read a criterion that names nothing as `style`; the
-criterion SHALL otherwise be one of meaning, omission, addition, terminology, gender, agreement, invented-word, quotes,
-language, fluency or style.
-
-**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, ADR-0038; tasks 15d.6. In plain words: short local labels are easier for a small model to keep straight than segment ids, and a small model often answers loosely, so a gap in the reply reads as "nothing to fix" and a half-formed edit is dropped rather than guessed at.
-
-#### Scenario: A reply that names no segment reads as ok
-
-- **WHEN** the reviewer replies `{"results":[]}`
-- **THEN** every segment of the chunk is read as `ok`
-
-#### Scenario: An unreadable reply is read as unreadable
-
-- **WHEN** the reviewer replies `Looks good to me!`
-- **THEN** the reply is unreadable and each segment it was for is handled as in "Flag a segment the reviewer could not
-  review"
-
-#### Scenario: An edit with no quote or no change is dropped
-
-- **WHEN** the reviewer answers an edit with an empty quote and another whose replacement `двері` equals its quote
-  `двері`
-- **THEN** neither edit is kept and no edit is applied
-
-#### Scenario: A criterion that names nothing reads as style
-
-- **WHEN** the reviewer answers an edit whose criterion is empty
-- **THEN** the edit reads as `style`
-
-### Requirement: Send the reviewer a flat schema and resend a timed-out call without it
-
-The schema sent SHALL be flat — no `maxItems`, `maxLength` or `additionalProperties` — and a structured call that ends
-with `ErrorCode.timeout` SHALL be sent once more without its response format.
-
-**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, ADR-0038; tasks 15d.6. In plain words: a small local model stalls on a constrained schema, so the schema stays plain and a stalled structured call is asked once more without it.
-
-#### Scenario: The schema is flat
-
-- **WHEN** a reviewer call is built
-- **THEN** its schema holds no `maxItems`, no `maxLength` and no `additionalProperties`
-
-#### Scenario: A structured call that times out is sent again without its schema
-
-- **WHEN** a reviewer call ends with `ErrorCode.timeout`
-- **THEN** the same request is sent once more with no `response_format` (OpenAI-compatible) or `format` (Ollama) and the
-  same temperature and seed, and a readable reply to it is used
-
-### Requirement: Review a Max chunk twice with a narrower second pass
-
-WHERE the dial is Max, the application SHALL make a second pass over the same drafts with a narrower checklist (gender,
-terminology, agreement) and SHALL apply that pass's edits after the first pass's.
-
-**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`, ADR-0038; tasks 15d.6. In plain words: Max spends a second, narrower look on the defects a small model most often misses.
-
-#### Scenario: Max reviews the chunk twice
-
-- **WHEN** the dial is Max and a chunk holds a draft whose first pass edit fixes a coined word and whose second pass
-  edit fixes an agreement
-- **THEN** two reviewer calls are made, the second saying it is a second pass, and both edits are applied in that order
-
-### Requirement: Verify every reviewer edit in code before applying it
-
-The application SHALL apply a reviewer edit only when its quote is a substring of the candidate that occurs exactly once
-after normalisation (white space runs and typographic apostrophes), the replacement keeps the `⟦gN⟧` tokens of the whole
-candidate in the same multiset and order, the deterministic checks and the placeholder gates pass on the edited text,
-and the set of blocking checks does not grow.
-
-**Source**: FR-QA-02, FR-QA-07, ADR-0038; tasks 15d.6. In plain words: a model may quote words that are not there, offer a replacement that breaks a placeholder, or "fix" one thing and break another. Because the code checks all of that, a wrong edit costs nothing and a right one is applied without asking the model again.
-
-#### Scenario: A coined word with a quote is fixed
-
-- **WHEN** the draft is `Він відчинив старі дверзі.` and the reviewer answers an `invented-word` edit with quote
-  `дверзі` and replacement `двері`
-- **THEN** the segment is ACCEPTED as `Він відчинив старі двері.` with one repair round and the edit kept on the record
-  as a low finding raised by `reviewer-edit`
-
-#### Scenario: A quote that occurs twice is refused
-
-- **WHEN** an edit's quote occurs twice in the candidate
-- **THEN** it is not applied and counts as refused
-
-#### Scenario: A replacement that changes a token is refused
-
-- **WHEN** an edit's quote holds `⟦g0⟧він⟦g1⟧` and its replacement is `вона`
-- **THEN** it is not applied and counts as refused
-
-#### Scenario: An edit that makes a check block is refused
-
-- **WHEN** an edit's replacement mixes Latin and Cyrillic letters inside one word
-- **THEN** the text fails `script-purity` and the edit counts as refused
-
-### Requirement: Ignore a reviewer edit whose quote is missing or whose change does not fit its criterion
-
-The application SHALL ignore an edit whose quote the candidate does not hold, and an edit whose change does not fit its
-criterion, testing the fit before the quote's count so that an unfit edit is never an ambiguity.
-
-**Source**: FR-QA-02, FR-QA-07, ADR-0038; tasks 15d.6. In plain words: a small model that finds nothing still fills a slot with a paraphrase under one of the criterion names, so an edit that does not do what its criterion says is dropped like a quote that is not there.
-
-#### Scenario: A hallucinated quote is ignored
-
-- **WHEN** the reviewer answers an edit whose quote `відімкнув ключем` is not in the candidate
-- **THEN** the candidate is unchanged, no edit is recorded, no further call is made and the segment is accepted
-
-#### Scenario: An edit that does not fit its criterion is ignored
-
-- **WHEN** the reviewer answers one of: an `omission` edit `Він пішов.` → `Він ушів.` that adds no words, an `addition`
-  edit `Він пішов додому.` → `Він пішов додому знову.` that removes none, a `quotes` edit `двері` → `дверцята` that
-  touches no quote mark or bracket, a `language` edit `двері` → `дверка` that touches no letter of another script, a
-  `terminology` edit `двері` → `портал` that uses no word the candidate or the glossary has, or a `meaning`, `terminology`, `gender` or
-  `agreement` edit that deletes more than half of its quote, such as the `gender` edit `Вона втомилася і пішла` →
-  `Вона`
-- **THEN** the edit is ignored, even when its quote occurs twice in the candidate
-
-#### Scenario: A reviewer's gender edit toward a suggested gender is a low note
-
-- **WHEN** the glossary suggests `Chisel` as female, the sheet reads `Chisel — likely female`, the draft is
-  `Чизел відчинив старі двері.` and the reviewer answers a `gender` edit changing `відчинив` to `відчинила`
-- **THEN** the edit is not applied, one low `ignored-edit` finding is recorded, no directed fix is called and the draft
-  stays; with the gender set by the person the same edit is applied
-
-### Requirement: Apply reviewer edits in order and keep a refused one as evidence
-
-The application SHALL apply edits one after another, each verified against the text the earlier ones left, dropping an
-edit identical to an earlier one (the same criterion, quote and replacement, as the two Max passes can both write it),
-and SHALL treat an edit whose quote was found but whose application was refused as evidence, never as an applied change.
-
-**Source**: FR-QA-02, FR-QA-07, ADR-0038; tasks 15d.6. In plain words: later edits are checked against what the earlier ones left; fluency and style remarks are notes for the person and are never applied.
-
-#### Scenario: A gender pair of edits is applied in order
-
-- **WHEN** the reviewer answers two `gender` edits, `Вона втомився` → `Вона втомилася` and `йшов далі` → `йшла далі`
-- **THEN** both are applied and the target is `Вона втомилася, але йшла далі.`
-
-#### Scenario: An edit written by both Max passes is applied once
-
-- **WHEN** both Max passes answer the same `gender` edit `Вона втомився` → `Вона втомилася`
-- **THEN** it is applied once and the second copy is dropped
-
-#### Scenario: A style remark is a note
-
-- **WHEN** the reviewer answers an edit with the criterion `style` for an idiom
-- **THEN** it is not applied, the segment is accepted with the draft's text and a low finding raised by `reviewer` keeps
-  the remark
-
-### Requirement: Send one directed fix for a refused reviewer edit
-
-WHEN, after the applied edits, an edit remains whose quote was found but whose application was refused, the
-application SHALL send one directed fix for that segment naming the criterion, the quote and the reviewer's
-replacement.
-
-**Source**: FR-QA-02, FR-QA-07, ADR-0038; tasks 15d.6. In plain words: when the reviewer is right that something is wrong but the code cannot apply its words, the model that wrote the draft gets one precise chance, with the exact quote. A call that fails during that one fix pauses and is sent again like any other call; the reviewer is not asked again.
-
-#### Scenario: A refused edit gets one directed fix that names its quote
-
-- **WHEN** the reviewer's `invented-word` edit for the quote `дверзі` mixes two alphabets and the directed fix answers
-  `Він відчинив старі двері.`
-- **THEN** exactly one directed fix is made, whose request names `дверзі` and `invented-word`
-- **AND** the segment is ACCEPTED as `Він відчинив старі двері.`
-
-#### Scenario: The directed fix fails with an error
-
-- **WHEN** the directed fix call answers `ErrorCode.auth`
-- **THEN** the step ends with that error, and the next decision for the segment repeats the fix without a new reviewer
-  call
-
-### Requirement: Count a refused edit's issue as resolved only when its defect is gone
-
-The application SHALL count a refused edit's issue as resolved only when the fixed text passes the hard gates and checks, adds no
-blocking check, and the edit's defect is gone from it — its quote is no longer there or, for an edit whose replacement
-adds words around its quote (`двері` → `старі двері`), its replacement stands there.
-
-**Source**: FR-QA-02, FR-QA-07, ADR-0038; tasks 15d.6. In plain words: a fix counts only when the thing the reviewer pointed at is really gone and nothing new is broken.
-
-#### Scenario: A fix that removes the quote resolves the issue
-
-- **WHEN** the `invented-word` edit for the quote `дверзі` is refused and the directed fix answers
-  `Він відчинив старі двері.`
-- **THEN** the issue is resolved, no verified blocker remains and the segment is ACCEPTED
-
-### Requirement: Flag the segment when a refused edit's issue is not resolved
-
-IF a refused edit's issue is not resolved, THEN the application SHALL treat it as a verified blocker and SHALL FLAG the
-segment with it recorded as a medium finding raised by `reviewer`, keeping the text the applied edits left.
-
-**Source**: FR-QA-02, FR-QA-07, ADR-0038; tasks 15d.6. In plain words: an issue the reviewer evidenced with a quote the code found, and that no edit or fix cleared, is the one thing besides the checks that keeps a segment out of the book.
-
-#### Scenario: A directed fix that leaves the quote flags the segment
-
-- **WHEN** the directed fix answers a text that still holds `дверзі`
-- **THEN** the segment is FLAGGED with the draft as its target and a medium `invented-word` finding raised by
-  `reviewer` that quotes `дверзі`
-
-### Requirement: Take a reviewer's rewrite only when nothing breaks
-
-A `rewrite` SHALL replace the draft only when the whole text passes the placeholder gates and every deterministic
-check; otherwise the draft SHALL stay, the segment SHALL be FLAGGED and a medium `rewrite` finding SHALL say the draft
-was kept.
-
-**Source**: FR-QA-02, FR-QA-07, ADR-0038; tasks 15d.6. In plain words: a model that rewrites a whole sentence may break more than it fixes, so a rewrite is taken only when nothing breaks.
-
-#### Scenario: A rewrite that passes every check is taken
-
-- **WHEN** the reviewer answers `rewrite` with `Він відчинив старі дубові двері.`
-- **THEN** the segment is ACCEPTED with that target
-
-#### Scenario: A rewrite that breaks a check leaves the draft
-
-- **WHEN** the reviewer answers `rewrite` with a text that mixes Latin and Cyrillic letters inside one word
-- **THEN** the draft stays as the target, the segment is FLAGGED, and a medium `rewrite` finding says the draft was kept
-
-### Requirement: Flag a segment the reviewer could not review
-
-IF a reviewer call ends with `ErrorCode.timeout` after its retries and its resend, or its reply cannot be read, THEN
-the system SHALL NOT pause the run for it: it SHALL keep each segment's draft, flag the segment with a medium
-`reviewer-unavailable` finding raised by `reviewer` (with the timeout as its reason when the call timed out), accept
-none of them, make no repair round for them, and go on with the next segment.
-
-**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7. In plain words: a reviewer that does not answer says nothing about the translation, so the translation is kept and handed to the person for review instead of holding the whole book.
-
-#### Scenario: A chunk's reviewer stalls
-
-- **WHEN** a Balanced chunk of two drafted segments is reviewed and the call and its resend both end with
-  `ErrorCode.timeout`, with pause on error enabled
-- **THEN** the run does not pause, both segments are FLAGGED with their drafts as targets and a `reviewer-unavailable`
-  finding, and the run report lists them with `ErrorCode.timeout`
-
-#### Scenario: A reply that cannot be read flags the segment
-
-- **WHEN** the reviewer replies `Looks good to me!`
-- **THEN** the segment is FLAGGED with a `reviewer-unavailable` finding and no flag reason
-
-### Requirement: Wait out a provider outage during review
-
-IF a reviewer call ends with a provider error other than `ErrorCode.timeout` — a provider outage (`unreachable`,
-`upstream`, `rateLimited`) included — THEN the application SHALL pause the run as the `resume` capability says, so the
-outage is waited out and the reviewer call made again, exactly as for a draft call.
-
-**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7. In plain words: a provider that is down is another matter than a reviewer that does not answer: overnight it would flag every segment reviewed while it was down, so the run waits for it and reviews again.
-
-#### Scenario: A provider outage during review is waited out
-
-- **WHEN** an Unattended Balanced run drafts `One.`, `Two.` and `Three.` and the chunk's reviewer call ends with
-  `ErrorCode.unreachable` (or `upstream`, or `rateLimited`) while the provider is down for a minute
-- **THEN** the run waits, probes at 0:15, 0:45 and 1:45, reviews the chunk again once a probe passes, and ends Completed
-  with all three ACCEPTED and none flagged
-
-### Requirement: Keep the first pass's answers when a second reviewer pass cannot be read
-
-On Max, a second reviewer pass that cannot be read SHALL leave the first pass's answers in force.
-
-**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7. In plain words: what the first pass already found is not thrown away because the narrower second look failed to answer.
-
-#### Scenario: An unreadable second pass keeps the first pass's edit
-
-- **WHEN** on Max the first reviewer pass answers an `omission` edit for `s1` and the second pass replies
-  `Looks good to me!`
-- **THEN** the first pass's answers stay in force and its edit stays applied
-
-### Requirement: Never flag a segment for a reviewer reply cut by the output cap
-
-A reviewer reply that stopped with the finish reason `length` SHALL NEVER flag a segment: the system SHALL keep the
-complete entries of the cut reply, ask about the pairs left unread once more in one smaller call of the same pass, and
-take a pair still unread after that as `ok` with a warning in the log.
-
-**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7. In plain words: the deterministic checks have passed such a pair, and a flag would hand the person a segment nothing is known to be wrong with (the draft stays unreviewed but accepted by the checks).
-
-#### Scenario: A reply cut by the cap keeps what it answered
-
-- **WHEN** the reviewer's reply for eight pairs stops with `length` after the fifth entry
-- **THEN** the five answers are used, one more reviewer call is made for the three unread pairs only, and no segment is
-  flagged `reviewer-unavailable`
-
-#### Scenario: Pairs unread after the re-ask are taken as ok
-
-- **WHEN** the re-ask is cut too and answers none of its pairs
-- **THEN** those pairs are decided by the quality checks alone, with no further reviewer call and no flag
-
-### Requirement: Size the reviewer's output cap from the batch
-
-The system SHALL size the reviewer's output cap from the batch as 128 tokens plus, for each pair, 70, the estimated
-tokens of the pair's candidate (a rewrite may repeat it) and 120 for a possible edit, and SHALL expect a reply of half
-the cap.
-
-**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7. In plain words: a cap sized from the pairs bounds every model call, so a small model cannot run on without limit.
-
-#### Scenario: The cap grows with the pairs
-
-- **WHEN** a reviewer call is built for two pairs
-- **THEN** its output cap is 128 tokens plus, for each pair, 70, the estimated tokens of the pair's candidate and 120,
-  and its expected length is half the cap
-
-### Requirement: Settle a failed re-ask of a cut reviewer reply
-
-IF a re-ask is answered with an unreadable reply (an empty completion, a context-window refusal, a stalled call), THEN
-the system SHALL take its pairs as `ok` with a warning in the log; IF it fails with a cancellation (Pause or Stop) or a
-provider outage, THEN it SHALL fail the whole review as the first call does, so the step is redone on resume and no unreviewed pair is stored as accepted.
-
-**Source**: FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7. In plain words: a re-ask that cannot answer is no reason to flag, but a Pause, a Stop or an outage must not leave an unreviewed pair stored as accepted.
-
-#### Scenario: An unreadable re-ask takes its pairs as ok
-
-- **WHEN** the re-ask for three unread pairs is answered with `ErrorCode.emptyCompletion`
-- **THEN** those pairs are taken as `ok` with a warning in the log and no segment is flagged
-
-#### Scenario: A re-ask that meets an outage fails the whole review
-
-- **WHEN** the re-ask for three unread pairs is answered with `ErrorCode.unreachable`
-- **THEN** the whole review fails like the first call, the step is redone on resume and no unreviewed pair is stored as
-  accepted
-
-### Requirement: Keep the best candidate through the repair path
-
-The application SHALL carry a best candidate through a segment's repair path — the target with the fewest failed hard
-gates and, among those, the fewest blocking checks, the checks counting before any reviewer finding — and SHALL replace
-it by a step's result only when that result has fewer; progress SHALL be judged by the sets of blocking checks, never by
-a score.
-
-**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), ADR-0038; tasks 15b, 15d.7. In plain words: on the hand test a repair that "improved" a segment sometimes left it with more defects than the draft had. A repair is a bet, so the best text seen so far is kept.
-
-#### Scenario: A repair that breaks a hard gate is discarded
-
-- **WHEN** the draft `Він.` fails only the length check and the directed fix answers `Він відчиниw.`, which fails
-  `script-purity`
-- **THEN** the segment is FLAGGED with `Він.` as its target and the `length` finding, and no second fix is sent
-
-#### Scenario: No defect ends worse than its first candidate
-
-- **WHEN** every fix answers a text with a Latin letter in a Cyrillic word and an unclosed guillemet, over each 15d.1
-  defect the checks decide
-- **THEN** each segment is FLAGGED with exactly its first candidate's findings
-
-### Requirement: Stop the repair path at a step that does not improve
-
-WHEN a step's result does not have fewer failed hard gates or blocking checks than the best candidate, whether it
-regresses, swaps one blocker for another or repeats the text, THEN the application SHALL discard it, stop the path
-there and keep the best candidate, which is always the final target, and SHALL write each round's blocker set before and after
-to the log at DEBUG.
-
-**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), ADR-0038; tasks 15b, 15d.7. In plain words: a directed fix once returned the same text three times; a step that does not beat the best candidate ends the attempt.
-
-#### Scenario: A second repair that makes it worse leaves the first
-
-- **WHEN** Max, the draft `Він відчиниw «старі двері.` fails `script-purity` and `quote-balance`, the first fix answers
-  `Він відчиниw старі двері.` (one blocker) and the second answers `HE OPENED THE «OLD DOOR.` (three)
-- **THEN** the segment is FLAGGED with the `script-purity` finding of the first fix and no `echo` or `quote-balance`
-  finding
-
-#### Scenario: Swapping one blocker for another stops the path
-
-- **WHEN** Max, a draft fails `script-purity` and `quote-balance`, the first fix leaves only `quote-balance`, and the
-  second leaves only `script-purity`
-- **THEN** the segment is FLAGGED with the `quote-balance` finding after 2 requests and no third fix is sent
-
-#### Scenario: Each round's blocker set is logged
-
-- **WHEN** a draft fails `script-purity` and `quote-balance` and the first repair round's fix leaves only `quote-balance`
-- **THEN** the DEBUG log holds the blocker set before (`script-purity`, `quote-balance`) and after (`quote-balance`)
-
-#### Scenario: A shrinking set continues up to the dial's rounds
-
-- **WHEN** Max, a draft fails `script-purity` and `quote-balance`, the first fix leaves only `script-purity` and the
-  second passes every check
-- **THEN** the segment is ACCEPTED after 2 rounds as repaired
-- **AND** with a dial of 1 round and the same first fix the segment is FLAGGED after 1 round
-
-#### Scenario: A fix that leaves the same blockers stops the path
-
-- **WHEN** an echoed draft gets a first directed fix answering `HE OPENED THE OLD DOOR!` with three rounds allowed
-- **THEN** the segment is FLAGGED after 1 round and no second fix is sent
-
-### Requirement: Send a directed fix only for a blocker with evidence
-
-The application SHALL send a directed fix only for a blocker with evidence it holds — a failed check, or the quote of a
-reviewer edit it could not verify — never for a concern with no finding, so a segment with nothing to name is decided
-without a repair call, and at most as many fix rounds as the dial allows, none on a review retry.
-
-**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), ADR-0038; tasks 15b, 15d.7. In plain words: the reflect, improve and polish chain could no longer run once acceptance stopped depending on a score, and no measurement showed it helped, so it is gone rather than hidden behind a switch; a fix needs something concrete to name.
-
-#### Scenario: A reviewer finding without a quote is never fixed
-
-- **WHEN** the reviewer asks for a rewrite that mixes alphabets in one word
-- **THEN** the draft is kept, the segment is FLAGGED and no directed fix is sent
-
-#### Scenario: A review retry makes no fix
-
-- **WHEN** a retry's reviewer edit is refused and the dial has no repair round
-- **THEN** no directed fix is sent and the segment is FLAGGED with the edited text
-
-#### Scenario: No reflect, improve or polish call exists
-
-- **WHEN** a Max segment fails a check and its repair rounds run
-- **THEN** only directed fixes are sent, with no reflect, improve or polish call and no near-miss polish window
-
-### Requirement: Replace the edited text by a fix only when it removes a quote without a new blocker
-
-A fix for refused reviewer edits SHALL replace the edited text only when it brings no new blocker and removes at least
-one of the quotes.
-
-**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), ADR-0038; tasks 15b, 15d.7. In plain words: a fix that makes things worse is thrown away.
-
-#### Scenario: A fix that adds a blocker is discarded
-
-- **WHEN** a reviewer edit is refused, and the directed fix answers a text that still holds the quote and an unclosed
-  guillemet
-- **THEN** the edited text stays as the target and the segment is FLAGGED
-
-#### Scenario: A fix that supplies the words of an omission edit is kept
-
-- **WHEN** an `omission` edit `двері` → `старі двері` is refused because `двері` occurs twice, and the directed fix
-  answers a text that holds `старі двері`
-- **THEN** the fixed text is the target and the edit counts as resolved although the quote is still in it
-
-#### Scenario: A fix that clears one of two quotes is kept
-
-- **WHEN** two reviewer edits are refused and the directed fix removes the first quote but not the second
-- **THEN** the fixed text is the target, the segment is FLAGGED, and the second quote stays on the record as evidence
-
-### Requirement: Fail a segment on a deterministic text defect before the reviewer reads it
-
-The application SHALL run the deterministic text checks on every restored candidate, after the refusal gate and before
-any reviewer call, and SHALL treat a blocking finding as a failed hard gate.
-
-**Source**: FR-QA-01, FR-QA-07, ADR-0038; tasks 15d.2. In plain words: a mixed-alphabet word, a quote left open and a whole English paragraph accepted as Ukrainian are facts code can see, so the segment is repaired or flagged before a model is asked to opine on it.
+**Source**: FR-QA-01, FR-QA-07, ADR-0038; tasks 15d.2. In plain words: a mixed-alphabet word, a quote left open and a whole English paragraph accepted as Ukrainian are facts code can see, so the segment is repaired or flagged on those facts, and the repair is told exactly what they are.
 
 #### Scenario: A text check runs before the reviewer
 
-- **WHEN** a Balanced draft passes the refusal gate and leaves a quote open that its source closes
-- **THEN** the quote check runs before any reviewer call, the segment fails a hard gate and the reviewer is not asked
-  about it
+- **WHEN** a Balanced draft passes the refusal gate and holds the word `навчg3вся`
+- **THEN** the script-purity check runs before the one repair, the segment fails a hard gate with a BLOCK finding, and the repair is told the word
 
 ### Requirement: Reject a word that mixes scripts
 
 A word that holds a letter of the target's script beside a letter of another script or a digit (`навчg3вся`,
 `імпoву`) SHALL raise a medium-or-higher `language` finding from `script-purity`.
 
-**Source**: FR-QA-01, FR-QA-07, ADR-0038; tasks 15d.2. In plain words: a word wholly in another script (a name) and a number's suffix (`90х`) are not mixed words, and a coined word in the right alphabet (`розлізяв`) cannot be seen by code and stays with the reviewer.
+**Source**: FR-QA-01, FR-QA-07, ADR-0038; tasks 15d.2. In plain words: a word wholly in another script (a name) and a number's suffix (`90х`) are not mixed words, and a coined word in the right alphabet (`розлізяв`) cannot be seen by code and stays with the Proofread stage.
 
 #### Scenario: A mixed-script word blocks acceptance
 
 - **WHEN** English → Ukrainian and the draft for `He studied hard all year.` is `Він наполегливо навчg3вся цілий рік.`
 - **THEN** the segment fails a hard gate with a `language` finding from `script-purity` whose note quotes `навчg3вся`
-- **AND** the reviewer is not asked about that segment
+- **AND** the segment earns the one repair at Balanced and Max
 
 ### Requirement: Hold a target's quote pairs balanced
 
@@ -1182,15 +702,20 @@ with the wrong mark, while the source's own pairs balance, SHALL raise a `fluenc
 ### Requirement: Identify a paragraph written in the wrong language
 
 A paragraph of at least 12 words whose letters are under 60% in the target script, or, when the scripts match, whose
-share of source-language function words (those the target language does not also use) is at least 30%, SHALL raise a
-`language` finding from `language-identity`.
+share of source-only function words (the source language's function words minus the target language's) is at least 30%,
+SHALL raise a BLOCK-level `language` finding from `language-identity`.
 
-**Source**: FR-QA-01, FR-QA-07, ADR-0038; tasks 15d.2. In plain words: a whole English paragraph accepted as Ukrainian is a fact code can see; a short English line is left to the echo check, because a name or an exclamation can read the same in both languages.
+**Source**: FR-QA-01, FR-QA-07, ADR-0038; tasks 15d.2. In plain words: a whole English paragraph accepted as Ukrainian is a fact code can see; a short English line is left to the echo check, because a name or an exclamation can read the same in both languages. A few source-only words in an otherwise translated paragraph are not this finding: they are the function-word residue finding, which earns a repair and keeps the draft.
 
 #### Scenario: An English paragraph is a hard failure
 
 - **WHEN** English → Ukrainian or English → Polish and the target of a 19-word English paragraph is that paragraph
 - **THEN** the segment fails with a `language` finding from `language-identity`
+
+#### Scenario: A Russian paragraph accepted as Ukrainian is a hard failure
+
+- **WHEN** Russian → Ukrainian and the target is a 14-word Russian paragraph of which 6 words are in the pair's source-only set
+- **THEN** the segment fails with a BLOCK `language` finding from `language-identity` and keeps no machine target
 
 ### Requirement: Note a doubled word and a spacing artefact the source lacks
 
@@ -1206,18 +731,18 @@ A doubled word and a spacing artefact the source does not have SHALL only add a 
 
 ### Requirement: Name the exact span in each text finding and bound the text checks
 
-Each finding SHALL carry the exact span and a plain explanation, and the directed fix SHALL repeat both in its findings
+Each finding SHALL carry the exact span and a plain explanation, and the repair SHALL repeat both in its defect
 list. The checks SHALL be skipped for a kept foreign passage, SHALL read only quote marks (never dashes, commas or full
 stops, which differ by language), and SHALL leave a text of only digits, URLs, e-mail addresses and ISBN labels alone, as
 the script and echo checks do.
 
-**Source**: FR-QA-01, FR-QA-07, ADR-0038; tasks 15d.2. In plain words: the directed fix can only repair what it is told exactly, and a check must not fire on text that is not prose.
+**Source**: FR-QA-01, FR-QA-07, ADR-0038; tasks 15d.2. In plain words: the one repair can only fix what it is told exactly, and a check must not fire on text that is not prose.
 
 #### Scenario: The directed fix repeats the span
 
 - **WHEN** the draft `Він наполегливо навчg3вся цілий рік.` gets a `script-purity` finding
-- **THEN** the finding carries the span `навчg3вся` with a plain explanation, and the directed fix repeats both in its
-  findings list
+- **THEN** the finding carries the span `навчg3вся` with a plain explanation, and the repair repeats both in its
+  defect list
 
 #### Scenario: A kept foreign passage is skipped
 
@@ -1229,37 +754,48 @@ the script and echo checks do.
 - **WHEN** the target is `https://example.org/1990`
 - **THEN** the deterministic text checks raise no finding
 
-### Requirement: Normalise a candidate's typography before it is reviewed
+### Requirement: Normalise a candidate's typography before any check counts
 
-The application SHALL, with no setting, put every candidate target — a draft, a repair round's rewrite, a review retry,
-a reused memory entry, a consistency-pass revision — through a deterministic typography pass before the placeholder
-gates restore it, so that the checks, the reviewer, the edits applied to the candidate and the stored masked target all
-read the normalised text, and SHALL never run the pass on a source text.
+The application SHALL, with no setting, put every candidate target — a draft, a repair's rewrite, a retry, a reused memory entry, a proofread rewrite — through the deterministic code repairs of this capability before the placeholder gates restore it and before any check counts, so the checks, the edits applied to the candidate and the stored masked target all read the normalised text, and SHALL never run them on a source text.
 
-**Source**: FR-QA-01, ADR-0038; tasks 15d.3. In plain words: the model writes `п'ять...` and `"Іди геть"` about nine times in ten, so code puts `п’ять…` and `«Іди геть»` in, instead of asking a model to fix what code can see, and a person's later edit gets the same finish when the book is written. A draft's masked reply is the normalised one.
+**Source**: FR-QA-01, ADR-0038; tasks 15d.3, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: the model writes `п'ять...` and `"Іди геть"` about nine times in ten, so code puts `п’ять…` and `«Іди геть»` in, instead of asking a model to fix what code can see, and a person's later edit gets the same finish when the book is written. The code repairs now also strip stress marks, restore a lost dialogue dash and heading number, and write dashes in one form; each is its own requirement. A draft's masked reply is the normalised one.
 
 #### Scenario: A memory reuse is normalised too
 
 - **WHEN** `ch03.xhtml:12`, reused from memory, holds `Він сказав: "Так..."`
 - **THEN** its stored target is `Він сказав: «Так…»`
 
+#### Scenario: A proofread rewrite is normalised before it is judged
+
+- **WHEN** the Proofread stage returns `Він сказав: "Не пам'ятаю..."` for `ch03.xhtml:14`
+- **THEN** the never-worse gate reads `Він сказав: «Не пам’ятаю…»`
+
+#### Scenario: A source text is never touched
+
+- **WHEN** a source paragraph holds `"Yes..."`
+- **THEN** it is unchanged
+
 ### Requirement: Normalise apostrophes, ellipses and spacing
 
-The pass SHALL turn a straight apostrophe between two letters into `’`, three dots into `…`, and remove a space before
+The pass SHALL turn a straight apostrophe between two letters into the apostrophe the brief's apostrophe choice names (`’` unless the person chose `'`), three dots into `…`, and remove a space before
 `,` `.` `;` `!` `?` or `…` (French keeps the space before `?` `!` `;`); a language with no line in the quote tables
 gets these fixes only.
 
-**Source**: FR-QA-01, ADR-0038; tasks 15d.3. In plain words: code writes the typographic apostrophe and ellipsis that models almost never do.
+**Source**: FR-QA-01, ADR-0038; tasks 15d.3. In plain words: code writes the apostrophe the person chose for the book, and the typographic ellipsis, that models almost never do.
+
+#### Scenario: The person chose the straight apostrophe
+
+- **WHEN** the brief's apostrophe is `'` and the Ukrainian draft is `Він сказав: "Не пам'ятаю..."`
+- **THEN** the stored target is `Він сказав: «Не пам'ятаю…»`
 
 #### Scenario: Apostrophe, ellipsis and quotes are normalised
 
-- **WHEN** the Ukrainian draft is `Він сказав: "Не пам'ятаю..."`
+- **WHEN** the brief's apostrophe is the default `’` and the Ukrainian draft is `Він сказав: "Не пам'ятаю..."`
 - **THEN** the stored target is `Він сказав: «Не пам’ятаю…»`
 
 ### Requirement: Write quote marks in the target language's convention
 
-For a target language that has a line in the quote table, the pass SHALL turn a straight `"` into that language's
-primary pair at the top level and its nested pair inside it (`«…„…“…»` in Ukrainian), SHALL keep a dash dialogue a dash
+For a target language that has a line in the quote table, the pass SHALL turn a straight `"` into the primary pair of the brief's quote-style choice (by default the language's own convention) at the top level and its nested pair inside it (`«…„…“…»` in Ukrainian by default), SHALL keep a dash dialogue a dash
 dialogue, and SHALL leave a quote whose side cannot be told, a stray closing mark and an inch sign as they are.
 
 **Source**: FR-QA-01, ADR-0038; tasks 15d.3. In plain words: the model writes `"Іди геть"`, and code writes `«Іди геть»` where the side of every mark is certain and touches nothing it would have to guess.
@@ -1268,6 +804,11 @@ dialogue, and SHALL leave a quote whose side cannot be told, a stray closing mar
 
 - **WHEN** the Ukrainian draft is `Він сказав: "Іди геть".`
 - **THEN** the stored target is `Він сказав: «Іди геть».`
+
+#### Scenario: The person chose another pair
+
+- **WHEN** the brief's quote style for Ukrainian is `„…“` and the draft is `Він сказав: "Іди геть".`
+- **THEN** the stored target is `Він сказав: „Іди геть“.`
 
 #### Scenario: A dash dialogue stays a dash dialogue
 
@@ -1313,7 +854,7 @@ naming how many of each kind were changed, and SHALL never change the verdict of
 ### Requirement: Repair a candidate's quote marks deterministically, and keep a usable draft when a text check still blocks
 
 When the only blocker of a restored candidate is `quote-balance`, the application SHALL repair its quote marks without a
-model call before any round or reviewer reads it, SHALL change quote marks only, never a word, a protected span or a
+model call before the one repair or any mark reads it, SHALL change quote marks only, never a word, a protected span or a
 `⟦gN⟧` token, and SHALL repeat to the same text.
 
 **Source**: FR-QA-01, FR-QA-07, ADR-0038; tasks 15e.5. In plain words: a usable Ukrainian paragraph with one stray quote mark is mended by code, or at worst exported as the model wrote it and flagged for a look; an English leftover is never exported as if it were a translation.
@@ -1384,7 +925,7 @@ left as it is.
 The quote repair SHALL return the text unchanged when the source's own quotes are open, a placeholder token sits inside
 a word, a language has no quote line of its own, or any step would be a guess.
 
-**Source**: FR-QA-01, FR-QA-07, ADR-0038; tasks 15e.5. In plain words: code mends only what it can decide with certainty, and otherwise leaves the text for the repair rounds.
+**Source**: FR-QA-01, FR-QA-07, ADR-0038; tasks 15e.5. In plain words: code mends only what it can decide with certainty, and otherwise leaves the text for the one repair.
 
 #### Scenario: A source that is itself open is left alone
 
@@ -1393,11 +934,11 @@ a word, a language has no quote line of its own, or any step would be a guess.
 
 ### Requirement: Keep a usable draft as the machine target when a text check still blocks
 
-A segment that still ends FLAGGED, whose draft restored through the placeholder gate and whose every failed hard gate is
-`quote-balance` or `script-purity`, SHALL keep that draft (the best candidate of its repair path) as its machine target,
-so review shows it with its finding and export writes it instead of the source.
+A segment that ends FLAGGED SHALL keep as its machine target the last candidate that restored through the placeholder
+gate, except a paragraph in the wrong language, which keeps none; export SHALL write that machine target only when every
+failed hard gate left on it is `quote-balance` or `script-purity`, and the source otherwise.
 
-**Source**: FR-QA-01, FR-QA-07, ADR-0038; tasks 15e.5. In plain words: a usable Ukrainian paragraph with one stray quote mark is at worst exported as the model wrote it and flagged for a look.
+**Source**: FR-QA-01, FR-QA-07, ADR-0038; tasks 15e.5. In plain words: a usable Ukrainian paragraph with one stray quote mark is at worst exported as the model wrote it and flagged for a look. Every other flagged text is kept for the review desk to show, but the book gets the source there; a whole paragraph left in the wrong language keeps no machine text at all, so it can never be written as a translation. This is the one rule every other requirement about a flagged segment's text follows.
 
 #### Scenario: A quote the repair cannot clear keeps the draft
 
@@ -1418,64 +959,63 @@ machine target.
 
 ### Requirement: Accept a segment only by the acceptance rule
 
-The application SHALL accept a drafted, edited or repaired segment only when its hard gates pass, no soft check failed
-outright, no deterministic check blocks, and no verified blocker is left — an issue the reviewer evidenced with a quote
-the code found and that no edit or fix resolved; the confidence the checks derive SHALL NOT be compared with any
-threshold and the reviewer's fluency and style remarks SHALL NOT block.
+The application SHALL accept a drafted, edited or repaired segment only when its hard gates pass, no soft check failed outright and no BLOCK-level finding is left; REPAIR-level and NOTE-level findings left on it SHALL NOT stop acceptance and SHALL become its marks, and the confidence the checks derive SHALL NOT be compared with any threshold.
 
-**Source**: FR-QA-07, FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`, ADR-0038; tasks 15d.6. In plain words: a segment is accepted unless the code can point at something wrong with it. A repaired target is decided by the checks alone: the reviewer read the draft, not the repair. A soft check that fails outright is the one in "Block acceptance when a soft check fails outright". A reuse from memory follows the same rule with no reviewer (see "Accept a context-matched memory reuse without the reviewer").
+**Source**: FR-QA-07, FR-QA-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `design.md#d12--checks-levels-and-code-repairs-before-checks`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: a segment is accepted unless the code can point at something blocking in it. A repaired target is decided by the hard gates and the never-worse gate ("Keep a repair only when it passes the hard gates and the never-worse gate keeps it"), then read by the same rule; what stays wrong at repair or note level is accepted with a mark for the Proofread stage. A soft check that fails outright is the one in "Block acceptance when a soft check fails outright". A reuse from memory follows the same rule with no model call (see "Accept a context-matched memory reuse when its checks pass").
 
 #### Scenario: A low-confidence segment whose checks all pass is accepted
 
-- **WHEN** Balanced and the segment passes every check with a length margin of 0.2 and confidence `0.70`, and the
-  reviewer answers `ok`
+- **WHEN** Balanced and the segment passes every check with a length margin of 0.2 and confidence `0.70`
 - **THEN** it is accepted in Unattended, Assisted and Manual alike
 
 #### Scenario: A hard-gate failure is never accepted
 
-- **WHEN** a segment's placeholder hard gate failed, so it was not shown to the reviewer
-- **THEN** the segment is not accepted and goes to a directed fix
+- **WHEN** a segment's placeholder hard gate failed
+- **THEN** the segment is not accepted and, at Balanced and Max, earns the one repair
 
 #### Scenario: A failed soft check blocks a segment the reviewer likes
 
-- **WHEN** a chunk is reviewed and one of its segments failed its length-ratio check outright
-- **THEN** that segment is not reviewed, is not accepted and goes to a directed fix
+- **WHEN** a segment failed its length-ratio check outright, whatever any model thought of its wording
+- **THEN** it is not accepted and, at Balanced and Max, earns the one repair
 
 #### Scenario: A repaired target is accepted by the checks alone
 
-- **WHEN** a directed fix returns a target that passes every check
-- **THEN** it is accepted as repaired and no reviewer call follows
-
-#### Scenario: A good but short translation is accepted
-
-- **WHEN** the reviewer is off and a segment passes every check with a length margin of 0.5 and confidence `0.875`
-- **THEN** it is accepted in Unattended, Assisted and Manual alike
+- **WHEN** the one repair returns a target that passes the hard gates and every check, and the never-worse gate keeps it
+- **THEN** the segment is accepted as repaired and no other call follows
 
 #### Scenario: A verified blocker left unresolved flags the segment
 
-- **WHEN** a refused edit's quote is still in the target after its one directed fix
-- **THEN** the segment is FLAGGED although every check passes
+- **WHEN** the one repair of a segment leaves a BLOCK `alphabet` finding on the text that stays
+- **THEN** the segment is FLAGGED although its other checks pass
+
+#### Scenario: A good but short translation is accepted
+
+- **WHEN** a segment passes every check with a length margin of 0.5 and confidence `0.875`
+- **THEN** it is accepted in Unattended, Assisted and Manual alike
+
+#### Scenario: A repair-level leftover is accepted with a mark
+
+- **WHEN** the text that stays holds a `terminal-mark` finding at REPAIR level and no BLOCK finding
+- **THEN** the segment is accepted with a proofread mark
 
 #### Scenario: The 15d.1 corpus replays through the rule
 
-- **WHEN** the clean candidates of the defect corpus that the old judge refused are replayed with a reviewer that finds
-  nothing, and the defects only a model can see are replayed with the edits a reviewer would ask for
-- **THEN** every clean candidate is accepted unchanged, every defect the checks decide is refused, and every other
-  defect ends as the corrected text
+- **WHEN** the clean candidates of the defect corpus that the old judge refused are replayed
+- **THEN** every clean candidate is accepted unchanged and every defect the checks decide at BLOCK level is refused
 
-### Requirement: Accept a context-matched memory reuse without the reviewer
+### Requirement: Accept a context-matched memory reuse when its checks pass
 
 WHEN a segment's target is reused from memory because its source and both neighbours match, the application SHALL
-accept that target only when its hard gates pass and no soft check failed outright, and SHALL make no reviewer call for
-it nor show it to its chunk's reviewer.
+accept that target only when its hard gates pass and no soft check failed outright, and SHALL make no model call for
+it.
 
-**Source**: FR-ALGO-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#context-aware-tm`, `#tiered-loop`, ADR-0038. In plain words: a sentence already accepted in the very same surroundings needs no second opinion from the reviewer, but it must still clear every deterministic check, so a memory entry can never put a broken or since-forbidden target into the book. When the memory is looked up, and that a reuse which is not accepted is discarded and the segment drafted instead, is the translation-pipeline capability's "Reuse the translation memory only where its context matches"; a segment is recorded as reused from memory only when its reuse is accepted.
+**Source**: FR-ALGO-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#context-aware-tm`, `#tiered-loop`, ADR-0038. In plain words: a sentence already accepted in the very same surroundings needs no new model call, but it must still clear every deterministic check, so a memory entry can never put a broken or since-forbidden target into the book. When the memory is looked up, and that a reuse which is not accepted is discarded and the segment drafted instead, is the translation-pipeline capability's "Reuse the translation memory only where its context matches"; a segment is recorded as reused from memory only when its reuse is accepted.
 
 #### Scenario: A context match is accepted without the reviewer
 
 - **WHEN** Balanced, `ch03.xhtml:12` reads `Yes.` between the same two sentences that surrounded `ch01.xhtml:4`, which
   was accepted as `Так.`
-- **THEN** `ch03.xhtml:12` is accepted as `Так.` with confidence 1.0, no draft or reviewer call is made for it, and it is
+- **THEN** `ch03.xhtml:12` is accepted as `Так.` with confidence 1.0, no draft call is made for it, and it is
   recorded as reused from memory
 
 #### Scenario: A reuse that fails a hard gate is drafted instead
@@ -1485,110 +1025,52 @@ it nor show it to its chunk's reviewer.
 - **THEN** the reused target fails the protected-span hard gate and is not accepted
 - **AND** `ch03.xhtml:12` is drafted instead, with `Hale` sent as a placeholder
 
-### Requirement: Repair a failing segment within the dial's repair budget before flagging it
-
-WHEN a drafted segment is not accepted because a check refuses it, the application SHALL run up to N self-heal rounds —
-N being 1 on Fast, 2 on Balanced and 3 on Max — each returning one target for that one segment; after N rounds without
-acceptance it SHALL mark the segment FLAGGED with every finding, and a segment accepted after at least one round SHALL
-count as repaired and accepted.
-
-**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#quality-dial-mapping`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#directed-fix-repair`, ADR-0038. In plain words: most failures can be fixed by asking the model again with the problem named. The budget keeps a stubborn segment from eating the run, and the repaired count shows how much the repairs are doing. A segment the checks accept goes to the reviewer instead (see "Verify every reviewer edit in code before applying it").
-
-#### Scenario: The budget runs out
-
-- **WHEN** Fast (N = 1) and the segment still fails after its one round
-- **THEN** it is marked FLAGGED
-
-#### Scenario: A repaired segment is counted
-
-- **WHEN** Max and the segment is accepted in its second round
-- **THEN** it is accepted and counted as repaired and accepted, not as auto-accepted
-
-### Requirement: Do not count the draft's format repairs as repair rounds
-
-The draft's one structural repair and one placeholder repair SHALL NOT count as self-heal rounds.
-
-**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#directed-fix-repair`, ADR-0038. In plain words: the draft's own two format repairs come first and never use up the budget — their order, and the replies that flag a segment at once, are the translation-pipeline capability's "Repair invalid structured draft replies once" and "Flag a segment whose reply cannot be used, and continue".
-
-#### Scenario: The draft's format repairs are not rounds
-
-- **WHEN** Fast (N = 1) and the draft, its placeholder repair and the directed fix all come back without `⟦g1⟧`
-- **THEN** the segment is FLAGGED with a high `markup` finding and no machine translation, after exactly 3 model calls
-- **AND** the directed fix was made although the placeholder repair had already been used
-
-### Requirement: Name a concrete finding in each round's directed fix
-
-Each self-heal round SHALL be a directed fix naming the concrete finding — a failed hard gate, with the expected
-placeholder sequence stated when the placeholder or protected-span gate failed, or a soft check failed outright — and
-SHALL have no call when there is nothing concrete to name.
-
-**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#directed-fix-repair`, ADR-0038. In plain words: a model repairs what it is told exactly, and a round with nothing to name would only ask it to guess.
-
-#### Scenario: A placeholder failure gets a directed fix with the expected tokens
-
-- **WHEN** Balanced, the source holds `⟦g0⟧`, `⟦g1⟧`, `⟦g2⟧`, and both the draft and its placeholder repair come back
-  without `⟦g1⟧`
-- **THEN** the first round is a directed fix that states the expected sequence `⟦g0⟧ ⟦g1⟧ ⟦g2⟧`
-- **AND** its reply is one target for that segment
-
-### Requirement: Decide a repaired target by the checks alone
-
-A target a round returns SHALL be decided by the checks alone, with no reviewer call, and a round that does not lower
-the blocker set ends the repair there ("Keep the best candidate through the repair path").
-
-**Source**: FR-ALGO-C11, FR-ALGO-C12 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), ADR-0038. In plain words: the reviewer read the draft, not the repair, so a repaired target is judged by the code alone.
-
-#### Scenario: A repaired target gets no reviewer call
-
-- **WHEN** Balanced and a directed fix returns a target that passes every check
-- **THEN** the segment is accepted as repaired and no reviewer call follows
-
 ### Requirement: Record each segment's findings for review and repair
 
-The application SHALL record for every decided segment its confidence and each finding with the check or the reviewer
-that raised it, its type, its severity and a short note, SHALL record every edit it applied as a low finding raised by
-`reviewer-edit` that carries the quote and its replacement, and SHALL keep the findings of a FLAGGED segment for the
-review desk and for any later retry.
+The application SHALL record for every decided segment its confidence and each finding with the check that raised it, its type, its severity, its level (BLOCK, REPAIR or NOTE) and a short note, SHALL keep the findings of a FLAGGED segment for the review desk and for any later retry, and SHALL keep the REPAIR-level findings left on an ACCEPTED segment as its proofread mark and its NOTE-level findings as its audit mark.
 
-**Source**: FR-QA-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`. In plain words: a directed fix needs to know exactly what was wrong, and so does the person reviewing a flagged segment; a flag with no reason would leave them guessing, and an edit made for them should be shown as what it removed and what it put there.
+**Source**: FR-QA-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, `design.md#d12--checks-levels-and-code-repairs-before-checks`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: the one repair needs to know exactly what was wrong, and so does the Proofread stage and the person reviewing a flagged segment; a flag with no reason would leave them guessing, and a mark with no named defect would give the proofread nothing to look at.
 
 #### Scenario: A flagged segment keeps its reasons
 
 - **WHEN** segment `ch5 · p12` is flagged after its length ratio of `0.41` fell outside `0.7–1.8`
-- **THEN** its record carries confidence and a medium `omission` finding from the length-ratio check
+- **THEN** its record carries confidence and a medium `omission` finding at BLOCK level from the length-ratio check
 
 #### Scenario: An accepted segment keeps the edits made to it
 
-- **WHEN** a segment is accepted after the reviewer's `gender` edit `Вона втомився` → `Вона втомилася` was applied
-- **THEN** its record carries a low `gender` finding raised by `reviewer-edit` holding both texts
+- **WHEN** a segment is accepted after the stress strip removed 2 accent marks from its draft
+- **THEN** its record carries a low `normalised` finding naming the 2 marks removed
+
+#### Scenario: An accepted segment keeps a repair-level leftover as its proofread mark
+
+- **WHEN** segment `ch5 · p13` is accepted with a `terminal-mark` finding at REPAIR level still on its text
+- **THEN** its record carries that finding as its proofread mark
 
 #### Scenario: An accepted segment keeps a low note
 
-- **WHEN** a segment is accepted with a `style` remark from the reviewer
-- **THEN** its record carries that remark as a low finding raised by `reviewer`
+- **WHEN** segment `ch5 · p14` is accepted with a NOTE `number` finding naming an extra `5`
+- **THEN** its record carries that finding as its audit mark and no proofread mark
 
 ### Requirement: Hold a first-person narrator's words to the narrator's gender
 
-WHEN the brief's narrator is first person with a male or female gender the person set, the brief verified or the run
+WHEN the brief's narrator is first person with a male or female gender the person set, the book's evidence verified or the run
 inferred from the narrator's own forms, and the target language's file names a gender check with `genderCheck=<name>`,
-the application SHALL run it on every candidate and raise a low `gender` finding (`raisedBy` `gender`) naming each word
-that disagrees; a gender shown as "(suggested)" SHALL be held against no text.
+the application SHALL run it on every candidate and raise a medium `gender` finding at REPAIR level (`raisedBy` `gender`) naming each
+word that disagrees; a gender shown as "likely" SHALL be held against no text.
 
 **Source**: FR-QA-01, ADR-0038; tasks 15d.10. In plain words: when the person says the narrator is a man and the draft says «я зачинила», code can see the wrong ending, so one repair call is made for it; because a suffix rule is sometimes wrong, the check can only note and repair, never reject.
 
 #### Scenario: A suggested narrator gender is not enforced
 
-- **WHEN** the narrator is first-person with a male gender that is only suggested and the draft says
+- **WHEN** the narrator is first-person with a male gender that is only likely (the model's guess) and the draft says
   `Я відчинила старі двері.`
-- **THEN** there is no finding and no directed fix, and a reviewer edit that changes `відчинила` to `відчинив` is
-  ignored with a low `ignored-edit` note and the draft stays
+- **THEN** there is no finding and no repair call, and the draft stays
 
 ### Requirement: Keep the gender check soft and per language
 
-A gender check SHALL be a soft check: it never fails a hard gate, never blocks acceptance and never flags a segment by
-itself. A language whose file names no `genderCheck` SHALL have no gender check and raise no gender finding.
+A gender check SHALL be a repair-level check: it never fails a hard gate, never blocks acceptance and never flags a segment by itself; its REPAIR-level finding earns the one repair at Balanced and Max, and a leftover SHALL be accepted with a proofread mark. A language whose file names no `genderCheck` SHALL have no gender check and raise no gender finding.
 
-**Source**: FR-QA-01, ADR-0038; tasks 15d.10. In plain words: a suffix rule is sometimes wrong, so the check can only note and repair; a language whose file names no check is never checked.
+**Source**: FR-QA-01, ADR-0038; tasks 15d.10, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a suffix rule is sometimes wrong, so the check can only note and repair; a language whose file names no check is never checked.
 
 #### Scenario: Third-person text is left alone
 
@@ -1599,6 +1081,11 @@ itself. A language whose file names no `genderCheck` SHALL have no gender check 
 
 - **WHEN** the target language is Polish, whose file names no `genderCheck`, and the narrator is first-person male
 - **THEN** no gender finding is raised
+
+#### Scenario: A leftover is accepted with a mark
+
+- **WHEN** Balanced, the narrator is first-person male, and the one repair of `Я зачинила двері.` still holds `зачинила`
+- **THEN** the segment is ACCEPTED with a proofread mark naming `зачинила`, and is not flagged
 
 ### Requirement: Read the Ukrainian narrator's past-tense ending
 
@@ -1612,7 +1099,7 @@ except for a list of words that end so and are not past-tense verbs.
 #### Scenario: A male narrator with a feminine verb is flagged
 
 - **WHEN** the narrator is first-person male and the target is `Я зачинила двері й пішов.`
-- **THEN** one finding spans `зачинила` and the segment is accepted and sent to one directed fix
+- **THEN** one finding spans `зачинила` at REPAIR level and the segment is accepted, with the one repair at Balanced and Max
 
 #### Scenario: The corpus is caught without a model
 
@@ -1632,93 +1119,23 @@ are third-person sentences.
 - **WHEN** the narrator is first-person male and the target is `«Я зачинила двері», — сказала вона.`
 - **THEN** there is no finding, and the same holds for `— Я зачинила двері, — сказала вона.`
 
-### Requirement: Spend one directed fix on an accepted segment's gender finding
+### Requirement: Audit every accepted segment again when the Translate stage ends
 
-WHEN an accepted segment carries a `gender` finding and the dial has a repair round and the segment was not drafted in
-pieces, the application SHALL spend exactly one directed fix on it, naming the finding, and SHALL take the fix only when
-its text passes every check and no longer carries the finding; otherwise the segment stays accepted as it was with the
-finding kept as a note. A fix call that fails SHALL leave the accepted segment as it was.
+WHEN the Translate stage of a run ends, before the Proofread stage builds its mark list, and again whenever the review desk is asked, the application SHALL check every ACCEPTED segment no person has reviewed (not kept as source, not kept verbatim) with the checks a run applies before acceptance — the deterministic text checks, the gender check, the number and terminal-mark checks, a placeholder token written into the stored plain target — and the book-wide `name-variants` check.
 
-**Source**: FR-QA-01, ADR-0038; tasks 15d.10. In plain words: one repair call is made for a wrong ending, and a fix that does not help is not repeated.
-
-#### Scenario: The fix repairs the segment
-
-- **WHEN** the scripted model first answers `Я відчинила старі двері.` for a male narrator and the fix answers
-  `Я відчинив старі двері.`
-- **THEN** the segment is accepted on the repaired path with the fixed text and no `gender` finding
-
-#### Scenario: A fix that does not help is not repeated
-
-- **WHEN** the fix answers the same wrong text
-- **THEN** the segment stays accepted with its draft, carries the `gender` finding and no second fix is called
-
-### Requirement: Ask a word validator about doubtful words, as a note only
-
-The application SHALL run every candidate's display text through the run's `WordValidator` after the other text checks
-and raise one low `unknown-word` finding (`raisedBy` `unknown-word`, kind `fluency`) naming each word the validator
-doubts with its quoted span, as a soft note that never fails a hard gate, never blocks acceptance and never flags a
-segment by itself.
-
-**Source**: FR-QA-01; task 15d.11. In plain words: a made-up word such as `кафедрахрі` cannot be caught by script, so a validator may point at it, but only as a note, because a real rare, dialect or archaic word can be missing from any source of words.
-
-#### Scenario: A doubted word becomes a low note
-
-- **WHEN** the validator doubts `кафедрахрі` in `Він сидів на кафедрахрі й мовчки дивився у вікно.`
-- **THEN** one low `unknown-word` finding quotes `кафедрахрі`, the hard gates pass and the segment is not failed outright
-
-### Requirement: Bind a word validator with no opinion by default
-
-The validator bound by default SHALL have no opinion, so a run with it is exactly a run without the check, and a
-validator SHALL be a pure function of the text and the target language tag. No dictionary of words is bundled or
-planned.
-
-**Source**: FR-QA-01; task 15d.11. In plain words: today nothing is bound, so the check changes nothing until a validator is chosen.
-
-#### Scenario: The default validator changes nothing
-
-- **WHEN** a segment is evaluated with the default validator
-- **THEN** the result equals the one produced without a validator
-
-### Requirement: Run the model-based word validator as one structured call per batch
-
-The optional model-based validator SHALL cost one structured call per batch of texts at temperature zero with a flat
-schema, SHALL keep a reported word only when it is a whole word of the text it names and its quoted phrase, when given,
-is words of that text that include it, SHALL say nothing when its call fails, and SHALL NOT be enabled by default, in
-the window or by the command line.
-
-**Source**: FR-QA-01; task 15d.11. In plain words: a model-based pointer exists only to be measured, so it is optional, bounded to one call per batch, and anything it reports that the text does not hold is dropped.
-
-#### Scenario: A word the text does not hold is dropped
-
-- **WHEN** the model-based validator reports a word that is not a whole word of the text, or a quote the text does not hold
-- **THEN** no finding is raised for it
-
-#### Scenario: A failed call says nothing
-
-- **WHEN** the model-based validator's call fails
-- **THEN** it reports no words and the segment is judged as it would be without the check
-
-#### Scenario: The corpus is measured, not asserted
-
-- **WHEN** `scripts/eval-matrix.sh --suite words` runs the ten garbled and ten clean sentences of `eval/words.json`
-- **THEN** a report holds the recall over the garbled cases and the false-positive rate over the clean ones
-
-### Requirement: Audit every accepted segment again when a run completes
-
-WHEN a run ends COMPLETED, and again whenever the review desk is asked, the application SHALL check every ACCEPTED
-segment no person has reviewed (not kept as source, not kept verbatim) with the checks a run applies before
-acceptance — the deterministic text checks, the gender check, the run's word validator, a placeholder token written
-into the stored plain target — and the book-wide `name-variants` check; spacing and a lost glossary name are not
-audited.
-
-**Source**: FR-QA-01, task 15d.12. In plain words: the run's checks only see a candidate while it is being decided, so a leak that gets through (a paragraph left in English, a stray quote, a name spelled two ways) used to be found only by reading the book. The audit asks the same checks again over the finished book and lists what is still doubtful, with the check that fired, as advice that never blocks anything. A lost glossary name is no audit doubt, it is a soft finding at draft time (15h.A5, see "Catch a lost or misspelt name, a copied Latin phrase and a listed foreign word").
+**Source**: FR-QA-01, task 15d.12, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. See also "Doubt a segment that lost two or more negations" and "Doubt the minority target of a repeated source paragraph". In plain words: the run's checks only see a candidate while it is being decided, so a leak that gets through (a paragraph left in English, a stray quote, a name spelled two ways) used to be found only by reading the book. The audit asks the same checks again over the finished book and lists what is still doubtful, with the check that fired, as advice that never blocks anything; its list is the audit marks the Proofread stage reads, so it runs once before that stage builds its list and not again after it (the never-worse gate guards every change the stage makes). There is no word validator any more. A lost glossary name is no audit doubt, it is a repair-level finding at draft time (see "Catch a lost glossary name"); spacing is not audited.
 
 #### Scenario: A leftover and a stray quote are listed
 
-- **WHEN** a finished run holds an accepted segment whose target is still English, one whose target leaves a quote
-  open that the source closed, and the audit runs
+- **WHEN** a finished run holds an accepted segment whose target is still English, one whose target leaves a quote open that the source closed, and the audit runs
 - **THEN** the two segments are suspicious with the checks `language-identity` and `quote-balance`
 - **AND** the segments the run translated cleanly are not listed
+
+#### Scenario: The audit runs before the mark list
+
+- **WHEN** a Balanced run's Translate stage ends with accepted `ch2 · p04` leaving a quote open that its source closed
+- **THEN** the audit lists `ch2 · p04` with the check `quote-balance` before the Proofread stage builds its mark list, which holds `ch2 · p04` as an audit mark
+- **AND** no audit runs after the Proofread stage has read its windows
 
 #### Scenario: A declined name is no loss
 
@@ -1728,8 +1145,7 @@ audited.
 ### Requirement: Store each audit finding under the check's name
 
 Each audit finding SHALL be stored on the record as an ordinary finding whose `raisedBy` is `audit:` and the check's
-name (`audit:language-identity`, `audit:quote-balance`, `audit:script-purity`, `audit:duplicate-word`, `audit:gender`,
-`audit:unknown-word`, `audit:token-leak`, `audit:name-variants`), replacing the findings of an earlier audit so that a
+name (such as `audit:language-identity` or `audit:negation`; every audited check has one), replacing the findings of an earlier audit so that a
 segment fixed since loses its mark.
 
 **Source**: FR-QA-01, task 15d.12. In plain words: the person sees which check fired, and a segment fixed since the last audit is no longer listed.
@@ -1738,6 +1154,11 @@ segment fixed since loses its mark.
 
 - **WHEN** a suspicious segment's target is clean at the next audit, or a person has reviewed the segment
 - **THEN** it holds no audit finding and is not suspicious
+
+#### Scenario: Every audited check has its name
+
+- **WHEN** the audit runs on a Russian → Ukrainian book
+- **THEN** the names it may store are `audit:language-identity`, `audit:function-word-residue`, `audit:alphabet`, `audit:address-parity`, `audit:quote-balance`, `audit:script-purity`, `audit:duplicate-word`, `audit:gender`, `audit:number`, `audit:terminal-mark`, `audit:token-leak`, `audit:name-variants`, `audit:negation` and `audit:source-variants`
 
 ### Requirement: Keep the final audit advisory
 
@@ -1752,34 +1173,41 @@ throws is logged once and the run stays completed — and SHALL persist nothing 
 - **WHEN** the earth-gravity fixture goes through a run with a model that never fails, in each of the four formats
 - **THEN** the audit lists no segment
 
-### Requirement: Catch a lost or misspelt name, a copied Latin phrase and a listed foreign word
+### Requirement: Catch a lost glossary name
 
-While a segment is drafted, the deterministic text checks SHALL raise a soft `name-missing` finding (15h.A5) for an
+While a segment is drafted, the deterministic text checks SHALL raise a `name-missing` finding for an
 unlocked glossary name (a capitalised term with a rendering) that the source names as a whole word and no word of the
-target holds by the lexicon's stem rule, reporting its rendering; two entries one vowel or one doubled letter apart are
+target holds by the lexicon's stem rule, at REPAIR level, reporting its rendering; two entries one vowel or one doubled letter apart are
 one name.
 
-**Source**: task 15h.A5. In plain words: the Oct 9 runs lost a place name; this check catches it. A lost name is a soft finding at draft time, fixable by the one directed fix.
+**Source**: task 15h.A5 of the archived translation-workflow change, which added the lost-name check. In plain words: the Oct 9 runs lost a place name; this check catches it. A lost name is a repair-level finding at draft time, fixable by the one repair. A copied Latin phrase is the separate requirement "Block a copied Latin phrase".
 
 #### Scenario: A lost place name earns a fix
 
 - **WHEN** the glossary maps `Zurich` to `Цюріх`, the source says "They reached Zurich at dawn." and the draft says
   "Вони дісталися до міста на світанку."
-- **THEN** the draft carries a soft `name-missing` finding and is not kept as drafted
+- **THEN** the draft carries a `name-missing` finding at REPAIR level and, at Balanced and Max, earns the one repair
 
 ### Requirement: Report a misspelt glossary name with its replacement
 
-WHEN exactly one capitalised word of the target is the rendering written another way (equal once doubled letters are
-collapsed and the language's `voicingPairs` are folded) and is no pronoun, stop word or word the target also writes in
-lower case, the deterministic text checks SHALL raise a soft `name-spelling` finding naming that word and the exact
-replacement instead of `name-missing`.
+WHEN exactly one capitalised word of the target is a name's rendering written another way (equal once doubled letters are collapsed and the language's `voicingPairs` are folded, and not one of the forms the book map lists for the name) and is no pronoun, stop word or word the target also writes in lower case, the checks SHALL raise a `name-spelling` finding naming that word and its replacement instead of `name-missing`, at BLOCK level for a pinned name and at NOTE level for a suggested one.
 
-**Source**: task 15h.A5. In plain words: a name spelled one letter differently is named with its exact replacement, so the one directed fix can put it right.
+**Source**: task 15h.A5 of the archived translation-workflow change (the lost-name check), `design.md#d4--name-forms-stress-marks-and-target-validation`. See also the glossary capability for pinned names and their forms. In plain words: a name spelled one letter differently is named with its exact replacement, so the one repair can put it right. A pinned name inflects freely, so a declined form the book map lists is correct; only a word that is none of its forms is a spelling error, and for a pinned name that is a defect the book may not carry. A suggested target is only a hint, so a different spelling of it earns no model call, only a note.
 
 #### Scenario: A misspelt name names its replacement
 
 - **WHEN** the glossary maps `Finn` to `Фінн` and the target says «Фін відчинив двері.»
-- **THEN** a soft `name-spelling` finding names `Фін` and the replacement `Фінн`, instead of `name-missing`
+- **THEN** a `name-spelling` finding names `Фін` and the replacement `Фінн`, instead of `name-missing`
+
+#### Scenario: A pinned name's declined form is no error
+
+- **WHEN** the book map lists `Фінн`, `Фінна` and `Фінну` for the pinned name Finn, and the target says «Я бачив Фінна.»
+- **THEN** no `name-spelling` finding is raised
+
+#### Scenario: A misspelt pinned name blocks, a misspelt suggested name asks for a repair
+
+- **WHEN** the target says «Фін відчинив двері.» once for the pinned name Finn and once for a suggested name
+- **THEN** the first finding is BLOCK level and the second is NOTE level, so only the first earns the one repair
 
 ### Requirement: Block a copied Latin phrase
 
@@ -1813,19 +1241,6 @@ title), where Latin is legitimate.
 - **WHEN** a Ukrainian target is the English source copied back whole
 - **THEN** no `latin-run` finding is raised, and the echo, script and language-identity checks decide
 
-### Requirement: Report a listed foreign word
-
-A whole word of the target that the target language's file lists under `foreignWords` (`тоже>теж`) and the source does
-not hold SHALL raise a soft `foreign-word` finding with the exact replacement, in the word's capitalisation; the soft
-`name-missing`, `name-spelling` and `foreign-word` findings SHALL all be fixable by the one directed fix.
-
-**Source**: task 15h.A5. In plain words: a short list names the Russian words that slip into Ukrainian text, so they can be replaced exactly.
-
-#### Scenario: A listed foreign word names its replacement
-
-- **WHEN** a Ukrainian draft holds `тоже` and the source does not hold it
-- **THEN** a soft `foreign-word` finding names `тоже` and the replacement `теж`
-
 ### Requirement: Count a name spelling only where the source names the term
 
 The whole-book `name-variants` audit SHALL count a spelling only in a segment whose source names the term and never when
@@ -1841,22 +1256,24 @@ the word is a pronoun, a stop word or written in lower case in the targets. The 
 
 ### Requirement: Check each target word against the target language's alphabet
 
-The deterministic text checks SHALL include a target-alphabet check: for every target word that holds a letter listed
-under `forbiddenLetters` in the target language's file (Ukrainian: `ыъэё`) and does not stand in the source text as
-well, it SHALL raise a blocking `alphabet` finding (15j.J5) naming the word and the letter, which blocks acceptance and
-earns the directed fix; a language with no such key is never checked.
+The deterministic text checks SHALL raise a BLOCK-level `alphabet` finding, naming the word and the letter, for every target word that holds a letter listed under `forbiddenLetters` in the target language's file (Ukrainian: `ыъэё`), except a word the source text holds as well when the source and target scripts differ, a glossary rendering and a kept foreign run; a language with no such key is never checked.
+
+**Source**: task 15j.J5 of the archived translation-workflow change (the alphabet check), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`, `design.md#d7--language-data-function-word-files-and-rule-keys-for-every-language`. In plain words: on Russian → Ukrainian the source and the target share an alphabet, so the old rule — forgive any word that also stands in the source — let every Russian word through; the exemption now applies only where the scripts differ (a Cyrillic title quoted in an English source). A finding blocks acceptance and earns the one repair.
 
 #### Scenario: A Russian letter in a Ukrainian word is repaired or flagged
 
-- **WHEN** a Ukrainian draft holds `бэкона` or `кобыли`
-- **THEN** the segment is not accepted as it is: the directed fix names the word, and the segment is accepted when the
-  fix removes the letter
-- **AND** a draft that still holds the letter after the repair round is flagged with the `alphabet` finding, its draft
-  kept as the machine text
+- **WHEN** Balanced and a Ukrainian draft holds `бэкона` or `кобыли`
+- **THEN** the segment is not accepted as it is: the one repair names the word, and the segment is accepted when the repair removes the letter
+- **AND** a draft that still holds the letter after the repair is flagged with the `alphabet` finding, its draft kept as the machine text for the desk and its source written by the export
+
+#### Scenario: A Russian word copied from a Russian source is still found
+
+- **WHEN** Russian → Ukrainian, the source is `Он купил кобылу.` and the draft is `Він купив кобылу.`
+- **THEN** the `alphabet` finding names `кобылу` and the letter `ы`, because the scripts match and the source exemption does not apply
 
 #### Scenario: A word that stands in the source is left alone
 
-- **WHEN** the source is `He read “Эхо” aloud.` and the Ukrainian draft is `Він прочитав «Эхо» вголос.`
+- **WHEN** English → Ukrainian, the source is `He read “Эхо” aloud.` and the Ukrainian draft is `Він прочитав «Эхо» вголос.`
 - **THEN** the alphabet check raises no finding for `Эхо`
 
 #### Scenario: A clean Ukrainian text is not touched
@@ -1896,17 +1313,628 @@ speech on its own, never the narrator's words.
 - **WHEN** a Ukrainian speech reads «Вам тут не місце, ти знаєш?»
 - **THEN** no `address-mix` finding is raised, because «Вам» opens the sentence and only the informal «ти» counts
 
-### Requirement: Treat an address mix as a note with one fix
+### Requirement: Treat an address mix as a repair-level finding with one repair
 
-The `address-mix` finding SHALL NOT block acceptance or flag a segment; with a repair round available it earns the same
-single directed fix as a narrator-gender finding, otherwise it stays a note for review. A language whose file lists no
-`informalAddress` and `formalAddress` SHALL NOT be checked.
+The `address-mix` finding SHALL be REPAIR level: it SHALL NOT block acceptance or flag a segment, it earns the one repair at Balanced and Max, and a leftover SHALL be accepted with a proofread mark. A language whose file lists no `informalAddress` and `formalAddress` SHALL NOT be checked.
 
-**Source**: task 15i.T6. In plain words: the mix is advice, not a reason to reject.
+**Source**: task 15i.T6, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: the mix is advice, not a reason to reject; one repair asks for a single way of address and what stays is marked for the Proofread stage.
 
 #### Scenario: The fix is asked once
 
-- **WHEN** a Ukrainian draft holds «Сядь, тобі треба відпочити, а я принесу Вам чаю.» as one speech and the dial has a
-  repair round
-- **THEN** one directed fix is asked for the `address-mix` finding
-- **AND** a fix that keeps the mix leaves the draft accepted with the finding as a note
+- **WHEN** Balanced and a Ukrainian draft holds «Сядь, тобі треба відпочити, а я принесу Вам чаю.» as one speech
+- **THEN** one repair is asked for the `address-mix` finding
+- **AND** a repair that keeps the mix leaves the draft accepted with a proofread mark
+
+#### Scenario: Fast only marks
+
+- **WHEN** Fast and the same draft
+- **THEN** no repair call is made and the segment is accepted with a proofread mark that the desk lists
+
+### Requirement: Give every finding one of three levels: block, repair or note
+
+The application SHALL give every finding one level: BLOCK (the segment cannot be accepted and is FLAGGED if the finding stays), REPAIR (the segment can be accepted, earns the one repair at Balanced and Max, and is accepted with a proofread mark if the finding stays) or NOTE (the segment is accepted with an audit mark and earns no call).
+
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: the same word, a copied source, a stray letter, a lost question mark, does not deserve the same treatment; the level says whether a segment may be accepted, whether it earns the one model call to fix it, and which mark it carries to the Proofread stage. A level is separate from a finding's severity, which only orders what the person sees.
+
+#### Scenario: A blocking finding that survives the repair flags the segment
+
+- **WHEN** Balanced, Russian → Ukrainian, the source is `Он купил кобылу.`, the draft is `Він купив кобылу.` (`ы` is a letter the Ukrainian file forbids) and the one repair returns `Він купив кобылу.` again
+- **THEN** the `alphabet` finding is BLOCK, one repair call was made, and the segment is FLAGGED
+
+#### Scenario: A repair-level finding that survives the repair is accepted with a proofread mark
+
+- **WHEN** Balanced, English → Ukrainian, the source is `Where is the key?`, the draft is `Де ключ.` and the one repair returns `Де ключ.` again
+- **THEN** the `terminal-mark` finding is REPAIR and the segment is ACCEPTED with a proofread mark carrying it
+
+#### Scenario: A note-level finding earns no call
+
+- **WHEN** English → Ukrainian, the source is `He waited.` and the draft is `Він чекав 5 хвилин.`
+- **THEN** the extra number is a NOTE, no repair call is made, and the segment is ACCEPTED with an audit mark
+
+#### Scenario: At Fast a repair-level finding becomes a mark for the desk
+
+- **WHEN** Fast and the same draft `Де ключ.` for `Where is the key?`
+- **THEN** no repair call is made and the segment is ACCEPTED with a proofread mark that the review desk lists
+
+### Requirement: Strip stress marks from every candidate before any check counts
+
+WHERE the target language sets `stripStressMarks`, the application SHALL, before any check counts, remove from every candidate target the acute and grave accent marks (decomposing the text first and recomposing it after, so that `й` and `ї` stay), the soft hyphen, and an acute sign right after a Cyrillic vowel, and SHALL log how many it removed.
+
+**Source**: `design.md#d12--checks-levels-and-code-repairs-before-checks`, `design.md#d4--name-forms-stress-marks-and-target-validation`. In plain words: models sometimes write stress marks (`мі́сяць`), which no reader of a book wants and which break the exact-text checks; code takes them out of every candidate, and a language that writes accents as part of its letters (Bulgarian `ѝ`) simply does not set the key. Nothing in the code stripped stress marks before this change.
+
+#### Scenario: Accents are removed and the letters stay
+
+- **WHEN** the Ukrainian candidate is `Мі́сяць зійшо́в над ї́жаком.`
+- **THEN** the stored candidate is `Місяць зійшов над їжаком.`, with `ї` intact, and a DEBUG log line gives the count 3
+
+#### Scenario: A grave accent is removed too
+
+- **WHEN** the Ukrainian candidate is `на́ша ма̀ма`
+- **THEN** the stored candidate is `наша мама`
+
+#### Scenario: A sign after a consonant is an apostrophe, not a stress mark
+
+- **WHEN** the Ukrainian candidate is `п´ять` (an acute sign after the consonant `п`, before `я`)
+- **THEN** the sign is not removed as a stress mark, and the apostrophe rule writes `п’ять`
+
+#### Scenario: A language that does not set the key keeps its accents
+
+- **WHEN** the target language is Bulgarian, whose file does not set `stripStressMarks`, and the candidate holds `ѝ`
+- **THEN** the candidate is unchanged
+
+### Requirement: Put back a leading dialogue dash that the source has and the target lost
+
+WHERE the target language sets `dialogue-dash`, WHEN a source paragraph starts with a dash (`-`, `–`, `―`, `‒` or `—`) and its target starts with a letter, the application SHALL put `— ` before the target; WHEN the target starts with a quote mark instead, it SHALL record a NOTE and change nothing.
+
+**Source**: `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a speech line that lost its dash reads as narration; code restores it where the book's own source shows the dash, and only for a target language whose speech is written with dashes, so an English target never gets one.
+
+#### Scenario: A lost dash is put back
+
+- **WHEN** the target language sets `dialogue-dash`, the source is `— Where is the key?` and the target is `Де ключ?`
+- **THEN** the stored target is `— Де ключ?`, with no model call
+
+#### Scenario: A hyphen at the start of the source counts as a dash
+
+- **WHEN** the source is `- Come in.` and the target is `Заходьте.`
+- **THEN** the stored target is `— Заходьте.`
+
+#### Scenario: A target that starts with a quote is only noted
+
+- **WHEN** the source is `— Where is the key?` and the target is `«Де ключ?»`
+- **THEN** the target is unchanged and a NOTE is recorded
+
+#### Scenario: A target language without the key never gets a dash
+
+- **WHEN** Russian → English, the source is `— Где ключ?` and the target is `Where is the key?`
+- **THEN** the target is unchanged
+
+### Requirement: Write dialogue dashes in one form
+
+WHERE the target language sets `dialogue-dash`, the application SHALL write a dash at the start of a line as `— ` followed by the text, and a dash that follows `,`, `?`, `!`, `…` or `»` and precedes a letter as ` — `, and SHALL NOT change a hyphen inside a word or between digits.
+
+**Source**: `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: models glue the dash to the next word or to the comma (`—Іди,-сказав він`); code writes it the way the book's dialogue is typeset, and never touches `будь-хто` or `10-20`.
+
+#### Scenario: A glued dash at the start and after a comma are spaced
+
+- **WHEN** the target language sets `dialogue-dash` and the target is `—Іди геть,-сказав він.`
+- **THEN** the stored target is `— Іди геть, — сказав він.`
+
+#### Scenario: A hyphen inside a word stays
+
+- **WHEN** the target is `— Будь-хто міг це зробити.`
+- **THEN** the target is unchanged
+
+#### Scenario: A hyphen between digits stays
+
+- **WHEN** the target is `У 1990-2000 роках.`
+- **THEN** the target is unchanged
+
+### Requirement: Put back a heading number that the target lost
+
+WHEN a source paragraph starts with digits or a Roman numeral followed by `.`, `)` or `:` and its target starts with no number, the application SHALL put the source's number and its mark before the target; a bare `I` followed by a space SHALL NOT count as a numeral, and a Roman numeral SHALL count only when it has two letters or more and no sentence follows it in the source, so a person's initial (`M. Poirot smiled.`) is never put before a target.
+
+**Source**: `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a chapter heading `4. Ночной перевал` must keep its `4.` whatever the model did with it; code puts it back, so the segment never needs a model call for it. A lost number is not a different number: a target that starts with another number is the separate blocking case.
+
+#### Scenario: A lost digit number is restored with no model call
+
+- **WHEN** the source is `4. Ночной перевал` and the draft is `Нічний перевал`
+- **THEN** the stored target is `4. Нічний перевал` and no model call is made
+
+#### Scenario: A Roman numeral is restored
+
+- **WHEN** the source is `XII) Возвращение` and the draft is `Повернення`
+- **THEN** the stored target is `XII) Повернення`
+
+#### Scenario: A Latin initial is not a numeral
+
+- **WHEN** the source is `M. Poirot smiled.` and the draft is `Пуаро усміхнувся.`
+- **THEN** the draft is unchanged
+
+#### Scenario: The pronoun I is not a numeral
+
+- **WHEN** the source is `I opened it.` and the draft is `Я відчинив це.`
+- **THEN** the draft is unchanged
+
+#### Scenario: A target that already starts with the number is unchanged
+
+- **WHEN** the source is `4. Ночной перевал` and the draft is `4. Нічний перевал`
+- **THEN** the draft is unchanged
+
+### Requirement: Block a word written wholly in a script the target does not use
+
+The application SHALL raise a BLOCK-level `script-purity` finding for a target word written wholly in a script that is neither the target language's, nor Latin, nor common, and for CJK punctuation (U+3000–303F) or fullwidth forms (U+FF00–FFEF), when the source segment does not hold the same word or sign.
+
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: small models sometimes drop a Chinese or Arabic word into a Ukrainian sentence; the mixed-script check sees only a word that mixes alphabets, so this check sees the word that is wholly foreign. A Latin name is fine, and a word the source itself holds is the book's own.
+
+#### Scenario: A Chinese word in a Ukrainian sentence blocks
+
+- **WHEN** English → Ukrainian and the draft is `Він сказав слово 门 і пішов.` for a source without that word
+- **THEN** the segment carries a BLOCK `script-purity` finding naming `门`
+
+#### Scenario: A word the source holds is left alone
+
+- **WHEN** the source is `He wrote 门 on the wall.` and the draft is `Він написав 门 на стіні.`
+- **THEN** no `script-purity` finding is raised
+
+#### Scenario: A fullwidth sign the source lacks blocks
+
+- **WHEN** the draft is `Він пішов。` and the source holds no such sign
+- **THEN** the segment carries a BLOCK `script-purity` finding naming `。`
+
+#### Scenario: A Latin name is not a foreign script
+
+- **WHEN** the draft is `Він зустрів Mara Quill.`
+- **THEN** no `script-purity` finding is raised
+
+### Requirement: Count source-only function words in a target as untranslated residue
+
+The application SHALL compute, for each language pair at the start of a run, the source-only set (the source language's function words minus the target language's), SHALL count the whole-word, lower-case hits of that set in each target, with no source exemption, and SHALL raise one `function-word-residue` finding naming the words, at REPAIR level, or at NOTE level for a pair whose language data marks residue as note-level (set when the language-data replay measured a precision below 0.9).
+
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d7--language-data-function-word-files-and-rule-keys-for-every-language`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: on Russian → Ukrainian a line left half in Russian shares its alphabet with the target, so no letter check sees it; the Russian words that Ukrainian does not also use (`что`, `это`) betray it. The set is computed from each language's own function-word file, never from a list of one pair, so a word both languages use (`просто`, `тебе`) never counts. A hit is a marked segment to repair, not a wrong-language paragraph, so the segment keeps its draft; it is its own finding, separate from the `language` finding of a paragraph in the wrong language. REPAIR is the shipped default, and a pair is made note-level only by its measured data, so a pair nobody measured stays REPAIR.
+
+#### Scenario: A Russian word in a Ukrainian draft earns one repair
+
+- **WHEN** Balanced, Russian → Ukrainian, the source is `Они сказали, что ключ в кармане.` and the draft is `Вони сказали, что ключ у кишені.`
+- **THEN** a REPAIR `function-word-residue` finding names `что`, and one repair call follows
+
+#### Scenario: A word both languages use is no residue
+
+- **WHEN** the Ukrainian function-word file lists `просто` and the draft is `Він просто відчинив двері.`
+- **THEN** no finding is raised
+
+#### Scenario: A single hit does not make the paragraph a wrong-language paragraph
+
+- **WHEN** the draft is a 14-word Ukrainian paragraph holding one source-only word
+- **THEN** the segment keeps its draft as the machine text and is never treated as an English leftover
+
+#### Scenario: A one-letter word counts only before a lower-case word
+
+- **WHEN** `и` is in the source-only set, the draft is `Вона відчинила и пішла.` in one case and `Іван и Марта пішли.` in another
+- **THEN** the first draft raises a finding naming `и` and the second does not
+
+#### Scenario: A replay below 0.9 makes the hit a note
+
+- **WHEN** the pair's language data marks residue as note-level, because its replay measured a precision of 0.82, and the draft holds `что`
+- **THEN** the finding is a NOTE: no repair call is made and the segment is ACCEPTED with an audit mark
+
+#### Scenario: A pair without function-word files raises nothing
+
+- **WHEN** the target language has no function-word file
+- **THEN** no residue finding is raised for any draft of that pair
+
+### Requirement: Block a target that starts with a different number than its source
+
+IF a target starts with a number that differs in value from the number its source starts with, THEN the application SHALL raise a BLOCK-level `number` finding naming both numbers.
+
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a heading `4. Ночной перевал` that comes back as `5. Нічний перевал` has silently renumbered the book; a number that was merely lost is restored by code first, so only a replaced number reaches this check.
+
+#### Scenario: A replaced heading number blocks
+
+- **WHEN** the source is `4. Ночной перевал` and the draft is `5. Нічний перевал`
+- **THEN** the segment carries a BLOCK `number` finding naming `4` and `5`
+
+#### Scenario: The same number written another way does not block
+
+- **WHEN** the source is `1,200 soldiers` and the draft is `1 200 солдатів`
+- **THEN** no `number` finding is raised
+
+### Requirement: Compare numbers by value and report a missing or extra number by its size
+
+The application SHALL compare the numbers of a source and its target by value (`1,200` equals `1 200`, `3.5` equals `3,5`), SHALL raise a REPAIR-level `number` finding for a number of two or more digits that the target lacks with no replacement, SHALL raise a NOTE-level one for an extra number when none is missing, and SHALL NOT compare spelled-out numbers.
+
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a lost `40` is a fact lost from the story and earns the one repair; an extra number may be a legitimate rewording, so it only marks the segment for the audit. Words such as `forty` are not compared, because their forms differ by language.
+
+#### Scenario: A missing two-digit number earns the one repair
+
+- **WHEN** Balanced, the source is `He paid 40 coins.` and the draft is `Він заплатив монетами.`
+- **THEN** a REPAIR `number` finding names `40`, and one repair call follows
+
+#### Scenario: An extra number is only a note
+
+- **WHEN** the source is `He waited.` and the draft is `Він чекав 5 хвилин.`
+- **THEN** a NOTE `number` finding names `5` and no repair call is made
+
+#### Scenario: A decimal written the target's way matches
+
+- **WHEN** the source is `It weighed 3.5 kilos.` and the draft is `Воно важило 3,5 кіло.`
+- **THEN** no `number` finding is raised
+
+#### Scenario: A spelled-out number is not compared
+
+- **WHEN** the source is `He paid forty coins.` and the draft is `Він заплатив сорок монет.` or `Він заплатив монетами.`
+- **THEN** no `number` finding is raised for either draft
+
+### Requirement: Compare the last mark of a paragraph with its source's
+
+WHEN the class of a target paragraph's last mark (`?`, `!`, `.` or `…`, with quotes and closing brackets ignored) differs from its source's, the application SHALL raise a REPAIR-level `terminal-mark` finding; an ellipsis against a full stop counts as a difference.
+
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: most of the times a model drops the end of a paragraph, it also drops its question mark; comparing the last mark finds those omissions cheaply. Quotes are ignored so that a different quotation style is not a defect.
+
+#### Scenario: A lost question mark is a finding
+
+- **WHEN** the source is `Where is the key?` and the draft is `Де ключ.`
+- **THEN** a REPAIR `terminal-mark` finding is raised
+
+#### Scenario: Quotes around the mark are ignored
+
+- **WHEN** the source is `“Where is the key?”` and the draft is `«Де ключ?»`
+- **THEN** no `terminal-mark` finding is raised
+
+#### Scenario: An ellipsis against a full stop is a difference
+
+- **WHEN** the source is `He waited…` and the draft is `Він чекав.`
+- **THEN** a REPAIR `terminal-mark` finding is raised
+
+### Requirement: Keep a speech's form of address from changing between informal and formal
+
+WHERE the source and the target language files both list informal and formal address forms, WHEN a source speech uses only informal forms (or only formal ones) and its target speech uses forms of the other kind, the application SHALL raise a REPAIR-level `address-parity` finding; a source speech that mixes both kinds is not judged.
+
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a Russian `— Ты придёшь?` that becomes a polite `— Ви прийдете?` changes how two characters stand to each other; the check compares with the source, which the address-mix check (target only) cannot. It is off for any pair where either language lists no address forms.
+
+#### Scenario: A switch from informal to formal is a finding
+
+- **WHEN** Russian → Ukrainian, the source speech is `— Ты придёшь?` and the target speech is `— Ви прийдете?`
+- **THEN** a REPAIR `address-parity` finding is raised
+
+#### Scenario: A matching form is fine
+
+- **WHEN** the source speech is `— Ты придёшь?` and the target speech is `— Ти прийдеш?`
+- **THEN** no finding is raised
+
+#### Scenario: A mixed source speech is not judged
+
+- **WHEN** the source speech uses both a `ты` form and a `вы` form
+- **THEN** no `address-parity` finding is raised
+
+#### Scenario: A pair where one language lists no address forms is not checked
+
+- **WHEN** English → Ukrainian and the English file lists no address forms
+- **THEN** no `address-parity` finding is raised
+
+### Requirement: Doubt a segment that lost two or more negations
+
+WHERE the pair declares that negations are counted and both language files list negation words, WHEN a source paragraph holds at least two more negation words than its target, the audit SHALL doubt the segment with a NOTE-level `negation` finding, and the draft stage SHALL make no call for it.
+
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a lost `не` turns a sentence into its opposite, but counting negations across two languages is right only for a close pair and wrong as a finding on its own (about one hit in six was a real loss), so it is advice for the Proofread stage, never a repair. It is off for English → Ukrainian, where double negation differs.
+
+#### Scenario: Two lost negations are doubted
+
+- **WHEN** Russian → Ukrainian, the pair counts negations, the source holds 5 negation words and the target holds 3
+- **THEN** the audit doubts the segment with a `negation` finding, and no call was made for it while drafting
+
+#### Scenario: One lost negation is not doubted
+
+- **WHEN** the source holds 5 negation words and the target holds 4
+- **THEN** no `negation` finding is raised
+
+#### Scenario: A pair that does not count negations is never doubted
+
+- **WHEN** English → Ukrainian, the source holds 4 negation words and the target holds 1
+- **THEN** no `negation` finding is raised
+
+### Requirement: Doubt the minority target of a repeated source paragraph
+
+WHEN two or more paragraphs have the same normalised source text of at least six words but different normalised targets, the audit SHALL doubt each paragraph that holds the less used target.
+
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a refrain, a sign or a repeated line should read the same each time; when it was translated two ways, the odd one out is the one worth a second look.
+
+#### Scenario: The odd translation of a repeated line is doubted
+
+- **WHEN** `The gate stayed shut until the morning came.` occurs three times, translated `Брама лишалася зачиненою до ранку.` twice and `Брама була замкнена до світанку.` once
+- **THEN** the audit doubts the paragraph that holds `Брама була замкнена до світанку.`
+
+#### Scenario: A short line is not compared
+
+- **WHEN** `The gate stayed shut.` (4 words) occurs twice with two different targets
+- **THEN** no doubt is raised
+
+#### Scenario: Differences in spacing or case alone are no difference
+
+- **WHEN** the same six-word source occurs twice and the targets differ only in a space and a capital letter
+- **THEN** no doubt is raised
+
+### Requirement: Give a failing segment one repair at Balanced and Max
+
+WHEN a drafted segment holds a BLOCK or REPAIR finding, the application SHALL at Balanced and Max send one repair call, the segment's own draft prompt and window plus its previous attempt and its defects, asking for it to be translated again at a low temperature, and SHALL make no further content-changing call for it; at Fast it SHALL make none.
+
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: the earlier flow could spend up to eight calls on one stubborn segment; the research found that a second and third round rarely bring a better text, so a segment gets one well-informed second try with the same context as its draft, and what stays wrong is marked for the Proofread stage. The dial never depends on the model: Max repairs exactly as Balanced does.
+
+#### Scenario: One repair fixes a draft
+
+- **WHEN** Balanced, Russian → Ukrainian, the draft `Вони сказали, что ключ у кишені.` carries a REPAIR finding naming `что`
+- **THEN** one repair call is sent with the window, the previous attempt and the defect `что`, it returns `Вони сказали, що ключ у кишені.`, and the segment is ACCEPTED
+
+#### Scenario: A repair that fails gets no second repair
+
+- **WHEN** Balanced and the repair still holds `что`
+- **THEN** no further call is made for the segment and its outcome is read from the findings left
+
+#### Scenario: Max repairs exactly as Balanced does
+
+- **WHEN** Max and the same draft
+- **THEN** one repair call is made, no more
+
+#### Scenario: Fast makes no repair call
+
+- **WHEN** Fast and the same draft
+- **THEN** no repair call is made
+
+#### Scenario: A segment with only notes gets no repair
+
+- **WHEN** Balanced and the draft carries only a NOTE-level `number` finding
+- **THEN** no repair call is made
+
+#### Scenario: A verified reviewer blocker left gets no repair
+
+- **WHEN** Balanced, the draft carries a REPAIR finding naming `что`, and the reviewer's quoted issue `дверзі` is still in the text after its directed fix
+- **THEN** no repair call is made and the segment is FLAGGED, because no repair the code can check clears the reviewer's evidence
+
+### Requirement: Count only content-changing calls as the one repair
+
+The application SHALL NOT count as the one repair a code repair, the one format re-ask for an unreadable reply or for ids a batch reply missed, a transport retry, or the first draft of an id a batch reply missed; it SHALL count a placeholder repair and the re-draft of a batch item that came back but failed its gate as the one repair.
+
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: the repair budget is about changing the text because a check failed; fixing the envelope around a reply, or asking again after a network hiccup, does not use it up. A placeholder repair is a content change, so it is the one repair rather than an extra call beside it.
+
+#### Scenario: A format re-ask does not use the repair
+
+- **WHEN** Balanced and a draft reply is not valid JSON, the re-ask returns a valid reply, and a check then fails
+- **THEN** the segment still gets its one repair, so up to three calls were made: draft, format re-ask and repair
+
+#### Scenario: A missing id is drafted again without using the repair
+
+- **WHEN** a batch of 4 comes back without the id of segment 3
+- **THEN** segment 3 is drafted alone and its repair is still available
+
+#### Scenario: A timeout retry is not a repair
+
+- **WHEN** a draft call times out and is sent again by the transport
+- **THEN** the segment's one repair is still available
+
+#### Scenario: A lost placeholder is repaired by the one repair
+
+- **WHEN** Balanced and the draft loses `⟦g0⟧`
+- **THEN** the one repair names `⟦g0⟧` as the expected token, and no separate placeholder repair is made
+
+### Requirement: Name every defect with its quoted span in the repair
+
+The repair call SHALL list every BLOCK and REPAIR finding of the segment with its plain explanation and the exact span it quotes, and, when formatting marks failed, the marks the segment must hold.
+
+**Source**: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: a model told only that its text was wrong improves little; told which word and why, and which marks are missing, it can fix just that.
+
+#### Scenario: Two defects are listed with their spans
+
+- **WHEN** the draft `Вони сказали, что ключ у кишені, та пішли.` carries a REPAIR `function-word-residue` finding naming `что` and a REPAIR `terminal-mark` finding
+- **THEN** the repair request lists both with their explanations and the span `что`
+
+#### Scenario: Missing marks are named
+
+- **WHEN** the draft lost `⟦g1⟧`
+- **THEN** the repair request names the tokens `⟦g0⟧` and `⟦g1⟧` as the marks the target must hold
+
+### Requirement: Keep a repair only when it passes the hard gates and the never-worse gate keeps it
+
+The application SHALL replace a segment's draft by its repair only when the repair passes the hard gates (placeholder, protected span, typography) and the never-worse gate keeps it, SHALL otherwise keep the draft, and SHALL NOT let the acceptance rule alone decide it.
+
+**Source**: `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`, `design.md#d14--the-never-worse-gate`. In plain words: a draft with only repair-level findings already passes the acceptance rule, so 'accepted' would let a worse repair in; one rule for every repair keeps the best text the segment has had, and there are no further rounds to try.
+
+#### Scenario: A repair that clears the defect replaces the draft
+
+- **WHEN** Balanced and the repair of `Вони сказали, что ключ у кишені.` is `Вони сказали, що ключ у кишені.`
+- **THEN** the repair becomes the target
+
+#### Scenario: A repair that adds a defect is not kept
+
+- **WHEN** Russian → Ukrainian, the source is `Где ключ и письмо?`, the draft `Де ключ і лист.` carries a `terminal-mark` finding, and the repair is `Де ключ и лист?`, which fixes the mark but adds the source-only word `и`
+- **THEN** the draft stays and its marks stay
+
+#### Scenario: A repair that breaks a placeholder is not kept
+
+- **WHEN** the repair drops `⟦g0⟧`
+- **THEN** the draft stays
+
+#### Scenario: A repair that changes nothing is not kept
+
+- **WHEN** the repair equals the draft
+- **THEN** the draft stays and no further call is made
+
+### Requirement: Keep the repair of a text that is no translation when it has fewer blockers
+
+WHEN the text a repair would replace stands on no machine translation — a refusal, an echo of the source, a reply in the wrong language or one whose formatting marks were lost — the application SHALL keep a repair that passes the hard gates, differs from that text and holds no more blocking checks, without the never-worse gate's text vetoes.
+
+**Source**: `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`, `design.md#d14--the-never-worse-gate`. In plain words: the never-worse vetoes protect a translation's quotes, clauses, numbers and names; a refusal or an untranslated echo has none worth protecting, so comparing them would throw away a good repair because the refusal held a comma.
+
+#### Scenario: A refusal is replaced by its repair
+
+- **WHEN** Balanced, the draft of `He opened the old door.` is `I'm sorry, but I can't translate this text.` and the repair is `Він відчинив старі двері.`
+- **THEN** the repair becomes the target and the segment is ACCEPTED
+
+#### Scenario: A repair that echoes the source again is not kept
+
+- **WHEN** the draft is the echo `HE OPENED THE OLD DOOR.` and the repair is the same echo
+- **THEN** the draft stays and the segment is FLAGGED
+
+### Requirement: Read a segment's outcome from the findings left after the one repair
+
+After the one repair, or on the draft at Fast, the application SHALL read the findings left on the text that stays: a BLOCK finding means FLAGGED; only REPAIR-level findings mean ACCEPTED with a proofread mark; only NOTE-level findings mean ACCEPTED with an audit mark; none means ACCEPTED with no mark.
+
+**Source**: `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: the table is the one place that says what a leftover finding does, so the review desk, the Proofread stage and the export all agree on what is marked.
+
+#### Scenario: A blocking finding left flags the segment
+
+- **WHEN** the text that stays holds a BLOCK `alphabet` finding
+- **THEN** the segment is FLAGGED and the review desk and the Proofread stage both list it
+
+#### Scenario: Repair-level leftovers are accepted with a proofread mark
+
+- **WHEN** the text that stays holds only a REPAIR `terminal-mark` finding
+- **THEN** the segment is ACCEPTED with a proofread mark naming that finding
+
+#### Scenario: Note-level leftovers are accepted with an audit mark
+
+- **WHEN** the text that stays holds only a NOTE `number` finding
+- **THEN** the segment is ACCEPTED with an audit mark
+
+#### Scenario: No finding means no mark
+
+- **WHEN** the text that stays holds no finding
+- **THEN** the segment is ACCEPTED with no mark
+
+### Requirement: Make no fixing call at Fast and mark the segment instead
+
+At the Fast dial the application SHALL make no repair call, SHALL read the outcome table on the draft and leave its marks for the review desk, and SHALL send one re-draft only for a piece whose formatting marks are still lost after the code restore, keeping that re-draft only by the same keep rule.
+
+**Source**: `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: Fast is a draft plus free checks: no hidden extra calls. Today Fast spends a repair round; this change removes it. A lost formatting mark would break the export, so it alone earns one retry.
+
+#### Scenario: A failing draft is marked, not repaired
+
+- **WHEN** Fast and the draft of `He opened the old door.` is `He opened the old door.`
+- **THEN** no call follows the draft, the segment is FLAGGED and the review desk lists it
+
+#### Scenario: Lost formatting marks earn one re-draft
+
+- **WHEN** Fast and the draft for `See ⟦g0⟧ here.` is `Дивіться тут.` and the code restore cannot put `⟦g0⟧` back
+- **THEN** one re-draft is sent, and it is kept when it holds `⟦g0⟧` and passes the keep rule
+
+### Requirement: Flag a segment whose formatting marks stay lost after the one re-draft
+
+IF the re-draft of a segment still loses formatting marks, or the keep rule rejects it, THEN the application SHALL, at every dial, keep no machine target for it, store the last reply as its rejected target, FLAG the segment with its placeholder BLOCK for the review desk, and try nothing else.
+
+**Source**: `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: a book can still be written: export fails the segment's own validation and writes its source text there, says so in a banner, and the person fixes it on the desk.
+
+#### Scenario: Fast gives up after one re-draft
+
+- **WHEN** Fast and the re-draft of `See ⟦g0⟧ here.` is `Дивіться тут.` again
+- **THEN** the segment is FLAGGED with a `markup` finding and no further call is made
+
+#### Scenario: Balanced gives up when the one repair fails on marks
+
+- **WHEN** Balanced and the one repair also lacks `⟦g0⟧`
+- **THEN** the segment is FLAGGED and no further call is made
+
+### Requirement: Reject a candidate text that breaks a never-worse veto
+
+The never-worse gate SHALL reject a candidate text, keeping the current one, when the candidate fails a hard gate, adds a BLOCK finding, adds a source-language word, writes a name in a form the book map does not list for it, drops a map name, adds a Latin run or a stress mark, or has fewer sentences, negation words, numbers, quotes, dashes or clauses than both the current text and the source.
+
+**Source**: `design.md#d14--the-never-worse-gate`. In plain words: every edit the program makes after a draft (the one repair, a proofread rewrite) must pass this one test, so a fix can never cost the book something it had. The earlier reviewer edits were checked by three different 'no new blocker' rules; this is the single replacement. A count is compared with the current text and the source, so a veto fires only when the candidate loses what the source holds: a repair that replaces a wrong number with the source's, removes a stray quote or drops a doubled sentence is kept.
+
+#### Scenario: A hard-gate failure is rejected
+
+- **WHEN** a candidate drops `⟦g0⟧` that the current text holds
+- **THEN** the gate rejects it
+
+#### Scenario: A new blocking finding is rejected
+
+- **WHEN** the current text has no BLOCK finding and the candidate holds a letter `ы` in a Ukrainian word
+- **THEN** the gate rejects it
+
+#### Scenario: A source-language word added is rejected
+
+- **WHEN** the current text is `Вони сказали, що ключ у кишені.` and the candidate is `Вони сказали, что ключ у кишені.`
+- **THEN** the gate rejects it
+
+#### Scenario: A name form outside the map is rejected
+
+- **WHEN** the map lists `Велемир`, `Велемира` and `Велемирові` for the pinned name Велемир, and the candidate writes `Велемер`
+- **THEN** the gate rejects it
+
+#### Scenario: A dropped map name is rejected
+
+- **WHEN** the source names Велемир, the current text has `Велемир` and the candidate has no form of the name
+- **THEN** the gate rejects it
+
+#### Scenario: A lower sentence count is rejected
+
+- **WHEN** the source and the current text have 3 sentences and the candidate has 2
+- **THEN** the gate rejects it
+
+#### Scenario: A lost negation is rejected
+
+- **WHEN** the current text holds `не` twice, the candidate holds it once, and the source holds two negation words or its language has no negation list
+- **THEN** the gate rejects it
+
+#### Scenario: A lost number is rejected
+
+- **WHEN** the source and the current text hold `40` and the candidate does not
+- **THEN** the gate rejects it
+
+#### Scenario: A wrong number replaced by the source's is kept
+
+- **WHEN** the source is `3. Night pass`, the current text `5. Нічний перевал` and the candidate `3. Нічний перевал`
+- **THEN** no veto rejects it, because `5` is a number the source does not hold
+
+#### Scenario: A stray quote or a doubled sentence removed is kept
+
+- **WHEN** the source holds no quote mark and one sentence, and the candidate removes a stray `«` or a doubled sentence of the current text
+- **THEN** no veto rejects it, because the candidate does not fall below the source
+
+#### Scenario: A new stress mark is rejected
+
+- **WHEN** the candidate holds `ма́ма` where the current text holds `мама`
+- **THEN** the gate rejects it
+
+### Requirement: Keep a candidate text only when its score is not worse and its mark is cleared
+
+WHEN no veto applies, the application SHALL keep a candidate only when its score (BLOCK findings weigh most, then REPAIR findings, then notes and audit doubts) is not higher than the current text's and either the marking finding is cleared or the score is strictly lower; in the whole-book re-read it SHALL also keep, at an equal score, a candidate for an unmarked paragraph that changes no more words than the rewrite cap allows; otherwise the current text and its marks stay.
+
+**Source**: `design.md#d14--the-never-worse-gate`. In plain words: a change that fixes the flagged problem without making anything else worse is kept, and a change that only moves words around is not; the score is a code count, because no judge model is available at run time.
+
+#### Scenario: A candidate that clears the marked finding is kept
+
+- **WHEN** the current text holds one REPAIR finding and the candidate holds none and passes every veto
+- **THEN** the candidate is kept
+
+#### Scenario: A candidate that swaps a blocking finding for a soft one is kept
+
+- **WHEN** the current text holds a BLOCK `alphabet` finding on `кобылу`, the candidate writes `кобилу`, clearing it, but holds a REPAIR `gender` finding, and no counted check's finding count rises
+- **THEN** the candidate is kept because its score is lower
+
+#### Scenario: A candidate with an equal score that clears nothing is not kept
+
+- **WHEN** the current text and the candidate both hold the marked REPAIR finding
+- **THEN** the current text stays with its mark
+
+#### Scenario: A small rewrite of an unmarked paragraph in the whole-book re-read is kept at an equal score
+
+- **WHEN** the paragraph holds no mark, the candidate changes 2 of its 20 words and the score is equal
+- **THEN** the candidate is kept
+
+#### Scenario: A large rewrite of an unmarked paragraph is not kept at an equal score
+
+- **WHEN** the paragraph holds no mark, the candidate changes 14 of its 20 words and the score is equal
+- **THEN** the current text stays
+
+### Requirement: Let no per-check finding count rise in a kept candidate
+
+The never-worse gate SHALL reject a candidate when the number of findings of any one of the checks alphabet, language-identity, function-word residue, script-purity, number, terminal-mark, address-parity and sentence-count is higher than in the current text, even when the candidate clears the finding that marked the segment.
+
+**Source**: `design.md#d14--the-never-worse-gate`, `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a repair that cures one defect by adding another of a kind the checks count, a new number finding for a fixed Russian word, is no improvement, so it is not kept.
+
+#### Scenario: A repair that cures one finding and adds a number finding is rejected
+
+- **WHEN** the repair clears the `function-word-residue` finding on `что` but loses the number `40`, raising a `number` finding
+- **THEN** the gate rejects the repair and the draft stays
+
+#### Scenario: A repair that lowers one count and raises none is kept
+
+- **WHEN** the repair clears the `function-word-residue` finding and every other count stays equal
+- **THEN** the gate does not reject it
