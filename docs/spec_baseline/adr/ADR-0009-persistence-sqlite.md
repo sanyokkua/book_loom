@@ -1,4 +1,4 @@
-# ADR-0009 — Persist state in SQLite (WAL) with Flyway migrations and JDBI access
+# ADR-0009 — Persist state in SQLite (WAL) with JDBI access, and Flyway migrations from the first release
 
 **Status:** accepted; amended by ADR-0043 (no Flyway migrations before the first release; state kept as JSON documents) **Date:** 2026-07-17 **Deciders:** architect
 
@@ -33,7 +33,7 @@ This ADR fixes the persistence technology and access approach.
 
 ## Decision outcome
 
-Chosen: **Option C — SQLite in WAL mode, with Flyway migrations and JDBI for SQL access.** SQLite is embedded,
+Chosen: **Option C — SQLite in WAL mode, with JDBI for SQL access and Flyway migrations from the first release (until then one schema file, ADR-0043).** SQLite is embedded,
 zero-administration, and battle-tested for local durability; WAL mode gives concurrent readers alongside a writer, which
 fits a UI reading while the pipeline writes. Flyway versions the schema so it evolves safely across releases. JDBI gives
 explicit, debuggable SQL with lightweight record mapping — the right level of control for a data model where the

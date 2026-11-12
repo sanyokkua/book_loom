@@ -158,5 +158,5 @@ same grounds `add-document-skeleton-and-epub-roundtrip`'s design.md D1 rejected 
   `docs/spec_baseline/specification/02_Architecture/03_DOCUMENT_MODEL.md#data-model`,
   `docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#txt` (FR-DOC-TXT-3)
 - Prior art: ADR-0003 (skeleton/segment model), `openspec/changes/archive/2026-08-07-add-document-skeleton-and-epub-roundtrip/design.md` D1–D3
-- Consumed by: `openspec/changes/add-fb2-md-txt-roundtrip/`
+- Consumed by: `openspec/changes/archive/2026-08-09-add-fb2-md-txt-roundtrip/`
 - Rules: `.claude/rules/document-roundtrip.md`

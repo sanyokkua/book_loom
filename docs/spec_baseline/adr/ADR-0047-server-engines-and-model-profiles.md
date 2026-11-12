@@ -69,5 +69,5 @@ Chosen: detect from the shape of reply bodies only on Save, Test and Detect agai
 ## Links
 
 - Design decisions: DD-01, DD-20
-- Spec clauses: `openspec/changes/redesign-translation-pipeline/design.md` D17, D26
+- Spec clauses: `openspec/changes/archive/2026-11-12-redesign-translation-pipeline/design.md` D17, D26
 - Stories: none yet

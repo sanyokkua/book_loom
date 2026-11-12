@@ -3,7 +3,7 @@
 Every deterministic check a translated segment passes through, what level each finding has, how the never-worse gate
 decides whether an edit may stay, what export validates, and the limits the owner accepted.
 
-Design: `openspec/changes/redesign-translation-pipeline/design.md` D12–D16; decision:
+Design: `openspec/changes/archive/2026-11-12-redesign-translation-pipeline/design.md` D12–D16; decision:
 [ADR-0046](../spec_baseline/adr/ADR-0046-three-stages-one-repair-never-worse.md). Classes are under
 `modules/pipeline/src/main/java/ua/bookloom/pipeline/` unless stated. No check calls a model: there is no judge model at
 run time.

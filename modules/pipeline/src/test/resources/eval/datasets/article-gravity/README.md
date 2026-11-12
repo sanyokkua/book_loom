@@ -4,7 +4,7 @@ One invented popular-science article, *The Quiet Pull: How Gravity Shapes Our Wo
 Ukrainian, Russian and French, each as Markdown, EPUB 3 and FictionBook 2.1. It is a short test book that holds
 everything a translation must keep — code, formulas, diagram source, tables, links, DOIs, images and foreign-language
 quotations — so the app can be checked on all four languages and all three formats, and a later run can be compared
-with the reference translations. Added by redesign task 1.11 (`openspec/changes/redesign-translation-pipeline/tasks.md`,
+with the reference translations. Added by redesign task 1.11 (`openspec/changes/archive/2026-11-12-redesign-translation-pipeline/tasks.md`,
 design D24). All text is invented; no owner book text is used.
 
 ## Files

@@ -147,5 +147,5 @@ because it fixes nothing measured while adding a second failure mode.
   `docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection` (EC-DRM-1),
   `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import` (FR-IMPORT-04)
 - Prior art: `openspec/changes/archive/2026-08-07-add-document-skeleton-and-epub-roundtrip/design.md` D7
-- Consumed by: `openspec/changes/add-fb2-md-txt-roundtrip/`
+- Consumed by: `openspec/changes/archive/2026-08-09-add-fb2-md-txt-roundtrip/`
 - Rules: `.claude/rules/document-roundtrip.md`

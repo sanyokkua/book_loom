@@ -202,7 +202,7 @@ no second escape vocabulary exists to be mangled. This subsumes EC-INLINE-5 and 
 | This ADR's own Markdown escaping rule, and the requirement's own "SHALL NOT fail" promise | model-introduced punctuation is neutralised so the operation never fails | Neutralisation is **bounded**. Each round re-parses the candidate and acts on one construct, so the round limit is in practice a cap on how many model-introduced constructs one segment may carry; measured, twenty-five independent emphasis pairs exhaust it with five still unescaped, and the structure comparison reports the mismatch as `ErrorCode.validation`. The bound is what stops a construct that re-parses to the same excess type after being acted on from looping without end — which a setext heading did, twenty times over, before the escapability guard was made universal. Recorded here because it was stated nowhere: it predates this change's second audit and neither audit swept it, and an unstated bound on a promise not to fail is the same defect shape that audit existed to close. |
 
 Nothing in `docs/spec_baseline/specification/**` is edited. Every requirement this ADR shapes is written in
-`openspec/changes/add-inline-masking-and-placeholder-gate/specs/document-round-trip/spec.md`.
+`openspec/changes/archive/2026-09-11-add-inline-masking-and-placeholder-gate/specs/document-round-trip/spec.md`.
 
 ## Pros and cons of the options
 
@@ -250,4 +250,4 @@ Nothing in `docs/spec_baseline/specification/**` is edited. Every requirement th
   `#code-edge-cases` (EC-CODE-2)
 - Related ADRs: ADR-0003 (skeleton + segment model), ADR-0025 (reassembly replaces a run's inner content),
   ADR-0027 (structural block recognition), ADR-0029 (transcode to UTF-8 on unrepresentable target text)
-- Changes: `openspec/changes/add-inline-masking-and-placeholder-gate/`
+- Changes: `openspec/changes/archive/2026-09-11-add-inline-masking-and-placeholder-gate/`

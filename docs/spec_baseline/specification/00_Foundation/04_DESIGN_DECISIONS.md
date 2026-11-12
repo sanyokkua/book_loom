@@ -604,7 +604,8 @@ messages. **ADR:** — **Requirements:** FR-UI-06, FR-I18N-*.
 
 **Decision:** Beyond inline tags, locked terms and URLs, the following are **preserved verbatim and never translated**
 (confirmed by the technical-book corpus, which is saturated with them): inline `<code>` (masked as an atomic protected
-placeholder, its text kept exactly), block code listings `<pre>`/`<pre><code>` (a non-translatable block — never a
+placeholder, its text kept exactly; the one exception is FB2 `<code>`, which is prose style: it is masked as a pair
+of placeholders and the text between them stays translatable, see `openspec/specs/document-round-trip/spec.md`), block code listings `<pre>`/`<pre><code>` (a non-translatable block — never a
 segment, skeleton-preserved), **MathML `<math>`**, and index-term/cross-reference anchors (targets/ids preserved;
 visible link text stays translatable). Admonitions/sidebars (`note`/`tip`/`warning`/`sidebar`) are ordinary
 translatable prose blocks; table cells and figure captions are translatable segments with structure preserved. No

@@ -6,7 +6,7 @@ The backlog with ids (D1 and on) is `docs/spec_baseline/implementation_plan/CHAN
 
 ## Quality limits the owner accepted (2026-11-11)
 
-Measured in the closing run of `redesign-translation-pipeline`
+Measured in the closing run of `redesign-translation-pipeline` (archived 2026-11-12)
 ([results](evaluation/results-redesign-closing-run.md)); the review desk is the guard for each.
 
 | Limit | What happens | Backlog |
@@ -35,9 +35,6 @@ Measured in the closing run of `redesign-translation-pipeline`
   `BOOKLOOM_LOG_LEVEL=INFO`; the run log and the detailed log are bounded
   ([logging](architecture/overview.md)).
 - **Command line.** Translating every book of a folder is a non-goal; run the command once per book.
-- **FB2 inline code.** The specification makes FB2 `<code>` a deliberate paired exception whose text is translatable;
-  design decision DD-49 in `docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md` still says
-  inline code is atomic and should be amended to match.
 - **Book Brief labels.** Long Ukrainian option labels may truncate at a 1024 px window width (cosmetic).
 - **Windows.** The reveal-in-folder action handles the odd `explorer.exe` exit code, but the quoting of its
   `/select,<path>` argument has not been checked on a real Windows machine. Packages are unsigned on every platform.

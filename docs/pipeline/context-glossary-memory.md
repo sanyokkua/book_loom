@@ -3,7 +3,7 @@
 What a model call sees and where it comes from: the book map, the one context builder, the glossary and its names
 pass, recurring terms, translation memory, chapter summaries, the narrator, the bundled language data and typography.
 
-Design references: `openspec/changes/redesign-translation-pipeline/design.md` D3–D10. Classes are under
+Design references: `openspec/changes/archive/2026-11-12-redesign-translation-pipeline/design.md` D3–D10. Classes are under
 `modules/pipeline/src/main/java/ua/bookloom/pipeline/` and records under `modules/api/src/main/java/ua/bookloom/api/`
 unless stated.
 

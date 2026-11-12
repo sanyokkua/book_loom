@@ -2,7 +2,7 @@
 #
 # Spec: docs/spec_baseline/specification/04_Build_and_Release/04_CI_CD.md#quality-job
 #       docs/spec_baseline/specification/04_Build_and_Release/02_QUALITY_GATES.md#ci-gates
-# Design: openspec/changes/bootstrap-gradle-and-quality-toolchain/design.md#d8
+# Design: openspec/changes/archive/2026-08-03-bootstrap-gradle-and-quality-toolchain/design.md#d8
 #
 # This is the only workflow in the repository. `04_CI_CD.md` also describes `build.yml` (snapshot packaging on
 # `master`) and `release.yml` (tag -> GitHub Release); neither was built. The `packaging` job below runs after the

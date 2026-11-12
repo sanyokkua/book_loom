@@ -66,6 +66,6 @@ segments still need a second or third round to reach an accepted text; then a bo
 
 ## Links
 
-- Design decisions: DD-16, DD-45; `openspec/changes/redesign-translation-pipeline/design.md` D12-D14, D28
+- Design decisions: DD-16, DD-45; `openspec/changes/archive/2026-11-12-redesign-translation-pipeline/design.md` D12-D14, D28
 - Spec clauses: `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`
 - Stories: none

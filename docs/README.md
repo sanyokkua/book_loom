@@ -81,4 +81,4 @@ OpenSpec change is archived.
 | [spec_baseline/adr/](spec_baseline/adr/) | architecture decision records, ADR-0001 to ADR-0047 (see its [README](spec_baseline/adr/README.md)) |
 | [spec_baseline/implementation_plan/](spec_baseline/implementation_plan/) | [CHANGE_BACKLOG.md](spec_baseline/implementation_plan/CHANGE_BACKLOG.md), [01_MODULE_INVENTORY.md](spec_baseline/implementation_plan/01_MODULE_INVENTORY.md), roadmap |
 | [../openspec/specs/](../openspec/specs/) | the live capability specs (17 capabilities) |
-| [../openspec/changes/](../openspec/changes/) | the open change `redesign-translation-pipeline`, and `archive/` with the finished ones |
+| [../openspec/changes/](../openspec/changes/) | no open change; `archive/` holds the finished ones, the latest being `redesign-translation-pipeline` (2026-11-12) |

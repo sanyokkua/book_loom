@@ -64,7 +64,7 @@ Module dependency graph and the allowed edges: [`AGENTS.md`](../../AGENTS.md#mod
 |---|---|
 | Operating manual, Definition of Done, git protocol | [`AGENTS.md`](../../AGENTS.md) |
 | Live behavioural specs (17 capabilities) | `openspec/specs/<capability>/spec.md` |
-| Open change | `openspec/changes/redesign-translation-pipeline/` (proposal, design, tasks, specs, owner checklist) |
+| Latest archived change | `openspec/changes/archive/2026-11-12-redesign-translation-pipeline/` (proposal, design, tasks, specs, owner checklist) |
 | Finished changes | `openspec/changes/archive/<date>-<name>/` |
 | Original specification (editable baseline) | [`docs/spec_baseline/specification/`](../spec_baseline/specification/) |
 | Architecture decision records | [`docs/spec_baseline/adr/`](../spec_baseline/adr/) (ADR-0001 to ADR-0047) |

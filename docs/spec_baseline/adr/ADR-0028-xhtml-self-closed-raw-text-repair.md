@@ -152,5 +152,5 @@ the document.
 - Design decisions: DD-43 (canonical-equal round trip), DD-49 (code and math preserved via the skeleton only)
 - Related: ADR-0025 (reassembly replaces a run's inner content), ADR-0027 (structural block segmentation)
 - Evidence: `docs/spec_baseline/implementation_plan/notes-corpus-verification.md` — findings F1, F12a, F12b
-- Consumed by: `openspec/changes/fix-document-round-trip-corpus-defects/`
+- Consumed by: `openspec/changes/archive/2026-08-11-fix-document-round-trip-corpus-defects/`
 - Rules: `.claude/rules/document-roundtrip.md`, `.claude/rules/offline-and-privacy.md`

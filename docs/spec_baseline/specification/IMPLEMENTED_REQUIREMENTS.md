@@ -279,8 +279,8 @@ These were left out on purpose and are ordered in `docs/spec_baseline/implementa
 - Saving anything across a restart (SQLite persistence): resume after a restart, remembered settings and brief, the
   in-app language switch, the Projects screen, and add / edit / delete provider with credentials.
 - Settings tabs Models, Generation, Automation and Storage.
-- The translation pipeline redesign, the next change `redesign-translation-pipeline`
-  (`openspec/changes/redesign-translation-pipeline/proposal.md`); built since, see the last section.
+- The translation pipeline redesign, the change `redesign-translation-pipeline`
+  (`openspec/changes/archive/2026-11-12-redesign-translation-pipeline/proposal.md`); built since, see the last section.
 - Numeral masking and an automatic model pre-scan of names (decided against, D-7); parallel cloud lanes (local inference
   is single-flight).
 
@@ -321,8 +321,8 @@ The Projects screen, the full Settings, SQLite storage, continue after a restart
 ## Requirements changed by `redesign-translation-pipeline`
 
 Built and checked by the gate, the closing run (`docs/evaluation/results-redesign-closing-run.md#redesign-closing-run`) and the hand run of task
-17.2; the owner's checks (task 17.4) and the archive are still to come, so the change sits in
-`openspec/changes/redesign-translation-pipeline/` and its delta specs are not yet merged into `openspec/specs/`. Rows
+17.2; the owner accepted it and it was archived on 2026-11-12 into
+`openspec/changes/archive/2026-11-12-redesign-translation-pipeline/`; its delta specs are merged into `openspec/specs/`. Rows
 already annotated in the tables above (FR-ALGO-04, FR-ALGO-08, FR-ALGO-10, FR-ALGO-11, FR-EXPORT-06, FR-SETTINGS-03,
 FR-SETTINGS-05) are not repeated. Four quality results are known limits the owner accepted on 2026-11-11 (quality not
 proven better than the old pipeline, narrator gender slips, source-language words in ru→uk output, the names pass's

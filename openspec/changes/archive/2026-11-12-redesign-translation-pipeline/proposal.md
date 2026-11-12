@@ -21,7 +21,7 @@ that tuning cannot fix:
 A completed research round (owner-local) and the owner's decisions show that a fixed context recipe, accepted text
 that is protected from changes that make it worse, hints instead of enforced guesses, and handling each model and
 server by its known facts fix these at the root. This change completes the earlier proposal
-`openspec/changes/redesign-translation-pipeline/proposal.md`. Its three open questions are now answered: meaningful
+`openspec/changes/archive/2026-11-12-redesign-translation-pipeline/proposal.md`. Its three open questions are now answered: meaningful
 names are sounded out with the meaning kept as a note; the eval judge is the local `gemma4:26b`; the reviewer at
 Balanced is off unless a paired test proves it finds mistakes nothing else finds.
 

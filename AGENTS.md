@@ -26,8 +26,9 @@ canonical-equal round trip. Java 25 + JavaFX 26, Gradle Kotlin DSL + Guice, JUni
 
 ## Where it stands — keep this section current
 
-The `redesign-translation-pipeline` change is built, verified and accepted by the owner (2026-11-12); archiving it is
-the owner's separate step. All eight modules carry real code; the whole workflow runs from the window and the command
+The `redesign-translation-pipeline` change is built, verified and accepted by the owner and archived on
+2026-11-12 (`openspec/changes/archive/2026-11-12-redesign-translation-pipeline/`); the next change comes from
+`docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md`. All eight modules carry real code; the whole workflow runs from the window and the command
 line, on a stored project (SQLite `bookloom.db` in the data folder, a chunk's decisions and run record in one
 transaction; an old database whose schema or record shapes changed is set aside as `bookloom.db.old-<time>` until the
 first release, ADR-0043).

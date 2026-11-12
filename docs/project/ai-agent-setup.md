@@ -73,10 +73,10 @@ non-negotiable invariants, authoring rules that steer generated artifacts), `spe
 |---|---|
 | `openspec/specs/<capability>/spec.md` | the ledger of what is built; 17 capabilities (`app-shell`, `book-brief`, `book-import`, `document-round-trip`, `export`, `glossary`, `inference`, `llm-provider`, `local-storage`, `localization`, `notifications`, `quality-gates`, `resume`, `review-queue`, `settings`, `theming`, `translation-pipeline`) |
 | `openspec/changes/<name>/` | the unit of work: `proposal.md`, `design.md` when warranted, `specs/` (delta requirements), `tasks.md` |
-| `openspec/changes/archive/<date>-<name>/` | finished changes (12 archived) |
+| `openspec/changes/archive/<date>-<name>/` | finished changes (13 archived) |
 
-Current state: one open change, `redesign-translation-pipeline` (built; the owner's checks and the archive remain),
-with an `owner-checklist.md`.
+Current state: no open change; the last one, `redesign-translation-pipeline`, was archived on 2026-11-12
+(its `owner-checklist.md` is kept in the archive folder).
 
 The loop is propose, validate, apply, archive:
 

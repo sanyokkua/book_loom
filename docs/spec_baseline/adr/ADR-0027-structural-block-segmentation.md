@@ -151,5 +151,5 @@ segments out of 12,968 paragraphs, so the guard passes while 99.56% of the book 
   `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc` (FR-DOC-01),
   `docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#code-and-technical-content` (the exclusions)
 - Related: ADR-0025 (reassembly model, including `<br/>` runs)
-- Consumed by: `openspec/changes/add-fb2-md-txt-roundtrip/`
+- Consumed by: `openspec/changes/archive/2026-08-09-add-fb2-md-txt-roundtrip/`
 - Rules: `.claude/rules/document-roundtrip.md`, `.claude/rules/testing.md`

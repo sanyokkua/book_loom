@@ -8,7 +8,7 @@ Decisions: [ADR-0047](../spec_baseline/adr/ADR-0047-server-engines-and-model-pro
 profiles), [ADR-0044](../spec_baseline/adr/ADR-0044-look-for-a-local-ai-program-at-first-launch.md) (first-launch
 listing), [ADR-0005](../spec_baseline/adr/ADR-0005-provider-abstraction.md) and
 [ADR-0013](../spec_baseline/adr/ADR-0013-response-handling-contract.md) as amended by ADR-0047. Design:
-`openspec/changes/redesign-translation-pipeline/design.md` D17–D23. Classes are under
+`openspec/changes/archive/2026-11-12-redesign-translation-pipeline/design.md` D17–D23. Classes are under
 `modules/llm/src/main/java/ua/bookloom/llm/` unless stated. Only `:llm` holds HTTP code (ArchUnit
 `no-http-in-core-except-llm`).
 

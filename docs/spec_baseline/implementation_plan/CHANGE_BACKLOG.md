@@ -21,22 +21,20 @@ tasks, built directly against the code — the same pattern `add-translation-eng
 of their planned slot. It consumed most of the Stage C and Stage D rows below in reduced form (each row says what it
 took and what it left), and closed D5, D7, D8, D17 and D19 and part of D18 in `#decision-debt`. The groups of work that
 were not planned up front (15a–15j) are written down in its `additional-work.md`, with their IDs unchanged. The
-translation pipeline is redesigned by a separate proposal, `openspec/changes/redesign-translation-pipeline/proposal.md`,
+translation pipeline is redesigned by a separate proposal, `openspec/changes/archive/2026-11-12-redesign-translation-pipeline/proposal.md`,
 the change after `finalize-ui-and-persistence`. **Done:** `finalize-ui-and-persistence`
 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/`, proposed 2026-10-20, archived 2026-10-27) finished the UI to the 2026-10-19 mockup, added the
 Projects screen and the full Settings, and keeps state and settings in SQLite (ADR-0043); every task, the final gate, the hand run and the owner's checks included, is done, and its specs are folded into
-`openspec/specs/`. **Done:** `redesign-translation-pipeline` (`openspec/changes/redesign-translation-pipeline/`,
+`openspec/specs/`. **Done:** `redesign-translation-pipeline` (`openspec/changes/archive/2026-11-12-redesign-translation-pipeline/`,
 built 2026-10-28 to 2026-11-11) re-centred the pipeline on three stages, Prepare, Translate and Proofread: one context
 builder over the book map, one repair behind the never-worse gate, no judge, reviewer, directed fix, backward revision
 or export consistency pass, export with no model call, server engines and per-model profiles, the Models tab and the
-memory-based model recommendation. Every group, the gate and the hand run are done; the owner's checks (task 17.4) and
-the archive remain. Its closing run is `docs/evaluation/results-redesign-closing-run.md#redesign-closing-run`; the falsifiers it met and the work
-it deferred are rows D20 to D25 in `#decision-debt`. **Next:** the `## Workflow follow-up` of its `tasks.md` (spec
-titles and Purpose paragraphs after archive), then the next change from this list.
+memory-based model recommendation. Every group, the gate, the hand run and the owner's checks are done; it was archived on 2026-11-12. Its closing run is `docs/evaluation/results-redesign-closing-run.md#redesign-closing-run`; the falsifiers it met and the work
+it deferred are rows D20 to D25 in `#decision-debt`. **Next:** the next change from this list.
 
 ## where-this-stands {#where-this-stands}
 
-**Eleven changes are authored and archived** (`openspec/changes/archive/`). **Stage A is complete and Stage B is three
+**Twelve changes are authored and archived** (`openspec/changes/archive/`). **Stage A is complete and Stage B is three
 of four archived**, change 5 — `add-inline-masking-and-placeholder-gate` — included (2026-09-11).
 `add-translation-engine-and-cli` (2026-09-20) delivered the walking skeleton the owner named as the next unit of work
 — a book of any of the four formats through the whole pipeline from the command line with a deterministic pseudo
@@ -160,7 +158,7 @@ created because building the thing taught us something the plan could not have k
 best current guess at order and intent, not a contract — a stage may gain, merge, split or reorder entries as the code
 teaches us more, exactly as Stage B gained two and Stage C gained five.
 
-**Change 1 — authored.** See `openspec/changes/bootstrap-gradle-and-quality-toolchain/`. Covers the Gradle multi-module
+**Change 1 — authored.** See `openspec/changes/archive/2026-08-03-bootstrap-gradle-and-quality-toolchain/`. Covers the Gradle multi-module
 build and eight JPMS modules, the version catalog and dependency locking, the `build-logic` convention plugins
 (Spotless/Palantir, Lombok + Error Prone/NullAway, Checkstyle, SpotBugs+FindSecBugs), the eight-rule ArchUnit boundary
 suite, test conventions with the `liveLocal`/`promptEval`/`visual` tag exclusions and the coverage gate, Lefthook, the
@@ -450,7 +448,7 @@ what it found and change 5 deliberately did **not** fix.
 
 **D17 — a Markdown link label ending in a span-less child derives the wrong closing delimiter.**
 `MarkdownEscaper.pairedGroup` takes a paired construct's closing position as its last *spanned* child's end. For an
-ordinary link that is exactly the `]`. When a soft or hard line break trails the label — `[foo  \n](u)`, a label
+ordinary link that is exactly the `]`. When a soft or hard line break trails the label — `[foo  \n]` followed by `(u)`, a label
 wrapped across a line — the last spanned child is the text before the break, whose end is the line feed at index 6,
 while the `]` sits at 7. Measured, the old code inserted a backslash before the line feed, manufacturing a hard
 line break that a later round then deleted; it reached a plausible-looking output by luck. Change 5's escapability

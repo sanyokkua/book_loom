@@ -2,7 +2,7 @@ flowchart TD
     S0["0 · Setup & Book Brief<br/>languages, genre, tone, options"] --> S1
     S1["1 · Open & unpack<br/>unzip EPUB / read FB2 / detect real language / refuse DRM"] --> S2
     S2["2 · Read structure into a tree<br/>pull out text segments, protect tags/code/images/links"] --> S3
-    S3["3 · Names pass (Prep)<br/>scan groups forms under one name, model reads names and what it knows of them,<br/>suggests targets, checks them (offline fallback: frequency + casing)"] --> S4
+    S3["3 · Prepare stage<br/>style sheet from the brief; frequency + casing names scan when the glossary is empty<br/>(the model names pass runs only when the person asks, in Names and style)"] --> S4
     S4["4 · Translate loop<br/>chunk by chunk, with context"] --> S5
     S5["5 · Auto-check<br/>accept if no check blocks; one repair for what fails, kept only if never worse"] --> S6
     S6{"More chunks / chapters?"}

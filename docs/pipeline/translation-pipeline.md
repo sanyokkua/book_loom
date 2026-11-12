@@ -5,7 +5,7 @@ How a book goes from import to an exported translation in the current code: the 
 
 The decision behind this shape is [ADR-0046](../spec_baseline/adr/ADR-0046-three-stages-one-repair-never-worse.md)
 (three stages, one repair, the never-worse gate); the full requirements are the change
-[`redesign-translation-pipeline`](../../openspec/changes/redesign-translation-pipeline/) (`design.md` D2, D8–D16) and
+[`redesign-translation-pipeline`](../../openspec/changes/archive/2026-11-12-redesign-translation-pipeline/) (`design.md` D2, D8–D16) and
 the `translation-pipeline` capability. The canonical diagrams are
 [`pipeline.mermaid`](../spec_baseline/specification/diagrams/pipeline.mermaid) (whole book) and
 [`chunk-translate-loop.mermaid`](../spec_baseline/specification/diagrams/chunk-translate-loop.mermaid) (one chunk);
