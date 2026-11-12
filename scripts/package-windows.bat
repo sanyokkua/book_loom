@@ -30,7 +30,7 @@ set "MAIN_JAR=app.jar"
 rem modules\app\build\dist\libs, per ADR-0021, which supersedes the frozen spec's app\build\dist\libs.
 set "INPUT_DIR=%REPO_ROOT%\modules\app\build\dist\libs"
 set "OUTPUT_DIR=%REPO_ROOT%\build\package"
-set "ICON=%REPO_ROOT%\docs\specification\assets\icon\dist\windows\BookLoom.ico"
+set "ICON=%REPO_ROOT%\docs\spec_baseline\specification\assets\icon\dist\windows\BookLoom.ico"
 
 if "%APP_VERSION%"=="" set "APP_VERSION=dev"
 
