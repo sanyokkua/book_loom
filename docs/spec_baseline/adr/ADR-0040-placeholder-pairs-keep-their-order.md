@@ -7,7 +7,7 @@
 The placeholder gate compares only the multiset of `⟦gN⟧` tokens (FR-DOC-05); the shipped requirement even says
 reordered tokens pass. A model that answers `⟦g0⟧old⟦g1⟧` with `⟦g1⟧OLD⟦g0⟧` therefore passes, and the restored
 markup is broken: EPUB's lenient parse repairs it silently, FB2 refuses it at write, and since export re-opens the
-written book the whole export can fail at the very end (`docs/next_features.md` §9, backlog D7/D8).
+written book the whole export can fail at the very end (`docs/next_features.md` (removed in 2026-11; open items are in `docs/known-limits.md`) §9, backlog D7/D8).
 `.claude/rules/document-roundtrip.md` says reordered placeholders must fail; the shipped specification says they must
 pass. One has to change.
 

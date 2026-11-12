@@ -284,7 +284,7 @@ accepted on 2026-11-11; the 17.2 hand-run finding D7 is row D24 here, so the two
 
 **The review of `add-translation-engine-and-cli` found more gaps** — EPUB language metadata, serialization details, the
 command line and what the translation screen will need. They are recorded, each with a reproduction, in
-`docs/next_features.md`; the ones already owned in this table (D1, D7, D8) are cross-referenced there, not repeated.
+`docs/next_features.md` (removed in 2026-11; open items are in `docs/known-limits.md`); the ones already owned in this table (D1, D7, D8) are cross-referenced there, not repeated.
 
 **D1 — the four writers disagree on unrepresentable target text.** Found by the corpus verification, which sets every
 segment's target to a marker plus its own source text and so exercises exactly this. Measured:

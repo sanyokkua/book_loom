@@ -9,7 +9,7 @@ declared metadata (FR-IMPORT-03, FR-ALGO-A4, EC-LANG-1), using the Lingua librar
 translation is in the target language (the QA target-language check, `02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`).
 The owner decided that "language detection means read metadata in fb2 or epub. No detection for text files": no
 text-based detector is added in this change. A wrong declaration — `Croatian_Lesson_Police.epub` declares `en-US` for
-Ukrainian text (`docs/next_features.md` §15) — is fixed by the person, who can now edit the source language.
+Ukrainian text (`docs/next_features.md` (removed in 2026-11; open items are in `docs/known-limits.md`) §15) — is fixed by the person, who can now edit the source language.
 
 ## Decision
 

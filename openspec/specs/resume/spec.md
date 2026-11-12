@@ -274,7 +274,7 @@ WHILE a run is pausing or stopping, the screen SHALL keep reporting the counts a
 SHALL NOT report the run as paused or stopped.
 
 **Source:** FR-RESUME-03, FR-RESUME-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`),
-`docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, `docs/next_features.md` §14.
+`docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, `docs/next_features.md` (removed in 2026-11; open items are in `docs/known-limits.md`) §14.
 In plain words: a pause or a stop is not instant. The engine aborts the model request in flight (see "Pause and stop
 act without waiting for the provider" in the `translation-pipeline` capability) and then reaches a safe point, so
 there is a short visible gap in which the run is still winding down and the person has already asked it to stop.

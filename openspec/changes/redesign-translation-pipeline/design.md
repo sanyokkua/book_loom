@@ -1247,7 +1247,7 @@ the mockups, `.claude/rules/` and the docs that its behaviour makes wrong; histo
 
 Not edited: the fifteen-error-code clauses, `persistence-sqlite.md`, `01_QUALITY_ATTRIBUTES.md`, the stop-word and
 title-list sentences. Group 14 finds the remaining stale wording by a grep for judge, reviewer, backward revision,
-rolling summary and last check across `docs/spec_baseline/specification`, `.claude/rules` and `docs/next_features.md` §11–12,
+rolling summary and last check across `docs/spec_baseline/specification`, `.claude/rules` and `docs/next_features.md` (removed in 2026-11; open items are in `docs/known-limits.md`) §11–12,
 instead of by the research's unlocated stale-doc ids. A delta cannot edit a capability's `## Purpose`, and OpenSpec
 refuses a MODIFIED block that drops an original scenario name: the stale Purpose paragraphs of
 `openspec/specs/{quality-gates,translation-pipeline,export}/spec.md` and the kept reviewer-era scenario titles are

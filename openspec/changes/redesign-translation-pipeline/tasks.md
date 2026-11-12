@@ -2030,7 +2030,7 @@ database is set aside once.
     last-check card); `.claude/rules/llm-provider-integration.md` (l22, l36, the judge Reject-if); `docs/Architecture.md`;
     `AGENTS.md` module table row `:pipeline` ("prompts, context builder, checks, one repair, Proofread stage"). Then a
     grep for `judge|reviewer|backward revision|rolling summary|last check|consistency pass` across
-    `docs/spec_baseline/specification`, `.claude/rules` and `docs/next_features.md` §11–12, fixing each live statement (ADR bodies and
+    `docs/spec_baseline/specification`, `.claude/rules` and `docs/next_features.md` (removed in 2026-11; open items are in `docs/known-limits.md`) §11–12, fixing each live statement (ADR bodies and
     history keep their text).
   - **Done when:** the grep finds only history, ADR bodies and the removed-requirement reasons; every edited anchor
     still resolves.

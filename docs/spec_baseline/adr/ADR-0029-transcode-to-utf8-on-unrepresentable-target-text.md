@@ -143,7 +143,7 @@ FR-DOC-FB2-3 and EC-FB2-1 are **not** deviations — this generalises them.
   `docs/spec_baseline/specification/02_Architecture/03_DOCUMENT_MODEL.md#repackaging`
 - Evidence: `docs/spec_baseline/implementation_plan/notes-corpus-verification.md` (the four-writer measurement table)
 - Implemented by: FB2 before this ADR; TXT and Markdown by `complete-translation-workflow` (backlog item D1, and
-  `docs/next_features.md` §6–§7)
+  `docs/next_features.md` (removed in 2026-11; open items are in `docs/known-limits.md`) §6–§7)
 - Related: ADR-0030 (the other half of the writer's acceptance policy)
 
 ## Amended in this change (2026-09-27)
