@@ -2910,9 +2910,10 @@ the owner with options; it is never reworded to pass.
 - *Judge.* `gemma4:26b`, local, pairwise with the order swapped, a win only when both orders agree. Its calibration
   failed the Wilson bounds (`#redesign-arms`, arm 1), so it is a screen only: every paragraph it marks as differing is
   read by the agent (with a Codex second opinion by hand), and that reading is the grade the rows below use.
-- *Where things live.* Raw outputs, reports and every owner book's name, hash and result stay in the git-ignored
+- *Where things live.* Raw outputs, reports and the real books' text stay in the git-ignored
   `.temporary_context/redesign-closing/`. Committed: the invented-text outputs of the mini suites and `sequence`, and
-  this table. Real books, their text and their reports are never committed.
+  this table, which names each owner book and its hash as a measurement record (as the earlier sections of this file
+  do). Real books, their text, their outputs and their reports are never committed.
 
 **Quality rows.**
 

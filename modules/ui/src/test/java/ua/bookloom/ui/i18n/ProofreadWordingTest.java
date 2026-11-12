@@ -14,7 +14,23 @@ class ProofreadWordingTest {
 
     // The select ids (reviewer, reviewer_edit) are stored raiser ids; only the words shown to a person count.
     private static String shownWords(final String pattern) {
-        return pattern.replaceAll("[a-z_]+ \\{", "{");
+        final StringBuilder shown = new StringBuilder();
+        int start = 0;
+        int open = pattern.indexOf(" {", start);
+        while (open >= 0) {
+            int idStart = open;
+            while (idStart > start && isIdChar(pattern.charAt(idStart - 1))) {
+                idStart--;
+            }
+            shown.append(pattern, start, idStart).append('{');
+            start = open + 2;
+            open = pattern.indexOf(" {", start);
+        }
+        return shown.append(pattern, start, pattern.length()).toString();
+    }
+
+    private static boolean isIdChar(final char c) {
+        return c == '_' || (c >= 'a' && c <= 'z');
     }
 
     // IF any shown words still said reviewer, THEN a person would meet a stage that no longer exists.
