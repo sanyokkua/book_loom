@@ -1,8 +1,8 @@
 # Quality gate, coverage and CI
 
-*Coverage, SonarQube, the gate, hooks and CI.*
+*What `check` enforces, coverage, the opt-in SonarQube scan, git hooks and the CI workflow.*
 
-## 8. Coverage {#coverage}
+## Coverage {#coverage}
 
 ```bash
 ./gradlew :document:jacocoTestReport               # HTML + XML report for one module
@@ -46,7 +46,7 @@ before the group is called done; the scan is not part of the gate only because i
 
 ---
 
-## 9. Quality gate, hooks and CI {#quality-gate}
+## Quality gate, hooks and CI {#quality-gate}
 
 `./gradlew check` runs Spotless (`spotlessCheck`), Checkstyle (`config/checkstyle/`, zero warnings allowed), Error
 Prone + NullAway (as javac plugins; every package is `@NullMarked`), SpotBugs + FindSecBugs (`config/spotbugs/`),
@@ -95,9 +95,12 @@ OPENSPEC_TELEMETRY=0 openspec update                        # after upgrading th
 OPENSPEC_TELEMETRY=0 openspec init --tools claude,codex     # first set-up; codex comes last so its rendering is the one kept
 ```
 
-**CI** (`.github/workflows/ci.yml`, on every push and pull request): a *quality* job (lock verification, the gate,
-the agent-file sync check, the licence gate — about 4 minutes) and a five-leg *packaging* matrix (macOS x86_64 and
-aarch64, Linux x86_64 and aarch64, Windows) that builds each image and, on POSIX, launch-smokes it — about 8 minutes
-end to end. Test reports are uploaded only on failure.
+**CI** (`.github/workflows/ci.yml`, on pull requests to `master` and on pushes to every other branch): a *quality* job
+(Xvfb, strict lock verification, the gate `./gradlew clean build check spotlessCheck`, the agent-file sync check, the
+licence gate; it takes 15–27 minutes on the runner, with a 45-minute ceiling) and, after it, a five-leg *packaging*
+matrix (macOS x86_64 and aarch64, Linux x86_64 and aarch64, Windows) that stages `:app:collectDist`, builds each image
+and, on POSIX, launch-smokes it (see [Packaging](getting-started.md#packaging)). Test reports are uploaded only on
+failure. The packaging legs are written from the spec and have not yet been observed running in CI; the scripts
+themselves were verified locally.
 
 ---

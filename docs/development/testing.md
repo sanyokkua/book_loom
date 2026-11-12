@@ -1,16 +1,16 @@
 # Testing
 
-*Test tags and local-only sets, conventions, the soak run, test speed and the focused loop.*
+*How to run the tests: tags and local-only sets, conventions, the soak run, test speed and the focused loop.*
 
-## 7. Testing {#testing}
+## Testing {#testing}
 
 | Command | Runs |
 |---|---|
-| `./gradlew test` | every test except the four local-only tags |
+| `./gradlew test` | every test except the five local-only tags (`liveLocal`, `promptEval`, `visual`, `corpus`, `soak`) |
 | `./gradlew :document:test` | one module |
 | `./gradlew :document:test --tests 'ua.bookloom.document.mask.*'` | one package or class (pattern) |
 | `./gradlew :document:test --tests '*Fb2WriterTest.write_lineFeedSource_keepsBareLineFeeds'` | one method |
-| `./gradlew :app:archTest` | the nine ArchUnit rules (also part of `check`) |
+| `./gradlew :app:archTest` | the ten ArchUnit rules (also part of `check`) |
 | `./gradlew :ui:fastTest` | one module's tests without the `slow`-tagged end-to-end classes (not part of `check`) |
 | `scripts/test-focused.sh` | the inner loop: format and test what the working tree changed ([below](#test-speed)) |
 | `python3 scripts/slowest-tests.py [module...]` | where the last run's test time went, from the XML reports |
@@ -50,7 +50,7 @@ Markdown and TXT book of 3,700 paragraphs (`SoakBooks`: chapter headings, recurr
 number- and symbol-only paragraphs, a few huge paragraphs) goes through the real `TranslationJobImpl`, export and
 re-open, over `FaultyModel` — the pseudo model at the model port behind a seeded fault injector (timeouts, a call that
 hangs until the stall watchdog ends it, 5xx bursts, an unreachable server, one 25-minute outage, an unloaded model,
-empty replies, dropped/doubled/garbled `⟦gN⟧` tokens and stray brackets, refusals, judge junk, a hang on a re-judge, a
+empty replies, dropped/doubled/garbled `⟦gN⟧` tokens and stray brackets, refusals, a bad Proofread reply, a
 step that throws). The clock is scripted, so every recovery wait and watchdog ceiling passes at once. It asserts the run
 completes with no segment pending, every fault class shows up as its pause, stall or flag, the export re-opens with every
 segment, the retained heap stays under 400 MB and grows by less than 16 KB per segment, the live threads return to the
@@ -69,13 +69,14 @@ They are excluded from `check` and CI. Without `BOOKLOOM_CORPUS_DIR` the corpus 
 set-but-missing directory is a hard failure. The last recorded corpus run is in
 `docs/spec_baseline/implementation_plan/notes-corpus-verification.md`.
 
+
 **Conventions** (full rules in `.claude/rules/testing.md`):
 
 - A test is named `method_state_expected`; when the name is not enough, one plain-language comment line above it
   says what it proves. There are no requirement-id markers and no coverage script (ADR-0032) — the test is the evidence.
 - Write the acceptance test first and see it fail before the implementation exists.
 - Mock only I/O and non-determinism, never the boundary the test exists to prove. The repository has no Mockito;
-  document tests run on real bytes in `@TempDir`, and the LLM seam will be WireMock at the HTTP level.
+  document tests run on real bytes in `@TempDir`, and the LLM seam is WireMock at the HTTP level, for both the OpenAI-compatible and the Ollama-native dialect.
 - No `if`/`for`/`while` in a test body — use `@ParameterizedTest`. Never recompute the expected value with the
   production algorithm.
 - A `:ui` test that shows a stage extends `FxTestBase`, not TestFX's `ApplicationTest`: the same lifecycle, but it
@@ -106,13 +107,13 @@ module. It prints the failed tests and the last 40 lines; the whole output is in
 | `--dry-run` | print the Gradle command only |
 | `--lines <n>` | lines of output shown at the end (default 40) |
 
-Measured on the owner's machine (Apple Silicon, 10 cores), 2026-10-01:
+Measured on the owner's machine (Apple Silicon, 10 cores), 2026-10-01 (the whole gate takes about 20 minutes from clean today; the per-module figures below are the ones that dated):
 
 | What | Before | After |
 |---|---|---|
 | `./gradlew :ui:test` (6,870 tests, 146 classes) | 13 m 36 s — one JVM, 813 s of test time | 1 m 53 s – 2 m 3 s — 4 forks, ~346 s of test time, 111 s wall (three runs) |
 | `./gradlew test --rerun` (every module) | — | 3 m 14 s before the `interact` change (three runs in a row); `:ui` is now ~35 s less |
-| `./gradlew clean build check spotlessCheck` | 8 m 39 s (2026-09-28) | 4 m 13 s, 118 tasks |
+| `./gradlew clean build check spotlessCheck` | 8 m 39 s (2026-09-28) | 4 m 13 s, 118 tasks (the suite has grown since: 17m 45s–20m 17s on 2026-11-11, see below) |
 | `./gradlew :pipeline:fastTest` / `:document:fastTest` / `:llm:fastTest` `--rerun` | — | 14 s / 5 s / 15 s |
 | `scripts/test-focused.sh` for a `:ui`-only change | — | 11 s when the diff points at its tests (`ReviewViewModel*Test`); 1 m 54 s when it falls back to `:ui:fastTest` (a changed message bundle) |
 
@@ -139,7 +140,7 @@ Isolation under forks: an "unreachable provider" test points at `ClosedPorts.end
 ephemeral range) instead of binding and releasing a port, which another fork's WireMock could take in between; the
 test log is one file per fork. Still open: two `:llm` WireMock tests (`GatedChatModelTest`,
 `OpenAiCompatibleClientProbeTest`) each failed once in about fifteen full runs because a reply came from something
-other than their own server — the same load-only symptom `replan-notes.md` recorded before the forks; rerun the class.
+other than their own server — a load-only symptom seen before the forks too; rerun the class.
 
 Two switches stay off on purpose. `org.gradle.parallel` (modules side by side) was tried: the gate then failed
 intermittently with a `NoClassDefFoundError` out of palantir-java-format in some modules' `spotlessJavaCheck` — Spotless

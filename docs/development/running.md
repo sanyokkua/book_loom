@@ -1,8 +1,8 @@
 # Running and debugging
 
-*Running the app and the command line, where it writes, logs, the headless end-to-end proof.*
+*How to run the app and the command line, where they write, how logging works, and the headless end-to-end proof.*
 
-## 5. Run and debug {#running}
+## Run and debug {#running}
 
 ```bash
 ./gradlew :app:run                # the BookLoom window: opens 1024x700, minimum 960x640
@@ -10,7 +10,7 @@
 ```
 
 `run` is a plain `JavaExec` with main class `ua.bookloom.app.bootstrap.Launcher`, launched on the **classpath**. A
-green `:app:run` therefore says nothing about the JPMS graph; the packaged image is what proves that ([§10](getting-started.md#packaging)).
+green `:app:run` therefore says nothing about the JPMS graph; the packaged image is what proves that ([Packaging](getting-started.md#packaging)).
 
 **Three warnings print on every run and none matters**: `Unsupported JavaFX configuration: classes were loaded from
 'unnamed module'` (the classpath launch), `System::load has been called by … NativeLibLoader` (JEP 472; native access
@@ -21,10 +21,9 @@ switched off on `:app:translate` below, but not here.
 Dock launch never sees a shell's `export`. BookLoom's one lookup (`ua.bookloom.app.SystemEnvironmentVariables`) reads
 the process environment, then the user's OS store — `launchctl getenv` on macOS, the registry user and machine
 environment on Windows, `environment.d` and `/etc/environment` on Linux — at call time, so `launchctl setenv NAME
-value` works without restarting the daemon or the window. How to set a key per OS: the README's
-[Provider keys](../README.md#provider-keys).
+value` works without restarting the daemon or the window. How to set a key per OS: [Provider keys](getting-started.md#provider-keys).
 
-**What the window can do.** The whole workflow, in five numbered steps and Settings. *Import*: open a book of any of the
+**What the window can do.** The whole workflow, in five numbered steps (Import, Book Brief, Names & style, Translating, Export), plus Projects and Settings. *Import*: open a book of any of the
 four formats (EPUB, FB2, Markdown, TXT); the card reports its format, declared language, cover and chapter count, refuses
 a DRM-protected or unsupported file, and shows the book's structure tree and its round-trip check. *Book Brief*: source
 and target language (any language the JDK can name, or Auto for the source), tone and style, the name, foreign-passage,
@@ -37,22 +36,15 @@ the same screen. *Export*: Save to, the side files (glossary CSV, bilingual HTML
 and the export-complete dialog (export makes no model call) with a button that shows the written file in the file manager; a stopped or partial run
 can be exported, and what it did not translate stays in the source. Verify a provider on Settings (Providers: connection,
 models, then a test inference, each measured), choose a model, and start. Pause and Stop abort the request in flight.
-Only one translation exists per application run: importing a book while a run can continue asks whether to discard it.
+The window translates one book at a time: opening another book while a translation is running or paused asks first and stops it; the finished segments are saved and the run continues from Projects. The Projects screen lists, opens, continues, renames and removes the stored projects, and the app keeps its settings, providers, books and projects across restarts (below).
 
-**The review mode is a launch flag**, because nothing is saved yet. `BOOKLOOM_REVIEW_MODE`, else the system property
-`bookloom.review.mode` (for `:app:run`, hand it to the launched JVM with `JAVA_TOOL_OPTIONS="-Dbookloom.review.mode=manual"`),
-takes `unattended` (also `auto`; the default — nothing pauses), `assisted` (also `semi-manual` — the run pauses on a
-flagged segment and on an error) or `manual` (pauses after every segment as well). A value that names no mode falls back
-to `unattended` and is named once in the log. The command line always runs unattended. The mode is shown on the
-Translating screen's ready card and in the session facts of the detailed log.
+**The review mode** is chosen in Settings › Automation ("When to stop and ask you": `Unattended`, `Assisted` or `Manual`; stored as `run.reviewMode`, applied to the next run start). A launch flag overrides the stored choice for that launch: `BOOKLOOM_REVIEW_MODE`, else the system property `bookloom.review.mode` (for `:app:run`, hand it to the launched JVM with `JAVA_TOOL_OPTIONS="-Dbookloom.review.mode=manual"`; Settings then names the flag that decides). It takes `unattended` (also `auto`; the default — nothing pauses), `assisted` (also `semi-manual` — the run pauses on a flagged segment and on an error) or `manual` (pauses after every segment as well). A value that names no mode counts as set, means `unattended` and is named once in the log. The command line always runs unattended and ignores the stored choice. The mode is shown on the Translating screen's ready card and in the session facts of the detailed log.
 
-**What it cannot do yet.** Persist anything across a restart (`:persistence` binds every repository port to an
-in-memory adapter, ADR-0034, so a run cannot be resumed after a restart and the theme, provider, model and brief are not
-remembered; ADR-0043 moves the window to SQLite), switch the interface language inside the app, open the Projects entry (greyed, no screen), or use the
-Settings tabs Models, Generation, Automation and Storage.
+**Persistence.** The window keeps its settings, providers, books, projects and every decided segment in SQLite (`bookloom.db` in the data folder, WAL; ADR-0043), so a run can be resumed after a restart and the theme, provider, model and brief are remembered. A database whose schema or stored record shapes changed is renamed `bookloom.db.old-<time>` and a fresh one created (there is no migration before the first release). The command line and most tests use the in-memory adapters instead and never create `bookloom.db` (ADR-0034).
 
-**Ukrainian interface.** The language follows the operating system: a Ukrainian locale shows `uk`, anything else
-shows `en`, and there is no switch in the app. To see Ukrainian without changing the OS, run
+**Settings.** Six tabs: Providers, Models, Generation, Appearance (theme and interface language), Automation and Storage & logs.
+
+**Interface language.** The first launch follows the operating system: a Ukrainian locale shows `uk`, anything else `en`. Settings › Appearance has a language chooser (`en` or `uk`, stored as `ui.language`) and a Restart now button, because the choice applies after a restart. To see Ukrainian without changing the OS or the setting, run
 `./gradlew :app:run -Duser.language=uk -Duser.country=UA`. The build script does nothing special for this: Gradle
 copies `user.language`, `user.country`, `user.variant` and `file.encoding` from its own JVM into every forked JVM
 (`JvmOptions` in `gradle-process-services`), so a `-D` on the Gradle command line reaches the launched application
@@ -68,7 +60,7 @@ INFO [JavaFX Application Thread] … BookLoomApplication - window shown, initial
 
 **Where the app writes** (`ua.bookloom.util.paths.AppPathsResolver`; `-Dev` is appended in the dev environment):
 
-| OS | Data (holds `bookloom.lock`, later `bookloom.db`) | Logs (`bookloom.log` + rolled files) |
+| OS | Data (holds `bookloom.lock` and `bookloom.db`) | Logs (`bookloom.log` + rolled files) |
 |---|---|---|
 | macOS | `~/Library/Application Support/BookLoom[-Dev]` | `~/Library/Logs/BookLoom[-Dev]` |
 | Linux | `$XDG_DATA_HOME` or `~/.local/share/bookloom[-dev]` | `$XDG_STATE_HOME` or `~/.local/state/bookloom[-dev]/logs` |
@@ -99,8 +91,8 @@ forks (`<worker>` is Gradle's test-worker id; the newest file is the last run) �
 (`src/test/resources/logback-test.xml`; the other modules have none yet). Read one at `TRACE` with
 `BOOKLOOM_LOG_LEVEL=TRACE ./gradlew :<module>:test --tests '<class>' --rerun`.
 
-**A development run's `DEBUG` default is verbose**: about 37 lines per segment (one 5,000-segment book wrote roughly
-50 MB of log at `TRACE`), so translate a large book with `BOOKLOOM_LOG_LEVEL=INFO` unless you are actually following
+**A development run's `TRACE` default is verbose**: about 37 lines per segment (one 5,000-segment book wrote roughly
+50 MB of log), so translate a large book with `BOOKLOOM_LOG_LEVEL=INFO` unless you are actually following
 one segment through its log.
 
 **The detailed diagnostic log — the one to share.** Beside `bookloom.log`, a run can write `bookloom-trace.log` in
@@ -245,7 +237,7 @@ like an outage but only six times, then the banner says "The model is not availa
 watchdog and retried as a timeout (two pauses, then the segment is flagged and the run goes on). While a run is at
 work — including such a wait — the computer is kept awake: on macOS `caffeinate -i -m -w <pid>`, on Linux
 `systemd-inhibit` when installed, on Windows nothing (one WARN line; set the power plan yourself). It is a local
-process, so the offline invariant is untouched. Nothing is saved to disk: a crash or power loss still loses the run.
+process, so the offline invariant is untouched. Every decided segment is stored as the run goes, so a crash or power loss costs at most the last in-flight chunk and the run continues from Projects (SQLite with `synchronous=NORMAL` is not power-loss-proof).
 
 **Measuring scroll smoothness.** The build sets no JavaFX rendering flags, and none should be added without numbers.
 To measure, hand the flags to the launched JVM through `JAVA_TOOL_OPTIONS` (the `run` task forwards no `-D` of its

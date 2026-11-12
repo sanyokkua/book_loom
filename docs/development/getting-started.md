@@ -1,8 +1,8 @@
 # Getting started
 
-*Prerequisites, first build, repository layout, build configuration, IDE, packaging, cleanup and troubleshooting.*
+*How to set up a machine, build and run BookLoom, supply a provider key, and package, clean and troubleshoot it.*
 
-## 1. Prerequisites {#prerequisites}
+## Prerequisites {#prerequisites}
 
 **JDK 25, installed by you.** The build asks for a language version, not a vendor, and declares no toolchain
 download repository, so Gradle cannot fetch one.
@@ -34,11 +34,11 @@ Optional:
 | Liberica 25 "Full" (`jdk+fx`) | packaging on **Windows** only — a plain JDK there lacks the JavaFX jmods `jpackage` needs; never on macOS or Linux, whose module-path image refuses a JavaFX-linked `java.base` | <https://bell-sw.com/pages/downloads/> |
 
 There is no `gradle.properties`; one you add is not ignored by git. `org.gradle.parallel` and the build cache stay off on
-purpose ([§7](testing.md#test-speed)).
+purpose ([focused loop](testing.md#test-speed)).
 
 ---
 
-## 2. Quick start {#first-build}
+## Quick start {#first-build}
 
 ```bash
 git clone <repo-url> && cd book_loom
@@ -54,14 +54,45 @@ The full gate — what pre-push and CI run — is:
 
 About 20 minutes on the owner's machine (measured 2026-11-11 at the end of `redesign-translation-pipeline`: 17m 45s
 to 20m 17s from clean; it was 4m 13s on 2026-10-01). While coding, use the focused loop
-instead ([§7](testing.md#test-speed)). Note your own baseline: a run materially longer than it is treated as hung.
+instead ([Test speed and the focused loop](testing.md#test-speed)). Note your own baseline: a run materially longer than it is treated as hung.
 
 ---
 
-## 3. Layout and modules {#project-structure}
+## Provider keys {#provider-keys}
+
+Step-by-step commands for each operating system are in [provider-keys.md](provider-keys.md).
+
+A provider that needs a key (LM Studio with a key, OpenAI, a company gateway) never holds the key in BookLoom. In
+Settings › Providers the form's **Key variable** field takes the **name** of an environment variable (for example
+`LMS_KEY`); only that name is saved (`ProviderConfig.credentialRef` in `:api`). The form refuses a key typed where the
+name belongs, and a custom header whose value looks like a credential must be written as `${env:NAME}`. When a request
+is sent, `RequestHeaders` in `:llm` resolves the name to its value and puts it in the sign-in header (`Authorization:
+Bearer <key>`, or the header you name for the API-key type); an unset variable refuses the call with a
+`missingCredential` error instead of sending it unsigned, and the value is never logged, stored or shown.
+
+BookLoom's one lookup (`ua.bookloom.app.SystemEnvironmentVariables`) reads its own process environment first, then the
+operating system's store of your user variables, and re-reads at call time (answers are cached for two seconds), so a
+variable set while BookLoom runs is seen without a restart; the form shows the variable as "set" once it can be read.
+An app opened from the Dock, the Start menu, a file manager or an IDE does **not** see `export` lines in `~/.zshrc` or
+`~/.bashrc`, so set the variable where the app looks:
+
+| OS | Where | Set it with |
+|---|---|---|
+| macOS | the login session (`launchctl getenv`) | `launchctl setenv LMS_KEY <key>`; to survive a reboot, a LaunchAgent that runs the same command at load |
+| Windows | your user variables (the registry user and machine environment) | `setx LMS_KEY <key>`, or System Properties › Advanced › Environment Variables |
+| Linux | `~/.config/environment.d/*.conf` or `/etc/environment` | a `LMS_KEY=<key>` line, then log in again |
+
+`:app:run` and `:app:translate` use the same lookup, so a Gradle daemon started before you exported a key still finds
+it through the OS store.
+
+---
+
+## Layout and modules {#project-structure}
 
 ```
 AGENTS.md                  operating manual (agents)         docs/Architecture.md   what is built, how to verify it
+docs/development/         this guide (getting started, running, testing, quality and CI)
+docs/evaluation/          eval suites and the measured results of the prompt and pipeline rounds
 docs/spec_baseline/specification/        the spec — editable reference     docs/spec_baseline/adr/              decisions (ADR-0001 …)
 docs/spec_baseline/implementation_plan/  CHANGE_BACKLOG.md (order of work), 01_MODULE_INVENTORY.md (as-built log), 07_ROADMAP.md,
                            notes-corpus-verification.md (235-book sweep results), 04_ADR_FORMAT.md
@@ -78,24 +109,24 @@ Gradle project names are `:api` … `:app` even though the directories sit under
 | `:api` | `modules/api` | real | `Result`, `AppError`, `ErrorCode`, `SafeDetails`, the document model (incl. book inspection), `DocumentPort`, the chat-model, translation-engine, project and storage-port contracts (`ua.bookloom.api.llm`, `ua.bookloom.api.pipeline`, `ua.bookloom.api.project`, `ua.bookloom.api.persistence`) |
 | `:util` | `modules/util` | real | per-OS paths, dev/prod environment, hashing, the language catalogue (`util.lang`) |
 | `:document` | `modules/document` | real | EPUB/FB2/Markdown/TXT parse → mask → unmask → write back → close; book inspection, sentence splitting, auxiliary text units; the placeholder gate checks the multiset and the order/nesting of paired placeholders (ADR-0040) |
-| `:llm` | `modules/llm` | real | the `pseudo` model, the Ollama-native and OpenAI-compatible clients (retry, single-flight gate, three-stage verification), model discovery |
-| `:pipeline` | `modules/pipeline` | real | the translation engine, the pausable job (pause/resume/cancel, which also abort a model request in flight), checked export; prompt templates, chunking, the stored-project service, deterministic QA checks, the one repair behind the never-worse gate, the Proofread stage, the context builder and chapter summaries |
-| `:persistence` | `modules/persistence` | real | in-memory adapters behind every `:api` storage port (ADR-0034; command line, tests) and, built by `finalize-ui-and-persistence`, SQLite + JDBI adapters for the window (ADR-0043; Flyway only from the first release); `RepositoryContractTest` runs against both |
-| `:ui` | `modules/ui` | real | the shell, six screens (Import, Book Brief, Structure, Translating, Export, Settings), the state mirror and viewmodels, `en`/`uk` bundles, the theme — six of eight planned packages |
+| `:llm` | `modules/llm` | real | the `pseudo` model, the Ollama-native and OpenAI-compatible clients (retry, single-flight gate, three-stage verification), detected server engines, per-model profiles, model discovery |
+| `:pipeline` | `modules/pipeline` | real | the translation engine, the pausable job (pause/resume/cancel, which also abort a model request in flight), checked export; prompt templates, chunking, the stored-project service, deterministic QA checks, the one repair behind the never-worse gate, the Proofread stage, the context builder, translation memory and chapter summaries |
+| `:persistence` | `modules/persistence` | real | in-memory adapters behind every `:api` storage port (ADR-0034; command line, tests) and SQLite + JDBI adapters for the window (`bookloom.db`, ADR-0043; Flyway only from the first release); `RepositoryContractTest` runs against both |
+| `:ui` | `modules/ui` | real | the shell, the workflow screens (Import, Book Brief, Names & style, Translating, Export), Projects and Settings (Providers, Models, Generation, Appearance, Automation, Storage & logs), the state mirror and viewmodels, `en`/`uk` bundles, the theme |
 | `:app` | `modules/app` | real | launcher, logging bootstrap, single-instance lock, Guice root, the command-line translator, the `archTest` suite |
 | `build-logic` | `modules/build-logic` | — | the five convention plugins; an **included build**, not a subproject |
 
 Allowed dependency edges point downward only: `:app`/`:ui` → `:pipeline` → `:document`/`:llm`/`:persistence` →
-`:util` → `:api`. Only `:ui` and `:app` may see JavaFX. ArchUnit enforces this ([§7](testing.md#testing)).
+`:util` → `:api`. Only `:ui` and `:app` may see JavaFX. ArchUnit enforces this ([Testing](testing.md#testing)).
 
 ---
 
-## 4. Build configuration {#build-config}
+## Build configuration {#build-config}
 
 **Toolchain.** `bookloom.java-conventions` declares `languageVersion = 25`. The JVM Gradle runs on (from
 `JAVA_HOME`/`PATH`) and the JDK that compiles BookLoom (auto-detected against 25) are chosen independently, so
 `java -version` says nothing about whether the build works. With no JDK 25 detected, configuration succeeds and the
-first `compileJava` fails ([§12](#troubleshooting)).
+first `compileJava` fails ([Troubleshooting](#troubleshooting)).
 
 **Version catalog.** Every coordinate lives in `gradle/libs.versions.toml`, pinned exactly; no build script carries
 an inline `group:artifact:version`. A catalog entry that nothing references does nothing — a transitive version is
@@ -127,16 +158,16 @@ compile/runtime classpaths because a lock entry cannot record which per-OS JavaF
 |---|---|---|
 | `bookloom.java-conventions` | all 8 | JDK 25 toolchain, `--release 25`, `-Werror` + `-Xlint:all` (minus a few carve-outs), Lombok as the only annotation processor, Error Prone + NullAway, Checkstyle, SpotBugs + FindSecBugs, dependency locking, version constraints, `resolveAndLockAll`/`verifyLocks` |
 | `bookloom.spotless-conventions` | all 8 | Palantir Java Format, 120 columns |
-| `bookloom.test-conventions` | all 8 | JUnit 5 + AssertJ + WireMock + TestFX on the test classpath, headless system properties, parallel test forks, `fastTest` (everything but `slow`), the four local-only tasks `liveLocal` `promptEval` `visual` `corpus` |
-| `bookloom.coverage-conventions` | the six FX-free modules | JaCoCo branch coverage ≥ 0.80 ([§8](quality-and-ci.md#coverage)) |
+| `bookloom.test-conventions` | all 8 | JUnit 5 + AssertJ + WireMock + TestFX on the test classpath, headless system properties, parallel test forks, `fastTest` (everything but `slow`), the five local-only tasks `liveLocal` `promptEval` `visual` `corpus` `soak` |
+| `bookloom.coverage-conventions` | the six FX-free modules | JaCoCo branch coverage ≥ 0.80 ([Coverage](quality-and-ci.md#coverage)) |
 | `bookloom.javafx-conventions` | `:ui`, `:app` | JavaFX 26 with per-OS classifiers, `--enable-native-access` on test tasks, the lock carve-out |
 
-The root build adds one thing: the licence gate (`checkLicense`, [§9](quality-and-ci.md#quality-gate)).
+The root build adds one thing: the licence gate (`checkLicense`, [Quality gate](quality-and-ci.md#quality-gate)).
 
 ---
 
 
-## 6. IDE (IntelliJ IDEA) {#ide}
+## IDE (IntelliJ IDEA) {#ide}
 
 Open the repository root, let IDEA import the Gradle build with the wrapper, and create a **Gradle** run
 configuration (not an Application one) with tasks `:app:run` — it runs the same `JavaExec` the CLI does. For
@@ -152,7 +183,7 @@ Distribution) — switch it back to the Gradle Wrapper.
 ---
 
 
-## 10. Packaging {#packaging}
+## Packaging {#packaging}
 
 Stage the input first, on every OS:
 
@@ -180,7 +211,7 @@ placeholder). There is no cross-compilation: each image is built on its own OS.
 ```
 
 It launches the packaged image against a throwaway `BOOKLOOM_DATA_DIR` with `-J-Dbookloom.smoke.resolveAll=true` and
-asserts the three startup log lines from [§5](running.md#running) and a fourth, `resolve-all passed: views=<n> ports=<m>`, appear
+asserts the three startup log lines from [Run and debug](running.md#running) and a fourth, `resolve-all passed: views=<n> ports=<m>`, appear
 in `<dataDir>/logs/bookloom.log`. The property makes the image build its injector in Guice's production stage and, once
 the window is shown, load every screen and resolve every `ua.bookloom.api` port; a `resolve-all FAILED` line names
 what failed and ends the smoke at once. The image runs on the **module path**, where
@@ -192,7 +223,7 @@ display is required — CI starts Xvfb before the smoke. The app icons `jpackage
 
 ---
 
-## 11. Cleanup {#cleanup}
+## Cleanup {#cleanup}
 
 ```bash
 ./gradlew clean                          # build/ at the root and modules/*/build (reports included)
@@ -200,16 +231,16 @@ display is required — CI starts Xvfb before the smoke. The app icons `jpackage
 rm -rf .gradle .kotlin                   # Gradle's project cache; safe, costs one re-configure
 ```
 
-Fresh app state means deleting the data and log directories from [§5](running.md#running), e.g. on macOS
+Fresh app state means deleting the data and log directories from [Run and debug](running.md#running), e.g. on macOS
 `~/Library/Application Support/BookLoom-Dev` and `~/Library/Logs/BookLoom-Dev`. The corpus report directory is
 whatever `BOOKLOOM_CORPUS_REPORT_DIR` pointed at, or a `bookloom-corpus-report-*` temp directory.
 
 ---
 
-## 12. Troubleshooting {#troubleshooting}
+## Troubleshooting {#troubleshooting}
 
 **`Cannot find a Java installation … matching {languageVersion=25}`** — no detectable JDK 25 and no
-auto-provisioning. Install one ([§1](#prerequisites)) and confirm with `./gradlew -q javaToolchains`.
+auto-provisioning. Install one ([Prerequisites](#prerequisites)) and confirm with `./gradlew -q javaToolchains`.
 
 **`:app:run` appears to hang, then exits 0 after five minutes** — another instance holds `bookloom.lock` (often a
 forgotten IDE launch). The second launch shows a "BookLoom is already running" window, waits up to 300 s for it to be
@@ -218,7 +249,7 @@ dismissed, then exits 0. Dismiss it, or find the first instance (`jps -l`) and i
 **A catalog pin changes nothing** — only a `constraints {}` entry in `bookloom.java-conventions` makes a version
 bind. `grep -rn 'libs\.<alias>' --include='*.kts' .`; no hit means decoration.
 
-**`:app` shows no lockfile diff after adding a dependency** — correct ([§4](#build-config)); check the catalog.
+**`:app` shows no lockfile diff after adding a dependency** — correct ([Build configuration](#build-config)); check the catalog.
 
 **A gate run takes materially longer than your baseline** — treat it as hung: kill it and diagnose. Never run two
 gates at once; they contend for the same daemon and outputs.
@@ -227,7 +258,7 @@ gates at once; they contend for the same daemon and outputs.
 convention configure it; do not reach for Monocle.
 
 **`jpackage is not on PATH`, or it fails on missing JavaFX jmods** — a JRE instead of a JDK, or a plain JDK on
-Windows. Install Liberica 25 Full there ([§1](#prerequisites)); never copy jmods by hand.
+Windows. Install Liberica 25 Full there ([Prerequisites](#prerequisites)); never copy jmods by hand.
 
 **Packaging fails with `Specified icon file … does not exist`** — the committed icons are missing from your checkout;
 regenerate them (`docs/spec_baseline/specification/assets/icon/README.md`).
