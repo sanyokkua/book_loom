@@ -199,7 +199,9 @@ class ProgressDialogTest extends ProgressWorkTestBase {
         endSteps(names, 2);
         start(names, 2);
         awaitDialog();
+        await(() -> selectedIndex() == 2);
         clickOn(required("progress-step-0"));
+        await(() -> !follow().isSelected());
         onFx(((Button) required("progress-background"))::fire);
         await(() -> !isDialogShown());
 
