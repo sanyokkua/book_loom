@@ -108,7 +108,7 @@ days, `if-no-files-found: warn`; the Windows leg produces a folder, not an archi
 The packaging matrix ran green on every leg for the pull-request run of 2026-10-27. The run of 2026-11-08 failed
 at the quality job's strict lock verification (a build-script dependency, `kotlinx-coroutines-bom` 1.8.0, had no
 checksum entry in `gradle/verification-metadata.xml` on the Linux runner), so the packaging legs did not start; the
-entry was added at the end of the redesign change and the next CI run is the proof.
+entry was added at the end of the redesign change. The run of 2026-11-12 (the archive push) was green on the quality job (30m) and all five packaging legs.
 
 ### What CI does not run
 
