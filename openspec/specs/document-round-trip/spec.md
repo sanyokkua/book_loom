@@ -2669,7 +2669,7 @@ tokens omitted rather than dropping them silently.
 The failure SHALL NOT include the segment's source text, the target text, or any file path.
 
 Source: FR-DOC-05 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
-`02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop` (a directed fix injects the expected multiset, "restore exactly:
+`02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop` (the one repair names the expected multiset, "restore exactly:
 …"), `02_Architecture/09_ERROR_HANDLING.md#safe-details-allowlist`,
 `03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#offline-invariant`.
 In plain words: the repair tier that comes later has to tell the model exactly which tokens to put back, and it can

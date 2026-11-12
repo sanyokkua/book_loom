@@ -9,28 +9,9 @@ with local storage.
 
 ### Requirement: Pause on request at the next boundary
 
-WHEN a pause is requested while a job translates, the system SHALL:
+WHEN a pause is requested while a model request is in flight, the system SHALL abort that request without waiting for the provider to answer, send no further request (not a retry, a repair or a proofread call), and pause with the reason "requested", reporting no error; a reply that had already arrived before the request was made is still decided normally.
 
-- abort the model request in flight, without waiting for the provider to answer, and send no further request — not a retry, a repair or a proofread call; a reply that had already arrived before the request was made is still
-  decided normally;
-- pause with the reason "requested", reporting no error;
-- make no model call while paused;
-- on resume, make the aborted call again from its first request — a segment's draft or repair, a chapter summary, or a
-  Proofread window — and then continue where the run stood.
-
-WHEN a pause is requested while no model request is in flight, the system SHALL pause at the next boundary, which is
-before the next model call or before the job ends, with the reason "requested".
-
-A pause requested before the job runs SHALL take effect at the first boundary, before the first model call. The export,
-which is a separate action, is never paused.
-
-**Source**: FR-RESUME-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, `docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, ADR-0035, ADR-0038, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: pausing does not wait for a slow model. The request that is waiting is aborted at once and nothing more is sent, so the Pause button acts within seconds even when a local model takes minutes. The call that was aborted has no answer yet, so resuming makes it again rather than skipping it; a segment already decided is never redone, and a draft already made for the chunk is not made twice (the translation-pipeline capability's "Keep a chunk's drafts across a pause and drop them on stop"). A screen may ask for a pause before it starts the job, and that request must not be lost. The run no longer writes the book, so its last boundary is the end of the job.
-
-#### Scenario: Pause after the first of three segments
-
-- **WHEN** a Fast job over three segments is asked to pause as soon as the first segment is decided
-- **THEN** the job pauses with reason requested, 1 accepted and 2 pending, after exactly 1 model call
-- **AND** after resume it ends Completed with exactly 3 model calls in total
+**Source**: FR-RESUME-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, `docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, ADR-0035, ADR-0038, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: pausing does not wait for a slow model. The request that is waiting is aborted at once and nothing more is sent, so the Pause button acts within seconds even when a local model takes minutes.
 
 #### Scenario: Pause during a slow request
 
@@ -41,7 +22,13 @@ which is a separate action, is never paused.
 - **AND** after resume the second segment is requested again from its first request, and the job ends Completed with 3
   accepted and the provider having received `4` requests in total
 
-#### Scenario: A pause during the reviewer call
+### Requirement: Make the aborted call again when a paused job resumes
+
+WHILE a job is paused, the system SHALL make no model call; on resume it SHALL make the aborted call again from its first request, whether a segment's draft or repair, a chapter summary or a Proofread window, and then continue where the run stood.
+
+**Source**: FR-RESUME-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, `docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, ADR-0035, ADR-0038, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: the call that was aborted has no answer yet, so resuming makes it again rather than skipping it; a segment already decided is never redone, and a draft already made for the chunk is not made twice (the translation-pipeline capability's "Keep a chunk's drafts across a pause and drop them on stop").
+
+#### Scenario: A pause during a Proofread call
 
 - **WHEN** a Balanced job (batch size 1) over three segments has drafted all three and repaired `Book.txt:2` once, so
   that segment carries a proofread mark, and a pause is requested while the Proofread call for the window around
@@ -51,10 +38,33 @@ which is a separate action, is never paused.
 - **AND** after resume the Proofread call is made again and no draft or repair is repeated, and the job ends Completed
   with the provider having received `6` requests in total
 
+### Requirement: Pause at the next boundary when no request is in flight
+
+WHEN a pause is requested while no model request is in flight, the system SHALL pause at the next boundary, which is before the next model call or before the job ends, with the reason "requested"; a pause requested before the job runs SHALL take effect at the first boundary, before the first model call.
+
+**Source**: FR-RESUME-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, `docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, ADR-0035, ADR-0038, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a screen may ask for a pause before it starts the job, and that request must not be lost. The run no longer writes the book, so its last boundary is the end of the job.
+
+#### Scenario: Pause after the first of three segments
+
+- **WHEN** a Fast job over three segments is asked to pause as soon as the first segment is decided
+- **THEN** the job pauses with reason requested, 1 accepted and 2 pending, after exactly 1 model call
+- **AND** after resume it ends Completed with exactly 3 model calls in total
+
 #### Scenario: A pause after the last decision
 
 - **WHEN** a pause is requested after the last segment is decided and before the job ends
 - **THEN** the job pauses with reason requested and 0 pending, and after resume ends Completed with no file written
+
+#### Scenario: A pause requested before the job runs
+
+- **WHEN** a pause is requested on a job over three segments before it runs, and the job is then run
+- **THEN** the job pauses with reason requested before any model call, with 0 accepted and 3 pending
+
+### Requirement: Never pause the export
+
+The export, which is a separate action, SHALL never be paused by a pause request on the run.
+
+**Source**: FR-RESUME-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, `docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, ADR-0035, ADR-0038, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: the export makes no model call and takes seconds, so there is nothing to wait for, and a half-written book would be worse than a finished one.
 
 #### Scenario: A pause during export is ignored
 
@@ -62,38 +72,11 @@ which is a separate action, is never paused.
   export writes `Book.uk.epub`
 - **THEN** nothing pauses and the export writes `Book.uk.epub`
 
-#### Scenario: A pause requested before the job runs
-
-- **WHEN** a pause is requested on a job over three segments before it runs, and the job is then run
-- **THEN** the job pauses with reason requested before any model call, with 0 accepted and 3 pending
-
 ### Requirement: Pause at enabled pause points
 
-WHERE the caller enables pause points, the system SHALL pause at each enabled point:
+WHERE the caller enables pause points, the system SHALL pause at each enabled point: after-segment (after each decided segment), on-flagged (after each segment decided FLAGGED), after-section (after the last segment of each section) and between-stages (after the last segment of the Translate stage, before the Proofread stage or the end of the job). A pause at after-segment or on-flagged SHALL name the segment just decided.
 
-- after-segment: after each decided segment;
-- on-flagged: after each segment decided FLAGGED;
-- after-section: after the last segment of each section;
-- between-stages: after the last segment of the Translate stage, before the Proofread stage or the end of the job.
-
-A section is one EPUB spine document, one FB2 body, or a whole Markdown or TXT file; the book's auxiliary text — its
-title, navigation labels, page titles and image descriptions — is not a section. A section with no segments SHALL
-cause no pause. A pause at after-segment or on-flagged SHALL name the segment just decided.
-
-**Source**: FR-RESUME-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/02_Architecture/03_DOCUMENT_MODEL.md#data-model`, ADR-0036, ADR-0041, `design.md#d2--the-runs-three-stages-and-the-quality-dial`. In plain words: a screen can let the person look at each flagged segment, each segment, each section, or the whole translation before it is proofread. With nothing enabled a job never waits, which is how the command line runs. The book's title and labels are translated after its body; they are not a chapter the person reads through, so finishing them is no section's end.
-
-#### Scenario: Pause after each section of an EPUB
-
-- **WHEN** an EPUB whose two spine documents hold 2 and 1 segments is translated with every "Also translate" switch off
-  and after-section enabled
-- **THEN** the job pauses twice: first with 2 accepted and 1 pending, then with 3 accepted and 0 pending
-
-#### Scenario: The auxiliary text is not a section
-
-- **WHEN** an EPUB whose two spine documents hold 2 and 1 segments, and whose only auxiliary segment is its title, is
-  translated with the metadata switch on and after-section enabled
-- **THEN** the job pauses twice: first with 2 accepted and 2 pending, then with 3 accepted and 1 pending
-- **AND** after the title is decided the job ends Completed without pausing again
+**Source**: FR-RESUME-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/02_Architecture/03_DOCUMENT_MODEL.md#data-model`, ADR-0036, ADR-0041, `design.md#d2--the-runs-three-stages-and-the-quality-dial`. In plain words: a screen can let the person look at each flagged segment, each segment, each section, or the whole translation before it is proofread. With nothing enabled a job never waits, which is how the command line runs.
 
 #### Scenario: Pause on a flagged segment
 
@@ -111,15 +94,34 @@ cause no pause. A pause at after-segment or on-flagged SHALL name the segment ju
 - **WHEN** a Fast book of three segments is translated with between-stages enabled
 - **THEN** the job pauses with 0 pending segments before the code-only Proofread stage, and after resume ends Completed with no Proofread call
 
-#### Scenario: An empty section causes no pause
-
-- **WHEN** an EPUB whose two spine documents hold 0 and 2 segments is translated with after-section enabled
-- **THEN** the job pauses once, after the second spine document
-
 #### Scenario: No pause points
 
 - **WHEN** a book is translated with no pause points and no pause request
 - **THEN** the job never pauses and ends Completed
+
+### Requirement: Count a section only as a whole body unit
+
+A section SHALL be one EPUB spine document, one FB2 body, or a whole Markdown or TXT file; the book's auxiliary text, its title, navigation labels, page titles and image descriptions, is not a section, and a section with no segments SHALL cause no pause.
+
+**Source**: FR-RESUME-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/02_Architecture/03_DOCUMENT_MODEL.md#data-model`, ADR-0036, ADR-0041, `design.md#d2--the-runs-three-stages-and-the-quality-dial`. In plain words: the book's title and labels are translated after its body; they are not a chapter the person reads through, so finishing them is no section's end.
+
+#### Scenario: Pause after each section of an EPUB
+
+- **WHEN** an EPUB whose two spine documents hold 2 and 1 segments is translated with every "Also translate" switch off
+  and after-section enabled
+- **THEN** the job pauses twice: first with 2 accepted and 1 pending, then with 3 accepted and 0 pending
+
+#### Scenario: The auxiliary text is not a section
+
+- **WHEN** an EPUB whose two spine documents hold 2 and 1 segments, and whose only auxiliary segment is its title, is
+  translated with the metadata switch on and after-section enabled
+- **THEN** the job pauses twice: first with 2 accepted and 2 pending, then with 3 accepted and 1 pending
+- **AND** after the title is decided the job ends Completed without pausing again
+
+#### Scenario: An empty section causes no pause
+
+- **WHEN** an EPUB whose two spine documents hold 0 and 2 segments is translated with after-section enabled
+- **THEN** the job pauses once, after the second spine document
 
 ### Requirement: Pause once per boundary, with the pause points in force
 
@@ -150,9 +152,9 @@ boundary.
 
 ### Requirement: Pause instead of failing when an error stops the job
 
-WHERE pause on error is enabled, IF a model call, after the retry policy, answers `ErrorCode.unreachable`, `timeout`, `auth`, `rateLimited`, `upstream`, `modelNotFound`, `modelUnavailable`, `missingCredential` or `validation`, or a step throws and so answers `ErrorCode.internal`, THEN the system SHALL pause with that error, keep every count as it stood, and on resume make the interrupted call again from its first request. The pause SHALL carry the error's reason where the provider's answer gave one, and that reason decides whether the pause ends by itself ("Recover from a provider error by itself").
+WHERE pause on error is enabled, IF a model call, after the retry policy, answers `ErrorCode.unreachable`, `timeout`, `auth`, `rateLimited`, `upstream`, `modelNotFound`, `modelUnavailable`, `missingCredential` or `validation`, or a step throws and so answers `ErrorCode.internal`, THEN the system SHALL pause with that error, keep every count as it stood, and on resume make the interrupted call again from its first request.
 
-**Source**: `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, FR-RESUME-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md` (the backlog item that made a run pause instead of fail), `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: a stopped local server or an unloaded model is often fixed in a minute, and a step that threw may well succeed when tried again, so the run waits instead of failing. The window always enables this pause; the command line enables it too and stops at a pause only a person can end. Only the failed call is made again. A reason is a word such as out-of-memory, model-loading or no-model-loaded that the provider's answer carries. The errors that end a run Failed instead, and the replies that flag one segment at once, are the translation-pipeline capability's.
+**Source**: `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, FR-RESUME-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md` (the backlog item that made a run pause instead of fail), `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: a stopped local server or an unloaded model is often fixed in a minute, and a step that threw may well succeed when tried again, so the run waits instead of failing. The window always enables this pause; the command line enables it too and stops at a pause only a person can end. Only the failed call is made again. The errors that end a run Failed instead, and the replies that flag one segment at once, are the translation-pipeline capability's.
 
 #### Scenario: The model is unreachable once
 
@@ -170,25 +172,15 @@ WHERE pause on error is enabled, IF a model call, after the retry policy, answer
 - **WHEN** pause on error is enabled and the provider answers `ErrorCode.validation` to the draft of `Book.txt:1`
 - **THEN** the job pauses with `ErrorCode.validation` and waits for the person
 
-#### Scenario: A reviewer timeout flags instead of pausing
+#### Scenario: A Proofread timeout leaves the window unread instead of pausing
 
 - **WHEN** the Proofread call for the window around `ch07.xhtml:42` answers `ErrorCode.timeout` after the window's budget of pauses is spent
 - **THEN** the run does not pause again: the window is left unread with its marks kept, and the run goes on
 
-#### Scenario: A reviewer outage pauses
+#### Scenario: A Proofread outage pauses
 
 - **WHEN** the Proofread call for the window around `ch07.xhtml:42` answers `ErrorCode.unreachable`
 - **THEN** the run pauses with `ErrorCode.unreachable`, and after resume the Proofread call is made again from its first request
-
-#### Scenario: Too little memory pauses and waits for the person
-
-- **WHEN** pause on error is enabled and the draft of `Book.txt:2` is answered with HTTP 500 `model requires 14.2 GiB but only 6.1 GiB are available`
-- **THEN** the job pauses with `ErrorCode.modelUnavailable` and the reason out-of-memory, naming 14.2 GiB and 6.1 GiB, and waits for the person
-
-#### Scenario: A model still loading pauses and recovers
-
-- **WHEN** pause on error is enabled and llama-server answers the draft of `Book.txt:2` with HTTP 503 `Loading model`
-- **THEN** the job pauses with `ErrorCode.modelUnavailable` and the reason model-loading, and recovers by itself once the server reports the model ready
 
 #### Scenario: The export fails once
 
@@ -238,19 +230,27 @@ WHERE pause on error is enabled, IF a model call, after the retry policy, answer
 - **WHEN** the run is paused because the draft of `Book.txt:1` was answered with `ErrorCode.upstream`, and the person skips the segment
 - **THEN** `Book.txt:1` is flagged with `ErrorCode.upstream`, its draft is not sent again, and `Book.txt:2` is drafted next
 
+### Requirement: Carry the provider's reason on an error pause
+
+WHEN the provider's answer to a call that stops the job gives a reason, the system SHALL carry that reason on the pause, and the reason SHALL decide whether the pause ends by itself ("Recover from a provider error by itself").
+
+**Source**: `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, FR-RESUME-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `design.md#d18--error-catalogue-by-meaning-and-the-call-ledger`. In plain words: a reason is a word such as out-of-memory, model-loading or no-model-loaded that the provider's answer carries; a model still loading recovers by itself, while too little memory waits for the person to free some.
+
+#### Scenario: Too little memory pauses and waits for the person
+
+- **WHEN** pause on error is enabled and the draft of `Book.txt:2` is answered with HTTP 500 `model requires 14.2 GiB but only 6.1 GiB are available`
+- **THEN** the job pauses with `ErrorCode.modelUnavailable` and the reason out-of-memory, naming 14.2 GiB and 6.1 GiB, and waits for the person
+
+#### Scenario: A model still loading pauses and recovers
+
+- **WHEN** pause on error is enabled and llama-server answers the draft of `Book.txt:2` with HTTP 503 `Loading model`
+- **THEN** the job pauses with `ErrorCode.modelUnavailable` and the reason model-loading, and recovers by itself once the server reports the model ready
+
 ### Requirement: Cancel a job
 
-WHEN cancellation is requested, the system SHALL end the job Cancelled without waiting for the segment in progress or
-for the provider, and SHALL keep every decided segment stored, so a new run for the same project in the same session
-starts at the first PENDING segment. If a model request is in flight, the system SHALL abort it and SHALL NOT send any
-further request. If the job is paused it SHALL end at once.
+WHEN cancellation is requested, the system SHALL end the job Cancelled without waiting for the segment in progress or for the provider, and SHALL keep every decided segment stored, so a new run for the same project in the same session starts at the first PENDING segment. If a model request is in flight, the system SHALL abort it and SHALL NOT send any further request. If the job is paused it SHALL end at once.
 
-IF the thread running a paused job is interrupted, THEN the system SHALL treat it as a cancellation.
-
-IF cancellation is requested before the job runs, THEN running it SHALL end the job Cancelled at once, without reading
-the opened book the project holds or calling the model.
-
-**Source**: FR-RESUME-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, ADR-0034. In plain words: stopping is safe and is not an error. A stop does not wait for a slow provider: the request that is waiting is aborted and nothing more is sent. What was decided before the stop is kept for the rest of the session, which is what lets a stopped run be resumed; drafts of the current chunk that were not yet decided are dropped, and those segments stay PENDING and are drafted again by the next run (the translation-pipeline capability's "Decide a chunk's segments in document order"). A job cancelled before it starts does no work at all.
+**Source**: FR-RESUME-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, ADR-0034. In plain words: stopping is safe and is not an error. What was decided before the stop is kept for the rest of the session, which is what lets a stopped run be resumed; drafts of the current chunk that were not yet decided are dropped, and those segments stay PENDING and are drafted again by the next run (the translation-pipeline capability's "Decide a chunk's segments in document order").
 
 #### Scenario: Cancel while paused
 
@@ -269,10 +269,22 @@ the opened book the project holds or calling the model.
 - **WHEN** a job over three segments is cancelled after the first is accepted, and a new job is run for the same project
 - **THEN** the new job's first model call is for the second segment
 
+### Requirement: Treat an interrupted thread as a cancellation
+
+IF the thread running a paused job is interrupted, THEN the system SHALL treat it as a cancellation.
+
+**Source**: FR-RESUME-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`. In plain words: an interrupt is how the host stops a thread, and it must end the job cleanly instead of leaving it paused forever.
+
 #### Scenario: Interrupt while paused
 
 - **WHEN** the thread running a paused job is interrupted
 - **THEN** the job ends Cancelled
+
+### Requirement: End a job cancelled before it runs without any work
+
+IF cancellation is requested before the job runs, THEN running it SHALL end the job Cancelled at once, without reading the opened book the project holds or calling the model.
+
+**Source**: FR-RESUME-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), ADR-0034. In plain words: a job cancelled before it starts does no work at all.
 
 #### Scenario: Cancel before the job runs
 
@@ -281,21 +293,9 @@ the opened book the project holds or calling the model.
 
 ### Requirement: Report a pause or a stop as requested until the engine acts on it
 
-WHEN a pause or a stop is requested, the application SHALL immediately make that control unavailable and report
-the run as pausing or as stopping, and SHALL leave the run in that reported state until the engine reports the
-run paused or the run returns.
+WHEN a pause or a stop is requested, the application SHALL immediately make that control unavailable and report the run as pausing or as stopping, and SHALL leave the run in that reported state until the engine reports the run paused or the run returns. WHILE a run is pausing or stopping, the screen SHALL keep reporting the counts as they continue to advance, and SHALL NOT report the run as paused or stopped.
 
-WHILE a run is pausing or stopping, the screen SHALL keep reporting the counts as they continue to advance, and
-SHALL NOT report the run as paused or stopped.
-
-**Source:** FR-RESUME-03, FR-RESUME-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`),
-`docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, `docs/next_features.md` (removed in 2026-11; open items are in `docs/known-limits.md`) §14.
-In plain words: a pause or a stop is not instant. The engine aborts the model request in flight (see "Pause and stop
-act without waiting for the provider" in the `translation-pipeline` capability) and then reaches a safe point, so
-there is a short visible gap in which the run is still winding down and the person has already asked it to stop.
-The reported state is exactly what makes that gap legible instead of looking like a dead button. Without a state for
-it the screen has two bad options: claim the run is paused while it is still calling the model, or leave the button
-live so it can be pressed four more times. A requested-but-not-yet-effective state is the honest third one.
+**Source**: FR-RESUME-03, FR-RESUME-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`. In plain words: a pause or a stop is not instant. The engine aborts the model request in flight (see "Pause and stop act without waiting for the provider" in the `translation-pipeline` capability) and then reaches a safe point, so there is a short visible gap in which the run is still winding down. The reported state makes that gap legible instead of looking like a dead button: without it the screen would claim the run is paused while it still calls the model, or leave the button live so it can be pressed four more times.
 
 #### Scenario: A requested pause reads as pausing, not paused
 
@@ -326,9 +326,7 @@ live so it can be pressed four more times. A requested-but-not-yet-effective sta
 
 The system SHALL pause a run started from the window on a model-call error in every review mode, and SHALL add the mode's own pause points: none for Never, each flagged segment for When something needs review, every decided segment for After every segment. The mode is read when each run starts, as the translation-pipeline capability's "Read the review mode at the start of each run" says.
 
-A pause on a flagged segment or after a segment SHALL name the segment just decided and SHALL come before any further model call.
-
-**Source**: FR-REVIEW-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, ADR-0036, ADR-0045, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: the default runs to the end and leaves review for afterwards; a careful translator can have it stop on every problem or every segment. A stopped server pauses the run in every mode. The command line always runs Unattended with the same pause on errors and the same recovery from an outage, and stops the run at a pause only a person can end. A batch is drafted in one call and its segments are then decided one at a time, each with its one repair where the dial spends one, so a pause on a segment comes after the batch call and the repairs of the segments up to it, never after a call for a later segment. Naming the segment lets the review desk open on the right one.
+**Source**: FR-REVIEW-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, ADR-0036, ADR-0045, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: the default runs to the end and leaves review for afterwards; a careful translator can have it stop on every problem or every segment. A stopped server pauses the run in every mode. The command line always runs Unattended with the same pause on errors and the same recovery from an outage, and stops the run at a pause only a person can end.
 
 #### Scenario: Unattended runs past a flagged segment
 
@@ -339,6 +337,17 @@ A pause on a flagged segment or after a segment SHALL name the segment just deci
 
 - **WHEN** an Unattended run started from the window gets `ErrorCode.unreachable` for the draft call of `ch07.xhtml:42`
 - **THEN** the run pauses with `ErrorCode.unreachable` and the screen shows the provider-error state
+
+#### Scenario: The mode is read from the setting
+
+- **WHEN** "When to stop and ask you" is set to After every segment, no launch flag is set, and a run is started from the window
+- **THEN** the run pauses after each decided segment, as Manual does
+
+### Requirement: Name the segment a review pause stops after and pause before any further call
+
+A pause on a flagged segment or after a segment SHALL name the segment just decided and SHALL come before any further model call.
+
+**Source**: FR-REVIEW-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, ADR-0036, ADR-0045, `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`. In plain words: a batch is drafted in one call and its segments are then decided one at a time, each with its one repair where the dial spends one, so a pause on a segment comes after the batch call and the repairs of the segments up to it, never after a call for a later segment. Naming the segment lets the review desk open on the right one.
 
 #### Scenario: Assisted on Fast stops on the flagged segment
 
@@ -355,11 +364,6 @@ A pause on a flagged segment or after a segment SHALL name the segment just deci
 
 - **WHEN** a Manual run accepts `ch01.xhtml:0`
 - **THEN** the run pauses after that segment, naming `ch01.xhtml:0`, before any call for `ch01.xhtml:1`
-
-#### Scenario: The mode is read from the setting
-
-- **WHEN** "When to stop and ask you" is set to After every segment, no launch flag is set, and a run is started from the window
-- **THEN** the run pauses after each decided segment, as Manual does
 
 ### Requirement: Continue after the person acts on the paused segment
 
@@ -648,7 +652,7 @@ WHEN a project is opened after a restart, the system SHALL plan the run's steps 
 
 ### Requirement: Ask when the stored AI model does not answer
 
-WHEN the person chooses Continue translation and the AI model the project's stored run used does not answer, the system SHALL show the dialog "AI model not answering" with Try again, Use another AI model… and Not now, and SHALL start no run until the person has chosen. "Does not answer" means the model's program fails to list its models, or lists some and not this one (a listing, never a model call); a program that lists none counts as answering. The stored model is read from the project's latest run each time Continue is chosen. Escape counts as Not now. Try again here asks only that one model again: it does not look for programs and saves nothing (it is not the Projects screen's Try again).
+WHEN the person chooses Continue translation and the AI model the project's stored run used does not answer, the system SHALL show the dialog "AI model not answering" with Try again, Use another AI model… and Not now, and SHALL start no run until the person has chosen; Escape counts as Not now.
 
 **Source**: FR-PROV-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", `docs/spec_baseline/specification/mockups/README.md#other-dialogs`. In plain words: instead of failing on the first call, the person is told right away that Ollama is not open and can fix that, pick another model, or leave.
 
@@ -662,6 +666,23 @@ WHEN the person chooses Continue translation and the AI model the project's stor
 
 - **WHEN** Not now is chosen
 - **THEN** the project stays ready to continue and no model call is made
+
+### Requirement: Count a stored model as not answering by its listing alone
+
+A stored model SHALL count as not answering when its program fails to list its models, or lists some and not this one (a listing, never a model call), a program that lists none SHALL count as answering, and the stored model SHALL be read from the project's latest run each time Continue is chosen.
+
+**Source**: FR-PROV-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", `docs/spec_baseline/specification/mockups/README.md#other-dialogs`. In plain words: a listing is free and never loads a model, so asking costs nothing; a program that lists no models may still serve the stored one by its name.
+
+#### Scenario: A program that lists no models counts as answering
+
+- **WHEN** the project's stored run used Ollama · `gemma4:e4b`, Continue translation is chosen, and Ollama answers its model listing with no models
+- **THEN** no `AI model not answering` dialog is shown and the run starts
+
+### Requirement: Try again asks only the stored model
+
+Try again in that dialog SHALL ask only that one model again: it SHALL NOT look for programs and SHALL save nothing, and it is not the Projects screen's Try again.
+
+**Source**: FR-PROV-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", `docs/spec_baseline/specification/mockups/README.md#other-dialogs`. In plain words: the person who just opened Ollama wants the same run to continue, not a new search or a changed setting.
 
 #### Scenario: Try again continues once the model answers
 

@@ -1072,9 +1072,9 @@ WHERE Settings › Automation "Reopen the last project" is on, the window SHALL 
 
 ### Requirement: Show a first-launch state on Projects when none exist
 
-WHILE no project exists, the application SHALL show on Projects "Translate a book. Private when you use a local AI model.", How it works in four steps (choose a book · check the languages · let it translate · save the translated book, with "your original file is never changed"), the line with the result of the first-launch look, and "+ New translation". While the look runs the line reads `Looking for an AI program on this computer…` with `Try again` visible but disabled; a screen that shows no look this session still offers `Try again` under `No AI model found`. When several models are found the person is asked which one to use; while that question is open the line still reads `Looking for an AI program on this computer…` and never says a program is not open, and the navigation footer reads `Looking for an AI model…`; dismissing that question with `Not now` shows the `No AI model chosen yet` line (the footer reads `No AI model chosen`) and `Try again` asks again. The words `(found on this computer when BookLoom first opened)` appear only in the session whose first-launch look found the model, and are not stored. It SHALL hide search and the filter, and show "+ New translation" with a list too.
+WHILE no project exists, the application SHALL show on Projects "Translate a book. Private when you use a local AI model.", How it works in four steps (choose a book · check the languages · let it translate · save the translated book, with "your original file is never changed"), the line with the result of the first-launch look, and "+ New translation". It SHALL hide search and the filter, and show "+ New translation" with a list too.
 
-**Source**: `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, `docs/spec_baseline/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`, the owner's decision that privacy is stated as "private when used with local models". In plain words: the first screen a new person sees must say what the program does, what to press, and whether the AI model it needs was found. It must not promise that a cloud model keeps the book on this computer, so the tagline says "private when you use a local AI model". The look itself is specified by llm-provider ("Look once for a local AI program at first launch").
+**Source**: `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, `docs/spec_baseline/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`, the owner's decision that privacy is stated as "private when used with local models". In plain words: the first screen a new person sees must say what the program does, what to press, and whether the AI model it needs was found. It must not promise that a cloud model keeps the book on this computer, so the tagline says "private when you use a local AI model".
 
 #### Scenario: An empty list
 
@@ -1086,15 +1086,53 @@ WHILE no project exists, the application SHALL show on Projects "Translate a boo
 - **WHEN** the first-launch Projects screen is shown
 - **THEN** it shows `Translate a book. Private when you use a local AI model.` and does not say the book is translated "on your own computer"
 
-#### Scenario: The model was found
+### Requirement: Word the first-launch look's line while it runs and when it finds nothing
 
-- **WHEN** Ollama with `gemma4:e4b` was found when BookLoom first opened
-- **THEN** the AI-model line reads `AI model: Ollama · gemma4:e4b — ready ✓ (found on this computer when BookLoom first opened)`
+WHILE the first-launch look runs, the AI-model line SHALL read `Looking for an AI program on this computer…` with `Try again` visible but disabled; a screen that shows no look this session SHALL still offer `Try again` under `No AI model found`.
+
+**Source**: `docs/spec_baseline/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`, `openspec/specs/llm-provider/spec.md` "Look once for a local AI program at first launch". In plain words: the person always sees what the program is doing and what to press next, even when the look was not run in this session.
 
 #### Scenario: Nothing was found
 
 - **WHEN** no program answered at the first launch
 - **THEN** the line reads `No AI model found`, says `Ollama is not open. Open the Ollama app, then press Try again.` and offers `Try again` and `I use another program…`, and no error dialog is opened
+
+#### Scenario: The look is still running
+
+- **WHEN** the first-launch look has not ended
+- **THEN** the line reads `Looking for an AI program on this computer…` and `Try again` is visible but disabled
+
+### Requirement: Ask which model to use when several are found
+
+WHEN the first-launch look finds several models, the application SHALL ask the person which one to use; WHILE that question is open the line SHALL still read `Looking for an AI program on this computer…` and never say a program is not open, and the navigation footer SHALL read `Looking for an AI model…`; dismissing it with `Not now` SHALL show the `No AI model chosen yet` line (the footer reads `No AI model chosen`), and `Try again` asks again.
+
+**Source**: `docs/spec_baseline/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`. In plain words: while the person is choosing, the screen must not claim that nothing was found; dismissing the question leaves a clear way back.
+
+#### Scenario: Several models are found
+
+- **WHEN** the first-launch look found Ollama with `gemma4:e4b` and LM Studio with `qwen3:8b`, and the question which one to use is open
+- **THEN** the line reads `Looking for an AI program on this computer…` and the footer reads `Looking for an AI model…`
+
+#### Scenario: The question is dismissed
+
+- **WHEN** `Not now` is chosen on the question which model to use
+- **THEN** the line reads `No AI model chosen yet`, the footer reads `No AI model chosen`, and `Try again` asks again
+
+### Requirement: Mark a model found at first launch only in that session
+
+The words `(found on this computer when BookLoom first opened)` SHALL appear only in the session whose first-launch look found the model, and SHALL NOT be stored.
+
+**Source**: `docs/spec_baseline/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`. In plain words: the words describe what happened in this session; a later session knows only the saved model, not how it was found.
+
+#### Scenario: The model was found
+
+- **WHEN** Ollama with `gemma4:e4b` was found when BookLoom first opened
+- **THEN** the AI-model line reads `AI model: Ollama · gemma4:e4b — ready ✓ (found on this computer when BookLoom first opened)`
+
+#### Scenario: A later session drops the words
+
+- **WHEN** BookLoom is opened again after the session whose first-launch look found `gemma4:e4b`
+- **THEN** the AI-model line holds no `(found on this computer when BookLoom first opened)` and nothing about it is stored
 
 ### Requirement: Look again when the person presses Try again
 

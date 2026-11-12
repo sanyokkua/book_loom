@@ -1,9 +1,12 @@
 # quality-gates Specification
 
 ## Purpose
-The gate between a draft and an accepted translation: the hard gates a translated segment can never be accepted
-without, the soft checks that blend into a deterministic confidence, the trust threshold each review mode sets, the
-per-chunk model reviewer that fixes in place with edits the code verifies, and the self-heal rounds that repair a failing segment before it is flagged for review.
+The gate between a draft and an accepted translation. Every check carries a level: BLOCK (the segment cannot be
+accepted as it is), REPAIR (worth the run's one repair) or NOTE (information only). The hard gates a translated segment
+can never be accepted without, and the soft checks that blend into a deterministic confidence, are judged against the
+trust threshold each review mode sets. A failing draft gets one repair, and the new text stays only through the
+never-worse gate; otherwise the segment is flagged for review. A rewrite the Proofread stage proposes passes the same
+gate.
 
 ## Requirements
 
@@ -318,7 +321,7 @@ both texts before comparing them. IF the source's display text has fewer than 20
 whole-word occurrence of a glossary term removed under any name policy, holds no letter, THEN the application SHALL
 skip the echo check: the glossary explains the echo.
 
-**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: a line made only of names the person chose to keep is meant to read like its source, so the names are taken out before the comparison. A short line that is only glossary names, such as `Bartimaeus!`, is explained by the glossary whatever the policy — how a name is rendered is the glossary check's question, not the echo's.
+**Source**: FR-QA-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`. In plain words: a line made only of names the person chose to keep is meant to read like its source, so the names are taken out before the comparison. A short line that is only glossary names, such as `Brindle!`, is explained by the glossary whatever the policy — how a name is rendered is the glossary check's question, not the echo's.
 
 #### Scenario: A names-only line kept by policy is not an echo
 
@@ -329,12 +332,12 @@ skip the echo check: the glossary explains the echo.
 
 #### Scenario: A short glossary name is explained by the glossary
 
-- **WHEN** the name policy is `Transliterate`, the glossary holds `Bartimaeus`, and `Bartimaeus!` comes back unchanged
+- **WHEN** the name policy is `Transliterate`, the glossary holds `Brindle`, and `Brindle!` comes back unchanged
 - **THEN** the untranslated-echo check is skipped and counts 1.0
 
 #### Scenario: A short line with words beside a name still counts
 
-- **WHEN** the glossary holds `Bartimaeus` and `Bartimaeus said.` (16 code points) comes back unchanged
+- **WHEN** the glossary holds `Brindle` and `Brindle said.` (13 code points) comes back unchanged
 - **THEN** the untranslated-echo check fails and records a low `language` finding, without blocking
 
 ### Requirement: Fail a target caught in a repetition loop
@@ -569,7 +572,7 @@ counting 0.0 and a skipped check 1.0, and SHALL NOT fold the hard gates into it;
   echo and script checks, with no locked term and length and repetition margins of 1.0
 - **THEN** confidence is 0.30 × 1.0 + 0.25 × 1.0 + 0.20 × 0.0 + 0.15 × 0.0 + 0.10 × 1.0 = `0.65`
 
-#### Scenario: The reviewer's answer does not move confidence
+#### Scenario: A kept repair adds nothing but its checks to confidence
 
 - **WHEN** the one repair is kept for the English → Polish segment above
 - **THEN** its confidence is computed from the checks on the repaired text alone, and no model's opinion adds anything to it
@@ -657,7 +660,7 @@ The application SHALL run the deterministic text checks on every restored candid
 
 **Source**: FR-QA-01, FR-QA-07, ADR-0038; tasks 15d.2. In plain words: a mixed-alphabet word, a quote left open and a whole English paragraph accepted as Ukrainian are facts code can see, so the segment is repaired or flagged on those facts, and the repair is told exactly what they are.
 
-#### Scenario: A text check runs before the reviewer
+#### Scenario: A text check runs before the one repair
 
 - **WHEN** a Balanced draft passes the refusal gate and holds the word `навчg3вся`
 - **THEN** the script-purity check runs before the one repair, the segment fails a hard gate with a BLOCK finding, and the repair is told the word
@@ -738,7 +741,7 @@ the script and echo checks do.
 
 **Source**: FR-QA-01, FR-QA-07, ADR-0038; tasks 15d.2. In plain words: the one repair can only fix what it is told exactly, and a check must not fire on text that is not prose.
 
-#### Scenario: The directed fix repeats the span
+#### Scenario: The repair repeats the finding's span
 
 - **WHEN** the draft `Він наполегливо навчg3вся цілий рік.` gets a `script-purity` finding
 - **THEN** the finding carries the span `навчg3вся` with a plain explanation, and the repair repeats both in its
@@ -765,7 +768,7 @@ The application SHALL, with no setting, put every candidate target — a draft, 
 - **WHEN** `ch03.xhtml:12`, reused from memory, holds `Він сказав: "Так..."`
 - **THEN** its stored target is `Він сказав: «Так…»`
 
-#### Scenario: A proofread rewrite is normalised before it is judged
+#### Scenario: A proofread rewrite is normalised before it is checked
 
 - **WHEN** the Proofread stage returns `Він сказав: "Не пам'ятаю..."` for `ch03.xhtml:14`
 - **THEN** the never-worse gate reads `Він сказав: «Не пам’ятаю…»`
@@ -973,7 +976,7 @@ The application SHALL accept a drafted, edited or repaired segment only when its
 - **WHEN** a segment's placeholder hard gate failed
 - **THEN** the segment is not accepted and, at Balanced and Max, earns the one repair
 
-#### Scenario: A failed soft check blocks a segment the reviewer likes
+#### Scenario: A failed soft check blocks a segment whatever its wording
 
 - **WHEN** a segment failed its length-ratio check outright, whatever any model thought of its wording
 - **THEN** it is not accepted and, at Balanced and Max, earns the one repair
@@ -1000,7 +1003,7 @@ The application SHALL accept a drafted, edited or repaired segment only when its
 
 #### Scenario: The 15d.1 corpus replays through the rule
 
-- **WHEN** the clean candidates of the defect corpus that the old judge refused are replayed
+- **WHEN** the clean candidates of the defect corpus that an earlier, model-based judge refused are replayed
 - **THEN** every clean candidate is accepted unchanged and every defect the checks decide at BLOCK level is refused
 
 ### Requirement: Accept a context-matched memory reuse when its checks pass
@@ -1011,7 +1014,7 @@ it.
 
 **Source**: FR-ALGO-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#context-aware-tm`, `#tiered-loop`, ADR-0038. In plain words: a sentence already accepted in the very same surroundings needs no new model call, but it must still clear every deterministic check, so a memory entry can never put a broken or since-forbidden target into the book. When the memory is looked up, and that a reuse which is not accepted is discarded and the segment drafted instead, is the translation-pipeline capability's "Reuse the translation memory only where its context matches"; a segment is recorded as reused from memory only when its reuse is accepted.
 
-#### Scenario: A context match is accepted without the reviewer
+#### Scenario: A context match is accepted without a model call
 
 - **WHEN** Balanced, `ch03.xhtml:12` reads `Yes.` between the same two sentences that surrounded `ch01.xhtml:4`, which
   was accepted as `Так.`
@@ -1211,14 +1214,9 @@ WHEN exactly one capitalised word of the target is a name's rendering written an
 
 ### Requirement: Block a copied Latin phrase
 
-The deterministic text checks SHALL raise a blocking `latin-run` finding for two or more Latin words in a row that the
-source also holds, left in a target written in Cyrillic or Greek that has more letters of its own script than the run
-has characters, except a locked term whose rendering is its own spelling and a glossary rendering the target holds,
-which are kept originals and not a run (15i.T4), and SHALL raise none in a target the `language-identity` check has
-already reported, nor for a segment of a front-matter or back-matter unit or of the auxiliary unit (a copyright page, a
-title), where Latin is legitimate.
+The deterministic text checks SHALL raise a blocking `latin-run` finding for two or more Latin words in a row that the source also holds, left in a target written in Cyrillic or Greek that has more letters of its own script than the run has characters, except a locked term whose rendering is its own spelling and a glossary rendering the target holds, which are kept originals and not a run (15i.T4).
 
-**Source**: task 15h.A5. In plain words: the Oct 9 runs left an English phrase in a Ukrainian sentence; this stops it. A mostly Latin target is the echo, script and language-identity checks' case, and a paragraph already reported as source language is not reported twice.
+**Source**: task 15h.A5. In plain words: the Oct 9 runs left an English phrase in a Ukrainian sentence; this stops it.
 
 #### Scenario: A copied phrase blocks
 
@@ -1230,6 +1228,12 @@ title), where Latin is legitimate.
 - **WHEN** a Ukrainian draft keeps "KESSEL OPTIK", a brand the glossary locks as its own spelling, between translated words,
   and the source holds the same two words
 - **THEN** the draft has no `latin-run` finding, while "Daily Courier" beside it still blocks
+
+### Requirement: Raise no latin-run finding where Latin is legitimate or already reported
+
+The deterministic text checks SHALL raise no `latin-run` finding in a target the `language-identity` check has already reported, nor for a segment of a front-matter or back-matter unit or of the auxiliary unit (a copyright page, a title), where Latin is legitimate.
+
+**Source**: task 15h.A5. In plain words: a mostly Latin target is the echo, script and language-identity checks' case, and a paragraph already reported as source language is not reported twice.
 
 #### Scenario: Front matter holds Latin
 
@@ -1601,7 +1605,7 @@ WHERE the source and the target language files both list informal and formal add
 - **WHEN** the source speech is `— Ты придёшь?` and the target speech is `— Ти прийдеш?`
 - **THEN** no finding is raised
 
-#### Scenario: A mixed source speech is not judged
+#### Scenario: A mixed source speech is not compared
 
 - **WHEN** the source speech uses both a `ты` form and a `вы` form
 - **THEN** no `address-parity` finding is raised
@@ -1684,10 +1688,10 @@ WHEN a drafted segment holds a BLOCK or REPAIR finding, the application SHALL at
 - **WHEN** Balanced and the draft carries only a NOTE-level `number` finding
 - **THEN** no repair call is made
 
-#### Scenario: A verified reviewer blocker left gets no repair
+#### Scenario: A repair that leaves the finding in place is not kept
 
-- **WHEN** Balanced, the draft carries a REPAIR finding naming `что`, and the reviewer's quoted issue `дверзі` is still in the text after its directed fix
-- **THEN** no repair call is made and the segment is FLAGGED, because no repair the code can check clears the reviewer's evidence
+- **WHEN** Balanced, the draft carries a REPAIR finding naming `что`, and the one repair call returns text that still holds `что`
+- **THEN** the never-worse gate keeps the first draft, and no second repair call is made
 
 ### Requirement: Count only content-changing calls as the one repair
 

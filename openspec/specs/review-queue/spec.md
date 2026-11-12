@@ -214,7 +214,7 @@ clears its only finding. REVISED SHALL mean the person's edit, a kept proofread 
   proofread proposal applied
 - **THEN** `ch2 · p07` becomes ACCEPTED and `ch2 · p08` stays REVISED
 
-#### Scenario: Backward revision moves accepted and flagged segments
+#### Scenario: Proofread rewrites move accepted and flagged segments
 
 - **WHEN** the Proofread stage keeps a rewrite for ACCEPTED `ch2 · p09`, and its term sweep swaps a name in FLAGGED `ch5 · p12` whose only finding is a `glossary`
   finding about that name, and in FLAGGED `ch5 · p13` that also carries an `omission` finding
@@ -292,7 +292,7 @@ The application SHALL pass a retried draft through the hard gates and the checks
 
 **Source**: FR-REVIEW-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-A1, FR-REVIEW-A2 (`docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`), ADR-0038. In plain words: the same gates and checks decide a retry as decided the first draft (the quality-gates capability), but a retry is one attempt the person asked for, not an automatic repair — if it fails, the person sees why and chooses again.
 
-#### Scenario: A retry makes no repair rounds
+#### Scenario: A retry makes no repair call
 
 - **WHEN** the retried target of `ch5 · p12`, an English → Ukrainian source of 60 characters or more, has a length ratio
   of `0.45` against the band `0.7–1.8`

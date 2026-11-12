@@ -1,9 +1,14 @@
 # translation-pipeline Specification
 
 ## Purpose
-Translates one book segment by segment through a chat model the caller supplies. It builds each prompt, decides each
-segment's status, reports progress, returns a report and writes a diagnostic log of the run. The command line is its
-first entry point.
+Translates one book through a chat model the caller supplies, in three stages. Prepare builds the style sheet and scans
+the names. Translate closes chunks on the token budget and at chapter boundaries, drafts them in batches whose size the
+model profile sets, checks each draft (levels BLOCK, REPAIR, NOTE), gives a failing draft one repair that stays only
+through the never-worse gate, and reuses translation memory. Proofread audits the finished book, sweeps terms, infers
+the narrator and settles deferrals; the quality dial (Fast, Balanced, Max) sets only the fixing call and how far
+Proofread reads, and the review mode (Unattended, Assisted, Manual) sets only when the run pauses. One context builder
+plans every call. The pipeline decides each segment's status, reports progress, returns a report and writes a
+diagnostic log of the run. The command line is its first entry point.
 
 ## Requirements
 
@@ -497,7 +502,7 @@ WHEN the engine starts a model call, it SHALL emit one event naming the call's k
 - **WHEN** the first reply for `Book.md:0` is not the required JSON object and the format re-ask is answered correctly
 - **THEN** a draft event and a format-re-ask event for `Book.md:0` are emitted, one before each call, before that segment's decision
 
-#### Scenario: The reviewer is announced by kind
+#### Scenario: The Proofread call is announced by kind
 
 - **WHEN** a Balanced run decides the chunk holding `ch07.xhtml:40` and `ch07.xhtml:41` and its Proofread stage later reads their window
 - **THEN** no event of a reviewer kind is emitted, and one model-call event of kind proofread names that window
@@ -640,7 +645,7 @@ The system SHALL set the run's mechanics from the Book Brief's quality dial alon
 
 **Source**: FR-ALGO-11 and FR-BRIEF-08, the requirements that one dial sets how careful a run is (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`, `#fr-brief`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#quality-dial-mapping`, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#quality-dial`, `design.md#d2--the-runs-three-stages-and-the-quality-dial`. In plain words: one control trades time for care, and it means the same on a small and a large model (the owner's decisions on Fast and Max). Fast used to spend a repair round and Balanced a reviewer pass per chunk; now Fast spends no fixing call, the reviewer is off, the backward revision is gone, and the preceding-target count and chunk caps no longer depend on the dial. What is accepted is the acceptance rule's alone, so turning the dial never silently flags more or fewer segments.
 
-#### Scenario: Fast skips the reviewer
+#### Scenario: Fast makes no repair or proofread call
 
 - **WHEN** a Fast run translates a chapter of 10 short segments, one of which holds a repair-level finding
 - **THEN** no reviewer, repair or proofread call is made, and that segment is ACCEPTED with a proofread mark for the review desk
@@ -742,10 +747,9 @@ model call and its source text kept. A body segment SHALL never be kept as sourc
 WHEN a run reaches a PENDING segment whose visible text — its masked text without `⟦gN⟧` tokens, normalized to NFC,
 with Unicode separator, control and format characters dropped — is empty, holds no letter, is an upper-case Roman
 numeral, is a single character, or is an equation of one-letter symbols, the system SHALL decide it ACCEPTED with its
-own text as the target, through the chunk's gate, with the path `verbatim` and no model call, reviewer, quality check
-or finding.
+own text as the target, through the chunk's gate, with the path `verbatim` and no model call, repair, check or finding.
 
-**Source**: `.temporary_context/log.log` (the Bartimaeus run, 2026-10-01), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunking`. In plain words: a chapter number, a scene break or a lone locked name reads the same in every language. The Bartimaeus run sent the chapter number `2` to the model with a 740-token prompt, then held the echo against it; 69 segments of two characters or less were each a full call. Keeping them as they are costs nothing and cannot go wrong, and they are counted on their own line so nobody reads them as translations or as text someone chose to leave untranslated.
+**Source**: an earlier run's log on a real book, `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunking`. In plain words: a chapter number, a scene break or a lone locked name reads the same in every language. That run sent the chapter number `2` to the model with a 740-token prompt, then held the echo against it; 69 segments of two characters or less were each a full call. Keeping them as they are costs nothing and cannot go wrong, and they are counted on their own line so nobody reads them as translations or as text someone chose to leave untranslated, and they never reach the checks, the one repair or the Proofread stage.
 
 #### Scenario: A chapter number is kept with no call
 
@@ -760,8 +764,8 @@ or finding.
 
 #### Scenario: A lone locked name takes its rendering
 
-- **WHEN** the glossary locks `Bartimaeus` → `Бартімеус` and a paragraph is only `Bartimaeus`
-- **THEN** no model call is made for it, and it is ACCEPTED with the target `Бартімеус` and the path `verbatim`
+- **WHEN** the glossary locks `Brindle` → `Бріндл` and a paragraph is only `Brindle`
+- **THEN** no model call is made for it, and it is ACCEPTED with the target `Бріндл` and the path `verbatim`
 
 #### Scenario: A word is still translated
 
@@ -803,7 +807,7 @@ WHEN a run reaches a PENDING auxiliary segment whose masked source equals that o
 in the same chunk or already ACCEPTED earlier in the run, the system SHALL make no model call for it: it SHALL take
 the undecided draft or the accepted target. Each segment SHALL keep its own record and decision.
 
-**Source**: `.temporary_context/log.log` (the Bartimaeus run, 2026-10-01), DD-47 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), ADR-0041. In plain words: one book's alt texts read `image` 58 times and its page titles `The Bartimaeus Trilogy` 80 times, and each was a separate call. A text that is identical gets an identical answer, so it is asked for once.
+**Source**: an earlier run's log on a real book, DD-47 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), ADR-0041. In plain words: one book's alt texts read `image` 58 times and its page titles `The Brindle Trilogy` 80 times, and each was a separate call. A text that is identical gets an identical answer, so it is asked for once.
 
 #### Scenario: A repeated alt text is sent once
 
@@ -871,7 +875,7 @@ the last 20 finished draft calls, taking both from the provider's usage figures.
 call, THEN the system SHALL estimate that call's completion tokens from the length of its reply in the target script and
 SHALL use the call's wall-clock time.
 
-**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`. In plain words: tokens per second tells a person how fast their model really is on this book, and it is taken from what the server says it generated, so it is not a guess. Only drafts count, because a reviewer call's short answer would make a slow model look fast.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`. In plain words: tokens per second tells a person how fast their model really is on this book, and it is taken from what the server says it generated, so it is not a guess. Only drafts count, because the short answer of a repair or Proofread call would make a slow model look fast.
 
 #### Scenario: Usage figures give the rate
 
@@ -905,27 +909,16 @@ The system SHALL plan every model call a run makes — drafts, format re-asks, r
 - **WHEN** a draft, repair or proofread call is built
 - **THEN** its items' output allowance is estimated from the length of their source display text, the upper bound of the language pair's length band and the target language's script
 
-#### Scenario: A reviewer states a limit and a pre-scan or summary states none
+#### Scenario: A pre-scan or summary call states no expected output
 
-- **WHEN** a run builds a pre-scan call and a chapter-summary call, a run making no reviewer call any more
+- **WHEN** a run builds a pre-scan call and a chapter-summary call
 - **THEN** neither states an expected output, and each carries its own output cap ("Cap every call's output at the reserve the context builder computes")
 
 ### Requirement: Read the review mode at the start of each run
 
-WHEN a translation starts from the window, the system SHALL take the review mode from the environment variable `BOOKLOOM_REVIEW_MODE`, or else the system property `bookloom.review.mode`, or else the stored setting "When to stop and ask you", by this table, in any letter case; a flag value naming no mode SHALL give Unattended and one WARN line naming it. The command line SHALL ignore these flags and run Unattended.
+WHEN a translation starts from the window, the system SHALL take the review mode from the environment variable `BOOKLOOM_REVIEW_MODE`, or else the system property `bookloom.review.mode`, or else the stored setting "When to stop and ask you", reading a flag in any letter case by the table of "Name the review modes by Settings word and flag value"; a flag value naming no mode SHALL give Unattended and one WARN line naming it. The command line SHALL ignore these flags and run Unattended.
 
-| Settings word | Mode | Flag values |
-|---|---|---|
-| Never — translate unattended | Unattended (the default) | `unattended`, `auto` |
-| When something needs review | Assisted | `assisted`, `semi-manual` |
-| After every segment | Manual | `manual` |
-
-**Source**: FR-REVIEW-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, ADR-0036, ADR-0045, `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`, "Translate one book from the command line". In plain words: the careful modes are now a saved choice in Settings, read each time a translation starts, so a change applies to the next translation. A launch flag set on purpose still wins in the window, for evaluations and testing; the command line has nobody to stop for, so it always runs Unattended and logs that it ignored the flag. A typo must not silently change how the run behaves.
-
-#### Scenario: A spelled-out alias is accepted
-
-- **WHEN** a translation starts from the window with `BOOKLOOM_REVIEW_MODE` set to `Semi-Manual`
-- **THEN** the run uses Assisted
+**Source**: FR-REVIEW-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, ADR-0036, ADR-0045, `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`, "Translate one book from the command line". In plain words: the careful modes are a saved choice in Settings, read each time a translation starts, so a change applies to the next translation. A launch flag set on purpose still wins in the window, for evaluations and testing; the command line has nobody to stop for, so it always runs Unattended and logs that it ignored the flag. A typo must not silently change how the run behaves.
 
 #### Scenario: The environment wins over the property
 
@@ -956,6 +949,23 @@ WHEN a translation starts from the window, the system SHALL take the review mode
 
 - **WHEN** the translate command runs with `BOOKLOOM_REVIEW_MODE` set to `manual`
 - **THEN** the run uses Unattended and the log holds one line saying the review-mode flag was ignored
+
+### Requirement: Name the review modes by Settings word and flag value
+
+The system SHALL name each review mode by its Settings word and its flag values, in any letter case:
+
+| Settings word | Mode | Flag values |
+|---|---|---|
+| Never — translate unattended | Unattended (the default) | `unattended`, `auto` |
+| When something needs review | Assisted | `assisted`, `semi-manual` |
+| After every segment | Manual | `manual` |
+
+**Source**: FR-REVIEW-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, ADR-0036, ADR-0045. In plain words: the review mode decides only when the run pauses, never how careful it is; that is the quality dial's job.
+
+#### Scenario: A spelled-out alias is accepted
+
+- **WHEN** a translation starts from the window with `BOOKLOOM_REVIEW_MODE` set to `Semi-Manual`
+- **THEN** the run uses Assisted
 
 ### Requirement: Hold no model-call permit while paused
 
@@ -1098,7 +1108,7 @@ Every entry the activity log holds SHALL carry one kind from a fixed vocabulary 
 - **THEN** an entry of kind accepted with the tag `ok` is appended, referring to the success role, which resolves to `#5f8a6b` under the light values
 - **AND** it carries a mark distinguishing it from a segment-error entry without relying on colour
 
-#### Scenario: A repair round logs fix
+#### Scenario: The one repair logs fix
 
 - **WHEN** the segment `ch07.xhtml:41`, whose locator is `ch7 · p42`, gets its one repair
 - **THEN** an entry tagged `fix` naming `ch7 · p42`, and not `ch07.xhtml:41`, is appended, and its tag is rendered before its text in a monospace face
@@ -1131,7 +1141,7 @@ Every entry the activity log holds SHALL carry one kind from a fixed vocabulary 
 #### Scenario: The seven kinds and their tags
 
 - **WHEN** the activity log holds entries of the seven kinds that came before the Proofread stage and chapter summaries
-- **THEN** each carries one kind, shown by its tag: accepted `ok`, repaired `fix`, glossary or memory applied `mem`, chapter summary kept `sum` (it meant "summary updated" while the rolling summary existed), retried `retry`, segment error `err` and milestone `info`; the eighth kind, proofread, is tagged `proof`
+- **THEN** each carries one kind, shown by its tag: accepted `ok`, repaired `fix`, glossary or memory applied `mem`, chapter summary kept `sum`, retried `retry`, segment error `err` and milestone `info`; the eighth kind, proofread, is tagged `proof`
 
 #### Scenario: Entries are monospace with the tag first
 
@@ -1186,9 +1196,9 @@ WHEN a run pauses — on request, for review or on an error — the system SHALL
 - **WHEN** an Assisted, Balanced run flags `ch07.xhtml:41` and pauses on it, the person saves the edit `Він рвучко відчинив двері.`, and the run resumes and finishes the batch
 - **THEN** `ch07.xhtml:41` is still REVISED with `Він рвучко відчинив двері.`
 
-#### Scenario: A reviewer call interrupted by a pause is made again
+#### Scenario: A repair interrupted by a pause is made again
 
-- **WHEN** a Balanced run has drafted `ch07.xhtml:40` … `ch07.xhtml:43` in one batch, a pause is requested while the one repair of `ch07.xhtml:42` is in flight (a run makes no reviewer call any more), and the run is resumed
+- **WHEN** a Balanced run has drafted `ch07.xhtml:40` … `ch07.xhtml:43` in one batch, a pause is requested while the one repair of `ch07.xhtml:42` is in flight, and the run is resumed
 - **THEN** the repair of `ch07.xhtml:42` is sent again and no draft call of the batch is repeated
 - **AND** each of the four segments is decided exactly once
 
@@ -1232,9 +1242,9 @@ WHILE a run translates, the live card SHALL list the run's segments in reading o
 - **WHEN** a Fast call covers `ch7 · p41` and `ch7 · p42`, `ch7 · p41` is decided as `Вона втратила матір.`, and the draft of `ch7 · p42` has not arrived
 - **THEN** the rows read `ch7 · p41` translated and `ch7 · p42` translating…, and Simple detail for `ch7 · p41` shows its source and translation
 
-#### Scenario: A draft waits for the reviewer
+#### Scenario: A draft waits for its checks and repair
 
-- **WHEN** on a Balanced run the batch draft of `ch7 · p42` has arrived and its checks and one repair have not finished (a run makes no reviewer call any more)
+- **WHEN** on a Balanced run the batch draft of `ch7 · p42` has arrived and its checks and one repair have not finished
 - **THEN** its row reads "drafted, checking…" and its detail shows the draft, and it reads translated only when it is decided
 
 #### Scenario: A decision moves the segment up
@@ -1267,9 +1277,9 @@ WHILE a run translates, the live card SHALL list the run's segments in reading o
 - **WHEN** a translation is started again after the app was closed, or after the previous run ended
 - **THEN** the live card lists no rows until the run's first segment starts; the history is not stored
 
-#### Scenario: A directed fix keeps the chunk's rows
+#### Scenario: The one repair keeps the chunk's rows
 
-- **WHEN** the one repair call for `ch7 · p42` is made in the chunk `ch7 · p41`–`p44` (a run makes no directed fix any more)
+- **WHEN** the one repair call for `ch7 · p42` is made in the chunk `ch7 · p41`–`p44`
 - **THEN** the rows `ch7 · p41` to `ch7 · p44` stay, and `ch7 · p42` reads translating… while the repair waits for the model
 
 #### Scenario: A verbatim segment reads kept as is
@@ -1689,10 +1699,10 @@ The system SHALL take every language rule a call carries from the bundled langua
 - **WHEN** the target is a tag with no file, such as `ja`
 - **THEN** the call carries the generic rules and the translation runs
 
-#### Scenario: The reviewer also gets the reviewer checks
+#### Scenario: Neither the draft nor the proofread prompt carries check lines
 
 - **WHEN** the draft and proofread system parts are built for English to Ukrainian
-- **THEN** neither carries `Check:` lines, a run making no reviewer call any more
+- **THEN** neither carries `Check:` lines
 
 #### Scenario: Rules forced to generic
 
@@ -1726,19 +1736,9 @@ The system SHALL take every language rule a call carries from the bundled langua
 
 ### Requirement: Infer an unstated first-person narrator's gender from the decided translations
 
-WHEN the Translate stage has ended, before the Proofread stage settles deferrals, and the brief's first-person narrator has no gender, or only a likely one (the source shows no gendered past-tense form), the application SHALL count the narrator's «I + past verb» forms in the decided targets by the target language file's past endings and first-person pronouns (the same reader that reads the source in Prepare) and, WHEN at least 20 segments hold the source first-person pronoun in narration, there are at least 8 forms and one gender holds at least 80 % of them, SHALL store that gender as inferred by the run.
+WHEN the Translate stage has ended, before the Proofread stage settles deferrals, and the brief's first-person narrator has no gender, or only a likely one (the source shows no gendered past-tense form), the application SHALL count the narrator's «I + past verb» forms in the decided targets by the target language file's past endings and first-person pronouns, the same reader that reads the source in Prepare.
 
-**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#narrator-and-characters`, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a Russian or Ukrainian source usually says the narrator's gender in its own past-tense verbs, and the `book-brief` capability reads it there before Start; an English source does not, and then the translations themselves usually do: most «я пішов» against a few «я пішла» says the narrator is a man and the few are slips, while a book that is only 70 % feminine is left unknown rather than corrected into the wrong gender.
-
-#### Scenario: A man's book with two feminine slips
-
-- **WHEN** a first-person English book of 24 segments has the narrator unset, and 22 masculine and 2 feminine «я + verb» forms are in the decided targets
-- **THEN** the narrator is stored as male, inferred by the run, and the Proofread stage settles the two segments as it settles any narrator deferral
-
-#### Scenario: Seventy per cent is not enough
-
-- **WHEN** 7 of 10 forms are feminine
-- **THEN** the narrator stays unknown and nothing is re-rendered
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#narrator-and-characters`, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a Russian or Ukrainian source usually says the narrator's gender in its own past-tense verbs, and the `book-brief` capability reads it there before Start; an English source does not, and then the translations themselves usually do.
 
 #### Scenario: The count reads outside quotes and dialogue
 
@@ -1749,11 +1749,6 @@ WHEN the Translate stage has ended, before the Proofread stage settles deferrals
 
 - **WHEN** the brief's narrator person is unspecified and the gender is inferred
 - **THEN** the narrator becomes first person only when the narrator detector reads the book as first person
-
-#### Scenario: The inference is logged and its slips are deferred
-
-- **WHEN** a gender is inferred
-- **THEN** the forms, the agreeing forms and the gender are logged at INFO, and one deferral waiting on the narrator is left on each segment holding a form of the other gender, for the Proofread stage to settle like a character's
 
 #### Scenario: A settled narrator is never replaced
 
@@ -1774,6 +1769,27 @@ WHEN the Translate stage has ended, before the Proofread stage settles deferrals
 
 - **WHEN** a Russian source's narration holds `я дошла` and `я нашла`, and Prepare stored the narrator as female from them
 - **THEN** no count runs when translation has ended
+
+### Requirement: Store an inferred narrator gender only when the forms agree
+
+WHEN at least 20 segments hold the source first-person pronoun in narration, there are at least 8 forms and one gender holds at least 80 % of them, the application SHALL store that gender as inferred by the run.
+
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#narrator-and-characters`, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: most «я пішов» against a few «я пішла» says the narrator is a man and the few are slips, while a book that is only 70 % feminine is left unknown rather than corrected into the wrong gender.
+
+#### Scenario: A man's book with two feminine slips
+
+- **WHEN** a first-person English book of 24 segments has the narrator unset, and 22 masculine and 2 feminine «я + verb» forms are in the decided targets
+- **THEN** the narrator is stored as male, inferred by the run, and the Proofread stage settles the two segments as it settles any narrator deferral
+
+#### Scenario: Seventy per cent is not enough
+
+- **WHEN** 7 of 10 forms are feminine
+- **THEN** the narrator stays unknown and nothing is re-rendered
+
+#### Scenario: The inference is logged and its slips are deferred
+
+- **WHEN** a gender is inferred
+- **THEN** the forms, the agreeing forms and the gender are logged at INFO, and one deferral waiting on the narrator is left on each segment holding a form of the other gender, for the Proofread stage to settle like a character's
 
 ### Requirement: Tell the model who narrates and who is present
 
@@ -1879,25 +1895,14 @@ prompt's foreign-passage rule.
 
 ### Requirement: End a model call that outlives its ceiling
 
-WHILE a run is running, the system SHALL watch its model calls on a daemon ticker of its own and SHALL end a call —
-interrupting it through the job's control, as a pause does — when the attempt has been outstanding longer than 1.5
-times its own timeout (15 min for a call whose model announces none), or when for 20 minutes no segment has been
-decided, the run has not resumed and no proofread call has been answered while a call is outstanding. An answered
-proofread call SHALL count as progress, since Proofread decides a segment only when it keeps a rewrite and each answered
-call ends its window; an answered draft or repair call SHALL NOT, since a segment repaired again and again without a
-decision is a stuck run. The ended call SHALL answer `ErrorCode.timeout` and go through the run's ordinary timeout path.
+WHILE a run is running, the system SHALL watch its model calls on a daemon ticker of its own and SHALL end a call when the attempt has been outstanding longer than 1.5 times its own timeout (15 min for a call whose model announces none), or when for 20 minutes no segment has been decided, the run has not resumed and no proofread call has been answered while a call is outstanding. The ended call SHALL answer `ErrorCode.timeout` and go through the run's ordinary timeout path.
 
-**Source**: the overnight plan, step 11, the decision that a stalled call must never hold a night's run (`docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`). In plain words: a provider that accepts a request and never finishes it would otherwise keep the run waiting forever; this holds for every call kind, the proofread and chapter-summary calls included.
+**Source**: the overnight plan, step 11, the decision that a stalled call must never hold a night's run (`docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`). In plain words: a provider that accepts a request and never finishes it would otherwise keep the run waiting forever, so the call is interrupted through the job's control as a pause does; this holds for every call kind, the proofread and chapter-summary calls included.
 
-#### Scenario: A reviewer call that never returns is ended at 135 s
+#### Scenario: A proofread call that never returns is ended at 135 s
 
-- **WHEN** a proofread call with a 90 s timeout has been outstanding for 136 s (a run makes no reviewer call any more)
+- **WHEN** a proofread call with a 90 s timeout has been outstanding for 136 s
 - **THEN** the watchdog ends it, the gate is released, and the call answers `ErrorCode.timeout`
-
-#### Scenario: A long Proofread is not taken for a stall
-
-- **WHEN** Proofread's calls are answered every 3 minutes for 27 minutes and no segment is decided
-- **THEN** the watchdog ends no call (the 16.4 whole-book run's Proofread was ended after 185 of 630 windows before this)
 
 #### Scenario: Calls that make no progress are still ended
 
@@ -1934,6 +1939,17 @@ decision is a stuck run. The ended call SHALL answer `ErrorCode.timeout` and go 
 
 - **WHEN** a run starts and ends
 - **THEN** the daemon ticker checks every 5 s, is started with the run and is stopped with it
+
+### Requirement: Count an answered proofread call as progress
+
+An answered proofread call SHALL count as progress for the watchdog, since Proofread decides a segment only when it keeps a rewrite and each answered call ends its window; an answered draft or repair call SHALL NOT, since a segment repaired again and again without a decision is a stuck run.
+
+**Source**: the overnight plan, step 11, the decision that a stalled call must never hold a night's run (`docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`). In plain words: a long Proofread that answers every few minutes is working, while a repair loop that never decides a segment is stuck.
+
+#### Scenario: A long Proofread is not taken for a stall
+
+- **WHEN** Proofread's calls are answered every 3 minutes for 27 minutes and no segment is decided
+- **THEN** the watchdog ends no call
 
 ### Requirement: Run a whole book in bounded memory
 
@@ -2089,9 +2105,9 @@ WHEN a batch reply is parsed, the engine SHALL announce each item's result (tran
 
 ### Requirement: Plan a run's steps and count the time spent
 
-WHEN a run starts and as it goes, the system SHALL plan one draft step per segment to translate — a segment kept verbatim being a draft step done at once with no call — one chapter-summary step per chapter while the book's switch is on, the book's last chapter's step and a stored summary's step done at once with no call, and proofread steps: at Max one per window of the whole-book round from Start, and at Balanced and Max one per window marked so far; it SHALL add a step when a repair, a format re-ask or a resend starts, and count the time spent without the time paused.
+WHEN a run starts and as it goes, the system SHALL plan one draft step per segment to translate (a segment kept verbatim being a draft step done at once with no call), one chapter-summary step per chapter while the book's switch is on (the last chapter's step and a stored summary's step done at once with no call), and proofread steps: at Max one per window of the whole-book round from Start, and at Balanced and Max one per window marked so far.
 
-**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#progress-counting`, `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: the time left must count the Proofread stage and the chapter summaries from Start, not only once they begin, so a Max run does not seem nearly done when a whole re-read of the book is still ahead. Max's whole-book round is known at Start; the marked windows grow as the Translate stage marks segments. Until the model has a measured proofread time, a proofread step is estimated from its measured draft time per segment times the batch size and labelled an estimate. How the steps become the bar and the time left is the `app-shell` capability's.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#progress-counting`, `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: the time left must count the Proofread stage and the chapter summaries from Start, not only once they begin, so a Max run does not seem nearly done when a whole re-read of the book is still ahead. Max's whole-book round is known at Start; the marked windows grow as the Translate stage marks segments. How the steps become the bar and the time left is the `app-shell` capability's.
 
 #### Scenario: A twelve-segment unit on Balanced
 
@@ -2103,15 +2119,21 @@ WHEN a run starts and as it goes, the system SHALL plan one draft step per segme
 - **WHEN** a book of one chapter of 3 segments, with the chapter-summaries switch off, is started on Fast, Balanced and Max with a model whose batch size is 4
 - **THEN** each run plans 3 draft steps; Max also plans 1 proofread step for its whole-book round at Start; Fast plans no proofread step; Balanced plans a proofread step only when a segment is marked
 
-#### Scenario: Added work joins the total
-
-- **WHEN** a Balanced run of 3 segments plans 3 steps and the one repair of one of them starts
-- **THEN** the total becomes 4 steps when the repair starts
-
 #### Scenario: A check with nothing to read is done at once
 
 - **WHEN** a Balanced run's Proofread stage finds no marked or doubtful segment
 - **THEN** no proofread step is left to do and no proofread call is made
+
+### Requirement: Add a step when extra work starts and count the time without pauses
+
+The system SHALL add a step when a repair, a format re-ask or a resend starts, and SHALL count the time spent without the time paused; until the model has a measured proofread time, a proofread step SHALL be estimated from its measured draft time per segment times the batch size and labelled an estimate.
+
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#progress-counting`, `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`. In plain words: work added mid-run joins the total so the bar never overstates progress, and a pause is not elapsed time.
+
+#### Scenario: Added work joins the total
+
+- **WHEN** a Balanced run of 3 segments plans 3 steps and the one repair of one of them starts
+- **THEN** the total becomes 4 steps when the repair starts
 
 #### Scenario: A pause does not count as elapsed
 

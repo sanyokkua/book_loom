@@ -1,35 +1,19 @@
 # export Specification
 
 ## Purpose
-Writes a translated book in its source format. The destination is replaced only after the written file has been opened
-again and checked, so an existing file is never replaced by a broken book.
+Writes a translated book in its source format, with no model call: the run's three stages (Prepare, Translate,
+Proofread) have already decided every segment, and export reads those stored decisions. The written file is opened again
+and checked, and the destination is replaced only after that check passes, so an existing file is never replaced by a
+broken book. A segment whose formatting broke is written in its source and named, and the export reports exactly what
+the file holds.
 
 ## Requirements
 
 ### Requirement: Write the book in its source format with the target language
 
-WHEN an export is started, the system SHALL write the book in its source format from a fresh read of the source file,
-writing for each segment:
+WHEN an export is started, the system SHALL write the book in its source format from a fresh read of the source file, and SHALL declare the target language where the format has a place for it: `dc:language` in an EPUB package, `lang` in an FB2 title-info, and the value of an existing top-level `lang` key in a Markdown book's frontmatter. TXT, and a Markdown book whose frontmatter holds no `lang` key, carry no language.
 
-- an ACCEPTED segment's machine translation;
-- a REVISED segment's text as stored: the text as the person saved it, with the typography pass applied (a person's
-  edit does not pass through the run's gate), kept as saved if the normalised form would not restore; or the rewrite the
-  Proofread stage kept, written as stored because it already passed the run's gates;
-- a FLAGGED segment's machine translation, or its source text when no translation of it ever passed the placeholder
-  check or its draft failed a gate other than quote balance or script purity (an English leftover is never written as
-  a translation);
-- a PENDING segment's source text;
-- the source text of every segment kept as source by choice — an auxiliary segment whose kind the book brief's "Also
-  translate" switches leave off when the export starts.
-
-A rewrite the Proofread stage only proposed for a segment the person had edited SHALL NOT be written; the person's text
-is.
-
-It SHALL declare the target language where the format has a place for it: `dc:language` in an EPUB package, `lang` in an
-FB2 title-info, and the value of an existing top-level `lang` key in a Markdown book's frontmatter. TXT, and a Markdown
-book whose frontmatter holds no `lang` key, carry no language.
-
-**Source**: FR-EXPORT-01, FR-EXPORT-02 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-DOC-06 (`#fr-doc`), FR-REVIEW-X2 (`01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), ADR-0035, `design.md#d16--export-validates-and-writes-with-no-model-call`; the shipped `document-round-trip` requirements "Set the target language by replacing the first dc:language", "Set the FB2 target language without touching the recorded source language" and "Declare no language metadata in formats that carry none" (`openspec/specs/document-round-trip/spec.md`). In plain words: the output opens in the same readers as the source, keeps its formatting, images and structure, and says it is in the new language. A book can be written at any point, so each segment is written with the best text it has: the person's edit over the machine's, the machine's over the source, and the source where nothing better exists yet. Reading the source afresh each time means two exports of the same decisions produce the same file. A Markdown book that already says `lang: en` is told it is now `uk`; one that says nothing is not given a key it never had. A rewrite the Proofread stage kept is machine text that already passed the run's gates, so it is written as stored; a rewrite proposed for text the person edited waits for the person, so the person's words are never replaced silently.
+**Source**: FR-EXPORT-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-DOC-06 (`#fr-doc`), ADR-0035, `design.md#d16--export-validates-and-writes-with-no-model-call`; the `document-round-trip` requirements "Set the target language by replacing the first dc:language", "Set the FB2 target language without touching the recorded source language" and "Declare no language metadata in formats that carry none". In plain words: the output opens in the same readers as the source, keeps its formatting, images and structure, and says it is in the new language. Reading the source afresh each time means two exports of the same decisions produce the same file. A Markdown book that already says `lang: en` is told it is now `uk`; one that says nothing is not given a key it never had.
 
 #### Scenario: An EPUB paragraph with inline markup
 
@@ -42,32 +26,6 @@ book whose frontmatter holds no `lang` key, carry no language.
 
 - **WHEN** an FB2 book whose title-info holds `<lang>en</lang>` is translated to `uk` and exported
 - **THEN** the written book's title-info holds `<lang>uk</lang>`
-
-#### Scenario: A flagged segment writes its machine translation
-
-- **WHEN** the paragraph `He opened the *old* door.` of a Markdown book is FLAGGED with the machine translation
-  `Він відчинив *старі* двері.`
-- **THEN** the written book contains `Він відчинив *старі* двері.`
-
-#### Scenario: A flagged segment keeps its source text
-
-- **WHEN** the paragraph `He opened the *old* door.` is FLAGGED because every reply for it failed the placeholder check
-- **THEN** the written book contains `He opened the *old* door.` unchanged
-
-#### Scenario: A revised segment writes the person's text
-
-- **WHEN** a segment's machine translation is `Він пішов.` and the person saved the edit `Він пішов геть.`
-- **THEN** the written book contains `Він пішов геть.`
-
-#### Scenario: A book paused part-way writes pending segments in the source
-
-- **WHEN** a Markdown book is exported while its run is paused with the paragraph `The end.` still PENDING
-- **THEN** the written book contains `The end.` unchanged, in the Markdown format
-
-#### Scenario: A switched-off auxiliary kind keeps its source
-
-- **WHEN** image alt text is switched off in "Also translate" and an image's alt text is `A ship at dawn`
-- **THEN** the written image's alt text is `A ship at dawn`
 
 #### Scenario: A Markdown book's frontmatter language follows the target
 
@@ -84,10 +42,60 @@ book whose frontmatter holds no `lang` key, carry no language.
 - **WHEN** `Frankenstein.epub` is exported to `/books/a.epub` and then, with no decision changed, to `/books/b.epub`
 - **THEN** the two files are canonical-equal
 
+### Requirement: Write each segment with the best text it has
+
+WHEN an export is started, the system SHALL write for each segment the best text it has: an ACCEPTED or FLAGGED segment's machine translation, a REVISED segment's stored text, a PENDING segment's source text, and the source text of every segment kept as source by choice, that is an auxiliary segment whose kind the book brief's "Also translate" switches leave off when the export starts.
+
+**Source**: FR-EXPORT-01, FR-EXPORT-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-REVIEW-X2 (`01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), ADR-0035. In plain words: a book can be written at any point, so each segment is written with the best text it has: the person's edit over the machine's, the machine's over the source, and the source where nothing better exists yet.
+
+#### Scenario: A flagged segment writes its machine translation
+
+- **WHEN** the paragraph `He opened the *old* door.` of a Markdown book is FLAGGED with the machine translation
+  `Він відчинив *старі* двері.`
+- **THEN** the written book contains `Він відчинив *старі* двері.`
+
+#### Scenario: A book paused part-way writes pending segments in the source
+
+- **WHEN** a Markdown book is exported while its run is paused with the paragraph `The end.` still PENDING
+- **THEN** the written book contains `The end.` unchanged, in the Markdown format
+
+#### Scenario: A switched-off auxiliary kind keeps its source
+
+- **WHEN** image alt text is switched off in "Also translate" and an image's alt text is `A ship at dawn`
+- **THEN** the written image's alt text is `A ship at dawn`
+
+### Requirement: Write a flagged segment in its source when no usable translation exists
+
+IF a FLAGGED segment never had a translation that passed the placeholder check, or its draft failed a gate other than quote balance or script purity, THEN the system SHALL write its source text instead of its machine translation.
+
+**Source**: FR-EXPORT-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-QA-01, ADR-0035. In plain words: an English leftover is never written as a translation; a flagged draft that only broke a soft rule is still the best text the book has.
+
+#### Scenario: A flagged segment keeps its source text
+
+- **WHEN** the paragraph `He opened the *old* door.` is FLAGGED because every reply for it failed the placeholder check
+- **THEN** the written book contains `He opened the *old* door.` unchanged
+
+### Requirement: Write a revised segment as stored
+
+The system SHALL write a REVISED segment as stored: the text as the person saved it, with the typography pass applied and kept as saved if the normalised form would not restore, or the rewrite the Proofread stage kept, which already passed the run's gates.
+
+**Source**: FR-EXPORT-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-REVIEW-X2 (`01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a person's edit does not pass through the run's gate, and a kept rewrite is machine text that already did, so both are written without a second check.
+
+#### Scenario: A revised segment writes the person's text
+
+- **WHEN** a segment's machine translation is `Він пішов.` and the person saved the edit `Він пішов геть.`
+- **THEN** the written book contains `Він пішов геть.`
+
 #### Scenario: A kept proofread rewrite is written
 
 - **WHEN** the paragraph `Tarn will come tomorrow.` was accepted as `Тарн прийшов завтра.` and the Proofread stage kept the rewrite `Тарн прийде завтра.`
 - **THEN** the written book contains `Тарн прийде завтра.`
+
+### Requirement: Never write a proposed rewrite over the person's text
+
+A rewrite the Proofread stage only proposed for a segment the person had edited SHALL NOT be written; the person's text is.
+
+**Source**: FR-EXPORT-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a rewrite proposed for text the person edited waits for the person, so the person's words are never replaced silently.
 
 #### Scenario: A proposed rewrite does not replace the person's text
 
@@ -96,39 +104,15 @@ book whose frontmatter holds no `lang` key, carry no language.
 
 ### Requirement: Check the written book before it replaces the destination
 
-The system SHALL write the book to a temporary file beside the destination, under a name no file in that folder holds, so a file already there is never written over or removed, open it again, and move it onto the destination — replacing an existing file only when the person agreed — only when it has the source's body segment count and every body segment keeps its placeholders, alt text set aside; a segment whose stored target fails the placeholder gate, or whose placeholders differ, SHALL be written in its source and reported; any other failure SHALL leave the destination unchanged.
+The system SHALL write the book to a temporary file beside the destination, under a name no file in that folder holds, so a file already there is never written over or removed, open it again, and move it onto the destination, replacing an existing file only when the person agreed, only when it has the source's body segment count and every body segment keeps its placeholders, alt text set aside; any other failure SHALL leave the destination unchanged.
 
-**Source**: FR-EXPORT-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`, ADR-0041. In plain words: the book is proven to open with nothing lost before it takes the place of a good one, and one paragraph whose formatting broke is written in its source and named instead of costing the whole book; only body segments are counted, because auxiliary segments can legitimately merge or vanish on re-opening.
+**Source**: FR-EXPORT-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`, ADR-0041. In plain words: the book is proven to open with nothing lost before it takes the place of a good one; only body segments are counted, because auxiliary segments can legitimately merge or vanish on re-opening. The check is code only and makes no model call.
 
 #### Scenario: A segment-count mismatch leaves the destination alone
 
 - **WHEN** `Book.uk.md` exists, the person agreed to replace it, and the written file opens with 2 body segments where the source has 3
 - **THEN** the export reports `ErrorCode.validation`, no side file is written
 - **AND** `Book.uk.md` is unchanged and no temporary file remains in its folder
-
-#### Scenario: A placeholder mismatch writes that segment in its source and names it
-
-- **WHEN** the segment `ch5 · p12` was written carrying `⟦g0⟧⟦g1⟧⟦g2⟧⟦g3⟧` and re-opens carrying `⟦g0⟧⟦g1⟧⟦g2⟧`, while the segment count matches
-- **THEN** the book is written again with `ch5 · p12` in its source, `<b>He</b> saw …`, and published
-- **AND** the report's source fallbacks are exactly `ch5 · p12`, it counts `ch5 · p12` as pending, and no temporary file remains in its folder
-
-#### Scenario: A segment that differs even in its source still refuses the export
-
-- **WHEN** the segment `ch5 · p12` re-opens with one placeholder fewer both as translated and as written in its source
-- **THEN** the export reports `ErrorCode.validation` naming `ch5 · p12`
-- **AND** the destination is unchanged and no temporary file remains in its folder
-
-#### Scenario: A stored target with broken placeholders is written in its source
-
-- **WHEN** `Book.md:0`, whose masked source is `He opened the ⟦g0⟧old⟦g1⟧ door.`, is ACCEPTED with the masked target `Зламано ⟦g0⟧тут` and `Book.md:1` is ACCEPTED as `Вона пішла.`
-- **THEN** the written file reads `He opened the *old* door.` and `Вона пішла.`
-- **AND** the report lists the source fallback `Book.md:0` and counts 1 segment written
-
-#### Scenario: Two broken targets are both listed
-
-- **WHEN** `Book.md:0` and `Book.md:1` both hold stored targets whose placeholders do not match their segments
-- **THEN** the written file is `He opened the *old* door.` followed by `She *left*.`, exactly the source
-- **AND** the report lists the source fallbacks `Book.md:0` then `Book.md:1` and counts 0 segments written
 
 #### Scenario: A translated alt text inside a translated paragraph passes the check
 
@@ -181,56 +165,41 @@ The system SHALL write the book to a temporary file beside the destination, unde
 - **WHEN** the bytes of the source file change after the book was opened and before the export
 - **THEN** the export reports `ErrorCode.validation` and nothing is written
 
+### Requirement: Write a segment with broken placeholders in its source and report it
+
+IF a segment's stored target fails the placeholder gate, or its placeholders differ when the written book is opened again, THEN the system SHALL write that segment in its source and report it, and SHALL refuse the export only when the segment differs even in its source.
+
+**Source**: FR-EXPORT-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`, ADR-0041. In plain words: one paragraph whose formatting broke is written in its source and named instead of costing the whole book.
+
+#### Scenario: A placeholder mismatch writes that segment in its source and names it
+
+- **WHEN** the segment `ch5 · p12` was written carrying `⟦g0⟧⟦g1⟧⟦g2⟧⟦g3⟧` and re-opens carrying `⟦g0⟧⟦g1⟧⟦g2⟧`, while the segment count matches
+- **THEN** the book is written again with `ch5 · p12` in its source, `<b>He</b> saw …`, and published
+- **AND** the report's source fallbacks are exactly `ch5 · p12`, it counts `ch5 · p12` as pending, and no temporary file remains in its folder
+
+#### Scenario: A segment that differs even in its source still refuses the export
+
+- **WHEN** the segment `ch5 · p12` re-opens with one placeholder fewer both as translated and as written in its source
+- **THEN** the export reports `ErrorCode.validation` naming `ch5 · p12`
+- **AND** the destination is unchanged and no temporary file remains in its folder
+
+#### Scenario: A stored target with broken placeholders is written in its source
+
+- **WHEN** `Book.md:0`, whose masked source is `He opened the ⟦g0⟧old⟦g1⟧ door.`, is ACCEPTED with the masked target `Зламано ⟦g0⟧тут` and `Book.md:1` is ACCEPTED as `Вона пішла.`
+- **THEN** the written file reads `He opened the *old* door.` and `Вона пішла.`
+- **AND** the report lists the source fallback `Book.md:0` and counts 1 segment written
+
+#### Scenario: Two broken targets are both listed
+
+- **WHEN** `Book.md:0` and `Book.md:1` both hold stored targets whose placeholders do not match their segments
+- **THEN** the written file is `He opened the *old* door.` followed by `She *left*.`, exactly the source
+- **AND** the report lists the source fallbacks `Book.md:0` then `Book.md:1` and counts 0 segments written
+
 ### Requirement: Report the finished file
 
-WHEN an export succeeds, the export screen SHALL show the title "Translated book ready" and four tiles: the number of
-segments written with a translation ("segments translated"), the share of segments accepted without review
-("auto-accepted", of the segments that needed a decision: the written ones less those kept as they are, plus the pending ones), the number of segments the person accepted, edited or reverted ("reviewed by you"), and whether the
-written file passed its verification ("file validates").
+WHEN an export succeeds, the export screen SHALL show the title "Translated book ready" and four tiles: the number of segments written with a translation ("segments translated"), the share of segments accepted without review ("auto-accepted"), the number of segments the person accepted, edited or reverted ("reviewed by you"), and whether the written file passed its verification ("file validates").
 
-WHEN an export succeeds, the system SHALL report with the written file: the number of segments written with a
-translation; the number of pending segments written in the source language, a flagged segment that has no machine
-translation counted among them; the number of segments kept as source by choice; the number of segments kept as they
-are because they have nothing to translate, also counted among those written; the number of flagged segments
-written with their machine translation; the number of segments accepted without review; and the number of segments
-the person reviewed.
-
-WHEN an export succeeds, the export screen SHALL list the checks it passed: "Re-opened and verified · structure, ids and
-fonts preserved" and, for an EPUB, an FB2, or a Markdown book whose frontmatter holds a `lang` key, "Language metadata
-updated (<source> → <target>)".
-
-WHEN an export succeeds, the application SHALL show an export-complete dialog naming the written file, its folder, its
-verification result and its size, offering Close, Open folder and Open book, and SHALL raise no transient message for
-it: the dialog is the export's one success notice.
-
-The export screen's Open folder action and the dialog's SHALL show the written file in the system file manager,
-selecting it where the platform supports it (macOS, Windows) and otherwise opening its folder; an exit code of 1 from the
-Windows file manager SHALL count as success. Open book SHALL open the written file in the application the system
-associates with its type.
-
-WHEN an export succeeds, the screen's checks and the dialog SHALL also name each side file written, one per line, and state the
-proofread summary, "Proofread: 12 segments re-read, 3 waiting for you", which gives both counts also when one is 0. WHEN any segment was a source fallback (the
-requirement "Check the written book before it replaces the destination"), the screen and the dialog SHALL say how many,
-and name each by its locator, in a warning line: "2 segments were written in the source language because their
-translation broke the formatting: ch12 · p02, ch12 · p06", worded with the language's plural forms.
-
-WHEN the destination, Replace or the chosen side files change after a success, the export
-screen SHALL forget that result, so its tiles, checks, Open folder and Open book never describe a file the next press
-will not write. WHEN the destination occupied after a success is the file just exported, the screen SHALL say so beside
-Save to in a neutral line, not as a refusal, and Export book SHALL wait for Replace or another name: "This is the file
-just exported. To write it again, turn on Replace or choose another name."
-
-WHILE no export of the open book has succeeded in the session, the export screen SHALL list no checks, SHALL show the
-file-validates tile as not yet known, and SHALL offer nothing to reveal or open. WHILE a run is translating, the export
-screen SHALL offer no control that writes a book, and its side-file choices SHALL stay visible and unavailable.
-
-**Source**: FR-EXPORT-01, FR-EXPORT-03, FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-export-complete`, `docs/known-limits.md#15-left-open-by-the-hand-test`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: after pressing Export the person sees that the book exists, that it was checked, and how much of it the machine did on its own. The check line says what the application actually verified — it re-opens the file — rather than the reference's EPUBCheck, which is not run. Windows Explorer returns 1 even when it succeeds, so treating that as a failure would report an error for a file that was shown. Showing and opening the file use the system's own commands, built from the path alone, never a shell and never the network. The counts say exactly what the file holds — how much the machine translated on its own, what the person reviewed, what is still in the source language because it was not reached, and what is in it because the person chose so — and they are what the tiles, the report side file and the command line's report line show. One success notice is enough: the dialog already names the file, so a transient message on top of it would only repeat it. The proofread line replaces the consistency-pass line: it says how much of the book the Proofread stage read and how much still waits for the person, from the counts stored with the export.
-
-#### Scenario: A source fallback is named after the export
-
-- **WHEN** an export of an EPUB succeeds with the one source fallback `ch12 · p02`
-- **THEN** the export screen and the export-complete dialog read "1 segment was written in the source language
-  because its translation broke the formatting: ch12 · p02"
+**Source**: FR-EXPORT-01, FR-EXPORT-03, FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-export-complete`, `docs/known-limits.md#15-left-open-by-the-hand-test`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: after pressing Export the person sees that the book exists, that it was checked, and how much of it the machine did on its own; "auto-accepted" is counted over the segments that needed a decision, the written ones less those kept as they are, plus the pending ones.
 
 #### Scenario: A completed run reports its file
 
@@ -241,28 +210,11 @@ screen SHALL offer no control that writes a book, and its side-file choices SHAL
 - **AND** it lists `Re-opened and verified · structure, ids and fonts preserved` and
   `Language metadata updated (en → uk)`
 
-#### Scenario: A format with no language metadata lists no language check
+### Requirement: Report every kind of segment the export wrote
 
-- **WHEN** `Book.md`, whose frontmatter holds no `lang` key, is exported to `/books/Book.uk.md`
-- **THEN** the screen lists the re-open check and no language-metadata line
+WHEN an export succeeds, the system SHALL report with the written file the counts of segments written with a translation; pending and written in the source language (a flagged one with no machine translation among them); kept as source by choice; kept as they are because they have nothing to translate (also counted as written); flagged and written with their machine translation; accepted without review; and reviewed by the person.
 
-#### Scenario: A Markdown book that declares its language lists the language check
-
-- **WHEN** `Notes.md`, whose frontmatter holds `lang: en`, is translated from `en` to `uk` and exported to
-  `/books/Notes.uk.md`
-- **THEN** the screen lists the re-open check and `Language metadata updated (en → uk)`
-
-#### Scenario: The export-complete dialog
-
-- **WHEN** `/books/Frankenstein.uk.epub`, 936 KB, is written and verified
-- **THEN** a dialog names `Frankenstein.uk.epub`, the folder `/books`, a passed verification and `936 KB`
-- **AND** offers Close, Open folder and Open book
-
-#### Scenario: The dialog is the only success notice
-
-- **WHEN** `/books/Frankenstein.uk.epub` is written and verified
-- **THEN** the export-complete dialog is shown
-- **AND** no transient message is raised for the export
+**Source**: FR-EXPORT-01, FR-EXPORT-03, FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-export-complete`, `docs/known-limits.md#15-left-open-by-the-hand-test`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: the counts say exactly what the file holds, and they are what the tiles, the report side file and the command line's report line show.
 
 #### Scenario: The export reports every kind of segment it wrote
 
@@ -279,6 +231,47 @@ screen SHALL offer no control that writes a book, and its side-file choices SHAL
   draft failed a hard gate, so it holds no machine translation
 - **THEN** the export reports `10` segments written with a translation, `2` pending written in the source language and
   `0` flagged written with their machine translation
+
+### Requirement: List the checks an export passed
+
+WHEN an export succeeds, the export screen SHALL list the checks it passed: "Re-opened and verified · structure, ids and fonts preserved" and, for an EPUB, an FB2, or a Markdown book whose frontmatter holds a `lang` key, "Language metadata updated (<source> → <target>)".
+
+**Source**: FR-EXPORT-01, FR-EXPORT-03, FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-export-complete`, `docs/known-limits.md#15-left-open-by-the-hand-test`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: the check line says what the application actually verified, which is that it re-opened the file, rather than the reference's EPUBCheck, which is not run.
+
+#### Scenario: A format with no language metadata lists no language check
+
+- **WHEN** `Book.md`, whose frontmatter holds no `lang` key, is exported to `/books/Book.uk.md`
+- **THEN** the screen lists the re-open check and no language-metadata line
+
+#### Scenario: A Markdown book that declares its language lists the language check
+
+- **WHEN** `Notes.md`, whose frontmatter holds `lang: en`, is translated from `en` to `uk` and exported to
+  `/books/Notes.uk.md`
+- **THEN** the screen lists the re-open check and `Language metadata updated (en → uk)`
+
+### Requirement: Show one export-complete dialog as the success notice
+
+WHEN an export succeeds, the application SHALL show an export-complete dialog naming the written file, its folder, its verification result and its size, offering Close, Open folder and Open book, and SHALL raise no transient message for it: the dialog is the export's one success notice.
+
+**Source**: FR-EXPORT-01, FR-EXPORT-03, FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-export-complete`, `docs/known-limits.md#15-left-open-by-the-hand-test`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: one success notice is enough: the dialog already names the file, so a transient message on top of it would only repeat it.
+
+#### Scenario: The export-complete dialog
+
+- **WHEN** `/books/Frankenstein.uk.epub`, 936 KB, is written and verified
+- **THEN** a dialog names `Frankenstein.uk.epub`, the folder `/books`, a passed verification and `936 KB`
+- **AND** offers Close, Open folder and Open book
+
+#### Scenario: The dialog is the only success notice
+
+- **WHEN** `/books/Frankenstein.uk.epub` is written and verified
+- **THEN** the export-complete dialog is shown
+- **AND** no transient message is raised for the export
+
+### Requirement: Show or open the written file with the system's own commands
+
+The export screen's Open folder action and the dialog's SHALL show the written file in the system file manager, selecting it where the platform supports it (macOS, Windows) and otherwise opening its folder; an exit code of 1 from the Windows file manager SHALL count as success. Open book SHALL open the written file in the application the system associates with its type.
+
+**Source**: FR-EXPORT-01, FR-EXPORT-03, FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-export-complete`, `docs/known-limits.md#15-left-open-by-the-hand-test`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: Windows Explorer returns 1 even when it succeeds, so treating that as a failure would report an error for a file that was shown. The commands are built from the path alone, never a shell and never the network.
 
 #### Scenario: Showing the file selects it where the platform can
 
@@ -298,6 +291,61 @@ screen SHALL offer no control that writes a book, and its side-file choices SHAL
 - **WHEN** Open book is taken on macOS for `/books/Frankenstein.uk.epub`
 - **THEN** the command `open /books/Frankenstein.uk.epub` is run
 
+### Requirement: State the side files and the proofread summary
+
+WHEN an export succeeds, the screen's checks and the dialog SHALL also name each side file written, one per line, and state the proofread summary, "Proofread: 12 segments re-read, 3 waiting for you", which gives both counts also when one is 0, and neither SHALL mention a model pass the export makes.
+
+**Source**: FR-EXPORT-01, FR-EXPORT-03, FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-export-complete`, `docs/known-limits.md#15-left-open-by-the-hand-test`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: the proofread line says how much of the book the Proofread stage read and how much still waits for the person, from the counts stored with the export; the export itself makes no model call.
+
+#### Scenario: The proofread summary is reported
+
+- **WHEN** `Frankenstein.epub` is exported after its Proofread stage re-read 12 segments and 3 still wait
+- **THEN** the screen's checks and the export-complete dialog read "Proofread: 12 segments re-read, 3 waiting for you"
+
+#### Scenario: A Fast book reports what waits
+
+- **WHEN** a Fast book is exported with 4 segments carrying a proofread mark and none re-read
+- **THEN** the checks read "Proofread: 0 segments re-read, 4 waiting for you"
+
+#### Scenario: The export names no model pass
+
+- **WHEN** any book is exported
+- **THEN** no check line and no dialog line mentions a consistency pass
+
+### Requirement: Name each source fallback by its locator
+
+WHEN any segment was a source fallback (the requirement "Write a segment with broken placeholders in its source and report it"), the screen and the dialog SHALL say how many, and name each by its locator, in a warning line: "2 segments were written in the source language because their translation broke the formatting: ch12 · p02, ch12 · p06", worded with the language's plural forms.
+
+**Source**: FR-EXPORT-01, FR-EXPORT-03, FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-export-complete`, `docs/known-limits.md#15-left-open-by-the-hand-test`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: the person learns which paragraphs stayed in the source language and can fix them in the review desk.
+
+#### Scenario: A source fallback is named after the export
+
+- **WHEN** an export of an EPUB succeeds with the one source fallback `ch12 · p02`
+- **THEN** the export screen and the export-complete dialog read "1 segment was written in the source language
+  because its translation broke the formatting: ch12 · p02"
+
+### Requirement: Forget an export result the next press will not write
+
+WHEN the destination, Replace or the chosen side files change after a success, the export screen SHALL forget that result, so its tiles, checks, Open folder and Open book never describe a file the next press will not write. WHEN the destination occupied after a success is the file just exported, the screen SHALL say so beside Save to in a neutral line, not as a refusal, and Export book SHALL wait for Replace or another name.
+
+**Source**: FR-EXPORT-01, FR-EXPORT-03, FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-export-complete`, `docs/known-limits.md#15-left-open-by-the-hand-test`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: a stale result would claim a file that the next press will not write; the neutral line says why Export book waits instead of refusing.
+
+#### Scenario: A changed destination clears the result
+
+- **WHEN** the export of `/books/a.epub` succeeded and the destination is changed to `/books/b.epub`
+- **THEN** the tiles, the checks, Open folder and Open book no longer describe `/books/a.epub`
+
+#### Scenario: The file just exported is named in a neutral line
+
+- **WHEN** the destination is `/books/a.epub`, the file just exported, and Replace is off
+- **THEN** the line `This is the file just exported. To write it again, turn on Replace or choose another name.` shows beside Save to, and Export book waits
+
+### Requirement: Show no export result before an export has succeeded
+
+WHILE no export of the open book has succeeded in the session, the export screen SHALL list no checks, SHALL show the file-validates tile as not yet known, and SHALL offer nothing to reveal or open. WHILE a run is translating, the export screen SHALL offer no control that writes a book, and its side-file choices SHALL stay visible and unavailable.
+
+**Source**: FR-EXPORT-01, FR-EXPORT-03, FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), DD-30, ADR-0035, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-export-complete`, `docs/known-limits.md#15-left-open-by-the-hand-test`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: the screen never shows a result that does not exist, and a book is not written while the run still changes it.
+
 #### Scenario: Nothing to report before a run finishes
 
 - **WHEN** `Frankenstein.epub` is open, its run is still paused at 78%, and no export has been written
@@ -313,21 +361,6 @@ screen SHALL offer no control that writes a book, and its side-file choices SHAL
 
 - **WHEN** the export screen is shown while the run over `Frankenstein.epub` is running at 42%
 - **THEN** the glossary, bilingual-copy and report choices are present and unavailable
-
-#### Scenario: The proofread summary is reported
-
-- **WHEN** `Frankenstein.epub` is exported after its Proofread stage re-read 12 segments and 3 still wait
-- **THEN** the screen's checks and the export-complete dialog read "Proofread: 12 segments re-read, 3 waiting for you"
-
-#### Scenario: A Fast book reports what waits
-
-- **WHEN** a Fast book is exported with 4 segments carrying a proofread mark and none re-read
-- **THEN** the checks read "Proofread: 0 segments re-read, 4 waiting for you"
-
-#### Scenario: The report names no consistency pass
-
-- **WHEN** any book is exported
-- **THEN** no check line and no dialog line mentions a consistency pass
 
 ### Requirement: Choose where to save on the export screen
 
@@ -620,12 +653,12 @@ findings, and the proofread notes (each segment the Proofread stage read, with i
 - **THEN** `Frankenstein.uk.bilingual.html` holds `1240` rows, each with a segment's source and its written target, and
   references no file or network resource outside itself
 
-#### Scenario: The report holds counts, flagged segments and consistency notes
+#### Scenario: The report holds counts, flagged segments and proofread notes
 
 - **WHEN** a book with `3` flagged segments is exported with the report chosen, after the Proofread stage rejected its rewrite of `ch2 · p05` because it added a source-language word
 - **THEN** `Frankenstein.uk.report.md` holds the segment counts, the `3` flagged segments with their findings, and a proofread note naming `ch2 · p05` as rejected with that reason, in place of the former consistency notes
 
-#### Scenario: The report has no consistency notes
+#### Scenario: The report holds no section of consistency notes
 
 - **WHEN** any report is written
 - **THEN** it holds no section of consistency notes
