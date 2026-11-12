@@ -34,7 +34,7 @@ it deferred are rows D20 to D25 in `#decision-debt`. **Next:** the next change f
 
 ## where-this-stands {#where-this-stands}
 
-**Twelve changes are authored and archived** (`openspec/changes/archive/`). **Stage A is complete and Stage B is three
+**Thirteen changes are authored and archived** (`openspec/changes/archive/`). **Stage A is complete and Stage B is three
 of four archived**, change 5 — `add-inline-masking-and-placeholder-gate` — included (2026-09-11).
 `add-translation-engine-and-cli` (2026-09-20) delivered the walking skeleton the owner named as the next unit of work
 — a book of any of the four formats through the whole pipeline from the command line with a deterministic pseudo

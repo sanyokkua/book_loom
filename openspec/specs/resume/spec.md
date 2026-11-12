@@ -2,8 +2,10 @@
 
 ## Purpose
 Lets a running translation job pause, resume or stop at safe points, either when asked or at pause points the caller
-enables, without losing or repeating decided segments. It covers one run in memory; continuing after a restart comes
-with local storage.
+enables, without losing or repeating decided segments. It also covers continuing a stored project after a restart: an
+unfinished project reopens ready to continue at the first undecided segment, and a run stored as running or paused is
+treated as interrupted. Proofread windows already holding the same fingerprint are skipped; repair and Proofread calls
+are otherwise made again.
 
 ## Requirements
 

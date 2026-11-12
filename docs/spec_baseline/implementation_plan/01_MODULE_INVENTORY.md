@@ -266,7 +266,7 @@ shortfall) and asserts each one fails the build. Being an included build has one
 **the root `clean` does not reach it**, so `:build-logic:test` can report `UP-TO-DATE` across an otherwise-clean gate
 run. `./gradlew :build-logic:clean` first when the point of the run is to re-prove those canaries.
 
-**`arch-test` is a source set inside `:app`**, at `:app/src/archTest/java`, holding `ua.bookloom.archtest` (the nine
+**`arch-test` is a source set inside `:app`**, at `:app/src/archTest/java`, holding `ua.bookloom.archtest` (the ten
 rules, the rule suite, and the completeness meta-test) plus one deliberate **violation fixture per rule** under
 `ua.bookloom.<module>.archfixture`. The fixtures are compiled but excluded from the production-class set the rules
 analyse; `RuleViolationFixtureTest` asserts each rule catches its own fixture, so a rule that silently stopped
