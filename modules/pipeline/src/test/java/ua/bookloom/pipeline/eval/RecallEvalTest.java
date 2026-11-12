@@ -20,7 +20,7 @@ import ua.bookloom.document.DocumentModule;
  * checkout but outside the git-ignored {@code .temporary_context/}, since every book directory gets a
  * {@code segments.jsonl} of book text that must never be committed. It measures and asserts no floor;
  * the report lands in {@code build/reports/promptEval/recall.json} and {@code .txt}. The layout and the gold format are
- * in {@code docs/DEVELOPMENT.md#recall-suite}.
+ * in {@code docs/evaluation/eval-suites.md}.
  */
 @Slf4j
 @Tag("promptEval")

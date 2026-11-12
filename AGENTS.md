@@ -79,12 +79,12 @@ one transaction, and a file whose schema or stored record shapes changed is set 
 release. The theme is token-only and holds WCAG AA in both themes, every operable control explains itself on hover,
 transitions stop under reduced motion, and the first-launch look is the one silent local model listing of ADR-0044.
 
-Measurements and evals: `docs/DEVELOPMENT.md` (`docs/DEVELOPMENT.md#redesign-arms`, `docs/DEVELOPMENT.md#15d-results`,
+Measurements and evals: `docs/DEVELOPMENT.md` (`docs/evaluation/results-redesign-arms.md#redesign-arms`, `docs/evaluation/results-quality-rounds.md#15d-results`,
 prompt-eval and matrix sections) and `scripts/eval-matrix.sh`; the unplanned groups 15a–15j are in
 `openspec/changes/archive/2026-10-19-complete-translation-workflow/additional-work.md` (IDs unchanged). The archived
 changes `complete-translation-workflow` and `finalize-ui-and-persistence` are done, their specs folded into
 `openspec/specs/`. `redesign-translation-pipeline` is built; the owner's checks (17.4) and the archive remain. Closing
-run (`docs/DEVELOPMENT.md#redesign-closing-run`): LTCR-1 0.9682 vs 0.9108; quality better than `79ffede6` not proven (Q1
+run (`docs/evaluation/results-redesign-closing-run.md#redesign-closing-run`): LTCR-1 0.9682 vs 0.9108; quality better than `79ffede6` not proven (Q1
 66:47, p = 0.090); Bartimaeus 1 en→uk at Balanced 263 min (e4b), 344 min (26b); Max ≈ 1.45× Balanced's time, 1.46× its
 calls; ru→uk (e4b) old 81.9 min / 14 flagged, new 92.1 min / 33 flagged. **Known limits the owner accepted
 (2026-11-11)**, guarded by the review desk (backlog D20–D25): Q1; narrator gender slips (9 Balanced, 5 Max, 0 before);
@@ -116,7 +116,7 @@ behaviour). Paste the gate's tail as evidence — "it passed" is not a result. T
 `scripts/test-focused.sh`; run the changed module's full `check` once before a commit (`--full-module`); run the whole
 gate at the end of a feature or step group (pre-push and CI still run it on every push). A red check anywhere is fixed before the
 work is called done, never carried forward. At the end of each change group, after the gate, also run `./gradlew sonar -PsonarLocal` (opt-in, needs the local
-SonarQube server; `docs/DEVELOPMENT.md#coverage`): the project stays at 0 open issues and the quality gate OK, so
+SonarQube server; `docs/development/quality-and-ci.md#coverage`): the project stays at 0 open issues and the quality gate OK, so
 new findings are fixed in the same group, not left for a later sweep. A run materially longer than the last baseline is hung: kill it and
 diagnose; never run two gates at once.
 
@@ -196,4 +196,4 @@ Spec `docs/spec_baseline/specification/` · decisions `docs/spec_baseline/adr/` 
 `openspec/` · rules `paths:`-scoped in `.claude/rules/` · skills canonical in `.agents/skills/`, which Codex reads
 directly and Claude reads through the `.claude/skills` symlink kept by `python3 scripts/sync-agent-files.py --apply` ·
 the `openspec-*` skills and `/opsx:*` commands are OpenSpec output: refresh with `OPENSPEC_TELEMETRY=0 openspec update`,
-never hand-edit them (`docs/DEVELOPMENT.md#quality-gate`).
+never hand-edit them (`docs/development/quality-and-ci.md#quality-gate`).

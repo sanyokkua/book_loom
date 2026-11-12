@@ -331,7 +331,7 @@ context. These rules apply to every task:
     `#http-error-mapping`, `#client-construction`; `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`;
     `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md#where-this-stands` and the Stage C table;
     `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md#module-api`, `#module-llm`, `#module-pipeline`, `#module-app`;
-    `AGENTS.md` "Where it stands"; `docs/DEVELOPMENT.md#running`, `#testing`; `docs/next_features.md`.
+    `AGENTS.md` "Where it stands"; `docs/development/running.md#running`, `#testing`; `docs/next_features.md`.
   - **Change:** `04_LLM_INTEGRATION.md`: `discoveryFailed` retryable **yes** in the mapping table (matching
     `09_ERROR_HANDLING.md` and the code); the `Provider.chat(ChatRequest, RequestOptions)` block replaced by the built
     `ChatRequest(messages, temperature, responseFormat)` and the three `:api` ports, with the per-dialect client

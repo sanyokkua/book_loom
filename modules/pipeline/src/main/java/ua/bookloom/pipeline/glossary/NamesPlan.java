@@ -43,7 +43,7 @@ public record NamesPlan(QualityDial dial, List<Candidate> read, WindowPlan windo
     private static final int PER_CALL = 6;
     private static final double MILLIS_PER_MINUTE = 60_000.0;
 
-    // 15i.M1: the names suite on gemma4:e4b-mlx, 2026-10-15 (docs/DEVELOPMENT.md#15i-m1), whole passes of 111 to 392
+    // 15i.M1: the names suite on gemma4:e4b-mlx, 2026-10-15 (docs/evaluation/results-prompt-rounds.md#15i-m1), whole passes of 111 to 392
     // calls took 3.7 to 7.8 seconds a call, 4.6 on the owner novel and on Tom Sawyer at Fast and Balanced. A call's
     // seconds are set so that the dial's call budget takes the dial's minutes: 120 calls 6 to 10 at Fast, 260 calls 16
     // to 25 at Balanced, 520 calls 31 to 60 at Max.

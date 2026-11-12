@@ -320,7 +320,7 @@ The Projects screen, the full Settings, SQLite storage, continue after a restart
 
 ## Requirements changed by `redesign-translation-pipeline`
 
-Built and checked by the gate, the closing run (`docs/DEVELOPMENT.md#redesign-closing-run`) and the hand run of task
+Built and checked by the gate, the closing run (`docs/evaluation/results-redesign-closing-run.md#redesign-closing-run`) and the hand run of task
 17.2; the owner's checks (task 17.4) and the archive are still to come, so the change sits in
 `openspec/changes/redesign-translation-pipeline/` and its delta specs are not yet merged into `openspec/specs/`. Rows
 already annotated in the tables above (FR-ALGO-04, FR-ALGO-08, FR-ALGO-10, FR-ALGO-11, FR-EXPORT-06, FR-SETTINGS-03,

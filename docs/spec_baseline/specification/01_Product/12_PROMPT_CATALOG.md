@@ -160,7 +160,7 @@ auxiliaries; no content words), for en uk ru de es fr pl cs sk hr sl pt. The wor
 does not (`FunctionWords.sourceOnly`, computed per pair, no curated pair list) are the source-language residue a check
 can count. A word both languages use goes into the target's own file, because it is a target word. The lists come from
 stopwords-iso (MIT); the source, commits and attribution are in the folder's `ATTRIBUTION` file and in
-`docs/DEVELOPMENT.md#redesign-language-data`. A language with no file gives an empty set, so the check is off for it.
+`docs/evaluation/results-redesign-status.md#redesign-language-data`. A language with no file gives an empty set, so the check is off for it.
 
 **Rule keys for names, tense and conventions** (any language file may set them; an absent key means "nothing declared"):
 
@@ -199,7 +199,7 @@ a pair whose double negation matches, ru→uk).
 
 Size limits, enforced by `LanguageFilesTest` in estimated tokens: a target's rules 200, a source's notes 80, a pair's rules 100. The rules of languages whose files were drafted for native-speaker review
 (every language but English, Russian and Ukrainian) are marked `status=untested`; a rule list stays only if the prompt
-matrix shows it moves a metric (the arms were run with the removed `PromptVariants` switch, `docs/DEVELOPMENT.md#redesign-arms`;
+matrix shows it moves a metric (the arms were run with the removed `PromptVariants` switch, `docs/evaluation/results-redesign-arms.md#redesign-arms`;
 the application always uses the bundled rules and reads no variable). Each language has a mini-corpus of draft cases in the eval format under
 `src/test/resources/eval/languages/<tag>.json` (`BOOKLOOM_EVAL_LANGS=all` or a list of tags).
 
@@ -266,7 +266,7 @@ the tagged protocol, its prompts and its parsing were removed.
 **One format.** Every batch goes out in this one JSON format (`PromptName.TRANSLATE`, read by `BatchReplyParser`):
 there is no format switch, no `notes` field in the schema or the prompt, and no related-earlier-pairs block. The marked-passage
 and passage-plus-items formats, the notes experiment (15i.X2) and the related pairs (15i.T8) were removed by redesign task 2.3
-after arm 2 kept JSON (`docs/DEVELOPMENT.md#redesign-arms`). When a batch's prompt does not fit its tier's ceiling or the window, the
+after arm 2 kept JSON (`docs/evaluation/results-redesign-arms.md#redesign-arms`). When a batch's prompt does not fit its tier's ceiling or the window, the
 context builder drops, in order, the next source, the previous pairs from the oldest, the map items with the fewest
 occurrences (never a pinned or locked name or a speaker's gender the window names), and only then batch items, down to
 one.
@@ -291,7 +291,7 @@ file and its `glossary/titles/<language>.txt` (ru and uk have one), so a Russian
 The lexicon (15d.9) keeps a book's recurring common words and titles (`master`, `imp`, `Mr`) to one rendering each, without
 making them glossary entries. The model is never asked which rendering it used: the key-term asks (a closed list of the
 batch's lexicon terms and an optional `terms` object per reply item) were measured by arm 5b and deleted by task 12.9,
-since they kept terms no more consistent than the learner alone (`docs/DEVELOPMENT.md#redesign-arms`). Three parts:
+since they kept terms no more consistent than the learner alone (`docs/evaluation/results-redesign-arms.md#redesign-arms`). Three parts:
 
 - **Established renderings** (draft, batch draft). The block above the earlier decisions, `term → rendering` lines for the
   lexicon terms the chunk names, under `[Established renderings of recurring terms — keep consistent]` and the line `Write
@@ -786,7 +786,7 @@ Below `NameKnowledge.LOW_CONFIDENCE` (0.7) the gender is shown "likely, low conf
 value and both are shown ("rule: male · model: female"). Likely and rule values fill the Start question's pre-selection,
 least confident first, and feed nothing that checks: the character sheet states a gender only when the person set it or
 the book proved it, and a glossary line states a rule's gender but not a likely one (arm 4b, task 7.8, measured a `male (likely)` hint on the character line against the name alone and found no
-difference, so the name alone stays; `docs/DEVELOPMENT.md#redesign-arms`). A place, a firm or a thing takes no gender.
+difference, so the name alone stays; `docs/evaluation/results-redesign-arms.md#redesign-arms`). A place, a firm or a thing takes no gender.
 
 **SYSTEM**
 

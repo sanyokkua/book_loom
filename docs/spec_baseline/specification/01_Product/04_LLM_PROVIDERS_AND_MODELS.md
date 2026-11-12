@@ -128,7 +128,7 @@ the prompt, a batch of 2) and the verdict "unknown model".
 `OtherRows`) are data with the rule in words: an identity pattern, the reasoning switch and its off value, the system
 role, quirks, the hard cap, the batch (4 for a small tier, 8 for a large one, 2 for the smallest models) and a verdict. A row
 holds no maker's sampler values: arm 3a of the redesign kept BookLoom's own temperature per call kind, with neutral
-values where a server's own samplers are not neutral (`docs/DEVELOPMENT.md#redesign-arms`). The classes they restate: models that never think (with a native
+values where a server's own samplers are not neutral (`docs/evaluation/results-redesign-arms.md#redesign-arms`). The classes they restate: models that never think (with a native
 system role, or with none so the system text is folded: Gemma 2 and 3); a boolean thinking switch (Gemma 4, Qwen 3.5 and
 3.6, Nemotron 3, Magistral); a level switch (Qwen 3.8); models that always reason (gpt-oss in the harmony format;
 muse-glimmer, whose template writes the reasoning level; Ministral 3 Reasoning, which has no switch at all). Gemma 4's

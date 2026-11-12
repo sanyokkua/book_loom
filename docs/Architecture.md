@@ -338,7 +338,7 @@ other logger `WARN`), adds `%X{job}`, and writes one `INFO` line naming the leve
 `bookloom-trace.log` (the detailed log, on in dev, `BOOKLOOM_TRACE_FILE=1` installed), `bookloom-trace-evidence.log`
 (the full TRACE of every flagged or repaired segment, 100 MB × 4 archives) and, always on, one
 `bookloom-trace-run-<launch time>.log` per launch (INFO and above, last 10 kept). Book text, prompts and model replies
-are logged at `TRACE` only. The details and how to share them are `docs/DEVELOPMENT.md#running`.
+are logged at `TRACE` only. The details and how to share them are `docs/development/running.md#running`.
 
 **Command line.** `TranslateLauncher` repeats `Launcher`'s pre-injector steps — paths, single-instance lock, logging —
 without starting JavaFX, then builds its injector from `CoreModules` alone and runs `TranslateCommand`:
@@ -354,7 +354,7 @@ provider preflight, imports the book and its brief, translates unattended with t
 exports. A run that did not complete, Ctrl+C included, still exports what it translated unless `--no-partial`. Exit
 codes: **0** completed and written, **3** the run did not complete and the partial book was written, **1** nothing was
 written, **2** invalid arguments. `scripts/e2e-fixture.sh` drives it as the headless proof. Quoting a book path with
-spaces and the log volume are in `docs/DEVELOPMENT.md#running`.
+spaces and the log volume are in `docs/development/running.md#running`.
 
 ## 6. What it can and cannot do
 

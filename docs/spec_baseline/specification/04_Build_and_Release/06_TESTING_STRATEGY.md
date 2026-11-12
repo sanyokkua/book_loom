@@ -267,13 +267,13 @@ reply of each call in `calls/`) and a version-2 `report.json` with the dataset, 
 was settled; no environment switch reaches production code (`BOOKLOOM_REASONING`, `BOOKLOOM_SAMPLING`, `BOOKLOOM_EVAL_RULES` and the batch-format
 switch are gone, and ArchUnit guards keep the first two out). The two arms of redesign task 6.10 that were not prompt
 variants (sampling and batch start size) used test-only switches that were deleted with the losing data once the arms
-were settled (`docs/DEVELOPMENT.md#redesign-arms`). Baselines of the
+were settled (`docs/evaluation/results-redesign-arms.md#redesign-arms`). Baselines of the
 behaviour of commit `79ffede6` are in `eval/baseline/`. Nothing in the repository calls a cloud model or Codex.
 
 **The local judge is a screen, not a grader.** The judge is `gemma4:26b-mlx` run locally through `:llm`, pairwise with the
 order swapped. Its calibration `cal-1` (60 invented items, rubric `bl-judge-1`) failed the Wilson lower-bound rule on the
 hidden test split (Wilson lower bounds TPR 0.510, TNR 0.701; both observed rates were 1.0), so every case it marks discordant is read by the agent with a Codex second
-opinion by hand and reports carry `judge.calibration.passed = false`; the result is in `docs/DEVELOPMENT.md#redesign-arms`.
+opinion by hand and reports carry `judge.calibration.passed = false`; the result is in `docs/evaluation/results-redesign-arms.md#redesign-arms`.
 
 Every pipeline prompt has a **local-only prompt eval** implemented as a JUnit test (tag **`promptEval`**, excluded from
 CI, env-gated like `liveLocal`). The eval calls the **same production prompt builder** the app uses to produce the

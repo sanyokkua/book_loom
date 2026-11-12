@@ -18,7 +18,7 @@ outputs and the rest of the report. It refuses a run that is not version 2, whos
 A and B are run directories, globs, or selectors: `latest:<suite>[:<model>]` and `previous:<suite>[:<model>]`
 (model is matched as a substring). Every number in the two reports is compared; a delta inside the noise band is
 marked `~` (--noise N: N percentage points for rates, N percent of A for counts and costs; default 5, the sequence
-eval's run-to-run noise is documented in docs/DEVELOPMENT.md#15e-after3). Stdlib only.
+eval's run-to-run noise is documented in docs/evaluation/results-quality-rounds.md#15e-after3). Stdlib only.
 
 The statistics of the redesign (design D24) live here and nowhere else. Version-2 reports (provenance.version == 2)
 carry a top-level `cases` array of per-repeat records {caseId, repeat, seed, graders: [{id, level, passed}], time,

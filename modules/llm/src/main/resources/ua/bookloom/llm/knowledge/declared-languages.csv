@@ -6,7 +6,7 @@
 # deliberate: Lapa is POSITIVE_ONLY (uk, en) with no BookLoom run.
 # deliberate: TranslateGemma (55 codes) stays NONE: the vendor's appendix is not in the research folder, no code is invented.
 # deliberate: Qwen3 is POSITIVE_ONLY (ru, uk, en): the Qwen3 blog and report name Russian and Ukrainian; the full 119-code list is not in the research folder, so no gap is claimed and no code beyond these three is invented.
-# deliberate: Gemma 4 carries BookLoom's own run for en>uk on the effective-4B size only (token BOOKLOOM-RUN:en>uk@e4b, the e4b runs measured in docs/DEVELOPMENT.md#15d-results); no other size and no other pair counts as tested.
+# deliberate: Gemma 4 carries BookLoom's own run for en>uk on the effective-4B size only (token BOOKLOOM-RUN:en>uk@e4b, the e4b runs measured in docs/evaluation/results-quality-rounds.md#15d-results); no other size and no other pair counts as tested.
 # deliberate: Mistral Small 4 is NONE: the research found CONFLICT (24 codes in metadata, 11 in prose).
 # deliberate: Mistral Small 3.2 repeats the 24 codes of 3.1 (pl and uk in, la out) so a 3.2 name reaches a row; a prefix on 3.1 would not match it.
 # deliberate: Ministral 3 Reasoning is NONE: its card list was not read. MADLAD-400 and NLLB-200 are NONE: the list is 'see metadata'.

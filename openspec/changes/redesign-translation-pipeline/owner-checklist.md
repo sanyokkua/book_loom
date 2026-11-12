@@ -47,7 +47,7 @@ Everything below needs a person. The change is built, gated and hand-run (17.1 t
 **Owner answer (2026-11-12): accepted. The archive is run by the owner in a separate session.**
 
 12. **Eight database resets noticed.** Until the first release the database has no migrations: when the schema or the stored record shapes change, an old `bookloom.db` is set aside as `bookloom.db.old-<time>` and a new one is made (ADR-0043). Confirm this stays acceptable until release.
-13. **Known limits accepted on 2026-11-11** (written in `docs/DEVELOPMENT.md#redesign-closing-run`, `AGENTS.md` and backlog rows D20 to D23): quality not proven better than the old pipeline (Q1); narrator gender slips (9 at Balanced and 5 at Max against 0 before); Russian content words left in ru to uk output (R8); possessives and case forms stored as separate glossary rows (R3, R4, hand-run D7). No follow-up change is planned.
+13. **Known limits accepted on 2026-11-11** (written in `docs/evaluation/results-redesign-closing-run.md#redesign-closing-run`, `AGENTS.md` and backlog rows D20 to D23): quality not proven better than the old pipeline (Q1); narrator gender slips (9 at Balanced and 5 at Max against 0 before); Russian content words left in ru to uk output (R8); possessives and case forms stored as separate glossary rows (R3, R4, hand-run D7). No follow-up change is planned.
 14. **Seen in the hand run, not fixed, your call** (backlog rows D24, D25):
     - On the small invented books a chapter summary is often not stored ("Chapter summary not kept … reason=all-dropped"), so each Continue asks for it again. Look at a real book to see whether it happens there.
     - The Ukrainian UI was not hand-checked (the OS locale was English).
