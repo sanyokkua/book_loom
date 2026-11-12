@@ -2370,7 +2370,7 @@ There is no separate acceptance test: the gate, the smoke and the hand run are t
     `.claude/rules`.
   - **Done when:** the documents are committed and the gate's `spotlessCheck` and docs checks are green.
 
-- [ ] 17.4 Hand the owner the checks only the owner can do, so the change can be archived after them. → :app (the
+- [x] 17.4 Hand the owner the checks only the owner can do, so the change can be archived after them. → :app (the
   owner's checks; no code)
   - **Satisfies:** enabling work for design D1
   - **Depends on:** 17.3
