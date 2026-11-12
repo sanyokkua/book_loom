@@ -126,7 +126,7 @@ Start at [docs/README.md](docs/README.md). The short list:
 
 ## Status and limits
 
-The application is feature complete for the workflow above. Its quality is good enough to read and edit, not
+The application is feature complete for the workflow above; the owner archives the last change separately. Its quality is good enough to read and edit, not
 proven better than the previous pipeline, and some limits are accepted: narrator gender slips, source-language words
 left in Russian to Ukrainian output, and names stored in more than one form. They are listed with their evidence in
 [docs/known-limits.md](docs/known-limits.md).

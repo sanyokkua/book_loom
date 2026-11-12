@@ -105,10 +105,10 @@ on Windows), then upload artifacts. The upload glob is `build/package/*.tar.gz`,
 days, `if-no-files-found: warn`; the Windows leg produces a folder, not an archive, so it uploads nothing. See
 [release-and-packaging.md](release-and-packaging.md).
 
-The packaging matrix ran green on every leg for the pull-request runs of 2026-10-19 and 2026-10-27. Pushes after
-2026-11-01 failed at the quality job's strict lock verification (a build-script dependency checksum entry missing from
-`gradle/verification-metadata.xml` on the Linux runner), so the packaging legs did not start; the entry was added
-at the end of the redesign change and the next CI run is the proof.
+The packaging matrix ran green on every leg for the pull-request run of 2026-10-27. The run of 2026-11-08 failed
+at the quality job's strict lock verification (a build-script dependency, `kotlinx-coroutines-bom` 1.8.0, had no
+checksum entry in `gradle/verification-metadata.xml` on the Linux runner), so the packaging legs did not start; the
+entry was added at the end of the redesign change and the next CI run is the proof.
 
 ### What CI does not run
 

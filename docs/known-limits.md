@@ -28,8 +28,9 @@ Measured in the closing run of `redesign-translation-pipeline`
 ## Open or deliberate
 
 - **Provider calls.** The silent structured-output downgrade exists (`StructuredRungs`), but there is no bounded JSON
-  repair call and no extraction of JSON from surrounding prose; a plain-text fallback covers the gap. Authentication
-  is a bearer header from an environment-variable name; an OS keychain is not built.
+  repair call and no extraction of JSON from surrounding prose; an unparseable reply is re-asked, or the segment is
+  flagged. Authentication is a bearer header from
+  an environment-variable name; an OS keychain is not built.
 - **Log volume.** DEBUG is verbose on purpose (about 37 lines per segment). For large books set
   `BOOKLOOM_LOG_LEVEL=INFO`; the run log and the detailed log are bounded
   ([logging](architecture/overview.md)).

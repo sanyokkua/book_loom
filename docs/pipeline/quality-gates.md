@@ -75,7 +75,7 @@ From `qa/CheckName` (the one level table). "Wire name" is the `raisedBy` value s
 | `QUOTE_BALANCE` | `quote-balance` | BLOCK | a quote pair the source balanced left open, stray or crossed |
 | `PROTOCOL_LEAK` | `protocol-leak` | BLOCK | reply structure (braces, a wrapper label) left in the text |
 | `IDENTIFIER` | `identifier` | BLOCK | a UUID, hex string, ISBN, URL or e-mail changed or lost |
-| `NUMBER` | `number` | BLOCK (a lost two-digit number is REPAIR, an extra one NOTE) | a digit number changed or lost |
+| `NUMBER` | `number` | BLOCK for a replaced leading number, REPAIR for any other lost number, NOTE for an added one | a digit number changed or lost |
 | `NAME_SWAP` | `name-swap` | BLOCK | a source glossary name replaced by another glossary name |
 | `VOCATIVE` | `vocative` | BLOCK | a name the source calls out lost in the target |
 | `NAME_SPELLING` | `name-spelling` | BLOCK for a pinned name, NOTE for a suggested one | a glossary name spelled another way |

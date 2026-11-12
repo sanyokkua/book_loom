@@ -170,9 +170,8 @@ flowchart TD
 ### What a chunk commit stores
 
 A chunk's decisions are committed in **one transaction** (`run/PendingCommit`, `run/RunRecorder`, the `CheckpointPort`
-in `:api`): the segment records with their status (`SegmentStatus`: `PENDING`, `ACCEPTED`, `FLAGGED`; `REVISED` comes later from a person's edit or a kept Proofread
-rewrite),
-each draft's context snapshot (`ContextSnapshot`), the translation-memory entries of accepted segments, new deferrals,
+in `:api`): the segment records with their status (`SegmentStatus`: `PENDING`, `ACCEPTED`, `FLAGGED`; `REVISED` comes later from a person's edit or a kept
+Proofread rewrite), each draft's context snapshot (`ContextSnapshot`), the translation-memory entries of accepted segments, new deferrals,
 new names, and the run record. A record already committed is never committed again, so an edit the person saved while
 the run was paused is not overwritten. After a restart the undecided chunk is drafted again.
 
@@ -235,7 +234,7 @@ current glossary and settings. Every action is checked against the segment statu
 | Bound | Value / rule | Where |
 |---|---|---|
 | Output cap | every translate-family call states an expected length and a hard cap sized from the source and the pair's `outputRatio` | `prompt/OutputLimit`, `context/OutputReserve` |
-| Timeout per kind | helper calls 2 min (longer for a model that always thinks); others `max(provider timeout, min(600 s, 0.5 s × expected tokens))` | `:llm` `http/RequestTimeouts`, `CallLimits` |
+| Timeout per kind | helper calls 2 min (longer for a model that always thinks); others `max(provider timeout, min(600 s, 0.5 s × expected tokens))` | `:llm` `http/RequestTimeouts`, `:api` `llm/CallLimits` |
 | Streaming idle gap | an Ollama stream silent for 60 s (or the shorter provider timeout) counts as stalled | `CallLimits.STREAM_IDLE` |
 | Retry | at most 3 requests per logical call, at most 2 timeouts; a timed-out retry gets a new seed and a lower cap | `:llm` `retry/RetryPolicy` |
 | Stall watchdog | ends a call held 1.5× its timeout (15 min if it has none), or after 20 min with no decided segment and no answered Proofread call | `StallWatchdog` |
