@@ -7,10 +7,12 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.MemorySource;
 import ua.bookloom.ui.Navigator;
+import ua.bookloom.ui.control.ScrollHost;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -84,10 +86,17 @@ public final class ProjectsController {
         final Node content =
                 switch (state) {
                     case LIST -> new VBox(14, list.build(), toolbar());
-                    case EMPTY -> empty.build();
+                    case EMPTY -> scrolling(empty.build());
                     case LOADING, FAILED -> new VBox();
                 };
         host.getChildren().setAll(content);
+    }
+
+    // The card is taller than a small window once the platform's font wraps its words, so it scrolls like every screen.
+    private static Node scrolling(final Node card) {
+        final ScrollHost scroll = new ScrollHost(card);
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+        return scroll;
     }
 
     private StepFooter toolbar() {
