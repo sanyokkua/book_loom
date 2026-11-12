@@ -16,7 +16,7 @@ package ua.bookloom.api.document;
  * <p>{@link #ACCEPTED} and {@link #REVISED} are terminal-exportable; {@link #FLAGGED} is exportable too, carrying
  * the source or best draft through — export is allowed at any time, not only once every segment is accepted.
  *
-
+ *
  * <p>The document engine produces only {@link #PENDING}; the pipeline and the persistence schema key on the whole
  * enum.
  */
