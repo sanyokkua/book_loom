@@ -28,6 +28,7 @@ import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.CallLedgerTestModule;
 import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.glossary.CsvRecords;
@@ -55,7 +56,8 @@ class LexiconCsvTest {
                 new DocumentModule(),
                 new InMemoryPersistenceModule(),
                 new PipelineModule(),
-                new ReviewModeTestModule());
+                new ReviewModeTestModule(),
+                new CallLedgerTestModule());
     }
 
     @BeforeEach
@@ -156,6 +158,34 @@ class LexiconCsvTest {
         });
     }
 
+    // A row may name a held term by another of its forms: it is the same word, so no second entry is added.
+    @Test
+    void importCsv_rowNamingAHeldTermsForm_updatesThatEntryAndKeepsItsForms() throws IOException {
+        lexicon.put(new LexiconEntry(PROJECT, "фонарь", List.of(), null, null, null, null, List.of("фонаря")));
+        final Path file = write(HEADER, "фонаря,ліхтар");
+
+        final Result<GlossaryImportReport> report = service.importCsv(PROJECT, file);
+
+        assertThat(report.data()).isEqualTo(new GlossaryImportReport(1, List.of(), List.of()));
+        assertThat(lexicon.all(PROJECT).data()).singleElement().satisfies(entry -> {
+            assertThat(entry.term()).isEqualTo("фонарь");
+            assertThat(entry.chosen()).isEqualTo("ліхтар");
+            assertThat(entry.forms()).containsExactly("фонаря");
+        });
+    }
+
+    // An edit changes the rendering and keeps the forms the entry was stored with.
+    @Test
+    void edit_entryWithForms_keepsTheForms() {
+        lexicon.put(new LexiconEntry(PROJECT, "фонарь", List.of(), null, null, null, null, List.of("фонаря")));
+
+        service.edit(PROJECT, "фонарь", "ліхтар");
+
+        assertThat(lexicon.all(PROJECT).data())
+                .singleElement()
+                .satisfies(entry -> assertThat(entry.forms()).containsExactly("фонаря"));
+    }
+
     // IF an import replaced a chosen rendering, THEN opening a series file would undo the person's own wording.
     @Test
     void importCsv_heldTermWithAChosenRendering_isNeverReplaced() throws IOException {
@@ -222,7 +252,7 @@ class LexiconCsvTest {
     // A term the glossary holds is the glossary's: the lexicon never gives a draft two renderings of one term.
     @Test
     void importCsv_termTheGlossaryHolds_isRefusedAndNotAdded() throws IOException {
-        glossary.add(new GlossaryEntry("p1:pasha", PROJECT, "Pasha", "Паша", TermType.TERM, Gender.UNKNOWN, false));
+        glossary.add(GlossaryEntry.of("p1:pasha", PROJECT, "Pasha", "Паша", TermType.TERM, Gender.UNKNOWN, false));
         final Path file = write(HEADER, "master,пан", "pasha,паша");
 
         final Result<GlossaryImportReport> report = service.importCsv(PROJECT, file);
@@ -269,7 +299,7 @@ class LexiconCsvTest {
 
     // A series keeps its terms across books: what one export wrote an import reads back into an empty lexicon.
     @Test
-    void importCsv_exportedLexicon_importsBackIntoAnEmptyOneWithTheSameRenderings() throws IOException {
+    void importCsv_exportedLexicon_importsBackIntoAnEmptyOneWithTheSameRenderings() {
         lexicon.put(LexiconEntry.of(PROJECT, "master").withChosen("пан"));
         lexicon.put(LexiconEntry.of(PROJECT, "imp"));
         lexicon.put(LexiconEntry.of(PROJECT, "sea, king").withChosen("морський \"король\""));

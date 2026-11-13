@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.glossary.GlossaryServiceFixtures.PROJECT;
 
 import com.google.inject.Guice;
+import com.google.inject.Injector;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,9 +18,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.GlossaryService;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
 
@@ -32,14 +36,16 @@ class GlossaryCsvImportRulesTest {
     Path dir;
 
     private GlossaryService service;
+    private GlossaryRepository repository;
 
     @BeforeEach
     void setUp() {
-        service = Guice.createInjector(
-                        new DocumentModule(),
-                        new InMemoryPersistenceModule(),
-                        binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()))
-                .getInstance(GlossaryServiceImpl.class);
+        final Injector injector = Guice.createInjector(
+                new DocumentModule(),
+                new InMemoryPersistenceModule(),
+                binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
+        service = injector.getInstance(GlossaryServiceImpl.class);
+        repository = injector.getInstance(GlossaryRepository.class);
     }
 
     // IF a header in another order were read by position, THEN every target would land in the wrong field.
@@ -92,6 +98,19 @@ class GlossaryCsvImportRulesTest {
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::target)
                 .containsExactly("Гейл");
+    }
+
+    // IF a row naming a form the glossary lists for a name were a new term, THEN one name would be held twice.
+    @Test
+    void importCsv_rowNamingAHeldForm_editsThatEntry() throws IOException {
+        repository.add(GlossaryEntry.of("e1", PROJECT, "Велемир", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                .withForms(List.of("Велемира")));
+
+        service.importCsv(PROJECT, write(HEADER, "Велемира,Велемир,character,male,false"));
+
+        assertThat(service.entries(PROJECT).data())
+                .extracting(GlossaryEntry::term, GlossaryEntry::target)
+                .containsExactly(tuple("Велемир", "Велемир"));
     }
 
     private Path write(final String... lines) throws IOException {

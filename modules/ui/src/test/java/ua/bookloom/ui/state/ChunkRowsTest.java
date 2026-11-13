@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.ChapterSummaryKept;
 import ua.bookloom.api.pipeline.SegmentDrafted;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.ui.state.LiveRow.Stage;
@@ -22,6 +23,12 @@ import ua.bookloom.ui.state.LiveRow.Stage;
 class ChunkRowsTest {
 
     private final LiveCallState state = new LiveCallState();
+
+    private static final String SUMMARY = "Він знайшов листа. Вона поїхала до міста.";
+
+    private static ChapterSummaryKept kept(final int chapter, final String text) {
+        return new ChapterSummaryKept("unit-" + chapter + "#0", chapter, 2, text);
+    }
 
     private List<LiveRow> rows() {
         return state.view(AT).rows();
@@ -74,12 +81,12 @@ class ChunkRowsTest {
                 .containsExactly("ch7 · p41", "ch7 · p42", "ch7 · p43", "ch7 · p44");
     }
 
-    // IF a directed fix of one paragraph replaced the rows with its own, THEN the chunk would vanish from the card.
+    // IF a repair of one paragraph replaced the rows with its own, THEN the chunk would vanish from the card.
     @Test
-    void directedFixOfOneSegment_keepsTheChunksFourRows() {
+    void repairOfOneSegment_keepsTheChunksFourRows() {
         state.snapshot(ChunkFixtures.batchWithMissingThird());
 
-        state.snapshot(draft(3, CallKind.DIRECTED_FIX, 2));
+        state.snapshot(draft(3, CallKind.REPAIR, 2));
 
         assertThat(rows()).hasSize(4);
         assertThat(rows().get(1).callId()).isEqualTo(3L);
@@ -163,5 +170,49 @@ class ChunkRowsTest {
 
         assertThat(rows()).hasSize(500);
         assertThat(rows().get(0).segmentId()).isEqualTo(id(6));
+    }
+
+    // IF a kept summary did not become a row after its chapter's rows, THEN the person could not read what the model
+    // will be told about the chapter before it shapes the rest of the book.
+    @Test
+    void summaryKept_afterTheChaptersRows_addsASummarisedRowWithTheText() {
+        IntStream.rangeClosed(1, 4).forEach(n -> state.started(started(n, CHUNK_ONE)));
+        draftAndAcceptAll();
+
+        state.summaryKept(kept(7, SUMMARY));
+
+        assertThat(rows())
+                .extracting(LiveRow::segmentId)
+                .containsExactly(id(1), id(2), id(3), id(4), "chapter-summary:unit-7#0");
+        final LiveRow summary = rows().getLast();
+        assertThat(summary.stage()).isEqualTo(Stage.SUMMARISED);
+        assertThat(summary.locator()).isEqualTo("7");
+        assertThat(summary.displaySource()).isEmpty();
+        assertThat(summary.target()).isEqualTo(SUMMARY);
+        assertThat(markers().getLast()).isEqualTo(RowMarker.SUMMARISED);
+    }
+
+    // IF a chapter summarised again on Continue added a second row, THEN the card would list one chapter twice.
+    @Test
+    void summaryKept_sameChapterAgain_replacesItsRowInPlace() {
+        state.summaryKept(kept(2, "Перший підсумок."));
+        state.started(started(1, CHUNK_ONE));
+
+        state.summaryKept(kept(2, SUMMARY));
+
+        assertThat(rows()).extracting(LiveRow::segmentId).containsExactly("chapter-summary:unit-2#0", id(1));
+        assertThat(rows().getFirst().target()).isEqualTo(SUMMARY);
+    }
+
+    // IF summary rows were not counted in the bound, THEN a long book's summaries would grow the card without end.
+    @Test
+    void rows_fiveHundredSegmentsThenASummary_keepTheNewestFiveHundred() {
+        IntStream.rangeClosed(1, 500).forEach(n -> state.started(started(n, CHUNK_ONE)));
+
+        state.summaryKept(kept(3, SUMMARY));
+
+        assertThat(rows()).hasSize(500);
+        assertThat(rows().getFirst().segmentId()).isEqualTo(id(2));
+        assertThat(rows().getLast().segmentId()).isEqualTo("chapter-summary:unit-3#0");
     }
 }

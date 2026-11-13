@@ -101,6 +101,7 @@ final class TranslatingSummaryStrip {
         final VBox strip = new VBox(
                 SPACING,
                 top,
+                StageStrip.build(mirror, messages),
                 bar(mirror, inputs, messages),
                 factsLine(mirror, inputs, messages),
                 counts(mirror, messages),
@@ -145,9 +146,7 @@ final class TranslatingSummaryStrip {
                                 MessageKey.TRANSLATING_STRIP_FINISHED_IN,
                                 DurationText.spelled(messages, pace.elapsed()));
             case READY, CANNOT_START ->
-                estimate instanceof StartEstimate.Measured measured
-                        ? measured.lines(messages).getFirst()
-                        : "";
+                estimate.lines(messages).stream().findFirst().orElse("");
             default -> view.title().in(messages);
         };
     }
@@ -268,7 +267,8 @@ final class TranslatingSummaryStrip {
                 MessageKey.TRANSLATING_STRIP_DONE,
                 counted ? figures.total() - figures.remaining() : storedDecided,
                 counted ? figures.total() : storedTotal));
-        if (figures.sections() > 0) {
+        // A Continue that only proofreads a decided book enters no chapter, so it names none.
+        if (figures.sections() > 0 && figures.section() > 0) {
             parts.add(messages.get(MessageKey.TRANSLATING_LINE_SECTION, figures.section(), figures.sections()));
         }
         if (!pace.elapsed().isZero()) {

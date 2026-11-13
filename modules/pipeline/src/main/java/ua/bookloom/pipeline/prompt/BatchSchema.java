@@ -9,22 +9,19 @@ import lombok.NoArgsConstructor;
 public final class BatchSchema {
 
     /**
+     * The answer schema's name every translate-family call asks for; a refused setting is remembered by it, so it keeps
+     * the batch draft's old name.
+     */
+    public static final String FORMAT_NAME = "draft-batch-json";
+
+    /**
      * One entry per item with its id and target. Deliberately flat — no {@code maxItems}, {@code maxLength} or
-     * {@code additionalProperties} — because LM Studio never answered a structured reviewer call that carried such limits
-     * on one model; the reply parser enforces the ids, so the schema need not. The optional {@code terms} object maps a
-     * key term to the rendering used; its values are not typed here for the same reason, and the verifier checks them.
+     * {@code additionalProperties} — because LM Studio never answered a structured call that carried such limits
+     * on one model; the reply parser enforces the ids, so the schema need not. The reply parser ignores any other field
+     * an item carries.
      */
     public static final String SCHEMA = """
             {"type":"object","properties":{"items":{"type":"array","items":{"type":"object","properties":{\
-            "id":{"type":"string"},"target":{"type":"string"},"terms":{"type":"object"}},"required":["id","target"]}}},"required":["items"]}
-            """.strip();
-
-    /**
-     * The experimental notes arm (15i.X2): the same schema with an optional {@code notes} string written before each
-     * {@code target}, which the code reads only to log. Optional, so a reply without notes still answers the schema.
-     */
-    public static final String SCHEMA_WITH_NOTES = """
-            {"type":"object","properties":{"items":{"type":"array","items":{"type":"object","properties":{\
-            "id":{"type":"string"},"notes":{"type":"string"},"target":{"type":"string"},"terms":{"type":"object"}},"required":["id","target"]}}},"required":["items"]}
+            "id":{"type":"string"},"target":{"type":"string"}},"required":["id","target"]}}},"required":["items"]}
             """.strip();
 }

@@ -87,9 +87,7 @@ class PausedRunHoldsNoPermitTest {
         final WireMockProvider provider = new WireMockProvider(ProviderKind.OPENAI_COMPATIBLE);
         started = provider;
         provider.stubSequence(List.of(
-                provider.target(ChunkRunFixtures.ECHO1, Duration.ZERO),
-                provider.target(ChunkRunFixtures.ECHO1, Duration.ZERO),
-                provider.reply("HELLO", Duration.ZERO)));
+                provider.target(ChunkRunFixtures.ECHO1, Duration.ZERO), provider.reply("HELLO", Duration.ZERO)));
         final WireMockProvider.TwoModels models = provider.twoModels(REQUEST_TIMEOUT);
         final TranslationJobImpl translation = job(
                 project(TestBooks.markdown(tempDir.resolve("Book.md"), ChunkRunFixtures.S1), brief("en", "uk")),

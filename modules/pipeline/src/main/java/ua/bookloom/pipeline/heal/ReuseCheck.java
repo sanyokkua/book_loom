@@ -11,14 +11,15 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.QaFinding;
-import ua.bookloom.api.project.Severity;
+import ua.bookloom.pipeline.qa.BlockingFindings;
 import ua.bookloom.pipeline.qa.LockedRendering;
 import ua.bookloom.pipeline.qa.QaResult;
 
 /**
- * Checks a context-matched memory target before any draft is made: through the chunk's gate, every check and τ, but
- * never the reviewer, so a memory entry can never put a broken or since-forbidden target into the book
- * ({@code specs/quality-gates/spec.md} "Accept a context-matched memory reuse without the reviewer"). A refusal only
+ * Checks a context-matched memory target before any draft is made: through the chunk's gate and every check, decided
+ * by the same {@link AcceptanceRule} as a draft with no model call, so a memory entry can never put a broken or
+ * since-forbidden target into the book ({@code specs/quality-gates/spec.md} "Accept a context-matched memory reuse
+ * when its checks pass"). A refusal only
  * means the segment is drafted instead, so the caller logs it and moves on; it is never routed like a model error.
  */
 @Slf4j
@@ -35,7 +36,7 @@ public final class ReuseCheck {
      * @param remaskedTarget the stored target with each protected span put back behind its token, as a draft reply
      *     would carry it
      * @param gate the chunk's gate: protected spans back, then the document's own markup
-     * @param settings the chunk's languages, policies, glossary terms and review mode, whose threshold is τ
+     * @param settings the chunk's languages, policies, glossary terms and review mode
      * @return the reuse, ready to be decided in its turn; or {@code validation} naming the findings that refused it
      *     (none when only its confidence fell short), or the gate's own error when the gate itself failed
      */
@@ -58,12 +59,9 @@ public final class ReuseCheck {
                 evaluated(new Candidate(segment, maskedSource, lockedRenderings, remaskedTarget), restored, settings);
             case GateResult.GateFailed failed ->
                 refused(segment.id(), failed.finding().raisedBy(), List.of(failed.finding()));
-            case GateResult.StepError stepError -> {
-                log.debug(
-                        "Memory reuse not checked segmentId={}: the gate failed code={}",
-                        segment.id(),
-                        stepError.error().code());
-                yield Result.err(stepError.error());
+            case GateResult.StepError(var error) -> {
+                log.debug("Memory reuse not checked segmentId={}: the gate failed code={}", segment.id(), error.code());
+                yield Result.err(error);
             }
         };
     }
@@ -72,21 +70,23 @@ public final class ReuseCheck {
             final Candidate candidate, final GateResult.Restored restored, final LoopSettings settings) {
         final QaResult qa = QaEvaluation.evaluate(
                 List.of(),
-                candidate.segment(),
-                candidate.maskedSource(),
+                new DraftSubject(candidate.segment(), candidate.maskedSource(), candidate.lockedRenderings()),
                 candidate.remaskedTarget(),
                 restored.maskedForm(),
-                settings,
-                candidate.lockedRenderings());
-        final boolean accepted = AcceptanceRule.accepts(qa, 0);
+                settings.softContext());
+        final AcceptanceRule.Decision decision = AcceptanceRule.decide(qa);
         log.debug(
-                "Memory reuse evaluated segmentId={} hardGatesPass={} failedOutright={} confidence={} accepted={}",
+                "Memory reuse evaluated segment {} findings block={} repair={} note={} outcome={} hardGatesPass={}"
+                        + " failedOutright={} confidence={}",
                 candidate.segment().id(),
+                decision.block().size(),
+                decision.repair().size(),
+                decision.note().size(),
+                decision.accepted() ? "reused" : "drafted",
                 qa.hardGatesPass(),
                 qa.failedOutright(),
-                qa.confidence(),
-                accepted);
-        if (!accepted) {
+                qa.confidence());
+        if (!decision.accepted()) {
             return refused(candidate.segment().id(), qa.hardGatesPass() ? "checks" : "hard-gate", qa.findings());
         }
         return Result.ok(new DraftOutcome.Reused(
@@ -101,7 +101,7 @@ public final class ReuseCheck {
     private static Result<DraftOutcome.Reused> refused(
             final String segmentId, final String refusedBy, final List<QaFinding> findings) {
         final List<String> blocking = findings.stream()
-                .filter(finding -> finding.severity() != Severity.LOW)
+                .filter(BlockingFindings::isBlocking)
                 .map(QaFinding::kind)
                 .distinct()
                 .toList();

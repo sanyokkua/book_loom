@@ -204,7 +204,7 @@ class AppearanceViewTest extends ShellTestBase {
     }
 
     private String textOf(final String id) {
-        return ThemeTestSupport.onFx(() -> ((Labeled) required(id)).getText());
+        return ThemeTestSupport.onFx(((Labeled) required(id))::getText);
     }
 
     // IF the accent row stayed, THEN a person would meet a colour "choice" that this version does not offer.
@@ -284,6 +284,7 @@ class AppearanceViewTest extends ShellTestBase {
         pickLanguage(LanguageChoice.SYSTEM);
 
         awaitStored(AppSetting.LANGUAGE, false);
+        assertThat(store.stored(AppSetting.LANGUAGE)).isEmpty();
     }
 
     // IF the follow-the-computer option did not name the language it would give, THEN a person could not tell it from
@@ -306,7 +307,7 @@ class AppearanceViewTest extends ShellTestBase {
         showAppearance();
         pickLanguage(LanguageChoice.UKRAINIAN);
 
-        onFx(() -> ((Button) required("appearance-restart")).fire());
+        onFx(((Button) required("appearance-restart"))::fire);
 
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> restart.calls() == 1);
         assertThat(store.stored(AppSetting.LANGUAGE)).contains("uk");
@@ -317,9 +318,9 @@ class AppearanceViewTest extends ShellTestBase {
         showAppearance();
         pickLanguage(LanguageChoice.UKRAINIAN);
 
-        onFx(() -> ((Button) required("appearance-restart")).fire());
+        onFx(((Button) required("appearance-restart"))::fire);
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> restart.calls() == 1);
-        onFx(() -> ((Button) required("appearance-restart")).fire());
+        onFx(((Button) required("appearance-restart"))::fire);
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(restart.calls()).isEqualTo(1);
@@ -347,11 +348,11 @@ class AppearanceViewTest extends ShellTestBase {
         pickLanguage(LanguageChoice.UKRAINIAN);
         onFx(() -> injector.getInstance(StateMirror.class).publishRunState(RunState.RUNNING));
 
-        onFx(() -> ((Button) required("appearance-restart")).fire());
+        onFx(((Button) required("appearance-restart"))::fire);
 
         assertThat(scene.getRoot().lookup("#confirm-card")).isNotNull();
         assertThat(restart.calls()).isZero();
-        onFx(() -> ((Button) required("confirm-yes")).fire());
+        onFx(((Button) required("confirm-yes"))::fire);
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> restart.calls() == 1);
     }
 
@@ -363,7 +364,7 @@ class AppearanceViewTest extends ShellTestBase {
         showAppearance();
         pickLanguage(LanguageChoice.UKRAINIAN);
 
-        onFx(() -> ((Button) required("appearance-restart")).fire());
+        onFx(((Button) required("appearance-restart"))::fire);
 
         WaitForAsyncUtils.waitFor(
                 WAIT_SECONDS, TimeUnit.SECONDS, () -> ThemeTestSupport.onFx(() -> shown("appearance-restart-error")));
@@ -392,9 +393,8 @@ class AppearanceViewTest extends ShellTestBase {
         useLocale(Locale.ENGLISH);
         showAppearance();
 
-        WaitForAsyncUtils.waitFor(
-                WAIT_SECONDS,
-                TimeUnit.SECONDS,
-                () -> ThemeTestSupport.onFx(() -> ((ToggleSwitch) required("appearance-technical")).isSelected()));
+        final ToggleSwitch technical = (ToggleSwitch) required("appearance-technical");
+        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> ThemeTestSupport.onFx(technical::isSelected));
+        assertThat(technical.isSelected()).isTrue();
     }
 }

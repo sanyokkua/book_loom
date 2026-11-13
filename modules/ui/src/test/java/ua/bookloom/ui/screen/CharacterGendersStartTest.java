@@ -22,7 +22,7 @@ import ua.bookloom.ui.dialog.CharacterGendersDialog;
 class CharacterGendersStartTest extends TranslatingScreenTestBase {
 
     private static final GlossaryEntry NAME =
-            new GlossaryEntry("e1", "p1", "Ember", "Ембер", TermType.CHARACTER, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e1", "p1", "Ember", "Ембер", TermType.CHARACTER, Gender.UNKNOWN, false);
     private static final String CARD = "genders-card";
 
     private void showNamesStyle(final List<UnknownGender> unknown) throws Exception {
@@ -59,7 +59,12 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
         awaitAsking();
 
         assertThat(textsUnder(required(CARD)))
-                .contains("Characters without a gender", "Ember — 12 mentions", "Back", "Start anyway");
+                .contains(
+                        "Characters without a gender",
+                        "Ember → no translation yet",
+                        "12 mentions",
+                        "Back",
+                        "Start anyway");
         assertThat(engine.requests()).isEmpty();
         assertThat(glossary.unknownGenderCalls()).containsExactly("p1:5");
     }
@@ -130,11 +135,14 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
         assertThat(textsUnder(required(CARD)))
                 .contains(
                         "Characters without a gender",
-                        "Ember — 12 mentions",
-                        "Dane — 9 mentions · suggested, confirm it",
+                        "Ember → no translation yet",
+                        "12 mentions",
+                        "Dane → no translation yet",
+                        "9 mentions",
                         "This character has only a suggested gender, which the translation does not hold to. Confirm it"
-                                + " in Names & style (Confirm suggested genders), or start anyway: the next export"
-                                + " re-renders those segments.");
+                                + " in Names & style (Confirm suggested genders), or start anyway: once it is confirmed,"
+                                + " Continue translation proofreads those segments, or lists them for your review at"
+                                + " Fast.");
     }
 
     @Test
@@ -145,7 +153,7 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
         awaitAsking();
 
         assertThat(textsUnder(required(CARD)))
-                .contains("Genders to confirm", "Dane — 9 mentions · suggested, confirm it")
+                .contains("Genders to confirm", "Dane → no translation yet", "9 mentions")
                 .doesNotContain("Characters without a gender");
     }
 
@@ -158,7 +166,6 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
         awaitAsking();
 
         assertThat(textsUnder(required(CARD)))
-                .contains("Ember — 12 згадок", "Dane — 9 згадок · припущення, підтвердіть")
-                .noneMatch(text -> text.contains("Dane") && !text.contains("припущення"));
+                .contains("Ember → ще без перекладу", "12 згадок", "Dane → ще без перекладу", "9 згадок");
     }
 }

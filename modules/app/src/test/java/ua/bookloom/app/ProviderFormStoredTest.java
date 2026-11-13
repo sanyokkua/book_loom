@@ -45,7 +45,7 @@ class ProviderFormStoredTest extends WorkspaceTestBase {
     void save_keyTypedAsTheVariable_isRefusedAtTheFieldAndNothingIsStored(final String typed) throws Exception {
         startStoredWindow();
         newProvider("Cloud", ADDRESS);
-        onFx(() -> ((ToggleButton) node("#settings-form-auth-bearer")).fire());
+        onFx(((ToggleButton) node("#settings-form-auth-bearer"))::fire);
         type("#settings-form-key-variable", typed);
 
         pressSave();
@@ -63,7 +63,7 @@ class ProviderFormStoredTest extends WorkspaceTestBase {
     void keyTypedAsTheVariable_isNeverShownBackOutsideTheField(final String typed) throws Exception {
         startStoredWindow();
         newProvider("Cloud", ADDRESS);
-        onFx(() -> ((ToggleButton) node("#settings-form-auth-bearer")).fire());
+        onFx(((ToggleButton) node("#settings-form-auth-bearer"))::fire);
         type("#settings-form-key-variable", typed);
 
         pressSave();
@@ -164,7 +164,7 @@ class ProviderFormStoredTest extends WorkspaceTestBase {
     private void newProvider(final String name, final String address) throws Exception {
         onFx(() -> shell.activate(ViewNames.SETTINGS));
         waitUntil(() -> shell.root().lookup("#settings-provider-add") != null);
-        onFx(() -> ((Button) node("#settings-provider-add")).fire());
+        onFx(((Button) node("#settings-provider-add"))::fire);
         type("#settings-form-name", name);
         type("#settings-form-address", address);
     }
@@ -180,7 +180,7 @@ class ProviderFormStoredTest extends WorkspaceTestBase {
     }
 
     private void pressSave() throws Exception {
-        onFx(() -> ((Button) node("#settings-form-save")).fire());
+        onFx(((Button) node("#settings-form-save"))::fire);
         waitUntil(() -> !injector.getInstance(ProviderForm.class).saving().get());
         WaitForAsyncUtils.waitForFxEvents();
     }

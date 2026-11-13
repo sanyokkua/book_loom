@@ -49,21 +49,34 @@ class ReviewDeskTabsTest extends ReviewDeskTestBase {
                 .contains("one line → перший раніший рядок")
                 .contains("two lines → другий раніший рядок");
         assertThat(textOf("review-context-intro"))
-                .contains("This segment was translated with others in one request; this is what that request sent.");
+                .contains("Exactly what the model was sent when it translated this segment.");
     }
 
-    // IF a segment drafted alone showed a batch prompt, THEN it would claim a request that never existed.
+    // IF only the segment's own sections were kept, THEN the tab would lose the rules and the style sheet after a
+    // restart; the stored frame is joined back in front of them.
     @Test
-    void whatTheModelSaw_segmentDraftedAlone_showsTheContextSectionNotAPrompt() throws Exception {
+    void whatTheModelSaw_segmentDraftedAlone_showsTheStoredFrameThenItsOwnSections() throws Exception {
         openDesk();
         selectLocator("ch3 · p01", 1);
 
         openTab(1);
 
+        assertThat(isShown("review-sent")).isTrue();
+        assertThat(textOf("review-sent")).contains("Formal, past tense.", "Earlier in the text. → Раніше в тексті.");
+        assertThat(textOf("review-sent").indexOf("Formal, past tense."))
+                .isLessThan(textOf("review-sent").indexOf("Раніше в тексті."));
+        assertThat(isShown("review-context-none")).isFalse();
+    }
+
+    // IF a segment no call was made for showed an empty prompt, THEN it would claim a request that never existed.
+    @Test
+    void whatTheModelSaw_segmentWithNoCall_saysNoCallWasMade() throws Exception {
+        openDeskWith(List.of(ReviewFixtures.nameIssue()), List.of());
+
+        openTab(1);
+
         assertThat(isShown("review-sent")).isFalse();
-        assertThat(isShown("review-context")).isTrue();
-        assertThat(textOf("review-context-intro"))
-                .contains("Exactly what the model was sent when it translated this segment.");
+        assertThat(textOf("review-context-none")).contains("No model call was made for this segment");
     }
 
     // IF a finding showed a badge and a second label, THEN it would read twice; it is one label.
@@ -89,6 +102,28 @@ class ReviewDeskTabsTest extends ReviewDeskTestBase {
         onFx(() -> injector.getInstance(TechnicalDetails.class).property().set(true));
 
         assertThat(textOf("review-findings")).contains("omission · length ratio 0.29, expected 0.35–3.6");
+    }
+
+    // IF the audit's doubt of a check the run already recorded were drawn too, THEN the desk would show two identical
+    // rows for one finding.
+    @Test
+    void findings_auditDoubtOfACarriedCheck_showsOneRow() throws Exception {
+        final String note = "The text still holds words of the source language: что.";
+        openDeskWith(
+                List.of(ReviewFixtures.view(
+                        "ch04.xhtml:2",
+                        "ch4 · p02",
+                        SegmentStatus.FLAGGED,
+                        List.of(
+                                new QaFinding("language", Severity.MEDIUM, note, "function-word-residue"),
+                                new QaFinding("language", Severity.MEDIUM, note, "audit:function-word-residue")),
+                        null,
+                        null)),
+                List.of());
+
+        assertThat(fx(() ->
+                        required("review-findings").lookupAll(".finding-kind").size()))
+                .isEqualTo(1);
     }
 
     @Test

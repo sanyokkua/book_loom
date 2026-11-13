@@ -71,7 +71,7 @@ class ExportScreenReplaceTest extends ExportScreenTestBase {
         pressExport();
         awaitQuestion();
 
-        onFx(() -> ((Button) required("confirm-cancel")).fire());
+        onFx(((Button) required("confirm-cancel"))::fire);
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(exportService().requests()).isEmpty();
@@ -86,7 +86,7 @@ class ExportScreenReplaceTest extends ExportScreenTestBase {
         pressExport();
         awaitQuestion();
 
-        onFx(() -> ((Button) required("confirm-yes")).fire());
+        onFx(((Button) required("confirm-yes"))::fire);
         awaitFx(() -> exportService().requests().size() == 1);
 
         assertThat(exportService().requests().getFirst().overwrite()).isTrue();

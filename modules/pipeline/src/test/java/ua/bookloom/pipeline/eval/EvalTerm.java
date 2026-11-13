@@ -26,6 +26,6 @@ public record EvalTerm(String term, @Nullable String target, TermType type, Gend
     }
 
     public GlossaryEntry entry(final String projectId) {
-        return new GlossaryEntry("eval:" + term, projectId, term, target, type, gender, locked);
+        return GlossaryEntry.of("eval:" + term, projectId, term, target, type, gender, locked);
     }
 }

@@ -26,7 +26,9 @@ final class SettingsConformanceCases {
                     Overlay.NONE,
                     List.of(
                             new Part("#settings-summary", Kind.BACKGROUND, "ok-bg", "#e7efe8", "#2b3a33"),
-                            new Part("#settings-summary", Kind.BORDER, "ok-bd", "#bcd4c1", "#3f5a49"))),
+                            new Part("#settings-summary", Kind.BORDER, "ok-bd", "#bcd4c1", "#3f5a49"),
+                            // Where the text goes is a quiet line under the card, never a warning or a question.
+                            new Part("#settings-privacy-line", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"))),
             // Typing marks the footer in the warning text role, on the form card's surface.
             new Screen(
                     "SETTINGS_FORM_DIRTY",
@@ -51,7 +53,9 @@ final class SettingsConformanceCases {
                     List.of(
                             new Part("#settings-connection", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#settings-connection", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            new Part("#settings-form-address", Kind.BORDER, "input-border", "#988462", "#7d949e"))),
+                            new Part("#settings-form-address", Kind.BORDER, "input-border", "#988462", "#7d949e"),
+                            // The engine found at the address is a quiet line under it, not a status badge.
+                            new Part("#settings-engine-line", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"))),
             new Screen(
                     "SETTINGS_DELETE_DIALOG",
                     ViewNames.SETTINGS,
@@ -97,6 +101,7 @@ final class SettingsConformanceCases {
                             new Part("#models-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#models-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
                             new Part("#models-found", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
+                            new Part("#models-identity-line", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"),
                             new Part("#models-model", Kind.BORDER, "input-border", "#988462", "#7d949e"))),
             new Screen(
                     "SETTINGS_MODELS_DIRTY",

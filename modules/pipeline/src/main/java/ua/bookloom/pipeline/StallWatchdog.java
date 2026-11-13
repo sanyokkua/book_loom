@@ -18,9 +18,15 @@ import ua.bookloom.api.pipeline.SegmentDecided;
 
 /**
  * Ends a model call the provider client failed to end: one outstanding half again as long as its own timeout, or a
- * running run that decided no segment for {@link #NO_DECISION_LIMIT}. It interrupts the call through the job's
+ * running run that made no progress for {@link #NO_DECISION_LIMIT}. It interrupts the call through the job's
  * control, as a pause does, so the client gives it up and the inference gate is released; the call's answer is then
  * read as a {@code timeout} and goes through the run's usual retry and failure budget.
+ *
+ * <p>Progress is a decided segment, a resume, or an answered proofread call. Proofread decides a segment only when it
+ * keeps a rewrite, so a whole book's Proofread can read windows for far longer than the limit without one; each
+ * answered proofread call ends its window (at most one redo), so a run of them always moves through the windows. An
+ * answered draft or repair is no progress: a segment repaired over and over without a decision is the stuck run the
+ * limit exists for.
  *
  * <p>Events arrive on the job thread and {@link #check()} runs on the watchdog's own ticker, so the state between them
  * is held in atomics.
@@ -37,7 +43,10 @@ final class StallWatchdog {
     /** The ceiling of a call whose model announces no timeout of its own. */
     static final Duration UNTIMED_CEILING = Duration.ofMinutes(15);
 
-    /** A running run that decides nothing for this long is stuck somewhere, whatever its calls report. */
+    /**
+     * A running run that decides no segment and has no proofread call answered for this long is stuck somewhere,
+     * whatever its other calls report.
+     */
     static final Duration NO_DECISION_LIMIT = Duration.ofMinutes(20);
 
     /** The attempt being waited on, and when the watchdog gives up on it. */
@@ -73,15 +82,21 @@ final class StallWatchdog {
         };
     }
 
-    /** Follows the run's own events: a call's attempts and ends, each decision and each resume. */
+    /** Follows the run's own events: a call's attempts and ends, each decision, each resume. */
     void onEvent(final JobEvent event) {
         final Instant now = clock.instant();
         switch (event) {
             case ModelCallStarted started ->
                 outstanding.set(new Outstanding(started.kind(), started.segmentIds(), now, ceilingOf(started)));
-            case ModelCallFinished finished -> outstanding.set(null);
-            case SegmentDecided decided -> lastProgress.set(now);
-            case Resumed resumed -> lastProgress.set(now);
+            case ModelCallFinished finished -> {
+                outstanding.set(null);
+                if (finished.kind() == CallKind.PROOFREAD && finished.isAnswered()) {
+                    log.debug("Stall watchdog progress: proofread call answered segmentIds={}", finished.segmentIds());
+                    lastProgress.set(now);
+                }
+            }
+            case SegmentDecided _ -> lastProgress.set(now);
+            case Resumed _ -> lastProgress.set(now);
             default -> {
                 // Nothing else says whether the run moves.
             }
@@ -117,7 +132,10 @@ final class StallWatchdog {
         final Instant progressed = lastProgress.get();
         final Duration idle = Duration.between(progressed, now);
         if (idle.compareTo(NO_DECISION_LIMIT) > 0 && lastProgress.compareAndSet(progressed, now)) {
-            log.warn("No segment decided for {} min while running; ending the call in flight", idle.toMinutes());
+            log.warn(
+                    "No segment decided and no proofread call answered for {} min while running; ending the call"
+                            + " in flight",
+                    idle.toMinutes());
             if (call != null) {
                 outstanding.compareAndSet(call, null);
                 fire(call.kind(), call.segmentIds(), Duration.between(call.since(), now), NO_DECISION_LIMIT);

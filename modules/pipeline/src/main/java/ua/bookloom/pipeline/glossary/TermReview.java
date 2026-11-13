@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.glossary;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import java.util.ArrayList;
@@ -37,8 +39,10 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
  * ({@link PronounGender.Evidence#isStrong()}) is decided by the code and not sent. Nothing is changed until every call
  * has answered, so a failed or cancelled call leaves the glossary as it was.
  *
- * <p>Once every verdict is in, the terms that remain are given a suggested target in calls of their own
- * ({@link SuggestTargets}), and verdicts and suggestions are written together.
+ * <p>Once every verdict is in, the terms that remain and whose gender neither the person nor the book gave are asked
+ * by their bare name for the most probable gender and kind ({@link NameKnowledgeCalls}, kept as likely), then given a
+ * suggested target in calls of their own ({@link SuggestTargets}), and verdicts, answers and suggestions are written
+ * together.
  *
  * <p>The person's work is never undone: a locked term or one with the person's target is not sent, and at commit time an entry is
  * read again, so an edit made while the model was thinking wins. A term judged not a name is removed only when its
@@ -58,6 +62,7 @@ public final class TermReview {
     private final SuggestTargets suggestions;
     private final NameReadings readings;
     private final ReviewBatches batched;
+    private final NameKnowledgeCalls knowledge;
 
     /**
      * Builds the review; the reading path is built from the same templates and mapper.
@@ -79,6 +84,7 @@ public final class TermReview {
         this.suggestions = Objects.requireNonNull(suggestions, "suggestions");
         this.readings = new NameReadings(templates, mapper);
         this.batched = new ReviewBatches(templates, mapper);
+        this.knowledge = new NameKnowledgeCalls(templates, mapper);
     }
 
     /**
@@ -110,7 +116,7 @@ public final class TermReview {
         try {
             return glossary.all(projectId)
                     .flatMap(held -> run(projectId, held, new Inputs(story, frame, policy, dial, calls)));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal,
                     "Glossary review failed",
@@ -168,7 +174,8 @@ public final class TermReview {
                 return Result.ok(new Reviewed(new GlossaryReviewReport(0, 0, held), Map.of(), Set.of()));
             }
             return verdictsOn(open, held, in)
-                    .flatMap(decided -> commit(projectId, decided.verdicts(), List.of(), in)
+                    .flatMap(decided -> commit(
+                                    projectId, new ReviewCommit.Answers(decided.verdicts(), List.of(), List.of()), in)
                             .map(report -> new Reviewed(report, decided.readings(), decided.verified())));
         });
     }
@@ -195,21 +202,52 @@ public final class TermReview {
         final Result<Decided> verdicts = verdictsOn(open, held, in);
         if (verdicts.isErr()) {
             log.warn("Glossary review project={} changed nothing: a call failed", projectId);
-            return Result.err(Objects.requireNonNull(verdicts.error(), "error"));
+            return Result.err(Objects.requireNonNull(verdicts.error(), ERROR));
         }
         final Decided decided = Objects.requireNonNull(verdicts.data(), "verdicts");
-        final Result<List<Suggestion>> suggested = suggest(open, held, decided, in);
+        return answersFor(projectId, open, held, decided, in).flatMap(answers -> commit(projectId, answers, in));
+    }
+
+    // The survivors' bare-name knowledge, then their suggestions asked with it in; nothing is written yet.
+    private Result<ReviewCommit.Answers> answersFor(
+            final String projectId,
+            final List<GlossaryEntry> open,
+            final List<GlossaryEntry> held,
+            final Decided decided,
+            final Inputs in) {
+        final List<GlossaryEntry> survivors = ReviewCommit.survivors(open, decided.verdicts());
+        final Result<List<GlossaryEntry>> known = knowledge.applied(survivors, in.frame(), in.calls());
+        if (known.isErr()) {
+            log.warn("Glossary review project={} changed nothing: a name-knowledge call failed", projectId);
+            return Result.err(Objects.requireNonNull(known.error(), ERROR));
+        }
+        final List<GlossaryEntry> answered = Objects.requireNonNull(known.data(), "known");
+        final Result<List<Suggestion>> suggested = suggest(withAnswers(survivors, answered), held, decided, in);
         if (suggested.isErr()) {
             log.warn("Glossary review project={} changed nothing: a suggestion call failed", projectId);
-            return Result.err(Objects.requireNonNull(suggested.error(), "error"));
+            return Result.err(Objects.requireNonNull(suggested.error(), ERROR));
         }
-        return commit(projectId, decided.verdicts(), Objects.requireNonNull(suggested.data(), "suggestions"), in);
+        return Result.ok(new ReviewCommit.Answers(
+                decided.verdicts(), answered, Objects.requireNonNull(suggested.data(), "suggestions")));
+    }
+
+    // The survivors with the name-knowledge answers in, so the suggestions are asked with the likely kind and gender.
+    private static List<GlossaryEntry> withAnswers(
+            final List<GlossaryEntry> survivors, final List<GlossaryEntry> answered) {
+        final Map<String, GlossaryEntry> byId =
+                answered.stream().collect(Collectors.toMap(GlossaryEntry::id, entry -> entry, (one, other) -> one));
+        return survivors.stream()
+                .map(entry -> byId.getOrDefault(entry.id(), entry))
+                .toList();
     }
 
     private Result<List<Suggestion>> suggest(
-            final List<GlossaryEntry> open, final List<GlossaryEntry> held, final Decided decided, final Inputs in) {
+            final List<GlossaryEntry> survivors,
+            final List<GlossaryEntry> held,
+            final Decided decided,
+            final Inputs in) {
         return suggestions.suggest(
-                ReviewCommit.survivors(open, decided.verdicts()),
+                survivors,
                 in.story(),
                 in.frame(),
                 in.policy(),
@@ -231,9 +269,9 @@ public final class TermReview {
         return readings.read(
                         new NameReadings.Inputs(rest, held, evidence, in.story(), in.frame(), in.dial(), in.calls()))
                 .flatMap(outcome -> batched.ask(outcome.unread(), evidence, in.frame(), in.calls())
-                        .map(batched -> {
+                        .map(asked -> {
                             all.addAll(outcome.verdicts());
-                            all.addAll(batched);
+                            all.addAll(asked);
                             return new Decided(all, outcome.readings(), verifiedNames(byCode, outcome));
                         }));
     }
@@ -264,12 +302,11 @@ public final class TermReview {
     }
 
     private Result<GlossaryReviewReport> commit(
-            final String projectId, final List<Verdict> verdicts, final List<Suggestion> suggestions, final Inputs in) {
+            final String projectId, final ReviewCommit.Answers answers, final Inputs in) {
         return ReviewCommit.apply(
                 glossary,
                 projectId,
-                verdicts,
-                suggestions,
+                answers,
                 in.frame().analysisLanguage(),
                 in.story().visibleTexts());
     }

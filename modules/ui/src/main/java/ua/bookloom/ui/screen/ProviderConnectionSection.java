@@ -6,6 +6,7 @@ import javafx.scene.Node;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ProviderDraft;
+import ua.bookloom.ui.state.ProviderEngine;
 import ua.bookloom.ui.state.ProviderForm;
 
 /** All the aligned rows of the connection details: identity and sign-in, endpoints, and the two timeouts. */
@@ -17,9 +18,9 @@ final class ProviderConnectionSection {
     private final DraftText connect;
     private final DraftText request;
 
-    ProviderConnectionSection(final ProviderForm form, final Messages messages) {
+    ProviderConnectionSection(final ProviderForm form, final ProviderEngine engine, final Messages messages) {
         identity = new ProviderIdentityFields(form, messages, grid);
-        endpoints = new ProviderEndpointFields(form, messages, grid);
+        endpoints = new ProviderEndpointFields(form, engine, messages, grid);
         connect = new DraftText(
                 form,
                 messages,

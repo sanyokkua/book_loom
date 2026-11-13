@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,11 @@ record GlossaryAdditions(
         Supplier<String> ids,
         Supplier<String> project) {
 
+    /** The source of new entry ids in the window; a test states its own. */
+    static Supplier<String> randomIds() {
+        return () -> UUID.randomUUID().toString();
+    }
+
     void add(final NewTerm term, final Runnable onAdded, final Consumer<String> onRefused) {
         Objects.requireNonNull(term, "term");
         Objects.requireNonNull(onAdded, "onAdded");
@@ -45,7 +51,7 @@ record GlossaryAdditions(
         }
         final String target = term.target().isBlank() ? null : term.target().strip();
         final GlossaryEntry entry =
-                new GlossaryEntry(ids.get(), project.get(), source, target, term.type(), term.gender(), term.locked());
+                GlossaryEntry.of(ids.get(), project.get(), source, target, term.type(), term.gender(), term.isLocked());
         calls.run("add", () -> glossary.add(entry), answer -> {
             final AppError failure = answer.error();
             if (failure != null) {

@@ -85,7 +85,9 @@ public final class Launcher {
         runGuarded(Objects.requireNonNull(acquired.data()), restart, Processes.system(), () -> {
             // Step 5. Nothing above this line may take a logger; everything below it may.
             StartupContext.publish(configureLogging(paths, restart));
+            final UncaughtFailures failures = UncaughtFailures.install();
             Application.launch(BookLoomApplication.class, args);
+            failures.shutdownStarted();
             LoggerFactory.getLogger(Launcher.class).info("app stopped, releasing the single-instance lock");
         });
     }
@@ -152,9 +154,10 @@ public final class Launcher {
      */
     static void logStartup(AppPaths paths, AppEnvironment environment) {
         final Logger log = LoggerFactory.getLogger(Launcher.class);
+        final String version = AppVersion.current();
         log.info(
                 "app started version={} environment={} dataDir={} logDir={}",
-                AppVersion.current(),
+                version,
                 environment,
                 paths.dataDir(),
                 paths.logDir());

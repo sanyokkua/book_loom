@@ -2,13 +2,16 @@ package ua.bookloom.ui;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.NamesPassReport;
+import ua.bookloom.api.pipeline.TargetIssue;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 
 /**
@@ -34,11 +37,35 @@ public final class AutoNamesFixture {
      * a suggested female and a person the book gives no evidence for, among them.
      */
     public static GlossaryEntry character(final String id, final String term, final Gender gender) {
-        return new GlossaryEntry(id, PROJECT, term, null, TermType.CHARACTER, gender, false);
+        return GlossaryEntry.of(id, PROJECT, term, null, TermType.CHARACTER, gender, false);
+    }
+
+    /** The rows a conformance case's review flags mark: a suggested target in an oblique form. */
+    public static final Map<String, List<TargetIssue>> CONFORMANCE_FLAGS =
+            Map.of("e6", List.of(TargetIssue.OBLIQUE_ENDING));
+
+    /**
+     * The glossary the conformance cases list: the two longest gender labels, a suggested female, a person the book
+     * gives no evidence for, and the book map's marks — a lemma with its forms and an Unsure mention, a kept meaning,
+     * and a suggested target {@link #CONFORMANCE_FLAGS} flags.
+     */
+    public static List<GlossaryEntry> conformanceGlossary() {
+        return List.of(
+                character("e1", "Frankenstein", Gender.UNKNOWN).withSuggestedGender(Gender.MALE),
+                character("e2", "Victor", Gender.MALE).withSuggestedTarget("Віктор"),
+                character("e3", "Justine", Gender.UNKNOWN).withSuggestedGender(Gender.FEMALE),
+                character("e4", "Clerval", Gender.UNKNOWN).withNoGenderEvidence(),
+                character("e5", "Велемир", Gender.UNKNOWN)
+                        .withForms(List.of("Велемира", "Велемиру"))
+                        .withGenderFrom(Gender.MALE, Origin.BOOK)
+                        .withUnsureMentions(2),
+                character("e6", "Brightwater", Gender.UNKNOWN)
+                        .withMeaning("bright water")
+                        .withSuggestedTarget("Брайтвотером"));
     }
 
     private static GlossaryEntry entry(final String id, final String term, final TermType type, final Gender gender) {
-        return new GlossaryEntry(id, PROJECT, term, null, type, gender, false);
+        return GlossaryEntry.of(id, PROJECT, term, null, type, gender, false);
     }
 
     /** {@return what the pass reports for the tables {@code Well}, {@code Hale} and {@code table}} */

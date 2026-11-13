@@ -1,7 +1,6 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.executor;
@@ -25,7 +24,6 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
-import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ChunkPosition;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobProgress;
@@ -34,6 +32,7 @@ import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDetail;
 import ua.bookloom.api.pipeline.SegmentDrafted;
@@ -47,6 +46,9 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
  */
 class LiveTextEventsTest {
 
+    // Heavy enough that the token budget, not a segment count, closes the chunks.
+    private static final String FILLER = "The old keeper counted the lamps along the quay again. ".repeat(8);
+
     @TempDir
     private Path tempDir;
 
@@ -55,6 +57,7 @@ class LiveTextEventsTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
+    // The position counts the book's chapters by the chapter rule: this short book is one, whatever its files.
     @Test
     void run_doorSentenceInChapterSeven_announcesItsStartDraftAndDecision() {
         final List<JobEvent> events = runDoor();
@@ -67,7 +70,7 @@ class LiveTextEventsTest {
                 .satisfies(started -> {
                     assertThat(started.locator()).isEqualTo("ch7 · p42");
                     assertThat(started.displaySource()).isEqualTo("He opened the old door.");
-                    assertThat(started.position()).isEqualTo(new ChunkPosition(7, 11, 1, 1));
+                    assertThat(started.position()).isEqualTo(new ChunkPosition(1, 1, 1, 1));
                 });
         assertThat(events)
                 .filteredOn(SegmentDrafted.class::isInstance)
@@ -84,27 +87,15 @@ class LiveTextEventsTest {
                 .containsExactly(null, SegmentPath.DRAFT);
     }
 
-    // The reviewer reads the whole chunk, so its call belongs to no one segment but names every segment it reviews.
-    @Test
-    void run_reviewedChunkOfFortyAndFortyOne_announcesOneReviewerCallNamingBothSegments() {
-        final List<JobEvent> events = runDoor();
-
-        assertThat(events)
-                .filteredOn(ModelCallStarted.class::isInstance)
-                .map(ModelCallStarted.class::cast)
-                .filteredOn(started -> started.kind() == CallKind.REVIEW)
-                .extracting(ModelCallStarted::segmentId, ModelCallStarted::segmentIds)
-                .containsExactly(tuple(null, List.of("ch07.xhtml:40", "ch07.xhtml:41")));
-    }
-
     @Test
     void run_oneDirectedFixAndTwoFirstDrafts_lastSnapshotCountsTwoAutoAndOneRepaired() {
         final Path book = TestBooks.markdown(
                 tempDir.resolve("Book.md"),
                 String.join("\n\n", ChunkRunFixtures.S1, ChunkRunFixtures.S2, ChunkRunFixtures.S3));
         final TranslationJobImpl translation = job(
-                project(book, TranslationJobTestSupport.brief("en", "uk")),
-                replies(ChunkRunFixtures.ECHO1, ChunkRunFixtures.T1, ChunkRunFixtures.T2, ChunkRunFixtures.T3));
+                project(book, TranslationJobTestSupport.brief("en", "uk", QualityDial.BALANCED)),
+                replies(ChunkRunFixtures.ECHO1, ChunkRunFixtures.T2, ChunkRunFixtures.T3)
+                        .answerTo(ChunkRunFixtures.REPAIR, ChunkRunFixtures.target(ChunkRunFixtures.T1)));
         final List<JobEvent> events = new CopyOnWriteArrayList<>();
         translation.subscribe(events::add);
 
@@ -115,10 +106,13 @@ class LiveTextEventsTest {
                 .containsExactly(3, 2, 1);
     }
 
+    // The book has no navigation, so its 264 paragraphs of 129 tokens are cut into pseudo-chapters of 23 paragraphs,
+    // each closing its last chunk early: 12 chapters, 69 chunks of up to four paragraphs, :160 in the 42nd of the 7th.
     @Test
-    void run_decisionInChunkTwentyOneOfThirtyThree_carriesSectionSevenOfElevenAndChunkTwentyOneOfThirtyThree() {
-        final List<String> paragraphs =
-                IntStream.range(0, 264).mapToObj(index -> "Line " + index + ".").toList();
+    void run_decisionInChunkFortyTwoOfSixtyNine_carriesChapterSevenOfTwelveAndChunkFortyTwoOfSixtyNine() {
+        final List<String> paragraphs = IntStream.range(0, 264)
+                .mapToObj(index -> "Line " + index + ". " + FILLER)
+                .toList();
         final TestProject project = LiveTextFixtures.seventhChapterPending(tempDir, paragraphs);
         final TranslationJobImpl translation = job(project, LiveTextFixtures.acceptingModel());
         final List<JobEvent> events = new CopyOnWriteArrayList<>();
@@ -128,7 +122,7 @@ class LiveTextEventsTest {
 
         assertThat(decided(events, "ch07.xhtml:160").progress())
                 .extracting(JobProgress::section, JobProgress::sections, JobProgress::chunk, JobProgress::chunks)
-                .containsExactly(7, 11, 21, 33);
+                .containsExactly(7, 12, 42, 69);
     }
 
     // A repair is its own call, and both belong to the segment before its decision.

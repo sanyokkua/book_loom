@@ -12,7 +12,7 @@ paths:
 
 # Gradle Build & Quality
 
-Scope: build scripts and quality config — `**/build.gradle.kts`, `settings.gradle.kts`, `build-logic/**`, `gradle/libs.versions.toml`, `gradle/**.lockfile`, `lefthook.yml`, `.editorconfig`, `.gitattributes`. Spec: `docs/specification/04_Build_and_Release/01_BUILD_AND_TOOLING.md`, `.../02_QUALITY_GATES.md`.
+Scope: build scripts and quality config — `**/build.gradle.kts`, `settings.gradle.kts`, `build-logic/**`, `gradle/libs.versions.toml`, `gradle/**.lockfile`, `lefthook.yml`, `.editorconfig`, `.gitattributes`. Spec: `docs/spec_baseline/specification/04_Build_and_Release/01_BUILD_AND_TOOLING.md`, `.../02_QUALITY_GATES.md`.
 
 ## MUST
 
@@ -28,7 +28,7 @@ Scope: build scripts and quality config — `**/build.gradle.kts`, `settings.gra
 
 ## SHOULD
 
-- **SHOULD** enforce the license gate in CI via **`com.github.jk1.dependency-license-report`** with an allowed-license policy file: allowlist Apache-2.0/MIT/BSD plus the recorded exceptions **EPL-1.0** (Logback), the **ICU License** (ICU4J), and the **JDOM License** (JDOM2); GPL/LGPL/AGPL/SSPL banned (`docs/specification/05_Dependencies/03_LICENSING.md`). — Rationale: keeps the distributable license-clean with a concrete, machine-checked policy.
+- **SHOULD** enforce the license gate in CI via **`com.github.jk1.dependency-license-report`** with an allowed-license policy file: allowlist Apache-2.0/MIT/BSD plus the recorded exceptions **EPL-1.0** (Logback), the **ICU License** (ICU4J), and the **JDOM License** (JDOM2); GPL/LGPL/AGPL/SSPL banned (`docs/spec_baseline/specification/05_Dependencies/03_LICENSING.md`). — Rationale: keeps the distributable license-clean with a concrete, machine-checked policy.
 - **SHOULD** confirm, before adding a new dependency: (a) no JDK-native API already covers the need, (b) no already-approved dependency can be extended to cover it, (c) the candidate has been maintained within the last 12 months with no open critical CVEs and carries an allowlisted license (the policy above), and (d) the addition is called out in the PR description. — Rationale: a lightweight gate against dependency sprawl, distinct from the license-report CI gate which only catches license *type*, not redundancy or staleness.
 - **SHOULD** keep packaging script-driven: `./gradlew :app:collectDist` stages the app jar + runtime classpath, and the committed `scripts/package-<os>` scripts drive the plain `jpackage` CLI per OS (no `org.beryx.jlink` or other packaging plugin; Windows = portable app-image zip, never an installer), built per-OS in the CI matrix. — Rationale: jpackage cannot cross-compile; scripts keep flags transparent and locally reproducible (DD-24, `03_PACKAGING_JPACKAGE.md`).
 - **SHOULD** keep `.editorconfig` and `.gitattributes` (LF) authoritative for line endings/whitespace so Spotless and Git agree. — Rationale: no CRLF churn across platforms.

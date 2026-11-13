@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.setup;
 
+import static ua.bookloom.util.contract.ArgNames.QUOTE;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -13,10 +15,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.GivenNames;
 import ua.bookloom.pipeline.prompt.AddressTerms;
 import ua.bookloom.pipeline.prompt.LanguageRules;
+import ua.bookloom.util.text.Edges;
 
 /**
  * Decides whether a quote the model gave for the narrator's gender shows that gender in words the code can check. Two
@@ -41,7 +45,8 @@ final class NarratorGenderEvidence {
     /**
      * Prepares the check for one book.
      *
-     * @param glossary the book's glossary entries; only characters of a known gender are used
+     * @param glossary the book's glossary entries; only characters whose gender the person set, the book proved or a
+     *     rule gave are used, never a model's guess
      * @param languageTag the source language's tag, which chooses the first-name list and the address terms; null when it is not known, then
      *     neither is used
      */
@@ -51,6 +56,7 @@ final class NarratorGenderEvidence {
         this.people = glossary.stream()
                 .filter(entry -> entry.type() == TermType.CHARACTER)
                 .filter(entry -> isKnown(entry.gender()))
+                .filter(NarratorGenderEvidence::isProof)
                 .toList();
         this.addressTerms = languageTag == null ? Map.of() : AddressTerms.of(languageTag);
         this.firstPersonPronouns =
@@ -62,6 +68,12 @@ final class NarratorGenderEvidence {
                 addressTerms.size());
     }
 
+    // A model's guess is no proof of anybody's gender: a narrator verified by a likely glossary gender would be a
+    // guess wearing the book's name. A rule's gender stands, as a listed first name does.
+    private static boolean isProof(final GlossaryEntry entry) {
+        return entry.hasConfirmedGender() || entry.genderOrigin() == Origin.RULE;
+    }
+
     /**
      * The gender a quote shows, by the name the model read from it or else by its words of address.
      *
@@ -70,7 +82,7 @@ final class NarratorGenderEvidence {
      * @return the gender the name or the address terms prove, or empty if the quote proves none
      */
     Optional<Gender> genderOf(final String quote, final String name) {
-        Objects.requireNonNull(quote, "quote");
+        Objects.requireNonNull(quote, QUOTE);
         Objects.requireNonNull(name, "name");
         final List<String> words = words(quote);
         if (!name.isBlank()) {
@@ -96,7 +108,7 @@ final class NarratorGenderEvidence {
      */
     boolean isSaidToAnother(final BookSample sample, final String quote, final String name) {
         Objects.requireNonNull(sample, "sample");
-        Objects.requireNonNull(quote, "quote");
+        Objects.requireNonNull(quote, QUOTE);
         Objects.requireNonNull(name, "name");
         return NarratorSpeech.isToAnother(sample.passages(), quote, name, firstPersonPronouns);
     }
@@ -109,7 +121,7 @@ final class NarratorGenderEvidence {
      * @return {@code true} if the name's words stand together in the quote, {@code false} otherwise and for a blank name
      */
     boolean isNamedIn(final String quote, final String name) {
-        Objects.requireNonNull(quote, "quote");
+        Objects.requireNonNull(quote, QUOTE);
         Objects.requireNonNull(name, "name");
         final List<String> nameWords = words(name);
         return !nameWords.isEmpty() && contains(words(quote), nameWords);
@@ -124,7 +136,7 @@ final class NarratorGenderEvidence {
      * @return the gender when the name is in the quote and names glossary people of one gender only, empty otherwise
      */
     Optional<Gender> glossaryGenderOf(final String quote, final String name) {
-        Objects.requireNonNull(quote, "quote");
+        Objects.requireNonNull(quote, QUOTE);
         Objects.requireNonNull(name, "name");
         final List<String> nameWords = words(name);
         if (nameWords.isEmpty() || !contains(words(quote), nameWords)) {
@@ -175,7 +187,7 @@ final class NarratorGenderEvidence {
     private static List<String> words(final String text) {
         final String marks = WHITESPACE.matcher(text.replace('’', '\'')).replaceAll(" ");
         return Arrays.stream(NOT_A_WORD.split(marks.toLowerCase(Locale.ROOT)))
-                .map(word -> word.replaceAll("^'+|'+$", ""))
+                .map(word -> Edges.strip(word, "'"))
                 .filter(word -> !word.isEmpty())
                 .toList();
     }

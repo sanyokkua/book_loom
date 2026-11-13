@@ -4,25 +4,26 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.pipeline.qa.CheckLevel;
+import ua.bookloom.pipeline.qa.CheckLevels;
 import ua.bookloom.pipeline.qa.CheckResult;
 import ua.bookloom.pipeline.qa.QaResult;
 
 /**
- * Builds the two finding lists {@link SegmentHealer} needs: the concrete findings that route a round to a directed
- * fix, and the findings a decided segment's {@link SegmentOutcome} records.
+ * Builds the finding lists {@link SegmentHealer} needs: the concrete findings that block a target, the defects the
+ * one repair names, and the findings a decided segment's {@link SegmentOutcome} records.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class SegmentFindings {
 
     /**
-     * The concrete findings that send a round to a directed fix: a failed hard gate or a soft check failed outright
-     * ({@code specs/quality-gates/spec.md} "Repair a failing segment within the dial's repair budget before
-     * flagging it"). Public so a prompt eval names the same findings in a directed fix that a run does.
+     * The concrete findings that block a target: a failed hard gate or a soft check failed outright. Public so a
+     * prompt eval names the same findings in a repair that a run does.
      */
     public static List<QaFinding> concrete(final QaResult qa) {
         final List<QaFinding> findings = new ArrayList<>();
@@ -40,37 +41,24 @@ public final class SegmentFindings {
     }
 
     /**
-     * The findings a round repairs when the previous round's reply was refused by a gate: {@code carried} replaces
-     * the finding the same check raised before, or joins the list when none did.
+     * The defects the one repair names: every BLOCK and REPAIR finding of the text, and every check that blocks it.
+     * Public so a prompt eval builds the repair a run sends.
      *
-     * @param findings the concrete findings of the state the round starts from
-     * @param carried the finding the previous round's gate raised, or {@code null} when it raised none
-     * @return the merged findings, in the original order
+     * @param qa the evaluation of the text in place
+     * @return the defects in the order the checks raised them; never null, empty when there is none
      */
-    static List<QaFinding> withCarried(final List<QaFinding> findings, @Nullable final QaFinding carried) {
-        if (carried == null) {
-            return findings;
-        }
-        final List<QaFinding> merged = new ArrayList<>(findings);
-        for (int index = 0; index < merged.size(); index++) {
-            if (merged.get(index).raisedBy().equals(carried.raisedBy())) {
-                merged.set(index, carried);
-                return List.copyOf(merged);
-            }
-        }
-        merged.add(carried);
-        return List.copyOf(merged);
+    public static List<QaFinding> defects(final QaResult qa) {
+        final Set<QaFinding> defects = new LinkedHashSet<>();
+        qa.findings().stream()
+                .filter(finding -> CheckLevels.of(finding) != CheckLevel.NOTE)
+                .forEach(defects::add);
+        defects.addAll(concrete(qa));
+        return List.copyOf(defects);
     }
 
-    /**
-     * A decided segment's recorded findings: its last evaluation's findings plus the reviewer's — each applied edit,
-     * each note, each unresolved issue — de-duplicated ({@code specs/quality-gates/spec.md} "Record each segment's
-     * findings for review and repair").
-     */
-    static List<QaFinding> recorded(final QaResult qa, final List<QaFinding> reviewerFindings) {
-        final LinkedHashSet<QaFinding> combined = new LinkedHashSet<>(qa.findings());
-        combined.addAll(reviewerFindings);
-        return List.copyOf(combined);
+    /** A decided segment's recorded findings: its last evaluation's, de-duplicated. */
+    static List<QaFinding> recorded(final QaResult qa) {
+        return List.copyOf(new LinkedHashSet<>(qa.findings()));
     }
 
     /** The kinds of a segment's findings, for a WARN log line that never carries the findings' text. */

@@ -84,7 +84,7 @@ public final class DetailedLogSwitch {
             }
             log.info("detailed log marker {}", wanted ? "created" : "removed");
             return true;
-        } catch (FileAlreadyExistsException alreadyThere) {
+        } catch (FileAlreadyExistsException _) {
             log.debug("detailed log marker already exists");
             return true;
         } catch (IOException e) {

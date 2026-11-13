@@ -41,7 +41,7 @@ class ReviewDeskMarksTest extends ReviewDeskTestBase {
         openMarked(Locale.ENGLISH);
 
         assertThat(fx(() -> target().getText())).isEqualTo(DISPLAYED);
-        assertThat(fx(() -> ((TextArea) required("review-source")).getText()))
+        assertThat(ReviewDeskTestBase.<String>fx(((TextArea) required("review-source"))::getText))
                 .isEqualTo("Gale opened the ⟦0⟧old⟦1⟧ door.");
         assertThat(strip()).startsWith("Formatting marks ⟦0⟧ ⟦1⟧ keep bold, links and similar");
         assertThat(main().isDisabled()).isFalse();

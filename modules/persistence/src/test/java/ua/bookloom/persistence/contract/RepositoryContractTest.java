@@ -235,12 +235,12 @@ public abstract class RepositoryContractTest {
         final int perThread = 1000;
         runInParallel(threads, () -> {
             for (int i = 0; i < perThread; i++) {
-                repository.update("p1", "ch1:0", RepositoryContractTest::incrementRepairRounds);
+                repository.update("p1", "ch1:0", RepositoryContractTest::incrementOrd);
             }
         });
 
         final SegmentRecord result = repository.find("p1", "ch1:0").data().orElseThrow();
-        assertThat(result.repairRounds()).isEqualTo(threads * perThread);
+        assertThat(result.ord()).isEqualTo(threads * perThread);
     }
 
     private static Set<SegmentKind> seedFiveSegments(final SegmentRepository repository) {
@@ -254,12 +254,13 @@ public abstract class RepositoryContractTest {
         return Set.of(SegmentKind.FRONTMATTER_VALUE);
     }
 
-    private static SegmentRecord incrementRepairRounds(final SegmentRecord record) {
+    // The position is the record's one counter left, so the test counts with it.
+    private static SegmentRecord incrementOrd(final SegmentRecord record) {
         return new SegmentRecord(
                 record.projectId(),
                 record.segmentId(),
                 record.unitId(),
-                record.ord(),
+                record.ord() + 1,
                 record.kind(),
                 record.status(),
                 record.machineTarget(),
@@ -270,7 +271,6 @@ public abstract class RepositoryContractTest {
                 record.judgeScore(),
                 record.findings(),
                 record.path(),
-                record.repairRounds() + 1,
                 record.reviewed(),
                 record.context());
     }
@@ -331,7 +331,6 @@ public abstract class RepositoryContractTest {
                 null,
                 List.of(),
                 SegmentPath.DRAFT,
-                0,
                 false,
                 null);
     }

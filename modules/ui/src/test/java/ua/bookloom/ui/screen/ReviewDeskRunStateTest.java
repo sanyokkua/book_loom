@@ -44,6 +44,17 @@ class ReviewDeskRunStateTest extends ReviewDeskTestBase {
         assertThat(isShown("review-pause")).isTrue();
     }
 
+    // IF the header said "0 of 0 left" over three segments worth a second look, THEN it would contradict the list; it
+    // says nothing is left to review and counts the second look instead.
+    @Test
+    void header_nothingToReviewAndThreeWorthASecondLook_saysSoInsteadOfZeroOfZero() throws Exception {
+        openDeskWith(List.of(), ReviewDeskFixtures.worthASecondLook());
+
+        assertThat(textOf("review-desk-left"))
+                .startsWith("Nothing left to review · 3 worth a second look.")
+                .doesNotContain("0 of 0");
+    }
+
     @Test
     void pause_pressedInTheBanner_pausesTheRunAndThenTheDeskIsEditable() throws Exception {
         openDuringARun();
@@ -137,5 +148,6 @@ class ReviewDeskRunStateTest extends ReviewDeskTestBase {
         publish(RunState.PAUSED);
 
         awaitFx(() -> button(REVIEW).getText().equals("Review (4)"));
+        assertThat(button(REVIEW).getText()).isEqualTo("Review (4)");
     }
 }

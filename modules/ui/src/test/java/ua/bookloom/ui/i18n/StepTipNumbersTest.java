@@ -47,7 +47,7 @@ class StepTipNumbersTest {
             final String language, final String key, final String expected) {
         final Map<String, String> bundle = Catalogues.load(language);
 
-        assertThat(bundle.get(key)).isEqualTo(expected);
+        assertThat(bundle).containsEntry(key, expected);
     }
 
     // IF a Structure entry or screen text stayed, THEN the catalogue would hold words for a screen nobody can open.

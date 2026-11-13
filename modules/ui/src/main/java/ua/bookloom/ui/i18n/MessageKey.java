@@ -111,24 +111,12 @@ public enum MessageKey {
     ACTIVITY_BLOCKED("activity.blocked"),
     /** Busy-card step: the export checks the destination and the project. */
     EXPORT_PROGRESS_VALIDATING("export.progress.validating"),
-    /** Busy-card step: the consistency pass re-renders segments whose character's gender became known. */
-    EXPORT_PROGRESS_RETRY("export.progress.retry"),
-    /** Busy-card step: the consistency pass drafts flagged and doubted segments again, keeping only a better text. */
-    EXPORT_PROGRESS_RETRY_DOUBTED("export.progress.retryDoubted"),
-    /** Busy-card step: the consistency pass checks repaired paragraphs against their neighbours. */
-    EXPORT_PROGRESS_NEIGHBOUR("export.progress.neighbour"),
     /** Busy-card step: the export writes the book and its side files. */
     EXPORT_PROGRESS_WRITING("export.progress.writing"),
     /** Busy-card detail label: the file being worked on. */
     ACTIVITY_DETAIL_FILE("activity.detail.file"),
-    /** Busy-card detail label: the model being asked. */
-    ACTIVITY_DETAIL_MODEL("activity.detail.model"),
-    /** Busy-card detail label: how many model requests were sent. */
-    ACTIVITY_DETAIL_REQUESTS("activity.detail.requests"),
     /** Busy-card detail label: how many segments of a step counted by segment are done. */
     ACTIVITY_DETAIL_SEGMENTS("activity.detail.segments"),
-    /** Busy-card detail value: a count out of a total; arguments: 0 done, 1 total. */
-    ACTIVITY_DETAIL_OF("activity.detail.of"),
     /** Progress dialog: label of the button that stops the work. */
     BUSY_CANCEL("busy.cancel"),
     /** Hover explanation of the progress dialog's Cancel button. */
@@ -153,10 +141,10 @@ public enum MessageKey {
     PROGRESS_HOW_COUNTED_LINE("progress.howCounted.line"),
     /** "How progress is counted": one kind of step not timed yet; arguments: 0 its name, 1 done, 2 planned. */
     PROGRESS_HOW_COUNTED_UNTIMED("progress.howCounted.untimed"),
+    /** "How progress is counted": a kind whose steps were forecast and not timed yet; arguments as the untimed line. */
+    PROGRESS_HOW_COUNTED_ESTIMATE("progress.howCounted.estimate"),
     /** Name of the draft steps in the note on how progress is counted. */
     PROGRESS_KIND_DRAFT("progress.kind.draft"),
-    /** Name of the check steps in the note on how progress is counted. */
-    PROGRESS_KIND_CHECK("progress.kind.check"),
     /** Name of the repair steps in the note on how progress is counted. */
     PROGRESS_KIND_REPAIR("progress.kind.repair"),
     /** Name of the re-ask steps in the note on how progress is counted. */
@@ -165,18 +153,22 @@ public enum MessageKey {
     PROGRESS_KIND_RESEND("progress.kind.resend"),
     /** Name of the chapter-summary steps in the note on how progress is counted. */
     PROGRESS_KIND_SUMMARY("progress.kind.summary"),
-    /** Name of the backward-revision step in the note on how progress is counted. */
-    PROGRESS_KIND_REVISION("progress.kind.revision"),
+    /** Name of the proofread step in the note on how progress is counted. */
+    PROGRESS_KIND_PROOFREAD("progress.kind.proofread"),
     /** Name of the stage rows in the note on how progress is counted. */
     PROGRESS_KIND_STAGE("progress.kind.stage"),
     /** Name of the model-request steps in the note on how progress is counted. */
     PROGRESS_KIND_REQUEST("progress.kind.request"),
-    /** Before Start: the time of a book from a measured speed; argument 0 is "about 2 h" or the like. */
+    /** Before Start: the time of a book measured per kind of call on this model; 0 is "about 2 h 21 min" or the like. */
     ESTIMATE_MEASURED("estimate.measured"),
-    /** Before Start: what Balanced costs against Fast when no speed was measured. */
-    ESTIMATE_RELATIVE_BALANCED("estimate.relative.balanced"),
-    /** Before Start: what Max costs against Fast when no speed was measured. */
-    ESTIMATE_RELATIVE_MAX("estimate.relative.max"),
+    /** Before Start: a range from the draft speed the model test measured; 0 is "about 2–3 h" or the like. */
+    ESTIMATE_RANGE_TEST("estimate.range.test"),
+    /** Before Start: a range from the draft speed an earlier translation measured; 0 is "about 2–3 h" or the like. */
+    ESTIMATE_RANGE_RUN("estimate.range.run"),
+    /** Hover explanation of the line labelled by {@link #ESTIMATE_RANGE_TEST}. */
+    ESTIMATE_RANGE_TEST_TIP("estimate.range.test.tip"),
+    /** Hover explanation of the line labelled by {@link #ESTIMATE_RANGE_RUN}. */
+    ESTIMATE_RANGE_RUN_TIP("estimate.range.run.tip"),
     /** Progress dialog: the switch that keeps the step the work is on selected. */
     PROGRESS_FOLLOW("progress.follow"),
     /** Hover explanation of the switch labelled by {@link #PROGRESS_FOLLOW}. */
@@ -199,6 +191,8 @@ public enum MessageKey {
     PROGRESS_STEP_DONE("progress.step.done"),
     /** Progress dialog: the result line of a step that failed. */
     PROGRESS_STEP_FAILED("progress.step.failed"),
+    /** Progress dialog: the result line of a step the person's Stop cut off. */
+    PROGRESS_STEP_STOPPED("progress.step.stopped"),
     /** Progress dialog: the result line of a step done with no model call. */
     PROGRESS_STEP_NO_CALL("progress.step.noCall"),
     /** Progress dialog: the plain sentence about the selected step; arguments: 0 its state word, 1 its name. */
@@ -211,17 +205,74 @@ public enum MessageKey {
     PROGRESS_NOTHING("progress.nothing"),
     /** Progress dialog, Simple: what an answered call with no translated text says; the raw reply is Detailed's. */
     PROGRESS_REPLY_IN_DETAILED("progress.replyInDetailed"),
-    PROGRESS_REVIEW_IN_DETAILED("progress.reviewInDetailed"),
+    /** Progress dialog, Simple: what a proofread call that changed no paragraph says. */
+    PROGRESS_PROOFREAD_UNCHANGED("progress.proofreadUnchanged"),
     /** Progress dialog, Detailed: the call line; arguments: 0 number, 1 kind words, 2 segments, 3 attempt, 4 of. */
     PROGRESS_DETAIL_CALL("progress.detail.call"),
     /** Progress dialog, Detailed: the call's clock; arguments: 0 waiting or other, 1 the clock, 2 the limit or none. */
     PROGRESS_DETAIL_CLOCK("progress.detail.clock"),
     /** Progress dialog, Detailed: the call's tokens; arguments: 0 sent, 1 written, 2 tokens a second or none. */
     PROGRESS_DETAIL_TOKENS("progress.detail.tokens"),
+    /** The mean time to first token over a stage's requests; 0 is the time, or the dash when none reported it. */
+    PROGRESS_DETAIL_MEAN_FIRST_TOKEN("progress.detail.meanFirstToken"),
     /** Progress dialog, Detailed: said of an older call whose full prompt is no longer kept. */
     PROGRESS_DETAIL_NOT_KEPT("progress.detail.notKept"),
     /** Progress dialog, Detailed: said of a step that made no model call. */
     PROGRESS_DETAIL_NO_CALL("progress.detail.noCall"),
+    /** Progress dialog: heading of the list of requests a stage sent. */
+    PROGRESS_REQUESTS_HEADING("progress.requests"),
+    /** Hover explanation of the list of a stage's requests. */
+    PROGRESS_REQUESTS_TIP("progress.requests.tip"),
+    /** Progress dialog, a request row announced and not yet seen by the model panel; argument: 0 its number. */
+    PROGRESS_REQUEST_SENDING("progress.request.sending"),
+    /** Progress dialog, a request row waiting; arguments: 0 number, 1 the clock, 2 the attempt or none. */
+    PROGRESS_REQUEST_WAITING("progress.request.waiting"),
+    /** Progress dialog, a request row answered; arguments: 0 number, 1 the time, 2 tokens a second or none. */
+    PROGRESS_REQUEST_ANSWERED("progress.request.answered"),
+    /** Progress dialog, a request row that failed; arguments: 0 number, 1 the time, 2 the attempt or none. */
+    PROGRESS_REQUEST_FAILED("progress.request.failed"),
+    /** Progress dialog, a request row that was stopped; argument: 0 its number. */
+    PROGRESS_REQUEST_STOPPED("progress.request.stopped"),
+    /** Progress dialog, an older request row whose call is no longer kept, ended well; argument: 0 its number. */
+    PROGRESS_REQUEST_DONE("progress.request.done"),
+    /** Progress dialog, an older request row whose call is no longer kept, ended badly; argument: 0 its number. */
+    PROGRESS_REQUEST_LOST("progress.request.lost"),
+    /** Progress dialog: heading of what a names call asked about. */
+    PROGRESS_INPUT_NAMES("progress.input.names"),
+    /** Progress dialog: heading of the model's reading of the names asked about. */
+    PROGRESS_OUTPUT_NAMES("progress.output.names"),
+    /** Progress dialog: heading of what a recurring-terms or glossary-review call asked about. */
+    PROGRESS_INPUT_TERMS("progress.input.terms"),
+    /** Progress dialog: heading of the model's answer about the terms asked about. */
+    PROGRESS_OUTPUT_TERMS("progress.output.terms"),
+    /** Progress dialog: heading of the names a suggest-targets call asked to render. */
+    PROGRESS_INPUT_TARGETS("progress.input.targets"),
+    /** Progress dialog: heading of the renderings the model suggested. */
+    PROGRESS_OUTPUT_TARGETS("progress.output.targets"),
+    /** Progress dialog: heading of the passages a brief call read. */
+    PROGRESS_INPUT_BRIEF("progress.input.brief"),
+    /** Progress dialog: heading of the model's suggestion for the brief. */
+    PROGRESS_OUTPUT_BRIEF("progress.output.brief"),
+    /** Progress dialog: heading of the paragraphs a consistency-pass call checked. */
+    PROGRESS_INPUT_PROOFREAD("progress.input.proofread"),
+    /** Progress dialog: heading of the model's verdict on the paragraphs checked. */
+    PROGRESS_OUTPUT_PROOFREAD("progress.output.proofread"),
+    /** Progress dialog: heading of the text a summary call read. */
+    PROGRESS_INPUT_SUMMARY("progress.input.summary"),
+    /** Progress dialog: heading of the summary the model wrote. */
+    PROGRESS_OUTPUT_SUMMARY("progress.output.summary"),
+    /** Progress dialog: heading of what a file-name call was given. */
+    PROGRESS_INPUT_FILE_NAME("progress.input.fileName"),
+    /** Progress dialog: heading of the file name the model suggested. */
+    PROGRESS_OUTPUT_FILE_NAME("progress.output.fileName"),
+    /** Progress dialog, Detailed: title of the block holding the request body as it went on the wire. */
+    PROGRESS_WIRE_REQUEST("progress.wire.request"),
+    /** Progress dialog, Detailed: title of the block holding the reply body as it came back. */
+    PROGRESS_WIRE_REPLY("progress.wire.reply"),
+    /** Progress dialog: one line asked beside the answer read for it; arguments: 0 what was asked, 1 the answer. */
+    PROGRESS_ITEM_LINE("progress.item.line"),
+    /** Progress dialog: the answer shown for a line the reply gave nothing for. */
+    PROGRESS_ITEM_NO_ANSWER("progress.item.noAnswer"),
     /** Progress dialog: the footer button that puts long work in the background. */
     PROGRESS_BACKGROUND("progress.background"),
     /** Hover explanation of the button labelled by {@link #PROGRESS_BACKGROUND}. */
@@ -276,6 +327,8 @@ public enum MessageKey {
     CONFIRM_STOP_TITLE("confirm.stop.title"),
     /** Body of the stop-the-run question. */
     CONFIRM_STOP_TEXT("confirm.stop.text"),
+    /** The Stop question's text during Proofread; arguments as {@link #CONFIRM_STOP_TEXT}, the third proofread now. */
+    CONFIRM_STOP_TEXT_PROOFREAD("confirm.stop.text.proofread"),
     /** Confirming button of the stop-the-run question. */
     CONFIRM_STOP_YES("confirm.stop.yes"),
     /** Hover explanation of the control labelled by {@link #CONFIRM_STOP_YES}. */
@@ -397,6 +450,14 @@ public enum MessageKey {
     SHELL_RUN_MODE("shell.run.mode"),
     /** Hover explanation of the text shown by {@link #SHELL_RUN_MODE}. */
     SHELL_RUN_MODE_TIP("shell.run.mode.tip"),
+    /** Hover explanation of the stage chip in the title bar and the stages on the Translating strip. */
+    SHELL_RUN_STAGE_TIP("run.stage.name.tip"),
+    /** A run stage's name; argument 0 is the stage's code (prep, translate, proofread). */
+    RUN_STAGE_NAME("run.stage.name"),
+    /** The Proofread stage at Fast, which makes no model call; argument 0 is the stage's name. */
+    RUN_STAGE_PROOFREAD_FAST("run.stage.proofread.fast"),
+    /** The Proofread stage at Max with its round; argument 0 is the stage's name, 1 the round (1 or 2). */
+    RUN_STAGE_PROOFREAD_ROUND("run.stage.proofread.round"),
     /** A duration of an hour or more; argument 0 is the hours, argument 1 the two-digit minutes, both Strings. */
     DURATION_HM("duration.hm"),
     /** A duration of a minute or more, under an hour; argument 0 is the minutes, a String. */
@@ -409,6 +470,10 @@ public enum MessageKey {
     DURATION_ABOUT_H("duration.about.h"),
     /** A rounded time left of hours and minutes; arguments are the hours and the minutes, Strings. */
     DURATION_ABOUT_HM("duration.about.hm"),
+    /** A range of whole hours: "about 2–3 h"; 0 and 1 are the hours. */
+    DURATION_ABOUT_RANGE_H("duration.about.range.h"),
+    /** A range of minutes: "about 5–15 min"; 0 and 1 are the minutes. */
+    DURATION_ABOUT_RANGE_M("duration.about.range.m"),
     /** Label of a button that dismisses a dialog. */
     COMMON_CLOSE("common.close"),
     /** Hover explanation of the control labelled by {@link #COMMON_CLOSE}. */
@@ -421,28 +486,30 @@ public enum MessageKey {
     COMMON_CANCEL_TIP("common.cancel.tip"),
     /** Activity-log entry for an accepted segment; argument 0 is the segment id, passed as a String so it is never grouped like a number. */
     LOG_ACCEPTED("log.accepted"),
-    /** Activity-log entry for an answered model-call attempt; arguments: 0 the call's name, 1 the locator part (empty or {@code " · ch7 · p42"}), 2 the repair round or {@code 0}, 3 the attempt, 4 the time it took as {@code m:ss}; all Strings. */
+    /** Activity-log entry for an answered model-call attempt; arguments: 0 the call's name, 1 the locator part (empty or {@code " · ch7 · p42"}), 2 the attempt, 3 the time it took as {@code m:ss}; all Strings. */
     LOG_MODEL_CALL("log.modelCall"),
-    /** Activity-log entry for a failed model-call attempt; arguments as {@link #LOG_MODEL_CALL}, and 5 the error code; all Strings. */
+    /** Activity-log entry for a failed model-call attempt; arguments as {@link #LOG_MODEL_CALL}, and 4 the error code; all Strings. */
     LOG_CALL_FAILED("log.callFailed"),
     /** Activity-log line for a model call the person's pause or stop interrupted; arguments as {@link #LOG_CALL_FAILED} without the error code. */
     LOG_CALL_PAUSED("log.callPaused"),
-    /** Activity-log entry for a segment entering a repair round; arguments: 0 the locator, 1 the round, 2 the rounds allowed, 3 the finding it repairs or {@code none}; all Strings. */
-    LOG_ROUND("log.round"),
-    /** The name of a model call's kind; argument 0 is the kind's lower-case token, such as {@code review} or {@code directed_fix}. */
+    /** The name of a model call's kind; argument 0 is the kind's lower-case token, such as {@code review} or {@code repair}. */
     RUN_CALL_KIND("run.callKind"),
     /** Activity-log entry for an applied glossary; argument 0 is the segment id, passed as a String so it is never grouped like a number. */
     LOG_GLOSSARY_APPLIED("log.glossaryApplied"),
-    /** Activity-log entry for an updated rolling summary; argument 0 is the segment id, passed as a String so it is never grouped like a number. */
-    LOG_SUMMARY_UPDATED("log.summaryUpdated"),
+    /** Activity-log entry for a kept chapter summary; argument 0 is the chapter's number, passed as a String so it is never grouped like a number. */
+    LOG_CHAPTER_SUMMARY_KEPT("log.chapterSummaryKept"),
+    /** Activity-log entry for a read proofread window; arguments: 0 its span, 1 kept, 2 proposed, 3 rejected, 4 unchanged, each passed as a String. */
+    LOG_PROOFREAD("log.proofread"),
     /** Activity-log entry for a retried segment; argument 0 is the segment id, passed as a String so it is never grouped like a number, argument 1 the attempt number. */
     LOG_RETRIED("log.retried"),
     /** Activity-log entry for a recoverable segment error; argument 0 is the segment id, passed as a String so it is never grouped like a number. */
     LOG_SEGMENT_ERROR("log.segmentError"),
     /** Activity-log entry for a step of the automatic recovery; arguments: 0 the attempt, 1 the next try as {@code HH:mm:ss} or empty, 2 the last probe's code or {@code none}, 3 {@code waiting}, {@code gaveUp} or {@code held}; all Strings. */
     LOG_WAITING("log.waiting"),
-    /** Activity-log entry for a run milestone; argument 0 is one of the tokens stageStarted, paused, resumed or finished, selecting the catalogue's own wording. */
+    /** Activity-log entry for a run milestone; argument 0 is one of the tokens paused, resumed or finished, selecting the catalogue's own wording. */
     LOG_MILESTONE("log.milestone"),
+    /** Activity-log entry naming the run stage that started, worded as the stage chip words it. */
+    LOG_STAGE_STARTED("log.stageStarted"),
     /** Label of the error dialog's button that runs the failed action again. */
     ERROR_RETRY("error.retry"),
     /** Hover explanation of the control labelled by {@link #ERROR_RETRY}. */
@@ -578,7 +645,7 @@ public enum MessageKey {
     SETTINGS_MODELS_LISTING("settings.models.listing"),
     /** Models tab: No models yet. Add a provider on the Providers tab. */
     SETTINGS_MODELS_EMPTY("settings.models.empty"),
-    /** Models tab: Found out from the program: &#123;0&#125; · structured answers: &#123;1&#125;. */
+    /** Models tab: Found out from the program: &#123;0&#125;. */
     SETTINGS_MODELS_FOUND("settings.models.found"),
     /** Models tab: it can read &#123;0, plural, one &#123;# token&#125; other &#123;# tokens&#125;&#125; at once */
     SETTINGS_MODELS_FOUND_READ("settings.models.found.read"),
@@ -586,14 +653,22 @@ public enum MessageKey {
     SETTINGS_MODELS_FOUND_LOADED("settings.models.found.loaded"),
     /** Models tab: it did not say how much it can read at once */
     SETTINGS_MODELS_FOUND_UNKNOWN("settings.models.found.unknown"),
-    /** Models tab: yes */
-    SETTINGS_MODELS_FOUND_YES("settings.models.found.yes"),
-    /** Models tab: no */
-    SETTINGS_MODELS_FOUND_NO("settings.models.found.no"),
-    /** Models tab: not checked yet — Test inference on the Providers tab checks it */
+    /** Models tab: structured answers: not checked yet — Test inference on the Providers tab checks it */
     SETTINGS_MODELS_FOUND_UNCHECKED("settings.models.found.unchecked"),
+    /** Models tab: one call kind's structured answer, as schema or plain JSON. */
+    SETTINGS_MODELS_FOUND_STRUCTURED_ROW("settings.models.found.structured.row"),
+    /** Models tab: the short name of a call kind in the structured-answers rows. */
+    SETTINGS_MODELS_FOUND_STRUCTURED_KIND("settings.models.found.structured.kind"),
     /** Models tab: Asking the program about this model… */
     SETTINGS_MODELS_FOUND_LOADING("settings.models.found.loading"),
+    /** Models tab: BookLoom's verdict: &#123;0, select, ...&#125; */
+    SETTINGS_MODELS_VERDICT("settings.models.verdict"),
+    /** Models tab: Window: set in Ollama, not by BookLoom */
+    SETTINGS_MODELS_FOUND_CONTEXT_OLLAMA_V1("settings.models.found.context.ollamaV1"),
+    /** Models tab: loaded in LM Studio: &#123;0, number, integer&#125; */
+    SETTINGS_MODELS_FOUND_CONTEXT_LM_STUDIO("settings.models.found.context.lmStudio"),
+    /** Models tab: set at llama-server start: &#123;0, number, integer&#125; per slot */
+    SETTINGS_MODELS_FOUND_CONTEXT_LLAMA_SERVER("settings.models.found.context.llamaServer"),
     /** Models tab: Temperature */
     SETTINGS_MODELS_TEMPERATURE("settings.models.temperature"),
     /** Models tab: — how varied the wording is */
@@ -620,6 +695,82 @@ public enum MessageKey {
     SETTINGS_MODELS_TEMPERATURE_HINT_VALUE("settings.models.temperature.hint.value"),
     /** Models tab: Not sent at all — for models that refuse it, such as some newer OpenAI and Anthropic models. The model uses its own setting. */
     SETTINGS_MODELS_TEMPERATURE_HINT_OMIT("settings.models.temperature.hint.omit"),
+    /** Models tab: Thinking */
+    SETTINGS_MODELS_THINKING("settings.models.thinking"),
+    /** Models tab: — whether the model reasons before it answers */
+    SETTINGS_MODELS_THINKING_SUB("settings.models.thinking.sub"),
+    /** Models tab: Reading what thinking control this model offers... */
+    SETTINGS_MODELS_THINKING_READING("settings.models.thinking.reading"),
+    /** Models tab: This model can turn thinking on and off. */
+    SETTINGS_MODELS_THINKING_BOOLEAN("settings.models.thinking.boolean"),
+    /** Models tab: This model offers thinking levels and can turn thinking off. */
+    SETTINGS_MODELS_THINKING_LEVELS("settings.models.thinking.levels"),
+    /** Models tab: This model has no thinking control, so BookLoom sends none. */
+    SETTINGS_MODELS_THINKING_NONE("settings.models.thinking.none"),
+    /** Models tab: BookLoom cannot tell whether this model can turn thinking off, so it sends no thinking control. */
+    SETTINGS_MODELS_THINKING_UNKNOWN("settings.models.thinking.unknown"),
+    /** Models tab: Always thinks; BookLoom sends the lowest level, {0}. */
+    SETTINGS_MODELS_THINKING_ALWAYS_LEVEL("settings.models.thinking.alwaysLevel"),
+    /** Models tab: Always thinks; this cannot be changed. */
+    SETTINGS_MODELS_THINKING_ALWAYS_FIXED("settings.models.thinking.alwaysFixed"),
+    /** Models tab: BookLoom sends thinking off for draft, repair, proofread, names and brief calls. */
+    SETTINGS_MODELS_THINKING_SENDS("settings.models.thinking.sends"),
+    /** Models tab: Recommended (off) */
+    SETTINGS_MODELS_THINKING_RECOMMENDED("settings.models.thinking.recommended"),
+    /** Models tab: Thinking stays off on every call: fastest, and no answer is spent on reasoning. */
+    SETTINGS_MODELS_THINKING_RECOMMENDED_TIP("settings.models.thinking.recommended.tip"),
+    /** Models tab: Allow on proofreading and names */
+    SETTINGS_MODELS_THINKING_ALLOW("settings.models.thinking.allow"),
+    /** Models tab: Drafts, repairs and the brief stay off; the proofread and the names pass may think, which is slower. */
+    SETTINGS_MODELS_THINKING_ALLOW_TIP("settings.models.thinking.allow.tip"),
+    /** Models tab: Always */
+    SETTINGS_MODELS_THINKING_ALWAYS("settings.models.thinking.always"),
+    /** Models tab: Every call thinks first: slowest, and room for the reasoning is added to every answer. */
+    SETTINGS_MODELS_THINKING_ALWAYS_TIP("settings.models.thinking.always.tip"),
+    /** Models tab: Sampling */
+    SETTINGS_MODELS_SAMPLING("settings.models.sampling"),
+    /** Models tab: — how adventurous the wording is */
+    SETTINGS_MODELS_SAMPLING_SUB("settings.models.sampling.sub"),
+    /** Models tab: what BookLoom sends under the profile's default. */
+    SETTINGS_MODELS_SAMPLING_SENDS_PROFILE("settings.models.sampling.sends.profile"),
+    /** Models tab: what every request carries under Custom; argument 0 lists the typed values. */
+    SETTINGS_MODELS_SAMPLING_SENDS_CUSTOM("settings.models.sampling.sends.custom"),
+    /** Models tab: Custom chosen with nothing typed yet. */
+    SETTINGS_MODELS_SAMPLING_SENDS_CUSTOM_NONE("settings.models.sampling.sends.customNone"),
+    /** Models tab: Profile default */
+    SETTINGS_MODELS_SAMPLING_PROFILE("settings.models.sampling.profile"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_MODELS_SAMPLING_PROFILE}. */
+    SETTINGS_MODELS_SAMPLING_PROFILE_TIP("settings.models.sampling.profile.tip"),
+    /** Models tab: Custom */
+    SETTINGS_MODELS_SAMPLING_CUSTOM("settings.models.sampling.custom"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_MODELS_SAMPLING_CUSTOM}. */
+    SETTINGS_MODELS_SAMPLING_CUSTOM_TIP("settings.models.sampling.custom.tip"),
+    /** Models tab: the label of the Custom temperature field. */
+    SETTINGS_MODELS_SAMPLING_TEMPERATURE("settings.models.sampling.temperature"),
+    /** Hover explanation of the Custom temperature field. */
+    SETTINGS_MODELS_SAMPLING_TEMPERATURE_TIP("settings.models.sampling.temperature.tip"),
+    /** Models tab: the label of the Custom top_k field. */
+    SETTINGS_MODELS_SAMPLING_TOP_K("settings.models.sampling.topK"),
+    /** Models tab: the label of the Custom top_p field. */
+    SETTINGS_MODELS_SAMPLING_TOP_P("settings.models.sampling.topP"),
+    /** Models tab: the label of the Custom min_p field. */
+    SETTINGS_MODELS_SAMPLING_MIN_P("settings.models.sampling.minP"),
+    /** Hover explanation of the Custom top_k field. */
+    SETTINGS_MODELS_SAMPLING_TOP_K_TIP("settings.models.sampling.topK.tip"),
+    /** Hover explanation of the Custom top_p field. */
+    SETTINGS_MODELS_SAMPLING_TOP_P_TIP("settings.models.sampling.topP.tip"),
+    /** Hover explanation of the Custom min_p field. */
+    SETTINGS_MODELS_SAMPLING_MIN_P_TIP("settings.models.sampling.minP.tip"),
+    /** Models tab: the line under the Custom fields. */
+    SETTINGS_MODELS_SAMPLING_HINT("settings.models.sampling.hint"),
+    /** Models tab finding: the Custom temperature is not a number from 0 to 2. */
+    SETTINGS_MODELS_ERROR_SAMPLING_TEMPERATURE("settings.models.error.samplingTemperature"),
+    /** Models tab finding: the Custom top_k is not a whole number above zero. */
+    SETTINGS_MODELS_ERROR_SAMPLING_TOP_K("settings.models.error.samplingTopK"),
+    /** Models tab finding: the Custom top_p is not above 0 and at most 1. */
+    SETTINGS_MODELS_ERROR_SAMPLING_TOP_P("settings.models.error.samplingTopP"),
+    /** Models tab finding: the Custom min_p is not from 0 to 1. */
+    SETTINGS_MODELS_ERROR_SAMPLING_MIN_P("settings.models.error.samplingMinP"),
     /** Models tab: Settings this model refused */
     SETTINGS_MODELS_REFUSED("settings.models.refused"),
     /** Models tab: — learned automatically */
@@ -632,6 +783,12 @@ public enum MessageKey {
     SETTINGS_MODELS_REFUSED_OMITTED("settings.models.refused.omitted"),
     /** Models tab: Refused on &#123;0, date, ::MMMd&#125;. BookLoom now sends &#123;1&#125; instead. */
     SETTINGS_MODELS_REFUSED_INSTEAD("settings.models.refused.instead"),
+    /** Models tab: Refused on a day; the system text now starts the first user message. */
+    SETTINGS_MODELS_REFUSED_FOLDED("settings.models.refused.folded"),
+    /** Models tab: Refused on a day; the answer's shape is now stated in the prompt only. */
+    SETTINGS_MODELS_REFUSED_PROMPT_ONLY("settings.models.refused.promptOnly"),
+    /** Models tab: what one refusal covers: the whole model, or one kind of call named in words. */
+    SETTINGS_MODELS_REFUSED_SCOPE("settings.models.refused.scope"),
     /** Models tab: Send again */
     SETTINGS_MODELS_REFUSED_SEND("settings.models.refused.send"),
     /** Models tab: Forgets the refusal at once: the next request to this model carries the setting again. */
@@ -642,6 +799,8 @@ public enum MessageKey {
     SETTINGS_MODELS_CONTEXT("settings.models.context"),
     /** Models tab: Sets how many tokens one request may hold for this model. */
     SETTINGS_MODELS_CONTEXT_TIP("settings.models.context.tip"),
+    /** Models tab: who sets the window where the engine does, so the field is read-only. */
+    SETTINGS_MODELS_CONTEXT_ENGINE("settings.models.context.engine"),
     /** Models tab: How much text one request may hold. Filled in from what the program loaded; larger is slower and uses more memory. */
     SETTINGS_MODELS_CONTEXT_HINT("settings.models.context.hint"),
     /** Models tab: num_ctx (Ollama) */
@@ -654,6 +813,8 @@ public enum MessageKey {
     SETTINGS_MODELS_LIMIT_TIP("settings.models.limit.tip"),
     /** Models tab: Off (recommended): each request is limited by its expected length. */
     SETTINGS_MODELS_LIMIT_HINT("settings.models.limit.hint"),
+    /** Models tab: the server ignored the answer-length limit on the last Advanced features check. */
+    SETTINGS_MODELS_LIMIT_IGNORED("settings.models.limit.ignored"),
     /** Models tab: max output tokens */
     SETTINGS_MODELS_LIMIT_TECH("settings.models.limit.tech"),
     /** Models tab: Advanced */
@@ -870,6 +1031,8 @@ public enum MessageKey {
     SETTINGS_TEST_MODELS_TIP("settings.test.models.tip"),
     /** Label of the action that also asks the chosen model for a short answer. */
     SETTINGS_TEST_INFERENCE("settings.test.inference"),
+    /** Label of the button of the optional check of what the server honours for the chosen model. */
+    SETTINGS_TEST_ADVANCED("settings.test.advanced"),
     /** Hover explanation of the control labelled by {@link #SETTINGS_TEST_INFERENCE}. */
     SETTINGS_TEST_INFERENCE_TIP("settings.test.inference.tip"),
     /** A duration under one second; argument 0 is the whole milliseconds. */
@@ -886,6 +1049,8 @@ public enum MessageKey {
     SETTINGS_STAGE_MODELS("settings.stage.models"),
     /** Name of the third check stage: does the model answer a short request. */
     SETTINGS_STAGE_INFERENCE("settings.stage.inference"),
+    /** Name of the optional fourth check stage: what the server honours for the chosen model. */
+    SETTINGS_STAGE_ADVANCED("settings.stage.advanced"),
     /** Outcome word of a stage that passed. */
     SETTINGS_STATUS_PASSED("settings.status.passed"),
     /** Outcome word of a stage that passed with a limitation. */
@@ -900,16 +1065,6 @@ public enum MessageKey {
     SETTINGS_MODEL_LISTING("settings.model.listing"),
     /** Note beside the model entry when no list was obtained; says the entry still accepts a typed name. */
     SETTINGS_MODEL_NO_LIST("settings.model.noList"),
-    /** Note under the model entry for the recommended model, Gemma 4 26B. */
-    SETTINGS_ADVICE_GEMMA_26B("settings.advice.gemma26b"),
-    /** Note under the model entry for Gemma 4 E4B, the smallest model that translates a book acceptably. */
-    SETTINGS_ADVICE_GEMMA_E4B("settings.advice.gemmaE4b"),
-    /** Warning under the model entry for Gemma 4 E2B, which is too small. */
-    SETTINGS_ADVICE_GEMMA_E2B("settings.advice.gemmaE2b"),
-    /** Warning under the model entry for the gpt-oss models. */
-    SETTINGS_ADVICE_GPT_OSS("settings.advice.gptOss"),
-    /** Note under the model entry on LM Studio: slower, no streaming, more control codes. */
-    SETTINGS_ADVICE_LM_STUDIO("settings.advice.lmStudio"),
     /** Label of the theme selector in the appearance tab. */
     APPEARANCE_THEME_LABEL("appearance.theme.label"),
     /** Option of the theme selector that always uses the light block. */
@@ -928,10 +1083,6 @@ public enum MessageKey {
     APPEARANCE_THEME_HINT("appearance.theme.hint"),
     /** Line under the Appearance tab saying a change takes effect without a Save button. */
     SETTINGS_INSTANT("settings.instant"),
-    /** Line under the Generation tab saying when a change takes effect. */
-    SETTINGS_GENERATION_INSTANT("settings.generation.instant"),
-    /** Note shown on the Generation tab while a translation is under way. */
-    SETTINGS_GENERATION_RUNNING("settings.generation.running"),
     /** Toast after a backup copy was written; argument 0 is the file's name. */
     SETTINGS_STORAGE_BACKUP_SAVED("settings.storage.backup.saved"),
     /** Line under the Automation tab saying when a change takes effect. */
@@ -976,12 +1127,6 @@ public enum MessageKey {
     SETTINGS_AUTOMATION_OPEN_DESK("settings.automation.openDesk"),
     /** Hover explanation of the control labelled by {@link #SETTINGS_AUTOMATION_OPEN_DESK}. */
     SETTINGS_AUTOMATION_OPEN_DESK_TIP("settings.automation.openDesk.tip"),
-    /** Switch: the last-check default. */
-    SETTINGS_AUTOMATION_LAST_CHECK("settings.automation.lastCheck"),
-    /** Hover explanation of the control labelled by {@link #SETTINGS_AUTOMATION_LAST_CHECK}. */
-    SETTINGS_AUTOMATION_LAST_CHECK_TIP("settings.automation.lastCheck.tip"),
-    /** Hint shown while the last-check default has not been written. */
-    SETTINGS_AUTOMATION_LAST_CHECK_UNSET("settings.automation.lastCheck.unset"),
     /** Switch: keep the computer awake while a model works. */
     SETTINGS_AUTOMATION_KEEP_AWAKE("settings.automation.keepAwake"),
     /** Hover explanation of the control labelled by {@link #SETTINGS_AUTOMATION_KEEP_AWAKE}. */
@@ -1050,77 +1195,51 @@ public enum MessageKey {
     SETTINGS_STORAGE_DETAILED_DEV("settings.storage.detailed.dev"),
     /** Line shown when the detailed log switch could not be written. */
     SETTINGS_STORAGE_SAVE_FAILED("settings.storage.saveFailed"),
-    /** Line shown when a Generation choice could not be stored. */
-    SETTINGS_GENERATION_SAVE_FAILED("settings.generation.saveFailed"),
     /** Title of the card that lists what each quality setting does. */
     SETTINGS_GENERATION_QUALITY_TITLE("settings.generation.quality.title"),
     /** Where the quality is chosen, shown beside the title of the quality card. */
     SETTINGS_GENERATION_QUALITY_SUB("settings.generation.quality.sub"),
-    /** Row of the quality table: the most segments in one request. */
-    SETTINGS_GENERATION_QUALITY_BATCH("settings.generation.quality.batch"),
-    /** Cell of the batch row; 0 is the segment cap. */
-    SETTINGS_GENERATION_QUALITY_UP_TO("settings.generation.quality.upTo"),
-    /** Row of the quality table: earlier translated segments sent with a draft. */
-    SETTINGS_GENERATION_QUALITY_PRECEDING("settings.generation.quality.preceding"),
-    /** Row of the quality table: directed-fix rounds. */
+    /** Line under the quality table: the dial means the same for every model. */
+    SETTINGS_GENERATION_QUALITY_SAME("settings.generation.quality.same"),
+    /** Row of the quality table: what a segment that fails a check is given. */
     SETTINGS_GENERATION_QUALITY_REPAIR("settings.generation.quality.repair"),
-    /** Row of the quality table: reviewer passes. */
-    SETTINGS_GENERATION_QUALITY_REVIEWS("settings.generation.quality.reviews"),
-    /** Row of the quality table: the backward revision. */
-    SETTINGS_GENERATION_QUALITY_BACKWARD("settings.generation.quality.backward"),
-    /** Row of the quality table: the model-written summary. */
-    SETTINGS_GENERATION_QUALITY_SUMMARY("settings.generation.quality.summary"),
-    /** Cell of the quality table for a step that runs. */
-    SETTINGS_GENERATION_QUALITY_YES("settings.generation.quality.yes"),
-    /** Cell of the quality table for a step that does not run. */
-    SETTINGS_GENERATION_QUALITY_NO("settings.generation.quality.no"),
-    /** Label of the thinking-level choice. */
-    SETTINGS_GENERATION_THINKING("settings.generation.thinking"),
-    /** Thinking level: none. */
-    SETTINGS_GENERATION_THINKING_OFF("settings.generation.thinking.off"),
-    /** Hover explanation of the control labelled by {@link #SETTINGS_GENERATION_THINKING_OFF}. */
-    SETTINGS_GENERATION_THINKING_OFF_TIP("settings.generation.thinking.off.tip"),
-    /** Thinking level: brief. */
-    SETTINGS_GENERATION_THINKING_LOW("settings.generation.thinking.low"),
-    /** Hover explanation of the control labelled by {@link #SETTINGS_GENERATION_THINKING_LOW}. */
-    SETTINGS_GENERATION_THINKING_LOW_TIP("settings.generation.thinking.low.tip"),
-    /** Thinking level: full. */
-    SETTINGS_GENERATION_THINKING_ON("settings.generation.thinking.on"),
-    /** Hover explanation of the control labelled by {@link #SETTINGS_GENERATION_THINKING_ON}. */
-    SETTINGS_GENERATION_THINKING_ON_TIP("settings.generation.thinking.on.tip"),
-    /** Explanation under the thinking-level choice. */
-    SETTINGS_GENERATION_THINKING_HINT("settings.generation.thinking.hint"),
-    /** Technical names of the thinking setting, shown with technical details on. */
-    SETTINGS_GENERATION_THINKING_TECH("settings.generation.thinking.tech"),
-    /** Note that a variable or property overrides a choice; 0 is its name. */
-    SETTINGS_GENERATION_OVERRIDE("settings.generation.override"),
-    /** Label of the sampling choice. */
-    SETTINGS_GENERATION_SAMPLING("settings.generation.sampling"),
-    /** Sampling mode: only the temperature is sent. */
-    SETTINGS_GENERATION_SAMPLING_DEFAULTS("settings.generation.sampling.defaults"),
-    /** Hover explanation of the control labelled by {@link #SETTINGS_GENERATION_SAMPLING_DEFAULTS}. */
-    SETTINGS_GENERATION_SAMPLING_DEFAULTS_TIP("settings.generation.sampling.defaults.tip"),
-    /** Sampling mode: BookLoom sends its own sampling. */
-    SETTINGS_GENERATION_SAMPLING_TUNED("settings.generation.sampling.tuned"),
-    /** Hover explanation of the control labelled by {@link #SETTINGS_GENERATION_SAMPLING_TUNED}. */
-    SETTINGS_GENERATION_SAMPLING_TUNED_TIP("settings.generation.sampling.tuned.tip"),
-    /** Explanation under the sampling choice. */
-    SETTINGS_GENERATION_SAMPLING_HINT("settings.generation.sampling.hint"),
+    /** Cell of the repair row: one repair call. */
+    SETTINGS_GENERATION_QUALITY_REPAIR_ONE("settings.generation.quality.repair.one"),
+    /** Cell of the repair row: only lost formatting marks are drafted again. */
+    SETTINGS_GENERATION_QUALITY_REPAIR_MARKS_ONLY("settings.generation.quality.repair.marks_only"),
+    /** Row of the quality table: how far the Proofread stage reads. */
+    SETTINGS_GENERATION_QUALITY_PROOFREAD("settings.generation.quality.proofread"),
+    /** Cell of the proofread row: code only, the marks go to the review desk. */
+    SETTINGS_GENERATION_QUALITY_PROOFREAD_NONE("settings.generation.quality.proofread.none"),
+    /** Cell of the proofread row: the marked passages are read. */
+    SETTINGS_GENERATION_QUALITY_PROOFREAD_MARKED("settings.generation.quality.proofread.marked"),
+    /** Cell of the proofread row: the marked passages, then every story paragraph. */
+    SETTINGS_GENERATION_QUALITY_PROOFREAD_WHOLE("settings.generation.quality.proofread.whole"),
+    /** Row of the quality table: the extra model calls the dial costs, counted in calls. */
+    SETTINGS_GENERATION_QUALITY_EXTRA("settings.generation.quality.extra"),
+    /** Cell of the extra-calls row: the dial makes none. */
+    SETTINGS_GENERATION_QUALITY_EXTRA_NONE("settings.generation.quality.extra.none"),
+    /** Cell of the extra-calls row: one call per marked passage. */
+    SETTINGS_GENERATION_QUALITY_EXTRA_MARKED("settings.generation.quality.extra.marked"),
+    /** Cell of the extra-calls row: marked passages plus one call per batch of paragraphs; argument 0 is the batch. */
+    SETTINGS_GENERATION_QUALITY_EXTRA_WHOLE("settings.generation.quality.extra.whole"),
     /** Title of the card listing the fixed time limits. */
     SETTINGS_GENERATION_LIMITS("settings.generation.limits"),
     /** Tag saying the limits cannot be changed. */
     SETTINGS_GENERATION_LIMITS_FIXED("settings.generation.limits.fixed"),
-    /** Time-limit row: a reviewer call. */
-    SETTINGS_GENERATION_LIMITS_CHECK("settings.generation.limits.check"),
     /** Time-limit row: the helper calls. */
     SETTINGS_GENERATION_LIMITS_HELPER("settings.generation.limits.helper"),
-    /** Time-limit row: drafting calls. */
+    /** Time-limit row: every call without a fixed limit, which waits by its expected length. */
     SETTINGS_GENERATION_LIMITS_DRAFT("settings.generation.limits.draft"),
+    /** Time-limit row: a streamed reply that sends nothing. */
+    SETTINGS_GENERATION_LIMITS_SILENCE("settings.generation.limits.silence"),
+    /** The helper limit; 0 is the number of seconds. */
+    SETTINGS_GENERATION_LIMITS_HELPER_VALUE("settings.generation.limits.helper.value"),
     /** Time-limit row: attempts per call. */
     SETTINGS_GENERATION_LIMITS_TRIES("settings.generation.limits.tries"),
     /** A limit in seconds; 0 is the number of seconds. */
     SETTINGS_GENERATION_LIMITS_SECONDS("settings.generation.limits.seconds"),
-    /** The drafting limit; 0 is the longest allowed in minutes. */
+    /** The limit by length; 0 is the seconds per expected token, 1 the most seconds. */
     SETTINGS_GENERATION_LIMITS_DRAFT_VALUE("settings.generation.limits.draft.value"),
     /** The attempts limit; 0 is the most tries. */
     SETTINGS_GENERATION_LIMITS_TRIES_VALUE("settings.generation.limits.tries.value"),
@@ -1279,6 +1398,8 @@ public enum MessageKey {
     BRIEF_SUGGEST_NO_MODEL("brief.suggest.noModel"),
     /** Banner over the brief while a translation is at work: why nothing can be changed. */
     BRIEF_READ_ONLY_BANNER("brief.readOnly.banner"),
+    /** Banner after a saved Brief key change; argument 0 is how many decided segments now need a look. */
+    BRIEF_RECHECK_BANNER("brief.recheck.banner"),
     /** Second line of the read-only banner: when a change takes effect. */
     BRIEF_READ_ONLY_NOTE("brief.readOnly.note"),
     /** Button on the read-only banner that pauses the translation. */
@@ -1327,6 +1448,8 @@ public enum MessageKey {
     BRIEF_DECIDES_NARRATOR("brief.decides.narrator"),
     /** Row of the decided fields: the readers and the voice. */
     BRIEF_DECIDES_READERS("brief.decides.readers"),
+    /** Row of the decided fields: whether the chapters tell one story or separate ones. */
+    BRIEF_DECIDES_STORY_SHAPE("brief.decides.storyShape"),
     /** How many of the samples read gave the decided value: agreeing, samples. */
     BRIEF_DECIDES_AGREE("brief.decides.agree"),
     /** Mark on a tally shown before the last step has decided. */
@@ -1369,6 +1492,10 @@ public enum MessageKey {
     BRIEF_EVIDENCE_UNCERTAIN("brief.evidence.uncertain"),
     /** Hover explanation of the chip labelled by {@link #BRIEF_EVIDENCE_UNCERTAIN}. */
     BRIEF_EVIDENCE_UNCERTAIN_TIP("brief.evidence.uncertain.tip"),
+    /** The line under a field that holds only the model's best guess. */
+    BRIEF_EVIDENCE_LIKELY("brief.evidence.likely"),
+    /** Hover explanation of the line labelled by {@link #BRIEF_EVIDENCE_LIKELY}. */
+    BRIEF_EVIDENCE_LIKELY_TIP("brief.evidence.likely.tip"),
     /** Heading of the tone-and-style card. */
     BRIEF_CARD_TONE("brief.card.tone"),
     /** Heading of the translation-policies card. */
@@ -1446,6 +1573,24 @@ public enum MessageKey {
     BRIEF_TONE_NARRATOR_GENDER("brief.tone.narrator.gender"),
     /** Hover explanation of the control labelled by {@link #BRIEF_TONE_NARRATOR_GENDER}. */
     BRIEF_TONE_NARRATOR_GENDER_TIP("brief.tone.narrator.gender.tip"),
+    /** Label of the tone card's story-shape choice. */
+    BRIEF_TONE_STORY_SHAPE("brief.tone.storyShape"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_TONE_STORY_SHAPE}. */
+    BRIEF_TONE_STORY_SHAPE_TIP("brief.tone.storyShape.tip"),
+    /** Story shape: the chapters continue one story. */
+    BRIEF_STORY_SHAPE_ONE("brief.storyShape.one"),
+    /** Story shape: the chapters are separate stories. */
+    BRIEF_STORY_SHAPE_SEPARATE("brief.storyShape.separate"),
+    /** Label of the Chapter summaries switch on the Book Brief and the ready card. */
+    BRIEF_SUMMARIES("brief.summaries"),
+    /** Hover explanation of the switch labelled by {@link #BRIEF_SUMMARIES}. */
+    BRIEF_SUMMARIES_TIP("brief.summaries.tip"),
+    /** Line under the switch: one story suggests it on. */
+    BRIEF_SUMMARIES_SUGGESTED_ON("brief.summaries.suggested.on"),
+    /** Line under the switch: separate stories suggest it off. */
+    BRIEF_SUMMARIES_SUGGESTED_OFF("brief.summaries.suggested.off"),
+    /** How many finished chapters are summarised before the next passage once the switch is on: count. */
+    BRIEF_SUMMARIES_PENDING("brief.summaries.pending"),
     /** Notice on the tone card: the source is told in the first person and the narrator's gender is not chosen. */
     BRIEF_NARRATOR_NOTICE("brief.narrator.notice"),
     /** Hover explanation of the notice labelled by {@link #BRIEF_NARRATOR_NOTICE}. */
@@ -1456,10 +1601,54 @@ public enum MessageKey {
     BRIEF_NARRATOR_GENDER_MALE("brief.narrator.gender.male"),
     /** Narrator gender option: female. */
     BRIEF_NARRATOR_GENDER_FEMALE("brief.narrator.gender.female"),
-    /** The narrator gender the style suggestion proved from the book, marked so it is not taken for the person's. */
-    BRIEF_NARRATOR_GENDER_SUGGESTED("brief.narrator.gender.suggested"),
-    /** Hover explanation of the line labelled by {@link #BRIEF_NARRATOR_GENDER_SUGGESTED}. */
-    BRIEF_NARRATOR_GENDER_SUGGESTED_TIP("brief.narrator.gender.suggested.tip"),
+    /** The narrator gender the style suggestion proved from the book's own words. */
+    BRIEF_NARRATOR_GENDER_FROM_BOOK("brief.narrator.gender.fromBook"),
+    /** Hover explanation of the line labelled by {@link #BRIEF_NARRATOR_GENDER_FROM_BOOK}. */
+    BRIEF_NARRATOR_GENDER_FROM_BOOK_TIP("brief.narrator.gender.fromBook.tip"),
+    /** The narrator gender the model gave with nothing the code could check, marked likely. */
+    BRIEF_NARRATOR_GENDER_LIKELY("brief.narrator.gender.likely"),
+    /** Hover explanation of the line labelled by {@link #BRIEF_NARRATOR_GENDER_LIKELY}. */
+    BRIEF_NARRATOR_GENDER_LIKELY_TIP("brief.narrator.gender.likely.tip"),
+    /** The mark beside a brief field the analysis filled that the person has not confirmed. */
+    BRIEF_LIKELY("brief.likely"),
+    /** Hover explanation of the mark {@link #BRIEF_LIKELY}. */
+    BRIEF_LIKELY_TIP("brief.likely.tip"),
+    /** Label of the apostrophe choice the target language offers. */
+    BRIEF_POLICY_APOSTROPHE("brief.policy.apostrophe"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_POLICY_APOSTROPHE}. */
+    BRIEF_POLICY_APOSTROPHE_TIP("brief.policy.apostrophe.tip"),
+    /** Hover explanation of one apostrophe: {0} the character, {1} its code point. */
+    BRIEF_POLICY_APOSTROPHE_OPTION("brief.policy.apostrophe.option"),
+    /** Caption of one apostrophe button: {0} the character, {1} its code point, so the three look different. */
+    BRIEF_POLICY_APOSTROPHE_SEGMENT("brief.policy.apostrophe.segment"),
+    /** Label of the quotation-mark choice the target language offers. */
+    BRIEF_POLICY_QUOTES("brief.policy.quotes"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_POLICY_QUOTES}. */
+    BRIEF_POLICY_QUOTES_TIP("brief.policy.quotes.tip"),
+    /** Hover explanation of one quotation-mark style: {0} the outer marks, {1} the inner marks. */
+    BRIEF_POLICY_QUOTES_OPTION("brief.policy.quotes.option"),
+    /** Label of the default address between strangers. */
+    BRIEF_POLICY_ADDRESS_STRANGERS("brief.policy.address.strangers"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_POLICY_ADDRESS_STRANGERS}. */
+    BRIEF_POLICY_ADDRESS_STRANGERS_TIP("brief.policy.address.strangers.tip"),
+    /** Label of the default address inside a family. */
+    BRIEF_POLICY_ADDRESS_FAMILY("brief.policy.address.family"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_POLICY_ADDRESS_FAMILY}. */
+    BRIEF_POLICY_ADDRESS_FAMILY_TIP("brief.policy.address.family.tip"),
+    /** Hover explanation of the familiar address: {0} the word. */
+    BRIEF_POLICY_ADDRESS_INFORMAL("brief.policy.address.informal"),
+    /** Hover explanation of the polite address: {0} the word. */
+    BRIEF_POLICY_ADDRESS_FORMAL("brief.policy.address.formal"),
+    /** Label of the Ukrainian-style hard-g convention ({@code hardG}). */
+    BRIEF_CONVENTION_HARD_G("brief.convention.hardG"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_CONVENTION_HARD_G}. */
+    BRIEF_CONVENTION_HARD_G_TIP("brief.convention.hardG.tip"),
+    /** Label of a convention the interface has no words for: {0} the convention's key. */
+    BRIEF_CONVENTION_OTHER("brief.convention.other"),
+    /** Hover explanation of a convention the interface has no words for. */
+    BRIEF_CONVENTION_OTHER_TIP("brief.convention.other.tip"),
+    /** Hover explanation of one convention choice: {0} the value. */
+    BRIEF_CONVENTION_OPTION("brief.convention.option"),
     /** Label of the character-and-place-names policy. */
     BRIEF_POLICY_NAMES("brief.policy.names"),
     /** Hover explanation of the control labelled by {@link #BRIEF_POLICY_NAMES}. */
@@ -1542,12 +1731,8 @@ public enum MessageKey {
     BRIEF_QUALITY_BALANCED("brief.quality.balanced"),
     /** Quality option: best quality. */
     BRIEF_QUALITY_MAX("brief.quality.max"),
-    /** Hint describing what the fast quality setting turns on. */
-    BRIEF_QUALITY_HINT_FAST("brief.quality.hint.fast"),
-    /** Hint describing what the balanced quality setting turns on. */
-    BRIEF_QUALITY_HINT_BALANCED("brief.quality.hint.balanced"),
-    /** Hint describing what the max quality setting turns on. */
-    BRIEF_QUALITY_HINT_MAX("brief.quality.hint.max"),
+    /** Hint of the quality card; arguments: the dial's name, then the fixing, proofread and extra-calls words. */
+    BRIEF_QUALITY_HINT("brief.quality.hint"),
     /** Label of the row naming the model a run will use. */
     BRIEF_MODEL_LABEL("brief.model.label"),
     /** The model row's value; argument 0 is the model, argument 1 the provider's name. */
@@ -1794,10 +1979,6 @@ public enum MessageKey {
     /** A type or gender cell's explanation: {0} is the value it shows, whole, {1} the column's explanation. */
     NAMES_STYLE_CHOICE_EXPLAINED("namesStyle.choice.explained"),
     NAMES_STYLE_GENDER_NO_EVIDENCE("namesStyle.gender.noEvidence"),
-    /** Glossary column of the lock switch. */
-    NAMES_STYLE_COLUMN_LOCKED("namesStyle.column.locked"),
-    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_COLUMN_LOCKED}. */
-    NAMES_STYLE_COLUMN_LOCKED_TIP("namesStyle.column.locked.tip"),
     /** Placeholder of a target field that is empty. */
     NAMES_STYLE_NO_TARGET("namesStyle.noTarget"),
     /** Accessible name of the row's remove action. */
@@ -1890,6 +2071,76 @@ public enum MessageKey {
     NAMES_STYLE_LOCK_NEEDS_TARGET("namesStyle.lockNeedsTarget"),
     /** Refusal of a duplicate term; argument 0 is the typed term. */
     NAMES_STYLE_DUPLICATE("namesStyle.duplicate"),
+    /** Header of the glossary table's Forms column. */
+    NAMES_STYLE_COLUMN_FORMS("namesStyle.column.forms"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_COLUMN_FORMS}. */
+    NAMES_STYLE_COLUMN_FORMS_TIP("namesStyle.column.forms.tip"),
+    /** Hover explanation of a Forms cell: how many forms the entry joins. */
+    NAMES_STYLE_FORMS_JOINED("namesStyle.forms.joined"),
+    /** The Unsure mark of a glossary row whose mentions also fit another name. */
+    NAMES_STYLE_UNSURE("namesStyle.unsure"),
+    /** Hover explanation of the mark labelled by {@link #NAMES_STYLE_UNSURE}. */
+    NAMES_STYLE_UNSURE_TIP("namesStyle.unsure.tip"),
+    /** The chip of a glossary row whose name's meaning is kept as a note. */
+    NAMES_STYLE_MEANING("namesStyle.meaning"),
+    /** Hover explanation of the chip labelled by {@link #NAMES_STYLE_MEANING}; {0} is the meaning. */
+    NAMES_STYLE_MEANING_TIP("namesStyle.meaning.tip"),
+    /** Header of the glossary table's State column. */
+    NAMES_STYLE_COLUMN_STATE("namesStyle.column.state"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_COLUMN_STATE}. */
+    NAMES_STYLE_COLUMN_STATE_TIP("namesStyle.column.state.tip"),
+    /** A target's state: a suggestion nobody accepted. */
+    NAMES_STYLE_STATE_SUGGESTED("namesStyle.state.suggested"),
+    /** A target's state: accepted, and the name may be declined. */
+    NAMES_STYLE_STATE_PINNED("namesStyle.state.pinned"),
+    /** A target's state: this exact text everywhere. */
+    NAMES_STYLE_STATE_LOCKED("namesStyle.state.locked"),
+    /** Origin chip: the person set the value. */
+    NAMES_STYLE_ORIGIN_USER("namesStyle.origin.user"),
+    /** Origin chip: the book proved the value. */
+    NAMES_STYLE_ORIGIN_BOOK("namesStyle.origin.book"),
+    /** Origin chip: a rule of the program set the value. */
+    NAMES_STYLE_ORIGIN_RULE("namesStyle.origin.rule"),
+    /** Origin chip: a guess nobody confirmed. */
+    NAMES_STYLE_ORIGIN_LIKELY("namesStyle.origin.likely"),
+    /** Hover explanation of an origin chip. */
+    NAMES_STYLE_ORIGIN_EXPLAINED("namesStyle.originExplained"),
+    /** A value followed by its origin; {0} the value, {1} the origin. */
+    NAMES_STYLE_WITH_ORIGIN("namesStyle.withOrigin"),
+    /** A likely gender the model gave with low confidence; {0} the gender. */
+    NAMES_STYLE_GENDER_LOW_CONFIDENCE("namesStyle.gender.lowConfidence"),
+    /** A rule's gender the model disagrees with; {0} the rule's, {1} the model's. */
+    NAMES_STYLE_GENDER_RULE_VERSUS_MODEL("namesStyle.gender.ruleVersusModel"),
+    /** Hover explanation of a review flag on a target; {0} the flags. */
+    NAMES_STYLE_FLAG_EXPLAINED("namesStyle.flagExplained"),
+    /** Why a target is refused: a letter the language forbids. */
+    NAMES_STYLE_ISSUE_FORBIDDEN_LETTER("namesStyle.issue.forbiddenLetter"),
+    /** Why a target is refused: a Latin letter. */
+    NAMES_STYLE_ISSUE_LATIN("namesStyle.issue.latin"),
+    /** Why a target is refused: a stress mark. */
+    NAMES_STYLE_ISSUE_STRESS_MARK("namesStyle.issue.stressMark"),
+    /** Why a target is refused: no capital letter. */
+    NAMES_STYLE_ISSUE_CAPITALISATION("namesStyle.issue.capitalisation"),
+    /** Why a target is refused or flagged: another number of words. */
+    NAMES_STYLE_ISSUE_WORD_COUNT("namesStyle.issue.wordCount"),
+    /** Why a target is refused: spelled against a convention the Book Brief stores. */
+    NAMES_STYLE_ISSUE_CONVENTION("namesStyle.issue.convention"),
+    /** Why a target is refused: not a form of the accepted name. */
+    NAMES_STYLE_ISSUE_RESPELLING("namesStyle.issue.respelling"),
+    /** Why a target is flagged: it is not the dictionary form. */
+    NAMES_STYLE_ISSUE_OBLIQUE_ENDING("namesStyle.issue.obliqueEnding"),
+    /** Refusal of a term that is a form of a held entry; {0} the term, {1} the entry. */
+    NAMES_STYLE_DUPLICATE_FORM("namesStyle.duplicateForm"),
+    /** Caption of the Add term dialog's State field. */
+    DIALOG_ADD_TERM_STATE("dialog.addTerm.state"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_ADD_TERM_STATE}. */
+    DIALOG_ADD_TERM_STATE_TIP("dialog.addTerm.state.tip"),
+    /** Name of the Accept all operation in its results. */
+    RESULTS_OP_ACCEPT_TARGETS("results.op.acceptTargets"),
+    /** Heading of the rows Accept all left suggested; {0} their count. */
+    RESULTS_LEFT("results.left"),
+    /** Badge of a row Accept all left suggested. */
+    PROGRESS_RESULTS_BADGE_LEFT("progress.results.badge.left"),
     /** Why the model scan did not start. */
     NAMES_STYLE_NO_MODEL("namesStyle.noModel"),
     /** Why the model review did not start. */
@@ -1903,16 +2154,15 @@ public enum MessageKey {
     /** The estimate under that button; arguments are the fewest and most minutes and the dial's name. */
     NAMES_STYLE_AUTO_ABOUT("namesStyle.auto.about"),
     PROGRESS_NAMES_PURPOSE("progress.namesPurpose"),
-    /** Heading of the progress dialog of an export that runs the last check before saving. */
-    PROGRESS_EXPORT_TITLE("progress.exportTitle"),
-    /** Purpose line of the progress dialog of an export that runs the last check before saving. */
-    PROGRESS_EXPORT_PURPOSE("progress.exportPurpose"),
     RECURRING_HELP_LINK("namesStyle.recurring.helpLink"),
     RECURRING_HELP_LINK_TIP("namesStyle.recurring.helpLink.tip"),
     RECURRING_HELP("namesStyle.recurring.help"),
-    NAMES_STYLE_AUTO_ESTIMATE("namesStyle.auto.estimate"),
-    /** The estimate when the fewest and most minutes are the same; arguments are the minutes and the dial's name. */
-    NAMES_STYLE_AUTO_ESTIMATE_ONE("namesStyle.auto.estimateOne"),
+    /** The names-pass time measured per kind of call on this model; 0 is the minutes. */
+    NAMES_STYLE_AUTO_ESTIMATE_MEASURED("namesStyle.auto.estimate.measured"),
+    /** The names-pass time from the built-in figures; 0 and 1 are the fewest and most minutes. */
+    NAMES_STYLE_AUTO_ESTIMATE_RANGE("namesStyle.auto.estimate.range"),
+    /** The same when the fewest and most minutes are the same; 0 is the minutes. */
+    NAMES_STYLE_AUTO_ESTIMATE_ONE("namesStyle.auto.estimate.one"),
     /** Why the automatic pass did not start. */
     NAMES_STYLE_AUTO_NO_MODEL("namesStyle.auto.noModel"),
     /** Line after the automatic pass; argument 0 is how many model calls it made. */
@@ -1983,6 +2233,12 @@ public enum MessageKey {
     NAMES_STYLE_TYPE_TERM("namesStyle.type.term"),
     /** Term type: a title or honorific. */
     NAMES_STYLE_TYPE_TITLE("namesStyle.type.title"),
+    /** Term type: a company, institution or other body of people. */
+    NAMES_STYLE_TYPE_ORGANISATION("namesStyle.type.organisation"),
+    /** Term type: a brand or named product. */
+    NAMES_STYLE_TYPE_PRODUCT("namesStyle.type.product"),
+    /** Term type: a material or substance. */
+    NAMES_STYLE_TYPE_MATERIAL("namesStyle.type.material"),
     /** Term type: anything else. */
     NAMES_STYLE_TYPE_OTHER("namesStyle.type.other"),
     /** Grammatical gender: female. */
@@ -1991,8 +2247,8 @@ public enum MessageKey {
     NAMES_STYLE_GENDER_MALE("namesStyle.gender.male"),
     /** Grammatical gender: neuter. */
     NAMES_STYLE_GENDER_NEUTER("namesStyle.gender.neuter"),
-    /** Grammatical gender: not known. */
-    NAMES_STYLE_GENDER_UNKNOWN("namesStyle.gender.unknown"),
+    /** Grammatical gender: none known yet; every place that names a gender reads it this way, never "unknown". */
+    NAMES_STYLE_GENDER_NOT_SPECIFIED("namesStyle.gender.notSpecified"),
     /** Heading of the Add term card. */
     DIALOG_ADD_TERM_TITLE("dialog.addTerm.title"),
     /** Line under the Add term heading. */
@@ -2013,10 +2269,6 @@ public enum MessageKey {
     DIALOG_ADD_TERM_GENDER("dialog.addTerm.gender"),
     /** Hover explanation of the control labelled by {@link #DIALOG_ADD_TERM_GENDER}. */
     DIALOG_ADD_TERM_GENDER_TIP("dialog.addTerm.gender.tip"),
-    /** Label of the lock switch. */
-    DIALOG_ADD_TERM_LOCK("dialog.addTerm.lock"),
-    /** Hover explanation of the control labelled by {@link #DIALOG_ADD_TERM_LOCK}. */
-    DIALOG_ADD_TERM_LOCK_TIP("dialog.addTerm.lock.tip"),
     /** Button that closes the Add term card without adding. */
     DIALOG_ADD_TERM_CANCEL("dialog.addTerm.cancel"),
     /** Hover explanation of the control labelled by {@link #DIALOG_ADD_TERM_CANCEL}. */
@@ -2054,37 +2306,6 @@ public enum MessageKey {
     /** Source pane of a segment that has no visible text. */
     LIVE_EMPTY_SOURCE("live.emptySource"),
 
-    /** Heading of the collapsed section that shows what a draft was sent with. */
-    LIVE_CONTEXT_TITLE("live.context.title"),
-    /** Counts beside {@link #LIVE_CONTEXT_TITLE}; arguments: 0 preceding translations, 1 {@code yes} when a summary was sent else {@code no}, 2 names, 3 memory hits. */
-    LIVE_CONTEXT_COUNTS("live.context.counts"),
-    /** Hover explanation of the context section. */
-    LIVE_CONTEXT_TIP("live.context.title.tip"),
-    /** Context-section heading of the preceding translations. */
-    LIVE_CONTEXT_PRECEDING("live.context.preceding"),
-    /** Context-section heading of the rolling summary. */
-    LIVE_CONTEXT_SUMMARY("live.context.summary"),
-    /** Context-section line under {@link #LIVE_CONTEXT_SUMMARY} while the model has written no summary yet. */
-    LIVE_CONTEXT_NO_SUMMARY("live.context.noSummary"),
-    /** Context-section heading of the glossary names. */
-    LIVE_CONTEXT_NAMES("live.context.names"),
-    /** Context-section heading of the translation-memory hits. */
-    LIVE_CONTEXT_MEMORY("live.context.memory"),
-    /** Context-section line of one glossary name; arguments: 0 the term, 1 its rendering or {@code none}, 2 {@code locked} or {@code free}; all Strings. */
-    LIVE_CONTEXT_TERM("live.context.term"),
-    /** Context-section line of one memory hit; arguments: 0 the source, 1 the target; both Strings. */
-    LIVE_CONTEXT_HIT("live.context.hit"),
-    /** Context-section body when the draft was sent nothing besides its source and the style sheet. */
-    LIVE_CONTEXT_EMPTY("live.context.empty"),
-    /** Button in the context section that copies what the model was given. */
-    LIVE_CONTEXT_COPY("live.context.copy"),
-    /** Hover explanation of the control labelled by {@link #LIVE_CONTEXT_COPY}. */
-    LIVE_CONTEXT_COPY_TIP("live.context.copy.tip"),
-    /** The target column of a glossary name the model was given with no rendering. */
-    LIVE_CONTEXT_NO_RENDERING("live.context.noRendering"),
-    /** Hover explanation and spoken name of the lock mark beside a locked glossary name in the context section. */
-    LIVE_CONTEXT_LOCKED("live.context.locked"),
-
     /** Text of the live panel before the run has made a model call. */
     LIVE_CALL_NONE("live.call.none"),
 
@@ -2093,6 +2314,12 @@ public enum MessageKey {
 
     /** Token usage of an answered call; arguments: 0 prompt tokens or {@code none}, 1 completion tokens or {@code none}. */
     LIVE_CALL_TOKENS("live.call.tokens"),
+
+    /** A call's timing figures; arguments: 0 time to first token, 1 speed, 2 cached share, each already a dash when not reported. */
+    CALL_TIMINGS("call.timings"),
+
+    /** A share of the prompt served from the cache; 0 is the whole percentage. */
+    CALL_TIMINGS_SHARE("call.timings.share"),
 
     /** Heading of the section holding the user message a call about no segment sent. */
     LIVE_CALL_INPUT("live.call.input"),
@@ -2170,19 +2397,6 @@ public enum MessageKey {
     LIVE_CALL_ITEM_EXTRA("live.call.item.extra"),
     /** Result word: the item's text seems to carry the next item as well. */
     LIVE_CALL_ITEM_MERGED("live.call.item.merged"),
-
-    /** Words for one reason in an outcome chip, and for a rule a consistency answer broke; arguments: 0 the reason's code lower-cased with dashes as underscores, 1 the code as reported, shown when no words are known. */
-    LIVE_CALL_DETAIL("live.call.detail"),
-    /** Context-section heading of the style sheet. */
-    LIVE_CONTEXT_STYLE("live.context.style"),
-    /** Context-section heading of the locked glossary names. */
-    LIVE_CONTEXT_LOCKED_NAMES("live.context.lockedNames"),
-    /** Context-section heading of the glossary renderings the person has not confirmed. */
-    LIVE_CONTEXT_SUGGESTED("live.context.suggested"),
-    /** Context-section heading of the renderings the run keeps for recurring terms. */
-    LIVE_CONTEXT_LEXICON("live.context.lexicon"),
-    /** Context-section heading of the characters a segment names. */
-    LIVE_CONTEXT_CHARACTERS("live.context.characters"),
 
     /** Heading of the source pane when no source language is set. */
     LIVE_SOURCE_FALLBACK("live.source.fallback"),
@@ -2286,14 +2500,6 @@ public enum MessageKey {
     EXPORT_AUX_REPORT("export.aux.report"),
     /** Hover explanation of the control labelled by {@link #EXPORT_AUX_REPORT}. */
     EXPORT_AUX_REPORT_TIP("export.aux.report.tip"),
-    /** Heading of the card holding the final consistency pass. */
-    EXPORT_CONSISTENCY_TITLE("export.consistency.title"),
-    /** Hover explanation of the control labelled by {@link #EXPORT_CONSISTENCY_TITLE}. */
-    EXPORT_CONSISTENCY_TITLE_TIP("export.consistency.title.tip"),
-    /** Label beside the switch that turns the final consistency pass on. */
-    EXPORT_CONSISTENCY_SWITCH("export.consistency.switch"),
-    /** Note under the consistency-pass switch saying what it does. */
-    EXPORT_CONSISTENCY_NOTE("export.consistency.note"),
     /** Refusal beside Save to when the occupied book is the file the last export wrote. */
     EXPORT_NOTE_JUST_EXPORTED("export.note.justExported"),
     /** Note under Save to while it is empty, saying why Export book waits. */
@@ -2403,8 +2609,18 @@ public enum MessageKey {
     EXPORT_BANNER_NOTHING("export.banner.nothing"),
     /** Banner text while nothing is translated. */
     EXPORT_BANNER_NOTHING_NOTE("export.banner.nothing.note"),
-    /** Banner while the export runs in the background. */
-    EXPORT_HIDDEN_BANNER("export.hidden.banner"),
+    /** Banner before Export book: argument 0 is how many segments will be written in the source language. */
+    EXPORT_BANNER_SOURCE_FALLBACK("export.banner.source_fallback"),
+    /** Banner before Export book: argument 0 is the windows read, argument 1 the windows planned. */
+    EXPORT_BANNER_PROOFREAD_UNREAD("export.banner.proofreadUnread"),
+    /** Banner before Export book: argument 0 is how many segments wait, argument 1 the facts they wait on, joined. */
+    EXPORT_BANNER_WAITING_FACT("export.banner.waitingFact"),
+    /** One fact a segment waits on: argument 0 is the character's name. */
+    EXPORT_BANNER_WAITING_FACT_GENDER("export.banner.waitingFact.gender"),
+    /** Banner before Export book: argument 0 is how many segments still carry a proofread mark. */
+    EXPORT_BANNER_OPEN_MARKS("export.banner.openMarks"),
+    /** The Proofread summary of a written export: argument 0 is the segments re-read, argument 1 those waiting. */
+    EXPORT_PROOFREAD_SUMMARY("export.proofread.summary"),
     /** Label of the original title. */
     EXPORT_BOOK_TITLE_ORIGINAL("export.bookTitle.original"),
     /** Label of the translated title field. */
@@ -2439,62 +2655,16 @@ public enum MessageKey {
     EXPORT_SUGGEST_NAME_CANCEL_KEEPS("export.suggestName.cancelKeeps"),
     /** The notice after a title edit: the file name is suggested again only on request. */
     EXPORT_SUGGEST_NAME_TITLE_CHANGED("export.suggestName.titleChanged"),
-    /** The last check's note while the book is partial. */
-    EXPORT_CONSISTENCY_PARTIAL("export.consistency.partial"),
     /** Heading of the export dialog's steps. */
     EXPORT_GROUP_STEPS("export.group.steps"),
-    /** Heading of the reread items; argument 0 is how many were reread, argument 1 how many there are. */
-    EXPORT_GROUP_REREAD("export.group.reread"),
     /** Heading of the export dialog's last step. */
     EXPORT_GROUP_FINISH("export.group.finish"),
-    /** Column heading of the reread grid: the text before. */
-    EXPORT_REREAD_BEFORE("export.reread.before"),
-    /** Column heading of the reread grid: the text after. */
-    EXPORT_REREAD_AFTER("export.reread.after"),
-    /** Row label of the reread grid: the paragraph before. */
-    EXPORT_REREAD_PREVIOUS("export.reread.previous"),
-    /** Row label of the reread grid: the reread paragraph. */
-    EXPORT_REREAD_THIS("export.reread.this"),
-    /** Row label of the reread grid: the paragraph after. */
-    EXPORT_REREAD_NEXT("export.reread.next"),
-    /** The after cell of an item the reread left alone. */
-    EXPORT_REREAD_UNCHANGED("export.reread.unchanged"),
-    /** The after cell of an item whose call is under way. */
-    EXPORT_REREAD_READING("export.reread.reading"),
-    /** The progress dialog button that ends the last check and writes the file. */
-    EXPORT_WRITE_NOW("export.writeNow"),
-    /** Hover explanation of the control labelled by {@link #EXPORT_WRITE_NOW}. */
-    EXPORT_WRITE_NOW_TIP("export.writeNow.tip"),
-    /** Heading of the question before writing early. */
-    EXPORT_WRITE_NOW_TITLE("export.writeNow.title"),
-    /** Text of the question before writing early; arguments are reread, all, fixed and the rest. */
-    EXPORT_WRITE_NOW_TEXT("export.writeNow.text"),
-    /** Text of the question before writing early when nothing was reread yet. */
-    EXPORT_WRITE_NOW_TEXT_EARLY("export.writeNow.textEarly"),
-    /** The button that writes the file early. */
-    EXPORT_WRITE_NOW_YES("export.writeNow.yes"),
-    /** Hover explanation of the control labelled by {@link #EXPORT_WRITE_NOW_YES}. */
-    EXPORT_WRITE_NOW_YES_TIP("export.writeNow.yes.tip"),
-    /** The safe answer of the write-early question. */
-    EXPORT_WRITE_NOW_NO("export.writeNow.no"),
-    /** Check line after an early write; argument 0 is how many paragraphs were not reread. */
-    EXPORT_CHECK_CONSISTENCY_NOT_REREAD("export.check.consistency.notReread"),
-    /** Row label of the export-complete card: the last check. */
-    EXPORT_COMPLETE_LAST_CHECK("export.complete.lastCheck"),
-    /** Row value of the last check; argument 0 is the segments reread, argument 1 those fixed. */
-    EXPORT_COMPLETE_LAST_CHECK_VALUE("export.complete.lastCheckValue"),
     /** Check line after an export: the file was re-opened and verified. */
     EXPORT_CHECK_REOPENED("export.check.reopened"),
     /** Check line after an export: the language metadata changed; arguments are the source and the target tags. */
     EXPORT_CHECK_LANGUAGE("export.check.language"),
     /** Check line after an export: one side file written beside the book; argument 0 is its file name. */
     EXPORT_CHECK_SIDE_FILE("export.check.sideFile"),
-    /** Check line after an export: the consistency pass adjusted segments; argument 0 is the count. */
-    EXPORT_CHECK_CONSISTENCY_ADJUSTED("export.check.consistency.adjusted"),
-    /** Consistency pass result; argument 0 is how many paragraphs were corrected against their neighbours. */
-    EXPORT_CHECK_CONSISTENCY_NEIGHBOURS("export.check.consistency.neighbours"),
-    /** Check line after an export: the consistency pass ran and changed nothing. */
-    EXPORT_CHECK_CONSISTENCY_NOTHING("export.check.consistency.nothing"),
     /**
      * Warning after an export: segments wait on characters whose gender is unknown; argument 0 is the segment count,
      * argument 1 the characters with their segment counts.
@@ -2511,22 +2681,6 @@ public enum MessageKey {
     EXPORT_AWAITING_GENDER_OPEN_TIP("export.awaitingGender.open.tip"),
     /** The tail of the warning's character list when more characters wait than are named; argument 0 is how many. */
     EXPORT_AWAITING_GENDER_MORE("export.awaitingGender.more"),
-    /** Check line after an export: the consistency pass skipped its gender step because no model was available. */
-    EXPORT_CHECK_CONSISTENCY_NO_MODEL("export.check.consistency.noModel"),
-    /**
-     * Check line after an export: argument 0 is how many flagged or doubtful segments a fresh draft improved, argument
-     * 1 how many were drafted again and kept because the new draft was no better.
-     */
-    EXPORT_CHECK_CONSISTENCY_RETRIED("export.check.consistency.retried"),
-    /** Check line after an export: argument 0 is how many paragraphs the neighbour check found nothing to change in. */
-    EXPORT_CHECK_CONSISTENCY_UNCHANGED("export.check.consistency.unchanged"),
-    /**
-     * Check line after an export: argument 0 is how many model answers the pass refused, argument 1 the rules they
-     * broke with their counts ({@code quotes: 2, worse: 1}).
-     */
-    EXPORT_CHECK_CONSISTENCY_REFUSED("export.check.consistency.refused"),
-    /** Check line after an export: argument 0 is how many segments were skipped because their model call failed. */
-    EXPORT_CHECK_CONSISTENCY_SKIPPED("export.check.consistency.skipped"),
     /** Display name of the literary fiction genre offered on the Book Brief. */
     GENRE_LITERARY_FICTION("genre.literaryFiction"),
     /** Display name of the classic literature genre offered on the Book Brief. */
@@ -2649,6 +2803,12 @@ public enum MessageKey {
     DIALOG_MODEL_PICK_NOT_NOW("dialog.modelPick.notNow"),
     /** Hover explanation of the control labelled by {@link #DIALOG_MODEL_PICK_NOT_NOW}. */
     DIALOG_MODEL_PICK_NOT_NOW_TIP("dialog.modelPick.notNow.tip"),
+    /** Placeholder of the field that narrows a model list by name. */
+    MODEL_FILTER_PROMPT("model.filter.prompt"),
+    /** Hover explanation of the model-name filter field. */
+    MODEL_FILTER_TIP("model.filter.prompt.tip"),
+    /** Sentence shown when the typed filter hides every model: the typed text. */
+    MODEL_FILTER_NONE("model.filter.none"),
     /** Title of the question asked when a book is chosen while a project is open. */
     DIALOG_OPEN_ANOTHER_TITLE("dialog.openAnother.title"),
     /** Body of that question; argument 0 is the open project's name, argument 1 the file chosen. */
@@ -2707,20 +2867,70 @@ public enum MessageKey {
     DIALOG_GENDERS_TEXT("dialog.genders.text"),
     /** One listed character; argument 0 is its name, argument 1 how often the book names it. */
     DIALOG_GENDERS_ROW("dialog.genders.row"),
+    /** A character in the Start question that has no rendering yet. */
+    DIALOG_GENDERS_ROW_UNTRANSLATED("dialog.genders.row.untranslated"),
+    /** The mentions of a character in the Start question. */
+    DIALOG_GENDERS_ROW_MENTIONS("dialog.genders.row.mentions"),
+    /** The mentions of a character followed by one note. */
+    DIALOG_GENDERS_ROW_NOTED("dialog.genders.row.noted"),
+    /** The note on a row the person has answered. */
+    DIALOG_GENDERS_ROW_ANSWERED("dialog.genders.row.answered"),
+    /** The sentence under the rows: what happens to rows left alone. */
+    DIALOG_GENDERS_FOOTER("dialog.genders.footer"),
+    /** The button that answers every suggested row with its offered gender. */
+    DIALOG_GENDERS_CONFIRM_ALL("dialog.genders.confirmAll"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_GENDERS_CONFIRM_ALL}. */
+    DIALOG_GENDERS_CONFIRM_ALL_TIP("dialog.genders.confirmAll.tip"),
     /** The control that starts without setting the genders. */
     DIALOG_GENDERS_START("dialog.genders.start"),
     /** Title of the question when every character it lists has a suggested gender to confirm. */
     DIALOG_GENDERS_SUGGESTED_TITLE("dialog.genders.suggested.title"),
     /** Intro to the characters whose gender is only suggested; argument 0 is how many. */
     DIALOG_GENDERS_SUGGESTED_TEXT("dialog.genders.suggested.text"),
-    /** One character whose gender is only suggested; arguments: 0 the name, 1 its mentions. */
-    DIALOG_GENDERS_SUGGESTED_ROW("dialog.genders.suggested.row"),
     /** Hover explanation of the control labelled by {@link #DIALOG_GENDERS_START}. */
     DIALOG_GENDERS_START_TIP("dialog.genders.start.tip"),
     /** The control that returns without starting. */
     DIALOG_GENDERS_BACK("dialog.genders.back"),
     /** Hover explanation of the control labelled by {@link #DIALOG_GENDERS_BACK}. */
     DIALOG_GENDERS_BACK_TIP("dialog.genders.back.tip"),
+    /** Note on a row whose offered gender is the model's likely one. */
+    DIALOG_GENDERS_ROW_LIKELY("dialog.genders.row.likely"),
+    /** Note on a row whose likely gender the model was not sure of. */
+    DIALOG_GENDERS_ROW_LOW_CONFIDENCE("dialog.genders.row.lowConfidence"),
+    /** Note on a row whose offered gender comes from a rule. */
+    DIALOG_GENDERS_ROW_RULE("dialog.genders.row.rule"),
+    /** Note on a row where the rule and the model disagree; arguments: 0 the rule's gender, 1 the model's. */
+    DIALOG_GENDERS_ROW_DISAGREE("dialog.genders.row.disagree"),
+    /** Hover explanation of a row's gender choices. */
+    DIALOG_GENDERS_ROW_CHOICE_HELP("dialog.genders.row.choice.help"),
+    /** Title of the question asked at Start about names whose meaning the book explains or plays on. */
+    DIALOG_MEANING_TITLE("dialog.meaning.title"),
+    /** Body of that question; argument 0 is the number of names listed. */
+    DIALOG_MEANING_TEXT("dialog.meaning.text"),
+    /** One listed name with its meaning; argument 0 is the name, argument 1 what it means. */
+    DIALOG_MEANING_ROW("dialog.meaning.row"),
+    /** One listed name whose meaning was not given; argument 0 is the name. */
+    DIALOG_MEANING_ROW_PLAIN("dialog.meaning.row.plain"),
+    /** The choice that sounds the name out and keeps its meaning as a note. */
+    DIALOG_MEANING_CHOICE_TRANSCRIBE("dialog.meaning.choice.transcribe"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_MEANING_CHOICE_TRANSCRIBE}. */
+    DIALOG_MEANING_CHOICE_TRANSCRIBE_TIP("dialog.meaning.choice.transcribe.tip"),
+    /** The choice that translates the name by its meaning. */
+    DIALOG_MEANING_CHOICE_TRANSLATE("dialog.meaning.choice.translate"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_MEANING_CHOICE_TRANSLATE}. */
+    DIALOG_MEANING_CHOICE_TRANSLATE_TIP("dialog.meaning.choice.translate.tip"),
+    /** The choice that sounds the name out and explains its meaning at its first use. */
+    DIALOG_MEANING_CHOICE_GLOSS("dialog.meaning.choice.gloss"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_MEANING_CHOICE_GLOSS}. */
+    DIALOG_MEANING_CHOICE_GLOSS_TIP("dialog.meaning.choice.gloss.tip"),
+    /** The control that stores the choices and goes on. */
+    DIALOG_MEANING_CONFIRM("dialog.meaning.confirm"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_MEANING_CONFIRM}. */
+    DIALOG_MEANING_CONFIRM_TIP("dialog.meaning.confirm.tip"),
+    /** The control that keeps the default for every name and returns without starting. */
+    DIALOG_MEANING_BACK("dialog.meaning.back"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_MEANING_BACK}. */
+    DIALOG_MEANING_BACK_TIP("dialog.meaning.back.tip"),
     /** Title of the question asked before leaving a screen whose model work is still running. */
     DIALOG_LEAVE_TITLE("dialog.leave.title"),
     /** Body of the leave question; argument 0 is the name of the running work. */
@@ -2745,6 +2955,12 @@ public enum MessageKey {
     REVIEW_LOCKED_RETRY("review.locked.retry"),
     /** Note above the target of a segment that kept no translation but the model's refused reply, which it shows. */
     REVIEW_TARGET_REJECTED("review.target.rejected"),
+    /** The refused-reply note when the checks found letters of another alphabet in it. */
+    REVIEW_TARGET_REJECTED_SCRIPT("review.target.rejected.script"),
+    /** The refused-reply note when the checks found part of it in another language. */
+    REVIEW_TARGET_REJECTED_LANGUAGE("review.target.rejected.language"),
+    /** The refused-reply note when other checks refused it; the findings below say which. */
+    REVIEW_TARGET_REJECTED_CHECKS("review.target.rejected.checks"),
     /** Note above the target of a segment that kept no translation at all, so its source is shown. */
     REVIEW_TARGET_SOURCE("review.target.source"),
     /** The review editor's line while the edit is blank: Save waits for the translation's words. */
@@ -2785,13 +3001,17 @@ public enum MessageKey {
     REVIEW_READABLE("review.readable"),
     /** Shown under the findings heading of a flagged segment whose record holds no finding. */
     REVIEW_FINDINGS_NONE("review.findings.none"),
-    /** Heading of an edit the reviewer made and the app verified; argument 0 is the criterion's name. */
+    /** Heading of an applied edit an older record keeps; argument 0 is the criterion's name. */
     REVIEW_EDIT_APPLIED("review.edit.applied"),
+    /** Compare: the Proofread stage's verdict line; argument 0 is the verdict in words. */
+    REVIEW_PROOFREAD_VERDICT("review.proofread.verdict"),
+    /** Compare: the heading of a kept proofread rewrite's diff. */
+    REVIEW_PROOFREAD_APPLIED("review.proofread.applied"),
     /** The name of an edit criterion; argument 0 is its token with underscores for hyphens, such as {@code gender} or {@code invented_word}, because an ICU selector holds no hyphen. */
     REVIEW_EDIT_CRITERION("review.edit.criterion"),
     /** The replacement line of an edit that only deleted its quote. */
     REVIEW_EDIT_DELETED("review.edit.deleted"),
-    /** Hover explanation of the diff of an applied edit: red is what the reviewer removed, green what it put there. */
+    /** Hover explanation of the diff of an applied edit: red is what was removed, green what was put there. */
     REVIEW_EDIT_TIP("review.edit.applied.tip"),
     /** Button that retries the selected segment's translation as it is. */
     REVIEW_RETRY("review.retry"),
@@ -2831,8 +3051,14 @@ public enum MessageKey {
     RESULTS_CHANGED("results.changed"),
     /** Line of the results dialog when an operation changed nothing. */
     RESULTS_NOTHING("results.nothing"),
-    /** Line of the results dialog that lists the names still without a target, with their count and the names. */
+    /** Heading of the results rows for the names still without a target; the argument is their count. */
     RESULTS_UNTARGETED("results.untargeted"),
+    /** Badge of a results row for a name the pass could not give a target. */
+    PROGRESS_RESULTS_BADGE_UNTARGETED("progress.results.badge.untargeted"),
+    /** Prompt of the field in a results row where the person types the target. */
+    RESULTS_TARGET("results.target"),
+    /** Hover explanation of the target field in a results row. */
+    RESULTS_TARGET_TIP("results.target.tip"),
     /** Line of the results dialog when the person stopped an operation. */
     RESULTS_STOPPED("results.stopped"),
     /** Column of the results rows: the term. */
@@ -2899,6 +3125,8 @@ public enum MessageKey {
     RUN_TITLE_STOPPING("run.title.stopping"),
     /** Title-bar state text of a stopped run: the percent done. */
     RUN_TITLE_STOPPED("run.title.stopped"),
+    /** Title-bar state text of a run stopped during Proofread: the window Continue reads first and the windows. */
+    RUN_TITLE_STOPPED_PROOFREAD("run.title.stoppedProofread"),
     /** Title-bar state text once every segment is decided. */
     RUN_TITLE_FINISHED("run.title.finished"),
     /** Title-bar state text of a run that ended on an error. */
@@ -2967,6 +3195,8 @@ public enum MessageKey {
     RUN_BANNER_WELCOME("run.banner.welcome"),
     /** Second line of the welcome banner: where it continues, or {@code none}. */
     RUN_BANNER_WELCOME_TEXT("run.banner.welcomeText"),
+    /** Second line of the welcome banner of a decided book: the Proofread window Continue reads first, the windows. */
+    RUN_BANNER_WELCOME_PROOFREAD("run.banner.welcomeProofread"),
     /** Banner of a start that lacks an input: the input's token. */
     RUN_BANNER_CANNOT_START("run.banner.cannotStart"),
     /** Banner while the run waits for the AI program by itself: the program. */
@@ -3003,10 +3233,14 @@ public enum MessageKey {
     RUN_LIVE_READY("run.live.ready"),
     /** Live line of a reopened project: where it continues, or {@code none}. */
     RUN_LIVE_CONTINUES("run.live.continues"),
+    /** Live line of a reopened project whose Proofread stage has windows left; arguments: 0 the next window, 1 all. */
+    RUN_LIVE_CONTINUES_PROOFREAD("run.live.continuesProofread"),
     /** Live line while a start lacks an input: nothing to say. */
     RUN_LIVE_CANNOT_START("run.live.cannotStart"),
     /** Live line while translating: the segments of the current call, or {@code none}. */
     RUN_LIVE_RUNNING("run.live.running"),
+    /** Live line while the Proofread stage reads: the segments of the current window, or {@code none}. */
+    RUN_LIVE_PROOFREADING("run.live.proofreading"),
     /** Live line while pausing: the segments in flight, or {@code none}. */
     RUN_LIVE_PAUSING("run.live.pausing"),
     /** Live line of a paused run: the segments in flight, or {@code none}. */
@@ -3027,6 +3261,7 @@ public enum MessageKey {
     NAV_FOOTER_SELECTION_TIP("nav.footer.selection.tip"),
     /** Why a model action is off while a translation is at work. */
     MODEL_BLOCKED_PAUSE_FIRST("model.blocked.pauseFirst"),
+    MODEL_BLOCKED_PROVIDER_CHECK("model.blocked.providerCheck"),
     /** Why Start translation is off while the names pass runs. */
     START_BLOCKED_NAMES_PASS("start.blocked.namesPass"),
     /** Heading of the question asked before leaving a screen with unsaved changes. */
@@ -3153,6 +3388,10 @@ public enum MessageKey {
     PROJECTS_NEW("projects.new"),
     /** Hover explanation of the new-translation buttons. */
     PROJECTS_NEW_TIP("projects.new.tip"),
+    /** The model advice for this computer's memory: gigabytes, tag, pull command. */
+    MODEL_RECOMMEND_LINE("model.recommend.line"),
+    /** The larger model offered as an option: tag, pull command. */
+    MODEL_RECOMMEND_OPTIN("model.recommend.optin"),
     /** Title of the first-launch card. */
     PROJECTS_EMPTY_TITLE("projects.empty.title"),
     /** First step of how it works. */
@@ -3391,6 +3630,8 @@ public enum MessageKey {
     /** Progress dialog: the name of this stage of the names pass. */
     PROGRESS_NAMES_STEP_NAMES("progress.names.step.names"),
     /** Progress dialog: the name of this stage of the names pass. */
+    PROGRESS_NAMES_STEP_NAMES_KNOWLEDGE("progress.names.step.namesKnowledge"),
+    /** Progress dialog: the name of this stage of the names pass. */
     PROGRESS_NAMES_STEP_TERMS_SCAN("progress.names.step.termsScan"),
     /** Progress dialog: the name of this stage of the names pass. */
     PROGRESS_NAMES_STEP_TERMS_REVIEW("progress.names.step.termsReview"),
@@ -3401,6 +3642,7 @@ public enum MessageKey {
     /** Progress dialog: the name of this stage of the names pass. */
     PROGRESS_NAMES_STEP_TERMS_TRANSLATE("progress.names.step.termsTranslate"),
     /** Progress dialog: the name of this stage of the names pass. */
+    PROGRESS_NAMES_STEP_CHECK("progress.names.step.check"),
     PROGRESS_NAMES_STEP_WRITE("progress.names.step.write"),
     /** Progress dialog: a finished stage's count of requests; argument 0 is the count. */
     PROGRESS_STAGE_REQUESTS_DONE("progress.stage.requests.done"),
@@ -3512,6 +3754,40 @@ public enum MessageKey {
     LIVE_MARKER_ALONE_TIP("live.marker.alone.tip"),
     /** Live row marker: kept as it is. */
     LIVE_MARKER_KEPT("live.marker.kept"),
+    /** Live row marker: a chapter's summary was kept. */
+    LIVE_MARKER_SUMMARISED("live.marker.summarised"),
+    /** Live card: the row of a kept chapter summary; argument 0 is the chapter's number, passed as a String. */
+    LIVE_ROW_CHAPTER_SUMMARISED("live.row.chapterSummarised"),
+    /** Live row marker: a proofread window was read. */
+    LIVE_MARKER_PROOFREAD("live.marker.proofread"),
+    /** Live card: the row of a read proofread window; argument 0 is its span, such as "ch7 · p40–p42". */
+    LIVE_ROW_WINDOW("live.row.window"),
+    /** Live card detail: one segment of a proofread window; arguments: 0 its locator, 1 the verdict in words. */
+    LIVE_DETAIL_WINDOW_ITEM("live.detail.window.item"),
+    /** Live card detail: the heading of a proofread segment's text before the window. */
+    LIVE_DETAIL_BEFORE("live.detail.before"),
+    /** Live card detail: the heading of a proofread segment's text after the window. */
+    LIVE_DETAIL_AFTER("live.detail.after"),
+    /** A proofread verdict's outcome; argument 0 is its code (kept, proposed, rejected, unchanged). */
+    PROOF_VERDICT("proof.verdict"),
+    /** A proofread verdict with its reason; arguments: 0 the outcome's word, 1 the reason. */
+    PROOF_VERDICT_WHY("proof.verdict.why"),
+    /** The reason of a kept rewrite of a segment marked for a gender ending. */
+    PROOF_KEPT_GENDER("proof.kept.gender"),
+    /** The reason of a kept rewrite of a segment whose gender deferral's gender arrived; arguments: 0 the name, 1 the gender code. */
+    PROOF_KEPT_GENDER_KNOWN("proof.kept.genderKnown"),
+    /** The reason of a kept rewrite of a segment marked by a check; argument 0 is who raised the mark. */
+    PROOF_KEPT_CHECK("proof.kept.check"),
+    /** A refused rewrite's reason; argument 0 is the check's code, 1 the code as stored, 2 who raised it. */
+    PROOF_REJECTED("proof.rejected"),
+    /** A refused rewrite's reason with the words that broke it; arguments: 0 the reason, 1 the words. */
+    PROOF_REJECTED_WORDS("proof.rejected.words"),
+    /** Who blocks a proposal when no check is named. */
+    PROOF_A_CHECK("proof.aCheck"),
+    /** A proposal of a flagged segment still blocked; argument 0 is who blocks it. */
+    PROOF_PROPOSED_BLOCKED("proof.proposed.blocked"),
+    /** A proposal that waits because the person edited the segment. */
+    PROOF_PROPOSED_EDIT("proof.proposed.edit"),
     /** Live detail: why a flagged segment waits; its argument names the findings. */
     LIVE_DETAIL_WHY("live.detail.why"),
     /** Live detail: the translation of a segment being translated. */
@@ -3522,6 +3798,8 @@ public enum MessageKey {
     LIVE_DETAIL_NO_WORDS("live.detail.noWords"),
     /** Live detail: the heading of the box of what the model works on. */
     LIVE_DETAIL_IN_FLIGHT("live.detail.inFlight"),
+    /** Heading of the in-flight box while the call in flight reads a Proofread window. */
+    LIVE_DETAIL_IN_FLIGHT_PROOFREAD("live.detail.inFlight.proofread"),
     /** Live detail: the box of what the model works on, with nothing in flight. */
     LIVE_DETAIL_IN_FLIGHT_NONE("live.detail.inFlight.none"),
     /** Live detail, Detailed: a segment no call has carried yet. */
@@ -3534,18 +3812,17 @@ public enum MessageKey {
     LIVE_CLOCK_OF("live.clock.of"),
     /** Live card: the line while a call has waited ten seconds; its argument is the clock. */
     LIVE_WAITING_FOR_MODEL("live.waitingForModel"),
-    /** Live card: the heading of the scene summary line. */
-    LIVE_SUMMARY_TITLE("live.summary.title"),
-    /** Live card: the scene summary line before there is one. */
-    LIVE_SUMMARY_NONE("live.summary.none"),
-    /** Live card: how the scene summary is kept; its argument is the refresh interval. */
-    LIVE_SUMMARY_SOURCE("live.summary.source"),
     /** Title of the review desk dialog. */
     REVIEW_DESK_TITLE("review.desk.title"),
     /** The desk's header line; argument 0 is how many are left to review, argument 1 how many there were when the desk opened. */
     REVIEW_DESK_LEFT("review.desk.left"),
     /** The desk's header line while a run translates; arguments as {@link #REVIEW_DESK_LEFT}. */
     REVIEW_DESK_LEFT_READ_ONLY("review.desk.leftReadOnly"),
+    /**
+     * The desk's header line when nothing was or is left to review, so it never reads "0 of 0" over a list of segments
+     * worth a second look; argument 0 is how many are worth a second look.
+     */
+    REVIEW_DESK_NONE_LEFT("review.desk.noneLeft"),
     /** Button in the read-only banner that pauses the run. */
     REVIEW_DESK_PAUSE("review.desk.pause"),
     /** Hover explanation of {@link #REVIEW_DESK_PAUSE}. */
@@ -3564,6 +3841,14 @@ public enum MessageKey {
     REVIEW_FILTER_SECOND_LOOK("review.filter.secondLook"),
     /** Hover explanation of {@link #REVIEW_FILTER_SECOND_LOOK}. */
     REVIEW_FILTER_SECOND_LOOK_TIP("review.filter.secondLook.tip"),
+    /** Filter "Changed by proofread"; argument 0 is how many segments it lists. */
+    REVIEW_FILTER_CHANGED("review.filter.changed"),
+    /** Hover explanation of {@link #REVIEW_FILTER_CHANGED}. */
+    REVIEW_FILTER_CHANGED_TIP("review.filter.changed.tip"),
+    /** Filter "Waiting on a gender"; argument 0 is how many segments it lists. */
+    REVIEW_FILTER_WAITING("review.filter.waiting"),
+    /** Hover explanation of {@link #REVIEW_FILTER_WAITING}. */
+    REVIEW_FILTER_WAITING_TIP("review.filter.waiting.tip"),
     /** Filter item listing every segment. */
     REVIEW_FILTER_ALL("review.filter.all"),
     /** Hover explanation of {@link #REVIEW_FILTER_ALL}. */
@@ -3580,6 +3865,8 @@ public enum MessageKey {
     REVIEW_MARKER_ACCEPTED("review.marker.accepted"),
     /** Row marker of a segment holding the person's edit. */
     REVIEW_MARKER_YOUR_EDIT("review.marker.yourEdit"),
+    /** Desk row marker: a rewrite the Proofread stage kept. */
+    REVIEW_MARKER_PROOFREAD("review.marker.proofread"),
     /** Row marker of a segment left for later. */
     REVIEW_MARKER_LATER("review.marker.later"),
     /** A row's line; argument 0 is why it is listed, argument 1 its text. */
@@ -3616,6 +3903,12 @@ public enum MessageKey {
     REVIEW_MORE_UNDO_SUB("review.more.undo.sub"),
     /** The line under {@link #REVIEW_MORE_UNDO} when there is no edit. */
     REVIEW_MORE_UNDO_NONE("review.more.undo.none"),
+    /** More menu: Undo proofread. */
+    REVIEW_MORE_UNDO_PROOFREAD("review.more.undoProofread"),
+    /** More menu: the line under Undo proofread. */
+    REVIEW_MORE_UNDO_PROOFREAD_SUB("review.more.undoProofread.sub"),
+    /** More menu: the line under Undo proofread when the segment holds no kept proofread rewrite. */
+    REVIEW_MORE_UNDO_PROOFREAD_NONE("review.more.undoProofread.none"),
     /** Heading of the inline note panel. */
     REVIEW_NOTE_LABEL("review.note.label"),
     /** Placeholder of the note field. */
@@ -3654,10 +3947,12 @@ public enum MessageKey {
     REVIEW_TAB_CONTEXT("review.tab.context"),
     /** Detail tab; argument 0 is the number of suggestions. */
     REVIEW_TAB_SUGGESTION("review.tab.suggestion"),
-    /** Line over the context of a segment drafted alone. */
+    /** Line over the prompt a segment's call was sent: the run's fixed frame and the call's own sections. */
     REVIEW_CONTEXT_INTRO("review.context.intro"),
-    /** Line over the context of a segment drafted in a batch. */
-    REVIEW_CONTEXT_BATCH("review.context.batch"),
+    /** Line over the prompt of a segment Try again drafted again: the context rebuilt and sent for that retry. */
+    REVIEW_CONTEXT_RETRY("review.context.retry"),
+    /** Line in place of the prompt of a segment no model call was made for (a memory reuse or a shortcut). */
+    REVIEW_CONTEXT_NONE("review.context.none"),
     /** What may be wrong with a name finding. */
     REVIEW_WHY_NAME("review.why.name"),
     /** What may be wrong with a language finding. */
@@ -3672,6 +3967,8 @@ public enum MessageKey {
     REVIEW_FINDING_LABEL("review.finding.label"),
     /** Who raised a finding, from its machine code. */
     REVIEW_RAISER("review.raiser"),
+    /** The short noun of the check that doubts an accepted segment; argument 0 is the check's machine code. */
+    REVIEW_DOUBT("review.doubt"),
     /** Switch that shows rule codes and figures. */
     REVIEW_TECHNICAL("review.technical"),
     /** Hover explanation of {@link #REVIEW_TECHNICAL}. */
@@ -3736,6 +4033,8 @@ public enum MessageKey {
     SETTINGS_TEST_VERDICT_MODELS_SOFT("settings.test.verdict.modelsSoft"),
     /** Verdict of a passed inference test. */
     SETTINGS_TEST_VERDICT_INFERENCE("settings.test.verdict.inference"),
+    /** Verdict of a passed Advanced features check. */
+    SETTINGS_TEST_VERDICT_ADVANCED("settings.test.verdict.advanced"),
     /** Verdict and reason of a test of Ollama or LM Studio on this computer that nothing answered: the app is closed. */
     SETTINGS_TEST_NOT_OPEN("settings.test.notOpen"),
     /** Verdict of a failed test; 0 is the reason. */
@@ -3772,6 +4071,216 @@ public enum MessageKey {
     SETTINGS_STAGE_MODELS_TIP("settings.stage.models.tip"),
     /** Hover explanation of the inference test's switch in the test dialog's footer. */
     SETTINGS_STAGE_INFERENCE_TIP("settings.stage.inference.tip"),
+    /** Hover explanation of the Advanced features check's switch in the test dialog's footer. */
+    SETTINGS_STAGE_ADVANCED_TIP("settings.stage.advanced.tip"),
+    /** Hover explanation of the Advanced features check's button. */
+    SETTINGS_TEST_ADVANCED_TIP("settings.test.advanced.tip"),
+    /** Title of the test dialog for the Advanced features check, and the line beside its button before it runs. */
+    SETTINGS_TEST_ADVANCED_TITLE("settings.test.advanced.title"),
+    /** Button beside a model test that runs it and opens its card at once. */
+    SETTINGS_TEST_WITH_DETAILS("settings.test.withDetails"),
+    /** Hover explanation of the button labelled by {@link #SETTINGS_TEST_WITH_DETAILS}. */
+    SETTINGS_TEST_WITH_DETAILS_TIP("settings.test.withDetails.tip"),
+    /** Shown where the reply will be while the request is out. */
+    SETTINGS_TEST_WAITING("settings.test.waiting"),
+    /** Verdict line of the running test card: which step of how many, which stage, and what it waits for. */
+    SETTINGS_TEST_STEP("settings.test.step"),
+    /** What a connection or models step waits for, the last part of {@link #SETTINGS_TEST_STEP}. */
+    SETTINGS_TEST_STEP_SERVER("settings.test.step.server"),
+    /** What an inference or advanced step waits for, the last part of {@link #SETTINGS_TEST_STEP}. */
+    SETTINGS_TEST_STEP_MODEL("settings.test.step.model"),
+    /** Button of the test card that stops the running test. */
+    SETTINGS_TEST_STOP("settings.test.stop"),
+    /** Hover explanation of the button labelled by {@link #SETTINGS_TEST_STOP}. */
+    SETTINGS_TEST_STOP_TIP("settings.test.stop.tip"),
+    /** Label of the time the server spent loading the model before it answered. */
+    SETTINGS_TEST_METRIC_LOAD("settings.test.metric.load"),
+    /** Heading over one call of the Advanced features test; 0 is the check, 1 its number. */
+    SETTINGS_TEST_CALL_HEADING("settings.test.callHeading"),
+    /** What the Advanced features test is for, at the top of its card. */
+    SETTINGS_TEST_ADVANCED_INTRO("settings.test.advanced.intro"),
+    /** What one Advanced features check asked for, selected by its token. */
+    SETTINGS_TEST_ADVANCED_ASKED("settings.test.advanced.asked"),
+    /** What came back for one Advanced features check, selected by check and outcome; 2 is the field that worked. */
+    SETTINGS_TEST_ADVANCED_ANSWERED("settings.test.advanced.answered"),
+    /** Label of what an Advanced features check asked for. */
+    SETTINGS_TEST_ADVANCED_ASKED_LABEL("settings.test.advanced.askedLabel"),
+    /** Label of what came back for an Advanced features check. */
+    SETTINGS_TEST_ADVANCED_ANSWERED_LABEL("settings.test.advanced.answeredLabel"),
+    /** Label of an Advanced features check's verdict. */
+    SETTINGS_TEST_ADVANCED_VERDICT_LABEL("settings.test.advanced.verdictLabel"),
+    /** One call of an Advanced features check; 0 is its number, 1 its time. */
+    SETTINGS_TEST_ADVANCED_CALL("settings.test.advanced.call"),
+    /** One call of an Advanced features check with its speed; 2 is tokens per second. */
+    SETTINGS_TEST_ADVANCED_CALL_SPEED("settings.test.advanced.callSpeed"),
+    /** One call of an Advanced features check the server answered with an error; 2 is the status. */
+    SETTINGS_TEST_ADVANCED_CALL_STATUS("settings.test.advanced.callStatus"),
+    /** Title of the question asked when the test card is closed while its test runs. */
+    DIALOG_TEST_CLOSE_TITLE("dialog.testClose.title"),
+    /** Text of the question asked when the test card is closed while its test runs; 0 is the test. */
+    DIALOG_TEST_CLOSE_TEXT("dialog.testClose.text"),
+    /** Button that stops the running test and closes its card. */
+    DIALOG_TEST_CLOSE_STOP("dialog.testClose.stop"),
+    /** Hover explanation of the button labelled by {@link #DIALOG_TEST_CLOSE_STOP}. */
+    DIALOG_TEST_CLOSE_STOP_TIP("dialog.testClose.stop.tip"),
+    /** Button that closes the test card and lets the test finish. */
+    DIALOG_TEST_CLOSE_KEEP("dialog.testClose.keep"),
+    /** Hover explanation of the button labelled by {@link #DIALOG_TEST_CLOSE_KEEP}. */
+    DIALOG_TEST_CLOSE_KEEP_TIP("dialog.testClose.keep.tip"),
+    /** Name of one Advanced features check, selected by its note token; &#123;1&#125; is the token. */
+    SETTINGS_ADVANCED_CHECK("settings.providers.advanced.check"),
+    /** How the server treated a setting an Advanced features check sent, selected by the outcome; &#123;1&#125; is the word. */
+    SETTINGS_ADVANCED_OUTCOME("settings.providers.advanced.outcome"),
+    /** Value of the thinking check when a request field turned reasoning off; &#123;0&#125; is the field. */
+    SETTINGS_ADVANCED_SWITCH("settings.providers.advanced.switch"),
+    /** Value of the thinking check when no request field turned reasoning off. */
+    SETTINGS_ADVANCED_NO_SWITCH("settings.providers.advanced.noSwitch"),
+    /** Value of the answer-cap check when no field limits the answer. */
+    SETTINGS_ADVANCED_NO_CAP("settings.providers.advanced.noCap"),
+    /** One verdict line of the Advanced features check: &#123;0&#125; the check, &#123;1&#125; what was found. */
+    SETTINGS_ADVANCED_LINE("settings.providers.advanced.line"),
+    /** The line under the address: &#123;0&#125; the engine found, &#123;1&#125; the connection. */
+    SETTINGS_ENGINE_DETECTED("settings.providers.engine.detected"),
+    /** The line under the address with the version the server reported: &#123;0&#125; engine, &#123;1&#125; version, &#123;2&#125; connection. */
+    SETTINGS_ENGINE_DETECTED_VERSION("settings.providers.engine.detectedVersion"),
+    /** The line under the address when the server matches no known engine. */
+    SETTINGS_ENGINE_UNKNOWN("settings.providers.engine.unknown"),
+    /** An engine's name, selected by its constant; &#123;1&#125; is the constant. */
+    SETTINGS_ENGINE_NAME("settings.providers.engine.name"),
+    /** How the provider is reached, selected by its kind's constant. */
+    SETTINGS_ENGINE_CONNECTION("settings.providers.engine.connection"),
+    /** Button beside the line under the address that asks the server again which engine it is. */
+    SETTINGS_ENGINE_DETECT("settings.providers.engine.detect"),
+    /** Hover explanation of Detect again. */
+    SETTINGS_ENGINE_DETECT_TIP("settings.providers.engine.detect.tip"),
+    /** Shown while Detect again waits for the server. */
+    SETTINGS_ENGINE_DETECTING("settings.providers.engine.detecting"),
+    /** Shown when Detect again got no answer; the line keeps its last text. */
+    SETTINGS_ENGINE_UNANSWERED("settings.providers.engine.unanswered"),
+    /** Label of the choice that names the engine of a server. */
+    SETTINGS_TREAT_AS("settings.providers.treatAs"),
+    /** Hover explanation of Treat this server as. */
+    SETTINGS_TREAT_AS_TIP("settings.providers.treatAs.tip"),
+    /** The choice of Treat this server as that keeps the detected engine. */
+    SETTINGS_TREAT_AS_DETECTED("settings.providers.treatAs.detected"),
+    /** The one-time offer when Ollama answers behind an OpenAI-compatible provider. */
+    SETTINGS_OLLAMA_OFFER("settings.providers.ollamaOffer"),
+    /** Button of the offer that switches to Ollama's own connection. */
+    SETTINGS_OLLAMA_OFFER_USE("settings.providers.ollamaOffer.use"),
+    /** Hover explanation of Use it. */
+    SETTINGS_OLLAMA_OFFER_USE_TIP("settings.providers.ollamaOffer.use.tip"),
+    /** Button of the offer that keeps the OpenAI-compatible connection. */
+    SETTINGS_OLLAMA_OFFER_KEEP("settings.providers.ollamaOffer.keep"),
+    /** Hover explanation of Keep as is. */
+    SETTINGS_OLLAMA_OFFER_KEEP_TIP("settings.providers.ollamaOffer.keep.tip"),
+    /** Why a test or a start stopped: LM Studio does not list the id; &#123;0&#125; is the id. */
+    SETTINGS_LMSTUDIO_NO_MODEL("settings.providers.lmStudio.noModel"),
+    /** Said once when a typed LM Studio variant was removed from the model id; &#123;0&#125; is the variant. */
+    SETTINGS_LMSTUDIO_VARIANT_REMOVED("settings.providers.lmStudio.variantRemoved"),
+    /** Under the privacy line of an LM Studio provider: where LM Studio keeps request text. */
+    SETTINGS_LMSTUDIO_LOG("settings.providers.lmStudio.log"),
+    /** The key hint of a provider treated as Unsloth. */
+    SETTINGS_UNSLOTH_KEY_HINT("settings.providers.unsloth.keyHint"),
+    /** The line about Unsloth's own chat tools on a provider treated as Unsloth. */
+    SETTINGS_UNSLOTH_TOOLS("settings.providers.unsloth.tools"),
+    /** Why an Unsloth server refused the sign-in. */
+    SETTINGS_UNSLOTH_KEY_REFUSED("settings.providers.unsloth.keyRefused"),
+    /** The privacy line of a provider on this computer. */
+    SETTINGS_PRIVACY_LOCAL("settings.providers.privacy.local"),
+    /** The privacy line of a provider outside this computer; &#123;0&#125; is its host. */
+    SETTINGS_PRIVACY_REMOTE("settings.providers.privacy.remote"),
+    /** The neutral label beside a model that runs on a remote service. */
+    SETTINGS_MODEL_CLOUD("settings.providers.model.cloud"),
+    /** Hover explanation of the cloud label. */
+    SETTINGS_MODEL_CLOUD_TIP("settings.providers.model.cloud.tip"),
+    /** The quant chip beside a model: &#123;0&#125; is the quant token, &#123;1&#125; the tier's word. */
+    SETTINGS_QUANT_CHIP("settings.quant.chip"),
+    /** The tier word of a quant that keeps the quality of the full model. */
+    SETTINGS_QUANT_TIER_EXCELLENT("settings.quant.tier.excellent"),
+    /** The tier word of a quant with a small, usually unnoticeable loss. */
+    SETTINGS_QUANT_TIER_GOOD("settings.quant.tier.good"),
+    /** The tier word of a quant with a visible loss that translation tolerates. */
+    SETTINGS_QUANT_TIER_ACCEPTABLE("settings.quant.tier.acceptable"),
+    /** The tier word of a quant whose loss shows in the text. */
+    SETTINGS_QUANT_TIER_POOR("settings.quant.tier.poor"),
+    /** The tier word of a quant that is not for translating a book. */
+    SETTINGS_QUANT_TIER_UNUSABLE("settings.quant.tier.unusable"),
+    /** The tier word of a quant type the engine no longer reads. */
+    SETTINGS_QUANT_TIER_REMOVED("settings.quant.tier.removed"),
+    /** The tier word of a quant nobody has measured yet. */
+    SETTINGS_QUANT_TIER_UNMEASURED("settings.quant.tier.unmeasured"),
+    /** Hover explanation of the quant chip. */
+    SETTINGS_QUANT_CHIP_TIP("settings.quant.chip.tip"),
+    /** The Models tab's identity line; &#123;0&#125; is the model, its quant and how it was recognised, joined by a middle dot. */
+    SETTINGS_ADVICE_IDENTITY("settings.advice.identity"),
+    /** The quant part of the identity line when the name and the server disagree; &#123;0&#125; is the name's label, &#123;1&#125; the server's. */
+    SETTINGS_ADVICE_IDENTITY_SERVER("settings.advice.identity.server"),
+    /** The match part of the identity line for a model BookLoom has a row for. */
+    SETTINGS_ADVICE_MATCH_EXACT("settings.advice.match.exact"),
+    /** The match part for a model only its family is known; &#123;0&#125; is the family. */
+    SETTINGS_ADVICE_MATCH_FAMILY("settings.advice.match.family"),
+    /** The match part for a fine-tune that takes its base model's behaviour; &#123;0&#125; is the base model. */
+    SETTINGS_ADVICE_MATCH_FINE_TUNE("settings.advice.match.fineTune"),
+    /** The match part for a model BookLoom knows nothing about. */
+    SETTINGS_ADVICE_MATCH_UNKNOWN("settings.advice.match.unknown"),
+    /** Added to a quant sentence to name the project's target language; &#123;0&#125; is that language. */
+    SETTINGS_ADVICE_ESPECIALLY("settings.advice.especially"),
+    /** The sentence for a good quant. */
+    SETTINGS_ADVICE_QUANT_GOOD("settings.advice.quant.good"),
+    /** The sentence for an acceptable quant; &#123;0&#125; is the target-language clause or nothing. */
+    SETTINGS_ADVICE_QUANT_ACCEPTABLE("settings.advice.quant.acceptable"),
+    /** The sentence for an acceptable quant of three bits or fewer. */
+    SETTINGS_ADVICE_QUANT_CAUTION("settings.advice.quant.caution"),
+    /** The sentence for a poor quant; &#123;0&#125; is the target-language clause or nothing. */
+    SETTINGS_ADVICE_QUANT_POOR("settings.advice.quant.poor"),
+    /** The sentence for an unusable quant. */
+    SETTINGS_ADVICE_QUANT_UNUSABLE("settings.advice.quant.unusable"),
+    /** The sentence for a quant format the engine no longer reads. */
+    SETTINGS_ADVICE_QUANT_REMOVED("settings.advice.quant.removed"),
+    /** The sentence for a quant nobody has measured. */
+    SETTINGS_ADVICE_QUANT_UNMEASURED("settings.advice.quant.unmeasured"),
+    /** The neutral languages line for a maker's list; &#123;0&#125; is the count, &#123;1&#125; some of the codes. */
+    SETTINGS_ADVICE_LANGUAGES_LIST("settings.advice.languages.list"),
+    /** The neutral languages line for a model that lists English only. */
+    SETTINGS_ADVICE_LANGUAGES_ENGLISH_ONLY("settings.advice.languages.englishOnly"),
+    /** The neutral languages line for a maker that gives no list. */
+    SETTINGS_ADVICE_LANGUAGES_NOT_STATED("settings.advice.languages.notStated"),
+    /** The neutral languages line for a fine-tune; &#123;0&#125; is its base model, &#123;1&#125; the base's codes. */
+    SETTINGS_ADVICE_LANGUAGES_BASE("settings.advice.languages.base"),
+    /** Added to the languages line where BookLoom tested the pair; &#123;0&#125; is the source language, &#123;1&#125; the target. */
+    SETTINGS_ADVICE_LANGUAGES_TESTED("settings.advice.languages.tested"),
+    /** The languages line while no target language is chosen, so none can be checked against the list. */
+    SETTINGS_ADVICE_LANGUAGES_NO_TARGET("settings.advice.languages.noTarget"),
+    /** The languages line when the maker's list declares the project's target language. */
+    SETTINGS_ADVICE_LANGUAGES_TARGET_DECLARED("settings.advice.languages.targetDeclared"),
+    /** The languages line when the maker's complete list leaves the project's target language out. */
+    SETTINGS_ADVICE_LANGUAGES_TARGET_NOT_DECLARED("settings.advice.languages.targetNotDeclared"),
+    /** Joins two language names; &#123;0&#125; and &#123;1&#125; are the names. */
+    SETTINGS_ADVICE_LANGUAGE_AND("settings.advice.language.and"),
+    /** The warning for a language the maker's complete list leaves out; &#123;0&#125; is the model's family, &#123;1&#125; the language names. */
+    SETTINGS_ADVICE_LANGUAGE_WARN("settings.advice.language.warn"),
+    /** The information line for a maker that says nothing; &#123;0&#125; is the model's family. */
+    SETTINGS_ADVICE_LANGUAGE_UNKNOWN("settings.advice.language.unknown"),
+    /** The information line for a fine-tune whose base model lists the languages; &#123;0&#125; is the model's family, &#123;1&#125; the base model, &#123;2&#125; the language names. */
+    SETTINGS_ADVICE_LANGUAGE_BASE("settings.advice.language.base"),
+    /** The licence note; &#123;0&#125; is the model. */
+    SETTINGS_ADVICE_LICENCE("settings.advice.licence"),
+    /** The thinking hint; &#123;0&#125; is the engine, &#123;1&#125; the library model. */
+    SETTINGS_ADVICE_THINKING_HINT("settings.advice.thinking"),
+    /** The foot of the Models tab; &#123;0&#125; is the date of the shipped model knowledge. */
+    SETTINGS_ADVICE_FACTS_DATE("settings.advice.factsDate"),
+    /** What a pasted Hugging Face link or file was read as; &#123;0&#125; is the repository, &#123;1&#125; the file, &#123;2&#125; the model and its quant. */
+    SETTINGS_FORM_MODELS_UNDERSTOOD_REPO_FILE("settings.form.models.understood.repoFile"),
+    /** What a pasted repository id was read as; &#123;0&#125; is the repository, &#123;1&#125; the model and its quant. */
+    SETTINGS_FORM_MODELS_UNDERSTOOD_REPO("settings.form.models.understood.repo"),
+    /** What any other recognised paste was read as; &#123;0&#125; is the model and its quant. */
+    SETTINGS_FORM_MODELS_UNDERSTOOD_ID("settings.form.models.understood.id"),
+    /** Added to the Understood line when the server does not list the model. */
+    SETTINGS_FORM_MODELS_NOT_LISTED("settings.form.models.notListed"),
+    /** Caption of the pull command offered as text for an Ollama provider. */
+    SETTINGS_FORM_MODELS_PULL_LABEL("settings.form.models.pull.label"),
+    /** Raised at Start when LM Studio will load a model that is not loaded. */
+    TOAST_MODEL_LOADS_OWN_SETTINGS("toast.modelLoadsOwnSettings"),
     /** Label of the status metric. */
     SETTINGS_TEST_METRIC_STATUS("settings.test.metric.status"),
     /** Label of the time metric. */
@@ -3802,6 +4311,8 @@ public enum MessageKey {
     SETTINGS_TEST_METRIC_SERVER("settings.test.metric.server"),
     /** A metric the server did not report. */
     SETTINGS_TEST_METRIC_NONE("settings.test.metric.none"),
+    /** Prompt reading that is labelled uncached; arguments: 0 the time, 1 the cached share in percent or {@code none}. */
+    SETTINGS_TEST_METRIC_UNCACHED("settings.test.metric.uncached"),
     /** HTTP status of an answered request; 0 is the code. */
     SETTINGS_TEST_STATUS_OK("settings.test.status.ok"),
     /** No HTTP status because nothing answered. */
@@ -3829,11 +4340,7 @@ public enum MessageKey {
     /** Button that switches to the new provider; 0 is its name. */
     DIALOG_SWITCH_PROVIDER_USE("dialog.switchProvider.use"),
     /** Hover explanation of the button labelled by {@link #DIALOG_SWITCH_PROVIDER_USE}. */
-    DIALOG_SWITCH_PROVIDER_USE_TIP("dialog.switchProvider.use.tip"),
-    /** Before Start: the time of a book from a speed an earlier translation measured; 0 is "about 2 h" or the like. */
-    ESTIMATE_MEASURED_RUN("estimate.measured.run"),
-    /** Hover explanation of the line labelled by {@link #ESTIMATE_MEASURED_RUN}. */
-    ESTIMATE_MEASURED_RUN_TIP("estimate.measured.run.tip");
+    DIALOG_SWITCH_PROVIDER_USE_TIP("dialog.switchProvider.use.tip");
 
     private final String key;
 

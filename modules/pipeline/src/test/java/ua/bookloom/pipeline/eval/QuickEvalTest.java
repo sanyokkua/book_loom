@@ -24,14 +24,13 @@ class QuickEvalTest {
     }
 
     @Test
-    void promptCases_quickSet_coversDraftFixReviewAndAControl() {
+    void promptCases_quickSet_coversDraftRepairAndAControl() {
         final List<EvalCase> quick = PromptEvalCases.ALL.stream()
                 .filter(evalCase -> QuickEval.PROMPT_CASES.contains(evalCase.name()))
                 .toList();
 
         assertThat(quick).hasAtLeastOneElementOfType(EvalCase.Draft.class);
-        assertThat(quick).hasAtLeastOneElementOfType(EvalCase.Fix.class);
-        assertThat(quick).hasAtLeastOneElementOfType(EvalCase.Review.class);
+        assertThat(quick).hasAtLeastOneElementOfType(EvalCase.Repair.class);
         assertThat(QuickEval.PROMPT_CASES).contains("plain-short");
     }
 
@@ -44,8 +43,6 @@ class QuickEvalTest {
     void realRun_quickMarks_coverMoreThanOneCaseFile() {
         assertThat(RunCorpus.text().stream().filter(RunCase::isQuick)).isNotEmpty();
         assertThat(RunCorpus.batches().stream().filter(BatchCase::isQuick)).isNotEmpty();
-        assertThat(RunCorpus.reviewerBatches().stream().filter(ReviewerBatchCase::isQuick))
-                .isNotEmpty();
         assertThat(RunCorpus.repairs().stream().filter(RepairCase::isQuick)).isNotEmpty();
     }
 

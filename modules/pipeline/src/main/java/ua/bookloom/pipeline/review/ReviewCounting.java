@@ -12,6 +12,7 @@ import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.audit.AuditFindings;
+import ua.bookloom.pipeline.qa.CheckName;
 
 /**
  * The one counts rule the review desk and the export report share, so the tiles a person reads before exporting and
@@ -49,7 +50,17 @@ public final class ReviewCounting {
                         translated,
                         record -> record.status() == SegmentStatus.FLAGGED && record.machineTarget() == null),
                 countIf(translated, record -> isUnreviewedAccept(record, SegmentPath.VERBATIM)),
-                countIf(translated, AuditFindings::isSuspicious));
+                countIf(translated, AuditFindings::isSuspicious),
+                countIf(translated, ReviewCounting::isSourceFallback));
+    }
+
+    // The export writes such a record in the source language: no target to put back, and the person did not edit one.
+    private static boolean isSourceFallback(final SegmentRecord record) {
+        return record.status() == SegmentStatus.FLAGGED
+                && record.machineTarget() == null
+                && record.userTarget() == null
+                && record.findings().stream()
+                        .anyMatch(finding -> CheckName.PLACEHOLDER.raisedBy().equals(finding.raisedBy()));
     }
 
     private static boolean isUnreviewedAccept(final SegmentRecord record, final SegmentPath... paths) {

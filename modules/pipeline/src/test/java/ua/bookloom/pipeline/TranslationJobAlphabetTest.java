@@ -2,13 +2,14 @@ package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
-import static ua.bookloom.pipeline.ChunkRunFixtures.FIX;
+import static ua.bookloom.pipeline.ChunkRunFixtures.PROOFREAD;
+import static ua.bookloom.pipeline.ChunkRunFixtures.REPAIR;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
 import static ua.bookloom.pipeline.ChunkRunFixtures.userMessage;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
+import static ua.bookloom.pipeline.TranslationJobTestSupport.draftThenRepair;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.project;
-import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.stored;
 
@@ -36,13 +37,13 @@ class TranslationJobAlphabetTest {
 
     @Test
     void run_russianLetterThenFix_repairsTheSegmentWithOneDirectedFixNamingTheWord() {
-        final ScriptedChatModel model = replies(RUSSIAN_LETTER, RIGHT);
-        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.FAST));
+        final ScriptedChatModel model = draftThenRepair(RUSSIAN_LETTER, RIGHT);
+        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.BALANCED));
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, FIX);
-        assertThat(userMessage(model.requests().get(1))).contains("стары").contains("ы");
+        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
+        assertThat(userMessage(model.requests().getLast())).contains("стары").contains("ы");
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, RIGHT);
@@ -53,12 +54,12 @@ class TranslationJobAlphabetTest {
 
     @Test
     void run_fixKeepsTheRussianLetter_flagsTheSegmentWithTheAlphabetFindingAndKeepsTheDraftAsMachineTarget() {
-        final ScriptedChatModel model = replies(RUSSIAN_LETTER, RUSSIAN_LETTER);
-        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.FAST));
+        final ScriptedChatModel model = draftThenRepair(RUSSIAN_LETTER, RUSSIAN_LETTER);
+        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.BALANCED));
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, FIX);
+        assertThat(formats(model)).containsExactly(DRAFT, REPAIR, PROOFREAD);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::machineTarget)
                 .containsExactly(SegmentStatus.FLAGGED, RUSSIAN_LETTER);

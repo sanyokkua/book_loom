@@ -14,6 +14,7 @@ import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.llm.ModelWindow;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
@@ -110,14 +111,18 @@ class ModelCallUsageWireMockTest {
                         f -> usageOf(f).completion(),
                         ModelCallFinished::outputChars,
                         ModelCallFinished::usageEstimated)
-                .containsExactly(null, 115, 300, true);
+                .containsExactly(null, 105, 300, true);
         assertThat(usageOf(finished).generation()).isEqualTo(finished.elapsed());
     }
 
     private JobModelCalls calls(final ChatModel model) {
         final JobControl control = new JobControl(Set.of());
         return new JobModelCalls(
-                onSent -> new CancellableChatModel(model, control, onSent), events::add, Clock.systemUTC(), "uk");
+                onSent -> new CancellableChatModel(model, control, onSent),
+                events::add,
+                Clock.systemUTC(),
+                "uk",
+                ModelWindow.DEFAULT_WINDOW);
     }
 
     private ModelCallFinished finished() {

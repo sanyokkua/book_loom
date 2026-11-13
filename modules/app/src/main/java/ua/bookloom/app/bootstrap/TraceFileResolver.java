@@ -5,11 +5,11 @@ import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.util.paths.AppEnvironment;
+import ua.bookloom.util.paths.NameLookup;
 
 /**
  * Purely decides whether the detailed diagnostic log is written, from injected environment and property lookups.
@@ -41,16 +41,13 @@ public final class TraceFileResolver {
      * @return the decision with where it came from, and the values that named neither on nor off, if any
      */
     public static ResolvedTraceFile resolve(
-            Function<String, @Nullable String> getEnv,
-            Function<String, @Nullable String> getProperty,
-            AppEnvironment environment,
-            Path marker) {
+            NameLookup getEnv, NameLookup getProperty, AppEnvironment environment, Path marker) {
         Objects.requireNonNull(marker, "marker");
         return decide(getEnv, getProperty, environment, marker);
     }
 
     /**
-     * Resolves as {@link #resolve(Function, Function, AppEnvironment, Path)} does, for a launch that has no marker
+     * Resolves as {@link #resolve(NameLookup, NameLookup, AppEnvironment, Path)} does, for a launch that has no marker
      * (the command line).
      *
      * @param getEnv reads an environment variable, returning {@code null} when unset
@@ -58,18 +55,12 @@ public final class TraceFileResolver {
      * @param environment the resolved run environment; a development run defaults to on
      * @return the decision with where it came from, and the values that named neither on nor off, if any
      */
-    public static ResolvedTraceFile resolve(
-            Function<String, @Nullable String> getEnv,
-            Function<String, @Nullable String> getProperty,
-            AppEnvironment environment) {
+    public static ResolvedTraceFile resolve(NameLookup getEnv, NameLookup getProperty, AppEnvironment environment) {
         return decide(getEnv, getProperty, environment, null);
     }
 
     private static ResolvedTraceFile decide(
-            Function<String, @Nullable String> getEnv,
-            Function<String, @Nullable String> getProperty,
-            AppEnvironment environment,
-            @Nullable Path marker) {
+            NameLookup getEnv, NameLookup getProperty, AppEnvironment environment, @Nullable Path marker) {
         Objects.requireNonNull(getEnv, "getEnv");
         Objects.requireNonNull(getProperty, "getProperty");
         Objects.requireNonNull(environment, "environment");

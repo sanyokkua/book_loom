@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.eval;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -11,9 +12,13 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.CallRecord;
+import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.project.Gender;
@@ -35,10 +40,9 @@ import ua.bookloom.pipeline.eval.SequenceMetrics.TermStat;
 import ua.bookloom.pipeline.eval.SequenceRun.Decided;
 
 /**
- * Turns one run into the sequence metrics with production checks only: {@link TextChecks} for the language, quote and
- * script findings, {@link GenderChecks} for the narrator, {@link RenderingConsistency} for the lexicon. A term's
- * renderings are read by co-occurrence: a source segment naming the term counts for every known rendering its target
- * carries, so a target that uses a rendering the fixture does not list counts for none.
+ * Turns one run into the sequence metrics with production checks only ({@link TextChecks}, {@link GenderChecks},
+ * {@link RenderingConsistency}). A term's renderings are read by co-occurrence: a segment naming the term counts for
+ * every known rendering its target carries, so a target using a rendering the fixture does not list counts for none.
  */
 final class SequenceMeasure {
 
@@ -67,7 +71,8 @@ final class SequenceMeasure {
                 .narrator(run.narrator().label())
                 .dial(dial)
                 .terms(terms)
-                .names(names);
+                .names(names)
+                .summaryGate(run.summaryGate());
         quality(builder, segments, terms, names);
         realRun(builder, run, terms);
         builder.ltcr1(ltcr1(segments));
@@ -118,7 +123,7 @@ final class SequenceMeasure {
                 .leakedProtocol((int) run.segments().stream()
                         .filter(s -> s.target() != null && ProtocolLeak.leaks(s.target()))
                         .count())
-                .reviewerTruncated(run.reviewerTruncated())
+                .proofreadTruncated(run.proofreadTruncated())
                 .termClaimedWrong(claims.values().stream().mapToInt(List::size).sum())
                 .claimedRenderings(claims.entrySet().stream()
                         .map(e -> e.getKey() + " <- " + String.join(", ", e.getValue()))
@@ -166,6 +171,9 @@ final class SequenceMeasure {
                 .callsPerSegment(count == 0 ? 0 : (double) run.calls().size() / count)
                 .secondsPerSegment(count == 0 ? 0 : seconds / count)
                 .elapsedSeconds(seconds)
+                .promptReadSecondsPerSegment(count == 0 ? 0 : promptReadSeconds(run.calls()) / count)
+                .promptTokens(usageSum(run.calls(), TokenUsage::prompt))
+                .cachedPromptTokens(usageSum(run.calls(), TokenUsage::cachedPrompt))
                 .batchedItems(batched)
                 .batchFallbacks(fallbacks)
                 .batchFallbackRate(batched == 0 ? 0 : (double) fallbacks / batched)
@@ -178,6 +186,27 @@ final class SequenceMeasure {
                 .costByKind(costByKind(run.calls()));
     }
 
+    private static double promptReadSeconds(final List<ModelCallFinished> calls) {
+        return calls.stream()
+                        .map(ModelCallFinished::usage)
+                        .filter(Objects::nonNull)
+                        .map(TokenUsage::promptEval)
+                        .filter(Objects::nonNull)
+                        .mapToLong(Duration::toMillis)
+                        .sum()
+                / 1000.0;
+    }
+
+    private static long usageSum(final List<ModelCallFinished> calls, final Function<TokenUsage, Integer> field) {
+        return calls.stream()
+                .map(ModelCallFinished::usage)
+                .filter(Objects::nonNull)
+                .map(field)
+                .filter(Objects::nonNull)
+                .mapToLong(Integer::longValue)
+                .sum();
+    }
+
     private static double wastedRate(final List<ModelCallFinished> calls) {
         final long wasted = calls.stream()
                 .filter(call -> !call.isAnswered() || call.attempt() > 1)
@@ -186,19 +215,25 @@ final class SequenceMeasure {
     }
 
     private static Map<String, SequenceMetrics.KindCost> costByKind(final List<ModelCallFinished> calls) {
-        final CallKindTotals totals = new CallKindTotals();
-        calls.forEach(totals::record);
+        final CallKindTotals totals =
+                CallKindTotals.of(calls.stream().map(SequenceMeasure::recordOf).toList());
         final Map<String, SequenceMetrics.KindCost> byName = new LinkedHashMap<>();
+        // The eval report's columns are numbers, so a figure no call reported is written as 0 there.
         totals.totals()
                 .forEach((kind, t) -> byName.put(
                         kind.name(),
                         new SequenceMetrics.KindCost(
                                 t.attempts(),
                                 t.failed(),
-                                t.promptTokens(),
-                                t.completionTokens(),
+                                t.promptTotal().orElse(0L),
+                                t.completionTotal().orElse(0L),
                                 t.elapsed().toMillis() / 1000.0)));
         return byName;
+    }
+
+    private static CallRecord recordOf(final ModelCallFinished call) {
+        return new CallRecord(
+                call.kind(), call.usage(), call.elapsed(), null, call.isAnswered() ? null : FailureReason.UNCLASSIFIED);
     }
 
     private static String learnedLine(final LexiconEntry entry) {

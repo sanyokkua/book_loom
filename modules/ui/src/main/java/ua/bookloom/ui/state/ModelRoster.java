@@ -160,7 +160,8 @@ public final class ModelRoster {
                     answered.orElse(List.of()),
                     config.customModels(),
                     storedByProvider.getOrDefault(config.id(), List.of()));
-            ids.forEach(id -> result.add(new ModelEntry(config.id(), name, config.kind(), id)));
+            ids.forEach(
+                    id -> result.add(new ModelEntry(config.id(), name, config.kind(), id, config.effectiveEngine())));
         }
         return new Reading(result, List.copyOf(silent));
     }
@@ -199,7 +200,7 @@ public final class ModelRoster {
     private static Optional<List<String>> await(final Future<Optional<List<String>>> listed) {
         try {
             return listed.get();
-        } catch (InterruptedException interrupted) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             return Optional.empty();
         } catch (ExecutionException failed) {

@@ -23,13 +23,9 @@ record FaultPlan(long seed, int outageAtCall, Duration outage, int scale) {
         }
     }
 
-    /** A plan whose outage of 25 minutes begins at {@code outageAtCall}, at the default rates. */
+    /** A plan whose outage of 25 minutes begins at {@code outageAtCall}, at three times the default rates, so each kind still strikes in a run of a few hundred calls. */
     static FaultPlan standard(final long seed, final int outageAtCall) {
-        return new FaultPlan(seed, outageAtCall, Duration.ofMinutes(25), 1);
-    }
-
-    int rejudgeHangPerMille() {
-        return 300 * scale;
+        return new FaultPlan(seed, outageAtCall, Duration.ofMinutes(25), 3);
     }
 
     /** A fault any call may meet. */
@@ -63,9 +59,9 @@ record FaultPlan(long seed, int outageAtCall, Duration outage, int scale) {
                 new int[] {8, 6, 6, 5, 5, 4, 3});
     }
 
-    /** A fault of a judge's reply. */
-    Fault judgeCall(final int roll) {
-        return band(roll - anyCallTotal(), new Fault[] {Fault.JUDGE_JUNK, Fault.JUDGE_REVISE}, new int[] {20, 40});
+    /** A fault of a proofread's reply: plain text where JSON was asked for. */
+    Fault proofreadCall(final int roll) {
+        return band(roll - anyCallTotal(), new Fault[] {Fault.PROOFREAD_TEXT}, new int[] {100});
     }
 
     private int anyCallTotal() {

@@ -5,6 +5,7 @@ import java.util.List;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.ProofreadTally;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.state.RunStateView.BannerView;
@@ -66,8 +67,16 @@ final class RunBanners {
                 Tone.INFO,
                 "↺",
                 Text.of(MessageKey.RUN_BANNER_WELCOME, in.decided(), in.total()),
-                Text.of(MessageKey.RUN_BANNER_WELCOME_TEXT, RunStateView.orNone(in.continuesAt())),
+                welcomeText(in),
                 List.of());
+    }
+
+    // A decided book continues with its Proofread stage, at the window it names, not at a segment.
+    private static Text welcomeText(final RunStateInputs in) {
+        final ProofreadTally proofread = in.proofread();
+        return proofread == null
+                ? Text.of(MessageKey.RUN_BANNER_WELCOME_TEXT, RunStateView.orNone(in.continuesAt()))
+                : Text.of(MessageKey.RUN_BANNER_WELCOME_PROOFREAD, proofread.next(), proofread.windows());
     }
 
     // "Cannot reach" only when nothing answered; a program that answered with an error or an unreadable reply is
@@ -130,20 +139,20 @@ final class RunBanners {
         final RunAction settings = openSettings();
         return switch (in.notice()) {
             // A refusal can come after work was done (an export refused at the run's end), so it is not "cannot start".
-            case RunNotice.Refused refused ->
+            case RunNotice.Refused(var error) ->
                 banner(
                         "refused",
                         Tone.WARN,
                         "⚠",
                         Text.of(MessageKey.TRANSLATING_REFUSED_TITLE),
-                        Text.of(MessageKey.RUN_BANNER_PLAIN, refused.error()),
+                        Text.of(MessageKey.RUN_BANNER_PLAIN, error),
                         List.of());
             case RunNotice.ProviderError provider ->
                 cannotStartBanner(OTHER, Text.of(MessageKey.RUN_BANNER_PLAIN, provider.error()), List.of(settings));
-            case RunNotice.MissingInput missing -> {
-                final String token = missing.which().token();
+            case RunNotice.MissingInput(var which) -> {
+                final String token = which.token();
                 yield cannotStartBanner(
-                        token, Text.of(MessageKey.TRANSLATING_MISSING_TEXT, token), fixFor(missing.which(), settings));
+                        token, Text.of(MessageKey.TRANSLATING_MISSING_TEXT, token), fixFor(which, settings));
             }
             case null -> {
                 final String token = RunNotice.Input.MODEL.token();

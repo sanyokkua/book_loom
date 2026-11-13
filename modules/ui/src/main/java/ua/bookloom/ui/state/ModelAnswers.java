@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -46,18 +47,22 @@ final class ModelAnswers {
         return screen.lexicon().entries(project).map(all -> new Terms(found, changes, all));
     }
 
-    // The pass writes both tables itself, so they are read again before anything is shown.
+    // The pass writes both tables itself, so they are read again before anything is shown. The model's context length
+    // is asked here, in the job, off the FX thread. The seconds per call the pass measured are stored on the chosen
+    // model whatever its end, since every answered call measured one.
     Result<AutoNames> prepare(
             final String project,
+            final @Nullable ModelSelection chosen,
             final ChatModel model,
-            final @Nullable Integer detectedContext,
             final Consumer<JobEvent> progress) {
-        return screen.namesPass()
-                .run(project, model, detectedContext, progress)
-                .flatMap(report -> screen.glossary()
-                        .entries(project)
-                        .flatMap(names ->
-                                screen.lexicon().entries(project).map(terms -> new AutoNames(report, names, terms))));
+        final @Nullable Integer detectedContext =
+                chosen == null ? null : screen.detection().apply(chosen).orElse(null);
+        final long mark = screen.measured().mark();
+        final Result<NamesPassReport> ran = screen.namesPass().run(project, model, detectedContext, progress);
+        screen.measured().keep(chosen, mark, "names pass");
+        return ran.flatMap(report -> screen.glossary()
+                .entries(project)
+                .flatMap(names -> screen.lexicon().entries(project).map(terms -> new AutoNames(report, names, terms))));
     }
 
     void autoPrepared(final ChangeOperation operation, final AutoNames answer) {
@@ -71,7 +76,14 @@ final class ModelAnswers {
         screen.rows().setAll(answer.glossary());
         screen.lexiconRows().setAll(answer.terms());
         info(screen.messages().get(MessageKey.NAMES_STYLE_AUTO_DONE, report.calls()));
-        screen.changes().both(operation, report.names(), report.terms(), report.untargeted());
+        screen.changes()
+                .both(operation, report.names(), report.terms(), withoutTarget(answer.glossary(), report.untargeted()));
+    }
+
+    // The pass names its untargeted terms; the dialog needs their rows to write a typed target into.
+    private static List<GlossaryEntry> withoutTarget(final List<GlossaryEntry> glossary, final List<String> terms) {
+        final Set<String> wanted = Set.copyOf(terms);
+        return glossary.stream().filter(entry -> wanted.contains(entry.term())).toList();
     }
 
     void termsChanged(final ChangeOperation operation, final Terms answer, final int changed, final MessageKey line) {

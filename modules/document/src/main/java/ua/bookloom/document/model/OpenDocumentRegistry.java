@@ -1,5 +1,7 @@
 package ua.bookloom.document.model;
 
+import static ua.bookloom.util.contract.ArgNames.DOCUMENT_ID;
+
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -31,7 +33,7 @@ public abstract class OpenDocumentRegistry<T> {
      * @param parsed the state to hold until the matching writer asks for it
      */
     public final void put(String documentId, T parsed) {
-        byDocumentId.put(Objects.requireNonNull(documentId, "documentId"), Objects.requireNonNull(parsed, "parsed"));
+        byDocumentId.put(Objects.requireNonNull(documentId, DOCUMENT_ID), Objects.requireNonNull(parsed, "parsed"));
     }
 
     /**
@@ -41,7 +43,7 @@ public abstract class OpenDocumentRegistry<T> {
      * @return the registered state, or empty if no document is open under that id
      */
     public final Optional<T> find(String documentId) {
-        return Optional.ofNullable(byDocumentId.get(Objects.requireNonNull(documentId, "documentId")));
+        return Optional.ofNullable(byDocumentId.get(Objects.requireNonNull(documentId, DOCUMENT_ID)));
     }
 
     /**
@@ -51,6 +53,6 @@ public abstract class OpenDocumentRegistry<T> {
      * @return the state that was held, or empty if no document was open under that id
      */
     public final Optional<T> close(String documentId) {
-        return Optional.ofNullable(byDocumentId.remove(Objects.requireNonNull(documentId, "documentId")));
+        return Optional.ofNullable(byDocumentId.remove(Objects.requireNonNull(documentId, DOCUMENT_ID)));
     }
 }

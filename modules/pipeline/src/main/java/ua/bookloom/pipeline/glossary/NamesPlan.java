@@ -41,9 +41,10 @@ public record NamesPlan(QualityDial dial, List<Candidate> read, WindowPlan windo
     private static final WindowPlan MAX_WINDOWS = new WindowPlan(12, 2, 450);
     private static final int FAST_PER_CALL = 4;
     private static final int PER_CALL = 6;
-    private static final long MILLIS_PER_MINUTE = 60_000L;
+    private static final double MILLIS_PER_MINUTE = 60_000.0;
 
-    // 15i.M1: the names suite on gemma4:e4b-mlx, 2026-10-15 (docs/DEVELOPMENT.md#15i-m1), whole passes of 111 to 392
+    // 15i.M1: the names suite on gemma4:e4b-mlx, 2026-10-15 (docs/evaluation/results-prompt-rounds.md#15i-m1), whole
+    // passes of 111 to 392
     // calls took 3.7 to 7.8 seconds a call, 4.6 on the owner novel and on Tom Sawyer at Fast and Balanced. A call's
     // seconds are set so that the dial's call budget takes the dial's minutes: 120 calls 6 to 10 at Fast, 260 calls 16
     // to 25 at Balanced, 520 calls 31 to 60 at Max.
@@ -268,10 +269,24 @@ public record NamesPlan(QualityDial dial, List<Candidate> read, WindowPlan windo
      * @return the fewest and the most whole minutes, each rounded up; zero for no call
      */
     public static Minutes minutesFor(final QualityDial dial, final int calls) {
+        return minutesFor(dial, calls, 1.0);
+    }
+
+    /**
+     * How long a number of calls takes at a dial on a model slower or faster than the one the per-call times were
+     * measured on.
+     *
+     * @param dial the quality dial; never null
+     * @param calls the calls; not negative
+     * @param scale the model's measured seconds per segment over the reference model's; positive, 1 for none
+     * @return the fewest and the most whole minutes, each rounded up; zero for no call
+     */
+    public static Minutes minutesFor(final QualityDial dial, final int calls, final double scale) {
         Objects.requireNonNull(dial, "dial");
-        final Minutes minutes = new Minutes((int) Math.ceilDiv(calls * lowMillisPerCall(dial), MILLIS_PER_MINUTE), (int)
-                Math.ceilDiv(calls * highMillisPerCall(dial), MILLIS_PER_MINUTE));
-        log.debug("Names plan {}: {} calls take {}", dial, calls, minutes);
+        final Minutes minutes =
+                new Minutes((int) Math.ceil(calls * lowMillisPerCall(dial) * scale / MILLIS_PER_MINUTE), (int)
+                        Math.ceil(calls * highMillisPerCall(dial) * scale / MILLIS_PER_MINUTE));
+        log.debug("Names plan {}: {} calls at scale {} take {}", dial, calls, scale, minutes);
         return minutes;
     }
 

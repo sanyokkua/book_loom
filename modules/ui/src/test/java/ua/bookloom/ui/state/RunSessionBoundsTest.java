@@ -10,10 +10,9 @@ import javafx.collections.ListChangeListener;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.pipeline.CallKind;
-import ua.bookloom.api.pipeline.RoundStarted;
 
 /**
- * What a run session holds does not grow with the book: the lines waiting for a tick, the locators and repair rounds it
+ * What a run session holds does not grow with the book: the lines waiting for a tick, the locators it
  * remembers, and the flagged queue, which grows by appending rather than by rebuilding every row it already shows.
  */
 class RunSessionBoundsTest extends LiveSessionTestBase {
@@ -40,12 +39,12 @@ class RunSessionBoundsTest extends LiveSessionTestBase {
         assertThat(logEntries()).hasSize(StateMirror.MAX_LOG_ENTRIES);
     }
 
-    // A segment that starts a repair round and is never decided (a stop, a skip) would otherwise stay remembered.
+    // A segment that starts and is never decided (a stop, a skip) would otherwise stay remembered.
     @Test
-    void segmentStarted_thousandsOfSegmentsWithRounds_holdsABoundedNumber() {
+    void segmentStarted_thousandsOfSegments_holdsABoundedNumber() {
         final ActivityLogFeed feed = new ActivityLogFeed();
 
-        IntStream.range(0, 3_700).forEach(index -> startWithRound(feed, "s-" + index));
+        IntStream.range(0, 3_700).forEach(index -> startSegment(feed, "s-" + index));
 
         assertThat(feed.heldSegments()).isLessThanOrEqualTo(ActivityLogFeed.MAX_LOCATORS + 1);
     }
@@ -77,9 +76,8 @@ class RunSessionBoundsTest extends LiveSessionTestBase {
         assertThat(onFx(() -> List.copyOf(mirror.live().flaggedQueue()))).isEqualTo(rows(3).subList(1, 3));
     }
 
-    private static void startWithRound(final ActivityLogFeed feed, final String segmentId) {
+    private static void startSegment(final ActivityLogFeed feed, final String segmentId) {
         feed.segmentStarted(started(segmentId, "ch1 · " + segmentId, "Text."));
-        feed.roundStarted(new RoundStarted(segmentId, 1, 3, 0.5, "meaning"));
     }
 
     private static LogEntry line(final int index) {

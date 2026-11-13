@@ -2,8 +2,6 @@ package ua.bookloom.ui;
 
 import com.google.inject.Binder;
 import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import lombok.AccessLevel;
@@ -43,17 +41,17 @@ final class UiTestBindings {
         binder.bind(ExecutorService.class).annotatedWith(IoExecutor.class).toInstance(daemonExecutor());
     }
 
-    /** Binds the stores a graph reads: providers, settings and per-model settings, and a clock standing at {@code now}. */
+    /** Binds the stores a graph reads: providers, settings and per-model settings, and the graph's clock. */
     static void bindStores(
             final Binder binder,
             final ProviderConfigs configs,
             final SettingsRepository settings,
             final ModelSettingsRepository modelSettings,
-            final Instant now) {
+            final Clock clock) {
         binder.bind(ProviderConfigs.class).toInstance(configs);
         binder.bind(SettingsRepository.class).toInstance(settings);
         binder.bind(ModelSettingsRepository.class).toInstance(modelSettings);
-        binder.bind(Clock.class).toInstance(Clock.fixed(now, ZoneOffset.UTC));
+        binder.bind(Clock.class).toInstance(clock);
     }
 
     static ExecutorService daemonExecutor() {

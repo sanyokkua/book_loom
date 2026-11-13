@@ -11,8 +11,10 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.project.AlsoTranslate;
+import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.api.project.Severity;
 
 /** The one counts rule the review desk and the export report share. */
 class ReviewCountingTest {
@@ -78,6 +80,43 @@ class ReviewCountingTest {
                 .isEqualTo(new ReviewCounts(1, 0, 0, 0, 0, 0, 1, 0, 0));
     }
 
+    private static SegmentRecord noTarget(final String id, final String raisedBy) {
+        return body(id, SegmentStatus.FLAGGED, SegmentPath.DRAFT)
+                .withMachineTarget(null, null)
+                .withFindings(List.of(new QaFinding("markup", Severity.HIGH, "marks lost", raisedBy)));
+    }
+
+    @Test
+    void count_lostMarksNoTargetFlagged_countedAsSourceFallback() {
+        final List<SegmentRecord> records = List.of(noTarget("a", "placeholder"), noTarget("b", "placeholder"));
+
+        final ReviewCounts counts =
+                ReviewCounting.count(records, AlsoTranslate.defaults().keptKinds());
+
+        assertThat(counts.sourceFallback()).isEqualTo(2);
+        assertThat(counts.flaggedWithoutTarget()).isEqualTo(2);
+    }
+
+    @Test
+    void count_lostMarksEditedByPerson_notCounted() {
+        final SegmentRecord edited = noTarget("a", "placeholder").withUserTarget("Моя правка.", "Моя правка.");
+
+        assertThat(ReviewCounting.count(
+                                List.of(edited), AlsoTranslate.defaults().keptKinds())
+                        .sourceFallback())
+                .isZero();
+    }
+
+    @Test
+    void count_otherNoTargetFlag_notCounted() {
+        final SegmentRecord refused = noTarget("a", "reply");
+
+        assertThat(ReviewCounting.count(
+                                List.of(refused), AlsoTranslate.defaults().keptKinds())
+                        .sourceFallback())
+                .isZero();
+    }
+
     private static SegmentRecord body(final String id, final SegmentStatus status, final SegmentPath path) {
         return record(id, "unit-1", SegmentKind.PARAGRAPH, status, path);
     }
@@ -93,7 +132,7 @@ class ReviewCountingTest {
             final SegmentStatus status,
             final SegmentPath path) {
         return new SegmentRecord(
-                "p1", id, unitId, 0, kind, status, "Ціль.", "Ціль.", null, null, 0.9, null, List.of(), path, 0, false,
+                "p1", id, unitId, 0, kind, status, "Ціль.", "Ціль.", null, null, 0.9, null, List.of(), path, false,
                 null);
     }
 }

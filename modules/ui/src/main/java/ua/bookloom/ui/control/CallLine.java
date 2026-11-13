@@ -134,6 +134,6 @@ public final class CallLine {
     }
 
     private static String clockOf(final Duration length) {
-        return DurationText.clock((int) Math.min(Math.max(length.toSeconds(), 0), SECONDS_CAP));
+        return DurationText.clock((int) Math.clamp(length.toSeconds(), 0, SECONDS_CAP));
     }
 }

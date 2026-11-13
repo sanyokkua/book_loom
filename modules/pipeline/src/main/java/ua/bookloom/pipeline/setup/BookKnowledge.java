@@ -1,10 +1,12 @@
 package ua.bookloom.pipeline.setup;
 
+import static ua.bookloom.util.contract.ArgNames.TITLE;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -16,14 +18,12 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.pipeline.heal.SelfHealCalls;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.setup.Knowledge.Reason;
 
 /**
@@ -35,10 +35,12 @@ import ua.bookloom.pipeline.setup.Knowledge.Reason;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class BookKnowledge {
 
+    private static final String AUTHOR = "author";
+    private static final String KNOWN = "known";
     private static final int EXPECTED_TOKENS = 160;
     private static final int CAP_TOKENS = 320;
 
-    private final PromptTemplates templates;
+    private final ContextBuilder builder;
     private final ObjectMapper mapper;
 
     /**
@@ -91,20 +93,47 @@ public final class BookKnowledge {
     }
 
     private Result<ChatResponse> send(final BookFacts facts, final CallFrame frame, final ModelCalls calls) {
-        final Map<String, String> user = new HashMap<>();
-        user.put("title", Objects.requireNonNull(facts.title(), "title"));
+        final Map<String, String> user = new LinkedHashMap<>();
+        user.put(TITLE, Objects.requireNonNull(facts.title(), TITLE));
         if (facts.author() != null) {
-            user.put("author", facts.author());
+            user.put(AUTHOR, facts.author());
         }
         final PromptName name = PromptName.BOOK_KNOWLEDGE;
-        final ChatRequest request = ChatRequests.build(
-                name,
-                SelfHealCalls.messagesFor(templates, name, frame, user),
-                new OutputLimit(EXPECTED_TOKENS, CAP_TOKENS),
-                false,
-                frame.requestDefaults());
+        final ChatRequest request =
+                builder.analysisRequest(name, frame, user, new OutputLimit(EXPECTED_TOKENS, CAP_TOKENS));
         log.debug("Book knowledge asked: author given={}", facts.author() != null);
-        return calls.callAbout(name.callKind(), List.of(), request, CallDescriptor.whole(name));
+        final List<String> asked = SetupCalls.askedOf(user);
+        final Result<ChatResponse> reply =
+                calls.callAbout(name.callKind(), List.of(), request, CallDescriptor.asking(name, asked));
+        final ChatResponse answer = reply.data();
+        if (answer != null) {
+            calls.answered(shown(answer.content()));
+        }
+        return reply;
+    }
+
+    // What the model said it knows, one line per field it filled, for the dialog.
+    private Map<String, @Nullable String> shown(final String content) {
+        final BookKnowledgeReply reply = read(content);
+        final Map<String, @Nullable String> lines = new LinkedHashMap<>();
+        if (reply == null) {
+            return lines;
+        }
+        lines.put(KNOWN, Boolean.toString(reply.known()));
+        putIfPresent(lines, "title", reply.title());
+        putIfPresent(lines, AUTHOR, reply.author());
+        putIfPresent(lines, "genre", reply.genre());
+        putIfPresent(lines, "audience", reply.audience());
+        putIfPresent(lines, "narration", reply.narration());
+        putIfPresent(lines, "summary", reply.summary() == null ? null : SetupCalls.excerpt(reply.summary()));
+        return lines;
+    }
+
+    private static void putIfPresent(
+            final Map<String, @Nullable String> lines, final String key, final @Nullable String value) {
+        if (value != null) {
+            lines.put(key, value);
+        }
     }
 
     private static Knowledge logged(final Knowledge knowledge) {
@@ -127,7 +156,7 @@ public final class BookKnowledge {
         }
         try {
             final JsonNode node = mapper.readTree(content.substring(from, to + 1));
-            return node.path("known").isBoolean() ? replyOf(node) : null;
+            return node.path(KNOWN).isBoolean() ? replyOf(node) : null;
         } catch (JsonProcessingException cause) {
             log.debug("Book knowledge reply is not JSON: {}", cause.getOriginalMessage());
             return null;
@@ -137,9 +166,9 @@ public final class BookKnowledge {
     private static BookKnowledgeReply replyOf(final JsonNode node) {
         final JsonNode year = node.path("year");
         return new BookKnowledgeReply(
-                node.path("known").asBoolean(),
+                node.path(KNOWN).asBoolean(),
                 text(node, "title"),
-                text(node, "author"),
+                text(node, AUTHOR),
                 year.isIntegralNumber() && year.asInt() > 0 ? year.asInt() : null,
                 text(node, "genre"),
                 text(node, "audience"),

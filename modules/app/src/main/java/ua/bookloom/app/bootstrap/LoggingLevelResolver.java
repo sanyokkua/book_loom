@@ -2,12 +2,12 @@ package ua.bookloom.app.bootstrap;
 
 import java.util.Locale;
 import java.util.Objects;
-import java.util.function.Function;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.event.Level;
 import ua.bookloom.util.paths.AppEnvironment;
+import ua.bookloom.util.paths.NameLookup;
 
 /** Purely resolves the application log level from injected environment and property lookups. */
 // Checkstyle parses source text before Lombok's annotation processor creates the private constructor,
@@ -20,10 +20,7 @@ public final class LoggingLevelResolver {
     private static final String PROPERTY_LEVEL = "bookloom.log.level";
 
     /** Resolves the first configured level, or the environment-specific default. */
-    public static ResolvedLogLevel resolve(
-            Function<String, @Nullable String> getEnv,
-            Function<String, @Nullable String> getProperty,
-            AppEnvironment environment) {
+    public static ResolvedLogLevel resolve(NameLookup getEnv, NameLookup getProperty, AppEnvironment environment) {
         Objects.requireNonNull(getEnv, "getEnv");
         Objects.requireNonNull(getProperty, "getProperty");
         Objects.requireNonNull(environment, "environment");
@@ -61,7 +58,7 @@ public final class LoggingLevelResolver {
     private static @Nullable Level parse(String value) {
         try {
             return Level.valueOf(value.toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException exception) {
+        } catch (IllegalArgumentException _) {
             return null;
         }
     }

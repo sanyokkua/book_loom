@@ -19,10 +19,7 @@ class AppSettingTest {
         assertThat(AppSetting.TECHNICAL_DETAILS.defaultValue()).isFalse();
         assertThat(AppSetting.REVIEW_MODE.defaultValue()).isEqualTo(ReviewMode.UNATTENDED);
         assertThat(AppSetting.DEFAULT_DIAL.defaultValue()).isEqualTo(QualityDial.BALANCED);
-        assertThat(AppSetting.REASONING.defaultValue()).isEqualTo(ReasoningSetting.OFF);
-        assertThat(AppSetting.SAMPLING.defaultValue()).isEqualTo(SamplingSetting.PROGRAM_DEFAULTS);
         assertThat(AppSetting.OPEN_REVIEW_DESK.defaultValue()).isTrue();
-        assertThat(AppSetting.LAST_CHECK.defaultValue()).isFalse();
         assertThat(AppSetting.KEEP_AWAKE.defaultValue()).isTrue();
         assertThat(AppSetting.REOPEN_LAST_PROJECT.defaultValue()).isTrue();
         assertThat(AppSetting.CURRENT_MODEL.defaultValue()).isNull();
@@ -37,10 +34,7 @@ class AppSettingTest {
         assertThat(AppSetting.TECHNICAL_DETAILS.key()).isEqualTo("ui.technicalDetails");
         assertThat(AppSetting.REVIEW_MODE.key()).isEqualTo("run.reviewMode");
         assertThat(AppSetting.DEFAULT_DIAL.key()).isEqualTo("run.defaultDial");
-        assertThat(AppSetting.REASONING.key()).isEqualTo("run.reasoning");
-        assertThat(AppSetting.SAMPLING.key()).isEqualTo("run.sampling");
         assertThat(AppSetting.OPEN_REVIEW_DESK.key()).isEqualTo("automation.openReviewDesk");
-        assertThat(AppSetting.LAST_CHECK.key()).isEqualTo("automation.lastCheck");
         assertThat(AppSetting.KEEP_AWAKE.key()).isEqualTo("automation.keepAwake");
         assertThat(AppSetting.REOPEN_LAST_PROJECT.key()).isEqualTo("automation.reopenLastProject");
         assertThat(AppSetting.CURRENT_MODEL.key()).isEqualTo("model.current");
@@ -70,22 +64,19 @@ class AppSettingTest {
         assertThat(AppSetting.THEME.parse(raw)).isEqualTo(ThemeSetting.SYSTEM);
         assertThat(AppSetting.REVIEW_MODE.parse(raw)).isEqualTo(ReviewMode.UNATTENDED);
         assertThat(AppSetting.DEFAULT_DIAL.parse(raw)).isEqualTo(QualityDial.BALANCED);
-        assertThat(AppSetting.REASONING.parse(raw)).isEqualTo(ReasoningSetting.OFF);
-        assertThat(AppSetting.SAMPLING.parse(raw)).isEqualTo(SamplingSetting.PROGRAM_DEFAULTS);
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"yes", "1", "", "TRUE!"})
     void parse_badBoolean_fallsBackToTheDefault(final String raw) {
         assertThat(AppSetting.KEEP_AWAKE.parse(raw)).isTrue();
-        assertThat(AppSetting.LAST_CHECK.parse(raw)).isFalse();
         assertThat(AppSetting.FIRST_LAUNCH_PROBED.parse(raw)).isNull();
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"true", "TRUE", "false"})
     void parse_goodBoolean_isTaken(final String raw) {
-        assertThat(AppSetting.LAST_CHECK.parse(raw)).isEqualTo(Boolean.parseBoolean(raw));
+        assertThat(AppSetting.KEEP_AWAKE.parse(raw)).isEqualTo(Boolean.parseBoolean(raw));
     }
 
     @ParameterizedTest
@@ -118,7 +109,6 @@ class AppSettingTest {
     @Test
     void format_enumValue_isTheLowerCaseName() {
         assertThat(AppSetting.REVIEW_MODE.format(ReviewMode.ASSISTED)).isEqualTo("assisted");
-        assertThat(AppSetting.SAMPLING.format(SamplingSetting.TUNED)).isEqualTo("tuned");
         assertThat(AppSetting.KEEP_AWAKE.format(false)).isEqualTo("false");
         assertThat(AppSetting.LAST_PROJECT.format("p-9")).isEqualTo("p-9");
     }

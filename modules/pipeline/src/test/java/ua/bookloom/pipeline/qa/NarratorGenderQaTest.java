@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.qa;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -10,8 +11,9 @@ import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.api.project.Severity;
 
-/** The gender check as the quality gate sees it: a soft note that never blocks, chosen by the target language. */
+/** The gender check as the quality gate sees it: a repair-level finding that never blocks, chosen by the target language. */
 class NarratorGenderQaTest {
 
     private static final Narrator MALE = new Narrator(NarratorPerson.FIRST, Gender.MALE);
@@ -57,6 +59,28 @@ class NarratorGenderQaTest {
                         .findings())
                 .extracting(QaFinding::raisedBy)
                 .doesNotContain("gender");
+    }
+
+    // Task 10.2 names UkrainianGenderCheckTest, but that check takes only a Gender; the origin is read here, at the
+    // gate.
+    @Test
+    void check_likelyNarratorGender_raisesNothing() {
+        final Narrator likely =
+                new Narrator(NarratorPerson.FIRST, Gender.MALE, Narrator.GenderOrigin.SUGGESTED, List.of());
+
+        assertThat(evaluate("Я відчинила старі двері.", "uk", likely).findings())
+                .extracting(QaFinding::raisedBy)
+                .doesNotContain("gender");
+    }
+
+    @Test
+    void evaluate_maleNarratorWithFeminineVerb_raisesTheGenderFindingAtRepairLevel() {
+        final QaResult qa = evaluate("Я зачинила двері й вийшла з дому.", "uk", MALE);
+
+        assertThat(qa.findings())
+                .filteredOn(finding -> finding.raisedBy().equals("gender"))
+                .extracting(QaFinding::severity, CheckLevels::of)
+                .containsExactly(tuple(Severity.MEDIUM, CheckLevel.REPAIR));
     }
 
     @Test

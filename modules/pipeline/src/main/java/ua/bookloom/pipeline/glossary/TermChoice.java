@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.glossary;
 
+import static ua.bookloom.util.contract.ArgNames.TERMS;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
@@ -10,27 +12,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.glossary.TermEvidence.Evidence;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.RequestDefaults;
 
 /**
  * The model's choice among recurring words: of candidate words and phrases, each shown with how often the book uses it
@@ -38,8 +38,11 @@ import ua.bookloom.pipeline.prompt.RequestDefaults;
  * scan (candidates from the text) and the review (the terms already held). Nothing is written here.
  */
 @Slf4j
-@RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class TermChoice {
+
+    // What the call list says of a term the model kept or dropped.
+    private static final String KEEP = "keep";
+    private static final String DROP = "drop";
 
     /**
      * The model's verdicts.
@@ -62,6 +65,14 @@ public final class TermChoice {
         public Choice(final Set<String> kept, final Set<String> dropped) {
             this(kept, dropped, Set.of());
         }
+
+        /** What the model decided for one term: kept, dropped, or neither when it did not say. */
+        LexiconReading.Verdict verdictOf(final String key) {
+            if (kept.contains(key)) {
+                return LexiconReading.Verdict.KEEP;
+            }
+            return dropped.contains(key) ? LexiconReading.Verdict.DROP : LexiconReading.Verdict.UNDECIDED;
+        }
     }
 
     static final int BATCH_SIZE = 10;
@@ -70,8 +81,20 @@ public final class TermChoice {
     private static final int BASE_TOKENS = 96;
     private static final int MAX_EXAMPLE_CHARS = 140;
 
-    private final PromptTemplates templates;
+    private final ContextBuilder builder;
     private final ObjectMapper mapper;
+
+    /**
+     * Builds its requests on the ANALYSIS frame (design D8) from the catalogue's task templates.
+     *
+     * @param templates the non-null prompt catalogue
+     * @param mapper the non-null object mapper
+     */
+    @Inject
+    public TermChoice(final PromptTemplates templates, final ObjectMapper mapper) {
+        this.builder = new ContextBuilder(Objects.requireNonNull(templates, "templates"));
+        this.mapper = Objects.requireNonNull(mapper, "mapper");
+    }
 
     /**
      * Asks the model which of the terms to keep.
@@ -85,7 +108,7 @@ public final class TermChoice {
      */
     public Result<Choice> choose(
             final List<String> terms, final BookSlice story, final CallFrame frame, final ModelCalls calls) {
-        Objects.requireNonNull(terms, "terms");
+        Objects.requireNonNull(terms, TERMS);
         Objects.requireNonNull(story, "story");
         Objects.requireNonNull(frame, "frame");
         Objects.requireNonNull(calls, "calls");
@@ -93,16 +116,13 @@ public final class TermChoice {
             return Result.ok(new Choice(Set.of(), Set.of()));
         }
         final Map<String, Evidence> evidence = TermEvidence.of(story.index(), story.ordinals(), terms);
-        final String system =
-                templates.renderSystem(PromptName.TERM_CHOICE, frame).strip();
-        return runBatches(terms, evidence, system, frame.requestDefaults(), calls);
+        return runBatches(terms, evidence, frame, calls);
     }
 
     private Result<Choice> runBatches(
             final List<String> terms,
             final Map<String, Evidence> evidence,
-            final String system,
-            final RequestDefaults defaults,
+            final CallFrame frame,
             final ModelCalls calls) {
         final int batches = (terms.size() + BATCH_SIZE - 1) / BATCH_SIZE;
         log.info("Term choice started terms={} batches={}", terms.size(), batches);
@@ -113,7 +133,7 @@ public final class TermChoice {
             final List<String> batch =
                     terms.subList(index * BATCH_SIZE, Math.min(terms.size(), (index + 1) * BATCH_SIZE));
             calls.announce(new BatchStarted(CallKind.TERM_CHOICE, index + 1, batches));
-            final Result<Choice> answered = runBatch(batch, evidence, system, defaults, calls);
+            final Result<Choice> answered = runBatch(batch, evidence, frame, calls);
             if (answered.isErr()) {
                 return answered;
             }
@@ -134,20 +154,19 @@ public final class TermChoice {
     private Result<Choice> runBatch(
             final List<String> batch,
             final Map<String, Evidence> evidence,
-            final String system,
-            final RequestDefaults defaults,
+            final CallFrame frame,
             final ModelCalls calls) {
-        final Result<Choice> first = ask(batch, evidence, system, defaults, calls);
+        final Result<Choice> first = ask(batch, evidence, frame, calls);
         if (first.isErr() || !isUniform(Objects.requireNonNull(first.data(), "choice"))) {
             return first;
         }
         log.warn("Term choice batch of {} answered all alike; asking again in halves", batch.size());
         final int middle = batch.size() / 2;
-        final Result<Choice> head = ask(batch.subList(0, middle), evidence, system, defaults, calls);
+        final Result<Choice> head = ask(batch.subList(0, middle), evidence, frame, calls);
         if (head.isErr()) {
             return head;
         }
-        final Result<Choice> tail = ask(batch.subList(middle, batch.size()), evidence, system, defaults, calls);
+        final Result<Choice> tail = ask(batch.subList(middle, batch.size()), evidence, frame, calls);
         if (tail.isErr()) {
             return tail;
         }
@@ -176,35 +195,52 @@ public final class TermChoice {
     private Result<Choice> ask(
             final List<String> batch,
             final Map<String, Evidence> evidence,
-            final String system,
-            final RequestDefaults defaults,
+            final CallFrame frame,
             final ModelCalls calls) {
         final String lines = String.join(
                 "\n",
                 batch.stream()
                         .map(term -> line(term, evidence.getOrDefault(term, Evidence.NONE)))
                         .toList());
-        final List<ChatMessage> messages = List.of(
-                new ChatMessage(ChatRole.SYSTEM, system),
-                new ChatMessage(
-                        ChatRole.USER,
-                        templates
-                                .renderUser(PromptName.TERM_CHOICE, Map.of("terms", lines))
-                                .strip()));
         final int cap = BASE_TOKENS + TOKENS_PER_VERDICT * batch.size();
-        final ChatRequest request =
-                ChatRequests.build(PromptName.TERM_CHOICE, messages, new OutputLimit(cap / 2, cap), false, defaults);
-        log.trace("Term choice messages {}", messages);
-        final Result<ChatResponse> reply =
-                calls.callAbout(CallKind.TERM_CHOICE, List.of(), request, CallDescriptor.whole(PromptName.TERM_CHOICE));
+        final ChatRequest request = builder.analysisRequest(
+                PromptName.TERM_CHOICE, frame, Map.of("terms", lines), new OutputLimit(cap / 2, cap));
+        log.trace("Term choice messages {}", request.messages());
+        final Result<ChatResponse> reply = calls.callAbout(
+                CallKind.TERM_CHOICE, List.of(), request, CallDescriptor.asking(PromptName.TERM_CHOICE, batch));
         if (reply.isErr()) {
-            final AppError error = Objects.requireNonNull(reply.error(), "error");
-            log.warn("Term choice batch of {} failed code={}", batch.size(), error.code());
-            return Result.err(error);
+            return failed(batch.size(), Objects.requireNonNull(reply.error(), "error"));
         }
         final String content = Objects.requireNonNull(reply.data(), "reply").content();
         log.trace("Term choice reply {}", content);
-        return verdicts(content, batch);
+        return readAndShow(content, batch, calls);
+    }
+
+    private Result<Choice> readAndShow(final String content, final List<String> batch, final ModelCalls calls) {
+        final Result<Choice> choice = verdicts(content, batch);
+        final Choice read = choice.data();
+        if (read != null) {
+            showRead(calls, batch, read);
+        }
+        return choice;
+    }
+
+    private static void showRead(final ModelCalls calls, final List<String> batch, final Choice read) {
+        final Map<String, @Nullable String> shown = new LinkedHashMap<>();
+        for (final String term : batch) {
+            final String key = LexiconEntry.keyOf(term);
+            shown.put(term, shownChoice(read, key));
+        }
+        calls.answered(shown);
+    }
+
+    private static Result<Choice> failed(final int batchSize, final AppError error) {
+        log.warn(
+                "Term choice batch of {} failed code={} reason={}",
+                batchSize,
+                error.code(),
+                FailureReason.tokenIn(error.details()));
+        return Result.err(error);
     }
 
     private Result<Choice> verdicts(final String reply, final List<String> asked) {
@@ -227,7 +263,7 @@ public final class TermChoice {
                     (verdict.path("keep").asBoolean(false) ? kept : dropped).add(key);
                 }
             }
-        } catch (IOException cut) {
+        } catch (IOException _) {
             return unreadable();
         }
         log.debug("Term choice batch answered asked={} kept={} dropped={}", asked.size(), kept.size(), dropped.size());
@@ -252,5 +288,12 @@ public final class TermChoice {
 
     private static String cut(final String example) {
         return example.length() > MAX_EXAMPLE_CHARS ? example.substring(0, MAX_EXAMPLE_CHARS) + "…" : example;
+    }
+
+    private static @Nullable String shownChoice(final Choice read, final String key) {
+        if (read.kept().contains(key)) {
+            return KEEP;
+        }
+        return read.dropped().contains(key) ? DROP : null;
     }
 }

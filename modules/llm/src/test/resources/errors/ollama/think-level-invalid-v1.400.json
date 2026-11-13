@@ -1,0 +1,1 @@
+{"error":{"message":"invalid reasoning value: \"bogus\" (must be \"high\", \"medium\", \"low\", \"max\", true, or false)","type":"invalid_request_error","param":null,"code":null}}

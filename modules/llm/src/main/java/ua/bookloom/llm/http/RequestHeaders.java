@@ -1,23 +1,24 @@
 package ua.bookloom.llm.http;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ProviderAuth;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigRules;
+import ua.bookloom.util.paths.NameLookup;
 
 /**
  * Builds the headers of one request from a provider description: the JSON headers, the custom headers with their
@@ -30,12 +31,14 @@ import ua.bookloom.api.llm.ProviderConfigRules;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RequestHeaders {
 
+    private static final String APPLICATION_JSON = "application/json";
+
     /** What a masked header value shows in place of the secret. */
     public static final String MASK = "••••";
 
     private static final int DELETE = 0x7f;
     private static final String AUTHORIZATION = "Authorization";
-    private static final Pattern ENV_REFERENCE = Pattern.compile("\\$\\{env:([A-Za-z_][A-Za-z0-9_]*)}");
+    private static final Pattern ENV_REFERENCE = Pattern.compile("\\$\\{env:([A-Za-z_]\\w*)}");
     private static final Set<String> RESTRICTED =
             Set.of("host", "content-length", "connection", "expect", "upgrade", "transfer-encoding");
 
@@ -48,7 +51,7 @@ public final class RequestHeaders {
      *     {@code validation} naming a header whose name is restricted or not a valid header name, or whose value holds
      *     a control character
      */
-    public static Result<Map<String, String>> resolve(ProviderConfig config, Function<String, @Nullable String> env) {
+    public static Result<Map<String, String>> resolve(ProviderConfig config, NameLookup env) {
         Objects.requireNonNull(config, "config");
         Objects.requireNonNull(env, "env");
         log.debug(
@@ -57,12 +60,12 @@ public final class RequestHeaders {
                 config.auth(),
                 config.headers().keySet());
         final Map<String, String> headers = new LinkedHashMap<>();
-        headers.put("Content-Type", "application/json");
-        headers.put("Accept", "application/json");
+        headers.put("Content-Type", APPLICATION_JSON);
+        headers.put("Accept", APPLICATION_JSON);
         for (final Map.Entry<String, String> custom : config.headers().entrySet()) {
             final Result<String> value = customValue(custom.getKey(), custom.getValue(), env);
             if (value.isErr()) {
-                return Result.err(Objects.requireNonNull(value.error(), "error"));
+                return Result.err(Objects.requireNonNull(value.error(), ERROR));
             }
             put(headers, custom.getKey(), Objects.requireNonNull(value.data(), "value"));
         }
@@ -79,8 +82,8 @@ public final class RequestHeaders {
     public static Map<String, String> masked(ProviderConfig config) {
         Objects.requireNonNull(config, "config");
         final Map<String, String> shown = new LinkedHashMap<>();
-        shown.put("Content-Type", "application/json");
-        shown.put("Accept", "application/json");
+        shown.put("Content-Type", APPLICATION_JSON);
+        shown.put("Accept", APPLICATION_JSON);
         config.headers().forEach((name, value) -> put(shown, name, isSecret(name, value) ? MASK : value));
         switch (config.auth()) {
             case BEARER -> put(shown, AUTHORIZATION, "Bearer " + MASK);
@@ -91,7 +94,7 @@ public final class RequestHeaders {
     }
 
     private static Result<Map<String, String>> withSignIn(
-            ProviderConfig config, Function<String, @Nullable String> env, Map<String, String> headers) {
+            ProviderConfig config, NameLookup env, Map<String, String> headers) {
         if (config.auth() == ProviderAuth.NONE) {
             log.debug("No sign-in header provider={} auth=NONE", config.id());
             return Result.ok(headers);
@@ -99,7 +102,7 @@ public final class RequestHeaders {
         final String variable = config.credentialRef() == null ? "" : config.credentialRef();
         final Result<String> key = lookup(variable, env);
         if (key.isErr()) {
-            return Result.err(Objects.requireNonNull(key.error(), "error"));
+            return Result.err(Objects.requireNonNull(key.error(), ERROR));
         }
         final String name = config.auth() == ProviderAuth.BEARER ? AUTHORIZATION : headerName(config);
         if (!isHeaderName(name)) {
@@ -108,7 +111,7 @@ public final class RequestHeaders {
         final String value = config.auth() == ProviderAuth.BEARER ? "Bearer " + key.data() : key.data();
         final Result<String> checked = checkedValue(name, Objects.requireNonNull(value, "value"));
         if (checked.isErr()) {
-            return Result.err(Objects.requireNonNull(checked.error(), "error"));
+            return Result.err(Objects.requireNonNull(checked.error(), ERROR));
         }
         put(headers, name, value);
         return Result.ok(headers);
@@ -118,7 +121,7 @@ public final class RequestHeaders {
         return config.apiKeyHeader() == null ? "" : config.apiKeyHeader();
     }
 
-    private static Result<String> customValue(String name, String template, Function<String, @Nullable String> env) {
+    private static Result<String> customValue(String name, String template, NameLookup env) {
         if (!isHeaderName(name)) {
             return Result.err(validation(ProviderConfigRules.BAD_HEADER_NAME));
         }
@@ -149,7 +152,7 @@ public final class RequestHeaders {
         return valid;
     }
 
-    private static Result<String> lookup(String variable, Function<String, @Nullable String> env) {
+    private static Result<String> lookup(String variable, NameLookup env) {
         final String value = variable.isBlank() ? null : env.apply(variable);
         if (value == null || value.isBlank()) {
             log.warn("Credential variable is not set variable={}", variable);

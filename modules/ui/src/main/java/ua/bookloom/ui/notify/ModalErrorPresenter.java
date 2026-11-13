@@ -1,5 +1,7 @@
 package ua.bookloom.ui.notify;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.util.Objects;
@@ -49,20 +51,20 @@ public final class ModalErrorPresenter implements ErrorPresenter {
 
     @Override
     public void present(final AppError error) {
-        Objects.requireNonNull(error, "error");
+        Objects.requireNonNull(error, ERROR);
         show(error, null);
     }
 
     @Override
     public void present(final AppError error, final Runnable onRetry) {
-        Objects.requireNonNull(error, "error");
+        Objects.requireNonNull(error, ERROR);
         Objects.requireNonNull(onRetry, "onRetry");
         show(error, onRetry);
     }
 
     @Override
     public void presentRunFailure(final AppError error) {
-        Objects.requireNonNull(error, "error");
+        Objects.requireNonNull(error, ERROR);
         show(error, null, MessageKey.ERROR_RUN_FAILURE_NOTE);
     }
 

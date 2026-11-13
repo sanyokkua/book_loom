@@ -19,15 +19,15 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.llm.pseudo.PseudoChatModel;
+import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.TestDocuments;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
  * {@link QualityLoop} driven by the real, deterministic {@link PseudoChatModel} on Balanced, over the three review
- * modes: an echo the pseudo model can never fix (D8's reference fixture) is FLAGGED after its repair budget, and a
+ * modes: an echo the pseudo model can never fix (D8's reference fixture) is FLAGGED after its one repair, and a
  * short line the pseudo model translates correctly by chance ("Yes, sir." → "YES, SIR.") is ACCEPTED at confidence
- * 0.85 — the reviewer call reads only the short line, because the echo is refused by the checks, and the pseudo
- * reviewer never asks for an edit
+ * 0.85 — the echo is refused by the checks and gets one repair
  * ({@code design.md} D8 "Reference fixtures").
  */
 class QualityLoopPseudoModelTest {
@@ -45,27 +45,24 @@ class QualityLoopPseudoModelTest {
     void nextDecision_pseudoModelOnBalanced_flagsTheEchoAndAcceptsTheShortLine(final ReviewMode mode) {
         final Segment echoSegment =
                 QualityLoopFixtures.markdownSegment(tempDir.resolve("echo.md"), "He opened the *old* door.");
-        final DraftOutcome.Drafted echoOutcome =
-                QualityLoopFixtures.drafted(echoSegment, documents, "HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.");
+        final DraftOutcome.Drafted echoOutcome = QualityLoopFixtures.repairing(
+                QualityLoopFixtures.drafted(echoSegment, documents, "HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR."));
         assertThat(echoOutcome.restoredTarget()).isEqualTo("HE OPENED THE *OLD* DOOR.");
         final Segment shortSegment = QualityLoopFixtures.markdownSegment(tempDir.resolve("short.md"), "Yes, sir.");
         final DraftOutcome.Drafted shortOutcome = QualityLoopFixtures.drafted(shortSegment, documents, "YES, SIR.");
 
         final LoopSettings settings = QualityLoopFixtures.settings(mode, QualityDial.BALANCED);
         final GateFunction gate = GateFunction.of(documents, BookFormat.MARKDOWN);
-        final ChunkDecider decider =
-                Objects.requireNonNull(loop.start(List.of(echoOutcome, shortOutcome), settings, gate, calls)
-                        .data());
+        final ChunkDecider decider = loop.start(List.of(echoOutcome, shortOutcome), settings, gate, calls);
 
         final SegmentOutcome flagged =
                 Objects.requireNonNull(decider.nextDecision().data());
         final SegmentOutcome accepted =
                 Objects.requireNonNull(decider.nextDecision().data());
 
-        // One reviewer call (for the short line only) plus one directed fix for the echo; no second fix because the
-        // pseudo model's fix returns the echo unchanged.
-        assertThat(requests).hasSize(2);
-        assertThat(responseFormatNames(requests)).containsExactly("reviewer", "directed-fix");
+        // The echo's one repair, which the pseudo model answers with the echo again.
+        assertThat(requests).hasSize(1);
+        assertThat(responseFormatNames(requests)).containsExactly("repair");
 
         assertThat(flagged.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(flagged.machineTarget()).isEqualTo("HE OPENED THE *OLD* DOOR.");
@@ -77,9 +74,7 @@ class QualityLoopPseudoModelTest {
     }
 
     private static List<String> responseFormatNames(final List<ChatRequest> requests) {
-        return requests.stream()
-                .map(request -> Objects.requireNonNull(request.responseFormat()).name())
-                .toList();
+        return requests.stream().map(ScriptedChatModel::callName).toList();
     }
 
     private static ModelCalls recordingPseudoCalls(final List<ChatRequest> requests) {

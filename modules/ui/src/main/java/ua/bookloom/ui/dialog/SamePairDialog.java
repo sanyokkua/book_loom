@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.ui.ModalHost;
+import ua.bookloom.ui.control.Literal;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -85,7 +86,7 @@ public final class SamePairDialog implements SamePairPrompt {
 
         private final ProjectNameRules rules;
         private final String languageName;
-        private final FormCard card;
+        private final FormCard form;
         private final NameField name;
         private final RadioButton open = new RadioButton();
         private final RadioButton second = new RadioButton();
@@ -102,7 +103,7 @@ public final class SamePairDialog implements SamePairPrompt {
                 final Runnable cancelled) {
             this.rules = rules;
             this.languageName = languageName;
-            this.card = new FormCard(
+            this.form = new FormCard(
                     modalHost,
                     messages,
                     PREFIX + "card",
@@ -113,9 +114,9 @@ public final class SamePairDialog implements SamePairPrompt {
             this.name = new NameField(messages, PREFIX, "name", () -> base, this::refresh);
             name.field().setPromptText(messages.get(MessageKey.DIALOG_SAME_PAIR_NAME_PLACEHOLDER, base));
             this.use = addButtons(keepName, openExisting, makeSecond, cancelled);
-            card.onEscape(cancelled);
+            form.onEscape(cancelled);
             this.nameBox = nameSection();
-            card.body(content(existing));
+            form.body(content(existing));
             final ToggleGroup group = new ToggleGroup();
             open.setToggleGroup(group);
             second.setToggleGroup(group);
@@ -129,14 +130,14 @@ public final class SamePairDialog implements SamePairPrompt {
                 final Runnable openExisting,
                 final Consumer<String> makeSecond,
                 final Runnable cancelled) {
-            card.button(
+            form.button(
                     PREFIX + "cancel",
                     keepName,
                     MessageKey.DIALOG_SAME_PAIR_KEEP_TIP,
                     ButtonBar.ButtonData.CANCEL_CLOSE,
                     "btn-secondary",
                     cancelled);
-            return card.button(
+            return form.button(
                     PREFIX + "use",
                     "",
                     MessageKey.DIALOG_SAME_PAIR_USE_TIP,
@@ -174,7 +175,7 @@ public final class SamePairDialog implements SamePairPrompt {
         }
 
         void show() {
-            card.show();
+            form.show();
             FormCard.focusWhenShown(name.field(), false);
         }
 
@@ -191,7 +192,7 @@ public final class SamePairDialog implements SamePairPrompt {
                 final MessageKey tip,
                 final Object[] arguments) {
             radio.setId(PREFIX + id);
-            radio.setText(messages.get(caption, arguments));
+            Literal.text(radio).setText(messages.get(caption, arguments));
             Tips.install(messages, radio, tip);
             final Label noteLabel = Wrapped.label(messages.get(note), "dialog-sub");
             return new VBox(NOTE_GAP, radio, noteLabel);

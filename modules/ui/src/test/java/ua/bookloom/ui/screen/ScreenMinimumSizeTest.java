@@ -86,7 +86,7 @@ class ScreenMinimumSizeTest extends ImportScreenTestBase {
         mirror.publishRunState(ua.bookloom.ui.state.RunState.PAUSED);
         WaitForAsyncUtils.waitForFxEvents();
         onFx(() -> shell.activate(ViewNames.TRANSLATING));
-        onFx(() -> ((javafx.scene.control.Button) required("translating-review-flagged")).fire());
+        onFx(((javafx.scene.control.Button) required("translating-review-flagged"))::fire);
         WaitForAsyncUtils.waitForFxEvents();
 
         assertFitsTheWidth(ViewNames.TRANSLATING);

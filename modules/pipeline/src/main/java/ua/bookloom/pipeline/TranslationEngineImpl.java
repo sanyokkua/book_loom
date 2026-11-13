@@ -2,34 +2,17 @@ package ua.bookloom.pipeline;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import java.time.Clock;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.DocumentPort;
-import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatModel;
-import ua.bookloom.api.persistence.CheckpointPort;
-import ua.bookloom.api.persistence.GlossaryRepository;
-import ua.bookloom.api.persistence.LexiconRepository;
-import ua.bookloom.api.persistence.ProjectRepository;
-import ua.bookloom.api.persistence.RunRepository;
-import ua.bookloom.api.persistence.SegmentRepository;
-import ua.bookloom.api.persistence.SummaryRepository;
-import ua.bookloom.api.persistence.TmRepository;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
-import ua.bookloom.api.project.IdSource;
-import ua.bookloom.pipeline.batch.BatchDrafter;
-import ua.bookloom.pipeline.checks.WordValidator;
-import ua.bookloom.pipeline.heal.QualityLoop;
-import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
-import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.run.RunStores;
 
 /**
@@ -43,55 +26,31 @@ public final class TranslationEngineImpl implements TranslationEngine {
     private final ObjectMapper mapper;
     private final PromptTemplates templates;
     private final RunStores stores;
-    private final QualityLoop qualityLoop;
-    private final SentenceSplitter splitter;
-    private final ConsistencyPass revision;
-    private final Clock clock;
-    private final IdSource idSource;
-    private final RecoveryTimer timer;
-    private final WordValidator words;
-    private final RequestDefaultsSource requestDefaultsSource;
+    private final RunChecks checks;
+    private final RunPacing pacing;
+    private final RunLogSources logSources;
 
     /**
-     * Creates an engine with the application-wide tolerant JSON mapper, the quality loop every run decides through,
-     * the sentence splitter an oversized segment is drafted in pieces with, the backward-revision pass a Max run
-     * ends with, and the timer a run's recovery waits pass by.
+     * Creates an engine with the application-wide tolerant JSON mapper, the stores every run reads and writes, the
+     * checks every run decides and revises through, the pacing a run's recovery waits and ticks follow, and the
+     * sources a run's log lines take their facts from.
      */
     @Inject
     public TranslationEngineImpl(
             final DocumentPort documents,
             final ObjectMapper mapper,
             final PromptTemplates templates,
-            final ProjectRepository projects,
-            final SegmentRepository segments,
-            final CheckpointPort checkpoint,
-            final OpenProjects openProjects,
-            final RunRepository runs,
-            final GlossaryRepository glossary,
-            final TmRepository tm,
-            final SummaryRepository summaries,
-            final LexiconRepository lexicon,
-            final QualityLoop qualityLoop,
-            final SentenceSplitter splitter,
-            final ConsistencyPass revision,
-            final Clock clock,
-            final IdSource idSource,
-            final RecoveryTimer timer,
-            final WordValidator words,
-            final RequestDefaultsSource requestDefaultsSource) {
-        this.requestDefaultsSource = Objects.requireNonNull(requestDefaultsSource, "requestDefaultsSource");
+            final RunStores stores,
+            final RunChecks checks,
+            final RunPacing pacing,
+            final RunLogSources logSources) {
         this.documents = Objects.requireNonNull(documents, "documents");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.templates = Objects.requireNonNull(templates, "templates");
-        this.stores =
-                new RunStores(projects, segments, checkpoint, openProjects, runs, glossary, tm, summaries, lexicon);
-        this.qualityLoop = Objects.requireNonNull(qualityLoop, "qualityLoop");
-        this.splitter = Objects.requireNonNull(splitter, "splitter");
-        this.revision = Objects.requireNonNull(revision, "revision");
-        this.clock = Objects.requireNonNull(clock, "clock");
-        this.idSource = Objects.requireNonNull(idSource, "idSource");
-        this.timer = Objects.requireNonNull(timer, "timer");
-        this.words = Objects.requireNonNull(words, "words");
+        this.stores = Objects.requireNonNull(stores, "stores");
+        this.checks = Objects.requireNonNull(checks, "checks");
+        this.pacing = Objects.requireNonNull(pacing, "pacing");
+        this.logSources = Objects.requireNonNull(logSources, "logSources");
     }
 
     @Override
@@ -101,7 +60,7 @@ public final class TranslationEngineImpl implements TranslationEngine {
             Objects.requireNonNull(model, "model");
             log.debug("Preparing translation job project={} mode={}", request.projectId(), request.mode());
             return Result.ok(jobFor(request, model));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal,
                     "This translation job could not be prepared",
@@ -115,21 +74,11 @@ public final class TranslationEngineImpl implements TranslationEngine {
 
     private TranslationJobImpl jobFor(final RunRequest request, final ChatModel model) {
         return new TranslationJobImpl(
-                documents,
                 request,
-                model,
-                mapper,
-                templates,
+                new JobTools(documents, model, mapper, templates),
                 stores,
-                qualityLoop,
-                splitter,
-                revision,
-                clock,
-                idSource,
-                timer,
-                RunTicks.DAEMON,
-                BatchDrafter.DEFAULT_INITIAL_SIZE,
-                words,
-                requestDefaultsSource);
+                checks,
+                pacing,
+                logSources.factsFor(request));
     }
 }

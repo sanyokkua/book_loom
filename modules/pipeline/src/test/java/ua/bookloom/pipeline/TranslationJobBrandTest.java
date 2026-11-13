@@ -205,7 +205,7 @@ class TranslationJobBrandTest {
             final Gender gender) {
         project.stores()
                 .glossary()
-                .add(new GlossaryEntry(
+                .add(GlossaryEntry.of(
                         GlossaryIds.of(project.id(), term), project.id(), term, target, type, gender, false));
     }
 

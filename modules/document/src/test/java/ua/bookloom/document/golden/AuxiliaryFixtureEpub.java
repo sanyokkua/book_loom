@@ -78,7 +78,7 @@ final class AuxiliaryFixtureEpub {
 
     private static String navigation(List<String> labels) {
         final String items = labels.stream()
-                .map(label -> "<li><a href=\"c01.xhtml\">%s</a></li>".formatted(label))
+                .map("<li><a href=\"c01.xhtml\">%s</a></li>"::formatted)
                 .collect(Collectors.joining());
         return """
                 <?xml version="1.0" encoding="UTF-8"?>

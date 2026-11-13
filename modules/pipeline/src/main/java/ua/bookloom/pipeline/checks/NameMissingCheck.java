@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.checks;
 
+import static ua.bookloom.util.contract.ArgNames.TARGET;
+
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -16,7 +18,7 @@ import ua.bookloom.pipeline.prompt.LanguageRules;
 /**
  * A name the glossary renders that the source holds and the target has lost — the case the draft-time glossary check
  * cannot see for an unlocked name, since only a locked one travels as a token. {@link NameLossCheck} turns it into a
- * soft finding the directed fix mends. Conservative on purpose: only a person
+ * soft finding the one repair mends. Conservative on purpose: only a person
  * or place entry with a non-empty target counts, the source form must stand as a whole word, and the target is held to
  * the same stem match the lexicon uses for an inflected rendering, so a declined name is not a loss.
  */
@@ -67,10 +69,10 @@ final class NameMissingCheck {
     // Two entries that spell one name nearly alike (Моріс, Морис) are one name: it is not lost when the other is there.
     private static boolean hasPresentVariant(
             final GlossaryEntry entry, final List<GlossaryEntry> inSource, final List<GlossaryEntry> missing) {
-        final String target = Objects.requireNonNull(entry.target(), "target");
+        final String target = Objects.requireNonNull(entry.target(), TARGET);
         return inSource.stream()
                 .filter(other -> !missing.contains(other))
-                .anyMatch(other -> isNearlyAlike(target, Objects.requireNonNull(other.target(), "target")));
+                .anyMatch(other -> isNearlyAlike(target, Objects.requireNonNull(other.target(), TARGET)));
     }
 
     // Only a duplicate spelling: one vowel written two ways (Моріс, Морис) or one doubled letter (Нел, Нелл). A
@@ -131,7 +133,7 @@ final class NameMissingCheck {
             final String source,
             final AlternationGuard guard,
             final List<String> alternations) {
-        final String rendering = Objects.requireNonNull(entry.target(), "target");
+        final String rendering = Objects.requireNonNull(entry.target(), TARGET);
         return !guard.holds(entry.term(), rendering, source, alternations);
     }
 }

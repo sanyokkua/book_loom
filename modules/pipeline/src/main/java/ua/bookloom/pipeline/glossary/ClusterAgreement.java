@@ -14,7 +14,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.project.GlossaryEntry;
-import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
 
@@ -67,10 +66,7 @@ final class ClusterAgreement {
         for (final GlossaryEntry entry : heldEntries) {
             final String target = entry.target();
             // Only the person's rendering binds: an earlier suggestion nobody confirmed is no cluster's (15i review).
-            if (!askedIds.contains(entry.id())
-                    && entry.origin() == TargetOrigin.PERSON
-                    && target != null
-                    && !target.isBlank()) {
+            if (!askedIds.contains(entry.id()) && !entry.isSuggested() && target != null && !target.isBlank()) {
                 targets.put(entry.id(), target.strip());
                 groupOf(entry.type()).ifPresent(group -> learnWords(group, entry.term(), target.strip(), words));
             }
@@ -122,7 +118,7 @@ final class ClusterAgreement {
                         suggestion.entry().id());
                 log.trace("Cluster agreement: {} → {}", suggestion.target(), target);
             }
-            aligned.add(target.equals(suggestion.target()) ? suggestion : new Suggestion(suggestion.entry(), target));
+            aligned.add(target.equals(suggestion.target()) ? suggestion : suggestion.retargeted(target));
         }
         return withSharedWords(aligned);
     }
@@ -146,7 +142,7 @@ final class ClusterAgreement {
                 log.trace("Shared-word agreement: {} → {}", suggestion.target(), target);
             }
             learnWords(group.get(), entry.term(), target, words);
-            agreed.add(target.equals(suggestion.target()) ? suggestion : new Suggestion(entry, target));
+            agreed.add(target.equals(suggestion.target()) ? suggestion : suggestion.retargeted(target));
         }
         return agreed;
     }

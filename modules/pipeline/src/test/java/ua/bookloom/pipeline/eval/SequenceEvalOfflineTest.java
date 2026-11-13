@@ -14,6 +14,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
@@ -34,6 +35,7 @@ class SequenceEvalOfflineTest {
 
     private static final SequenceFixture FIXTURE = SequenceFixture.load();
     private static SequenceMetrics scripted;
+    private static SequenceRun scriptedRun;
 
     @TempDir
     private static Path workDir;
@@ -43,6 +45,7 @@ class SequenceEvalOfflineTest {
         final SequenceRun run = new SequenceEval(FIXTURE, QualityDial.FAST, null, SequenceNarratorMode.UNSET)
                 .run(new SequenceScriptedModel(), workDir);
         assertThat(run.report().end()).isEqualTo(JobState.COMPLETED);
+        scriptedRun = run;
         scripted = new SequenceMeasure(FIXTURE).measure("scripted", "FAST", run);
     }
 
@@ -126,9 +129,10 @@ class SequenceEvalOfflineTest {
     @Test
     void run_echoedParagraph_isTheOnlyFirstRoundHardGateFailure() {
         assertThat(scripted.hardGateFailuresRound0()).isEqualTo(1);
-        assertThat(scripted.hardGateKinds()).containsKey("language");
+        // Fast makes no repair, so no repair names the echo's findings.
+        assertThat(scripted.hardGateKinds()).isEmpty();
         assertThat(scripted.leakedProtocol()).isZero();
-        assertThat(scripted.reviewerTruncated()).isZero();
+        assertThat(scripted.proofreadTruncated()).isZero();
         assertThat(scripted.termClaimedWrong()).isZero();
     }
 
@@ -156,20 +160,25 @@ class SequenceEvalOfflineTest {
                 decided(6, NarratorPerson.THIRD, "The imp waited.", null, SegmentStatus.FLAGGED));
     }
 
+    private static List<ModelCallFinished> handWrittenCalls() {
+        final TokenUsage first = new TokenUsage(100, 10, Duration.ofSeconds(1), Duration.ofMillis(400), 60);
+        final TokenUsage second = new TokenUsage(50, 5, null, Duration.ofMillis(250), null);
+        return List.of(
+                new ModelCallFinished(
+                        null, CallKind.DRAFT, Duration.ofSeconds(2), first, 0, false, List.of("a", "b", "c"), 1, null),
+                new ModelCallFinished("d", CallKind.DRAFT, Duration.ofSeconds(1), second, 0, false),
+                new ModelCallFinished("e", CallKind.PROOFREAD, Duration.ofSeconds(1), null, 0, false));
+    }
+
     private static SequenceMetrics measureHandWrittenRun() {
         final LexiconEntry master = LexiconEntry.of("p", "master")
                 .seen("господар")
                 .seen("учитель")
                 .withLearned(new LexiconEntry.Learned("господар", 3, 4));
-        final List<ModelCallFinished> calls = List.of(
-                new ModelCallFinished(
-                        null, CallKind.DRAFT, Duration.ofSeconds(2), null, 0, false, List.of("a", "b", "c"), 1, null),
-                new ModelCallFinished("d", CallKind.DRAFT, Duration.ofSeconds(1), null, 0, false),
-                new ModelCallFinished("e", CallKind.REVIEW, Duration.ofSeconds(1), null, 0, false));
         final SequenceRun run = new SequenceRun(
                 new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 7, 6, 1, List.of(), null),
                 Duration.ofSeconds(14),
-                calls,
+                handWrittenCalls(),
                 handWrittenSegments(),
                 List.of(master),
                 Map.of("OK/[ECHO]", 1),
@@ -205,13 +214,16 @@ class SequenceEvalOfflineTest {
         assertThat(metrics.calls()).isEqualTo(3);
         assertThat(metrics.callsPerSegment()).isCloseTo(3.0 / 7, within(0.0001));
         assertThat(metrics.secondsPerSegment()).isCloseTo(2.0, within(0.0001));
+        assertThat(metrics.promptReadSecondsPerSegment()).isCloseTo(0.65 / 7, within(0.0001));
+        assertThat(metrics.promptTokens()).isEqualTo(150);
+        assertThat(metrics.cachedPromptTokens()).isEqualTo(60);
         assertThat(metrics.batchedItems()).isEqualTo(3);
         assertThat(metrics.batchFallbackRate()).isCloseTo(1.0 / 3, within(0.0001));
         assertThat(metrics.editsRefused()).isEqualTo(2);
         assertThat(metrics.lexiconDistinct()).isEqualTo(2.0);
         assertThat(metrics.learned()).isEqualTo(1);
         assertThat(metrics.learnedCoverage()).isEqualTo(0.75);
-        assertThat(metrics.callsByKind()).containsEntry("DRAFT", 2).containsEntry("REVIEW", 1);
+        assertThat(metrics.callsByKind()).containsEntry("DRAFT", 2).containsEntry("PROOFREAD", 1);
     }
 
     @Test
@@ -221,7 +233,7 @@ class SequenceEvalOfflineTest {
         assertThat(metrics.narrator()).isEqualTo("set");
         assertThat(metrics.hardGateFailuresRound0()).isEqualTo(3);
         assertThat(metrics.hardGateKinds()).containsEntry("UNBALANCED_QUOTES", 2);
-        assertThat(metrics.reviewerTruncated()).isEqualTo(1);
+        assertThat(metrics.proofreadTruncated()).isEqualTo(1);
         assertThat(term("master", metrics).dominantShare()).isEqualTo(0.5);
     }
 
@@ -343,7 +355,7 @@ class SequenceEvalOfflineTest {
                         "narrator=unset",
                         "hardGateRound0",
                         "leakedProtocol",
-                        "reviewerTruncated",
+                        "proofreadTruncated",
                         "termClaimedWrong",
                         "dominantShare");
         assertThat(report.json())
@@ -368,12 +380,11 @@ class SequenceEvalOfflineTest {
     }
 
     @Test
-    void report_runWithNoRepeatedTerm_tablePrintsLtcr1AsNotApplicable() {
-        final List<Decided> segments = List.of(
-                decided(0, NarratorPerson.THIRD, "The master came.", "Господар прийшов.", SegmentStatus.ACCEPTED));
+    void json_withRun_keepsEverySegmentsTargetByIdBesideTheMetrics() throws java.io.IOException {
+        final com.fasterxml.jackson.databind.JsonNode json = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(new SequenceReport(scripted).json(scriptedRun));
 
-        final SequenceReport report = new SequenceReport(measureOf(segments, List.of()));
-
-        assertThat(report.table()).contains("LTCR-1 n/a");
+        assertThat(json.get("segments").asInt()).isEqualTo(328);
+        assertThat(json.get("outputs").size()).isEqualTo(328);
     }
 }

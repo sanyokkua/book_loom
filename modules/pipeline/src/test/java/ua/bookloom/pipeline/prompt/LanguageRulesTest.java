@@ -34,6 +34,15 @@ class LanguageRulesTest {
             names.policy.KEEP_ORIGINAL=c
             names.terms=d
             names.convention=e
+            rule.marks=f
+            rule.dialogue=g
+            rule.address=h
+            rule.numbers=i
+            rule.inflect=j
+            reminder.marks=k
+            reminder.dialogue=l
+            reminder.narrator=m
+            illustration.label=n
             """;
 
     /** Opens an in-memory set of files and records every name it was asked for. */
@@ -67,7 +76,7 @@ class LanguageRulesTest {
 
     @Test
     void section_englishToUkrainian_isOneSectionOfTargetSourceAndPairRules() {
-        final String section = new LanguageRules(sentinelFiles(), false).section("en", "uk", false);
+        final String section = new LanguageRules(sentinelFiles()).section("en", "uk");
 
         assertThat(section)
                 .startsWith("[Language rules: English -> Ukrainian]\n")
@@ -79,7 +88,7 @@ class LanguageRulesTest {
     void section_englishToUkrainian_opensOnlyThePairsOwnFiles() {
         final Files files = sentinelFiles();
 
-        new LanguageRules(files, false).section("en", "uk", false);
+        new LanguageRules(files).section("en", "uk");
 
         assertThat(files.opened)
                 .containsExactlyInAnyOrder(
@@ -91,14 +100,14 @@ class LanguageRulesTest {
 
     @Test
     void section_englishToUkrainian_neverShowsAnotherLanguagesRules() {
-        final String section = new LanguageRules(sentinelFiles(), false).section("en", "uk", true);
+        final String section = new LanguageRules(sentinelFiles()).section("en", "uk");
 
         assertThat(section).doesNotContain("FR-", "GENERIC-");
     }
 
     @Test
     void section_unknownTarget_getsTheGenericRules() {
-        final String section = new LanguageRules(sentinelFiles(), false).section("en", "xx", false);
+        final String section = new LanguageRules(sentinelFiles()).section("en", "xx");
 
         assertThat(section)
                 .contains("GENERIC-QUOTES", "generic pitfall", "EN-SOURCE-NOTE")
@@ -107,14 +116,14 @@ class LanguageRulesTest {
 
     @Test
     void section_regionalAndScriptTags_useThePrimaryLanguageFile() {
-        final LanguageRules rules = new LanguageRules(sentinelFiles(), false);
+        final LanguageRules rules = new LanguageRules(sentinelFiles());
 
-        assertThat(rules.section("en-GB", "uk-UA", false)).contains("UK-QUOTES", "EN-UK-PAIR");
+        assertThat(rules.section("en-GB", "uk-UA")).contains("UK-QUOTES", "EN-UK-PAIR");
     }
 
     @Test
     void section_unknownSource_leavesOutSourceNotesAndPair() {
-        final String section = new LanguageRules(sentinelFiles(), false).section(null, "uk", false);
+        final String section = new LanguageRules(sentinelFiles()).section(null, "uk");
 
         assertThat(section)
                 .startsWith("[Language rules: the source -> Ukrainian]\n")
@@ -123,34 +132,10 @@ class LanguageRulesTest {
     }
 
     @Test
-    void section_genericOnly_ignoresEveryLanguageFile() {
-        final Files files = sentinelFiles();
-
-        final String section = new LanguageRules(files, true).section("en", "uk", false);
-
-        assertThat(section).contains("GENERIC-QUOTES").doesNotContain("UK-", "EN-");
-        assertThat(files.opened).containsExactly("languages/generic.properties");
-    }
-
-    @Test
-    void section_reviewing_addsReviewerChecksOnly() {
-        final LanguageRules rules = new LanguageRules(
-                new Files(Map.of(
-                        "languages/generic.properties",
-                        GENERIC,
-                        "languages/uk.properties",
-                        "quotes=Q\nreviewerChecks.1=CHECK-ME")),
-                false);
-
-        assertThat(rules.section("en", "uk", true)).contains("Check: CHECK-ME");
-        assertThat(rules.section("en", "uk", false)).doesNotContain("CHECK-ME");
-    }
-
-    @Test
     void section_twoCallsOfOnePair_areTheSameBytes() {
-        final LanguageRules rules = new LanguageRules(sentinelFiles(), false);
+        final LanguageRules rules = new LanguageRules(sentinelFiles());
 
-        assertThat(rules.section("en", "uk", false)).isSameAs(rules.section("en", "uk", false));
+        assertThat(rules.section("en", "uk")).isSameAs(rules.section("en", "uk"));
     }
 
     @Test
@@ -158,19 +143,17 @@ class LanguageRulesTest {
         final Files files = new Files(Map.of("languages/generic.properties", "status=untested"));
 
         assertThatIllegalStateException()
-                .isThrownBy(() -> new LanguageRules(files, false))
+                .isThrownBy(() -> new LanguageRules(files))
                 .withMessageContaining("generic.properties")
                 .withMessageContaining("quotes");
     }
 
     @Test
     void examples_pairBeforeTargetBeforeGeneric() {
-        final LanguageRules rules = new LanguageRules(
-                new Files(Map.of(
-                        "languages/generic.properties", GENERIC,
-                        "languages/uk.properties", "example.1=TARGET-EXAMPLE",
-                        "languages/pairs/en-uk.properties", "example.1=PAIR-EXAMPLE")),
-                false);
+        final LanguageRules rules = new LanguageRules(new Files(Map.of(
+                "languages/generic.properties", GENERIC,
+                "languages/uk.properties", "example.1=TARGET-EXAMPLE",
+                "languages/pairs/en-uk.properties", "example.1=PAIR-EXAMPLE")));
 
         assertThat(rules.examples("en", "uk")).isEqualTo("PAIR-EXAMPLE");
         assertThat(rules.examples("de", "uk")).isEqualTo("TARGET-EXAMPLE");
@@ -180,7 +163,7 @@ class LanguageRulesTest {
 
     @Test
     void isTested_markedAndUnmarkedAndUnknown() {
-        final LanguageRules rules = new LanguageRules(sentinelFiles(), false);
+        final LanguageRules rules = new LanguageRules(sentinelFiles());
 
         assertThat(rules.hasTestedRules("uk")).isTrue();
         assertThat(rules.hasTestedRules("fr")).isFalse();
@@ -196,7 +179,7 @@ class LanguageRulesTest {
     @ParameterizedTest
     @ValueSource(strings = {"ja", "zh-Hant", "und", "tlh", "x-private", ""})
     void section_anyOtherTag_stillWorksWithTheGenericRules(final String target) {
-        final String section = LanguageRules.bundled().section("en", target, true);
+        final String section = LanguageRules.bundled().section("en", target);
 
         assertThat(section).contains("[Language rules: English -> ").contains("Quotes:");
         assertThat(section).doesNotContain("{{");
@@ -206,9 +189,9 @@ class LanguageRulesTest {
     void section_bundledEnglishToUkrainian_staysWithinTheSizeLimits() {
         final LanguageRules rules = LanguageRules.bundled();
 
-        assertThat(tokens(rules.targetRules("uk", false))).isLessThanOrEqualTo(200);
+        assertThat(tokens(rules.targetRules("uk"))).isLessThanOrEqualTo(200);
         assertThat(tokens(rules.sourceRules("en"))).isLessThanOrEqualTo(80);
-        assertThat(tokens(rules.pairRules("en", "uk", false))).isLessThanOrEqualTo(100);
+        assertThat(tokens(rules.pairRules("en", "uk"))).isLessThanOrEqualTo(100);
     }
 
     private static int tokens(final String text) {
@@ -237,16 +220,12 @@ class LanguageRulesTest {
         assertThat(LanguageRules.bundled().firstPersonPronouns(tag)).isEmpty();
     }
 
-    @ParameterizedTest
-    @CsvSource({"uk,би", "uk,не", "ru,бы"})
-    void functionWords_languageWithAList_holdsItsParticles(final String tag, final String word) {
-        assertThat(LanguageRules.bundled().functionWords(tag)).contains(word);
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"en", "pl", "xx"})
-    void functionWords_languageWithoutAList_isEmpty(final String tag) {
-        assertThat(LanguageRules.bundled().functionWords(tag)).isEmpty();
+    @Test
+    void negationWords_ukrainian_holdsOnlyTheNegations() {
+        assertThat(LanguageRules.bundled().negationWords("uk"))
+                .containsExactlyInAnyOrder(
+                        "не", "ні", "ніколи", "ніде", "ніхто", "нікого", "нікому", "ніким", "нічого", "нічому",
+                        "нічим");
     }
 
     @ParameterizedTest

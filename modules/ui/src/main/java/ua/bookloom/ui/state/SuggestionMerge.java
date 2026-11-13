@@ -1,10 +1,13 @@
 package ua.bookloom.ui.state;
 
+import java.util.EnumSet;
+import java.util.Objects;
+import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import ua.bookloom.api.pipeline.BriefField;
 import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.BriefField;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.Genre;
 import ua.bookloom.api.project.Narrator;
@@ -19,30 +22,63 @@ import ua.bookloom.api.project.Register;
 final class SuggestionMerge {
 
     // The fields the model filled replace the brief's; one it left empty keeps what the person wrote, and the policies,
-    // dial and languages are not its business.
+    // dial and languages are not its business. The policy keys and the likely marks the suggestion does not touch stay.
+    // The story shape is the model's to write, but the summaries switch is the person's: a forced value is never
+    // changed by a later suggestion, and an unforced one follows the new shape by itself (BookBrief#summariesOn).
     static BookBrief withSuggestion(final BookBrief brief, final BriefSuggestion guess) {
         final BriefSuggestion suggestion = guess.alignedTo(brief.narrator());
-        return new BookBrief(
-                brief.sourceLanguage(),
-                brief.targetLanguage(),
-                suggestion.genre() == null ? brief.genre() : knownGenre(suggestion.genre()),
-                registerFor(brief, suggestion),
-                suggestion.voiceEra() == null ? brief.voiceEra() : suggestion.voiceEra(),
-                suggestion.audience() == null ? brief.audience() : suggestion.audience(),
-                brief.names(),
-                brief.foreignPassages(),
-                brief.footnotes(),
-                brief.units(),
-                brief.balance(),
-                brief.alsoTranslate(),
-                brief.dial(),
-                narratorFor(brief, suggestion));
+        final BookBrief merged = new BookBrief(
+                        brief.sourceLanguage(),
+                        brief.targetLanguage(),
+                        suggestion.genre() == null ? brief.genre() : knownGenre(suggestion.genre()),
+                        registerFor(brief, suggestion),
+                        suggestion.voiceEra() == null ? brief.voiceEra() : suggestion.voiceEra(),
+                        suggestion.audience() == null ? brief.audience() : suggestion.audience(),
+                        brief.names(),
+                        brief.foreignPassages(),
+                        brief.footnotes(),
+                        brief.units(),
+                        brief.balance(),
+                        brief.alsoTranslate(),
+                        brief.dial(),
+                        narratorFor(brief, suggestion))
+                .withKeysOf(brief)
+                .withStoryShape(suggestion.storyShape() != null ? suggestion.storyShape() : brief.storyShape());
+        return merged.withLikely(likelyAfter(brief, merged, suggestion));
+    }
+
+    // A field the suggestion rewrote is the model's now, so it is marked only when the suggestion says it is a guess;
+    // a field it left alone keeps the mark it had.
+    private static Set<BriefField> likelyAfter(
+            final BookBrief before, final BookBrief merged, final BriefSuggestion suggestion) {
+        final Set<BriefField> likely = EnumSet.noneOf(BriefField.class);
+        likely.addAll(before.likely());
+        if (!Objects.equals(before.genre(), merged.genre())) {
+            likely.remove(BriefField.GENRE);
+        }
+        if (before.register() != merged.register()) {
+            likely.remove(BriefField.REGISTER);
+        }
+        if (!Objects.equals(before.voiceEra(), merged.voiceEra())) {
+            likely.remove(BriefField.VOICE_ERA);
+        }
+        if (!Objects.equals(before.audience(), merged.audience())) {
+            likely.remove(BriefField.AUDIENCE);
+        }
+        if (!before.narrator().equals(merged.narrator())) {
+            likely.remove(BriefField.NARRATOR);
+        }
+        if (before.storyShape() != merged.storyShape()) {
+            likely.remove(BriefField.STORY_SHAPE);
+        }
+        likely.addAll(suggestion.likelyFields());
+        return likely;
     }
 
     // An uncertain register is not a suggestion: the person's own stays, as the field's tip says.
     private static Register registerFor(final BookBrief brief, final BriefSuggestion suggestion) {
         return suggestion
-                        .evidenceOf(BriefField.REGISTER)
+                        .evidenceOf(ua.bookloom.api.pipeline.BriefField.REGISTER)
                         .filter(proof -> !proof.isKept())
                         .isPresent()
                 ? brief.register()

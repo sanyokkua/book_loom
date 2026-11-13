@@ -35,6 +35,9 @@ import ua.bookloom.pipeline.RenderingConsistency;
 @Slf4j
 final class RunReport {
 
+    private static final String REASON = "reason";
+    private static final String SEGMENT_ID = "segmentId";
+
     private static final double MILLIS_PER_SECOND = 1000.0;
 
     private final ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
@@ -78,6 +81,7 @@ final class RunReport {
         names.put("typed", counts.updated());
         names.put("suggested", counts.suggested());
         names.put("accepted", counts.accepted());
+        names.put("rejected", counts.rejected());
         names.put("failed", counts.error());
     }
 
@@ -86,6 +90,7 @@ final class RunReport {
         run.put("stoppedBecause", watch.stopReason());
         timings.put("modelCalls", watch.modelCalls());
         timings.put("modelSeconds", seconds(watch.modelTime()));
+        stageTimes(watch);
         modelCallsByKind(watch);
         recovery(watch);
         flagged(watch);
@@ -105,7 +110,7 @@ final class RunReport {
         }
         final ArrayNode reasons = run.putArray("flaggedSegments");
         for (final FlaggedSegment segment : report.flaggedSegments()) {
-            reasons.addObject().put("segmentId", segment.segmentId()).put("reason", String.valueOf(segment.reason()));
+            reasons.addObject().put(SEGMENT_ID, segment.segmentId()).put(REASON, String.valueOf(segment.reason()));
         }
     }
 
@@ -134,13 +139,15 @@ final class RunReport {
         export.put("autoAccepted", report.autoAccepted());
         export.put("keptVerbatim", report.keptVerbatim());
         export.put("verifiedSegments", report.verifiedSegments());
+        export.put("proofreadReRead", report.proofread().reRead());
+        export.put("proofreadWaiting", report.proofread().waiting());
         final ArrayNode fallbacks = export.putArray("sourceFallbacks");
         for (final SourceFallback fallback : report.sourceFallbacks()) {
             fallbacks
                     .addObject()
-                    .put("segmentId", fallback.segmentId())
+                    .put(SEGMENT_ID, fallback.segmentId())
                     .put("locator", fallback.locator())
-                    .put("reason", fallback.reason().name());
+                    .put(REASON, fallback.reason().name());
         }
     }
 
@@ -151,7 +158,7 @@ final class RunReport {
         final ArrayNode segments = audit.putArray("segments");
         for (final SuspiciousSegment segment : suspicious) {
             final ObjectNode node = segments.addObject();
-            node.put("segmentId", segment.segmentId()).put("locator", segment.locator());
+            node.put(SEGMENT_ID, segment.segmentId()).put("locator", segment.locator());
             final ArrayNode checks = node.putArray("checks");
             segment.checks().forEach(checks::add);
         }
@@ -183,18 +190,25 @@ final class RunReport {
         }
     }
 
+    // Every stage is named, so a Fast run's report shows its Proofread stage took its few code steps' time.
+    private void stageTimes(UnattendedRun watch) {
+        final ObjectNode stages = timings.putObject("stageSeconds");
+        watch.stageTimes().forEach((stage, took) -> stages.put(stage.name(), seconds(took)));
+    }
+
     private void modelCallsByKind(UnattendedRun watch) {
         final ObjectNode kinds = root.putObject("modelCallsByKind");
         watch.kindTotals().totals().forEach((kind, totals) -> {
             final ObjectNode node = kinds.putObject(kind.name());
             node.put("attempts", totals.attempts());
             node.put("failed", totals.failed());
-            node.put("promptTokens", totals.promptTokens());
-            node.put("completionTokens", totals.completionTokens());
-            node.put("cachedPromptTokens", totals.cachedPromptTokens());
             node.put("elapsedSeconds", seconds(totals.elapsed()));
-            node.put("promptEvalSeconds", seconds(totals.promptEval()));
-            node.put("generationSeconds", seconds(totals.generation()));
+            // A figure no call reported is left out, never written as 0.
+            totals.promptTotal().ifPresent(tokens -> node.put("promptTokens", tokens));
+            totals.completionTotal().ifPresent(tokens -> node.put("completionTokens", tokens));
+            totals.cachedTotal().ifPresent(tokens -> node.put("cachedPromptTokens", tokens));
+            totals.promptEvalTotal().ifPresent(time -> node.put("promptEvalSeconds", seconds(time)));
+            totals.generationTotal().ifPresent(time -> node.put("generationSeconds", seconds(time)));
             totals.meanFirstToken().ifPresent(mean -> node.put("meanFirstTokenSeconds", seconds(mean)));
             totals.prefillShare().ifPresent(share -> node.put("prefillShare", share));
         });
@@ -217,9 +231,9 @@ final class RunReport {
         final ArrayNode flagged = root.putArray("flagged");
         for (final UnattendedRun.FlaggedDetail detail : watch.flagged()) {
             final ObjectNode node = flagged.addObject();
-            node.put("segmentId", detail.segmentId());
+            node.put(SEGMENT_ID, detail.segmentId());
             final @Nullable ErrorCode reason = detail.reason();
-            node.put("reason", reason == null ? null : reason.name());
+            node.put(REASON, reason == null ? null : reason.name());
             final ArrayNode kinds = node.putArray("findings");
             detail.findingKinds().forEach(kinds::add);
         }

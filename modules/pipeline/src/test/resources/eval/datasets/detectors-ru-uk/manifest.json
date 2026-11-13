@@ -1,0 +1,10 @@
+{
+ "id": "detectors-ru-uk",
+ "version": 2,
+ "pair": "ru-uk",
+ "ownerData": false,
+ "files": [
+  {"path": "datasets/detectors-ru-uk/cases.json", "sha256": "c8a7a80bf2cbf4fb6cade635d2a59bf2bad72fa7ec77237711c2d945d40fe8f6"}
+ ],
+ "rootHash": "e6ce6a061ca2e27af9bb4167fc82b715a6ebb8254f755a2025de4c9aa4bc0ad5"
+}

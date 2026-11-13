@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
@@ -17,12 +18,11 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.llm.MeasuredSpeed;
 import ua.bookloom.api.persistence.DeferralRepository;
-import ua.bookloom.api.persistence.GlossaryRepository;
-import ua.bookloom.api.persistence.LexiconRepository;
-import ua.bookloom.api.persistence.ProjectRepository;
-import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.NamesEstimate;
@@ -31,14 +31,14 @@ import ua.bookloom.api.pipeline.NamesPassReport;
 import ua.bookloom.api.pipeline.NamesPassStage;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
-import ua.bookloom.pipeline.context.ContextBudget;
+import ua.bookloom.pipeline.PrepSummary;
+import ua.bookloom.pipeline.context.ModelWindows;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans.Book;
 import ua.bookloom.pipeline.glossary.TermReview.Reviewed;
 import ua.bookloom.pipeline.lexicon.LexiconServiceImpl;
-import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
+import ua.bookloom.pipeline.run.RunStores;
 
 /**
  * The one autonomous names pass (15i.N8): the steps the Names &amp; style buttons run, in order, over a private copy of
@@ -54,48 +54,25 @@ import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class NamesPassImpl implements NamesPass {
 
-    private final GlossaryRepository glossary;
-    private final LexiconRepository lexicon;
-    private final SegmentRepository segments;
+    private final RunStores stores;
     private final DeferralRepository deferrals;
-    private final ProjectRepository projects;
-    private final OpenProjects openProjects;
-    private final PreScan preScan;
+    private final NameServices services;
     private final PromptTemplates templates;
     private final ObjectMapper mapper;
-    private final SuggestTargets suggestTargets;
-    private final LexiconReading lexiconReading;
     private final Clock clock;
-    private final RequestDefaultsSource requestDefaultsSource;
+    private final CallLedger ledger;
 
-    /** A names pass whose requests use the defaults the environment alone gives (the command line, tests). */
+    /**
+     * A names pass whose calls are counted nowhere (tests).
+     */
     public NamesPassImpl(
-            final GlossaryRepository glossary,
-            final LexiconRepository lexicon,
-            final SegmentRepository segments,
+            final RunStores stores,
             final DeferralRepository deferrals,
-            final ProjectRepository projects,
-            final OpenProjects openProjects,
-            final PreScan preScan,
+            final NameServices services,
             final PromptTemplates templates,
             final ObjectMapper mapper,
-            final SuggestTargets suggestTargets,
-            final LexiconReading lexiconReading,
             final Clock clock) {
-        this(
-                glossary,
-                lexicon,
-                segments,
-                deferrals,
-                projects,
-                openProjects,
-                preScan,
-                templates,
-                mapper,
-                suggestTargets,
-                lexiconReading,
-                clock,
-                RequestDefaultsSource.environmentOnly());
+        this(stores, deferrals, services, templates, mapper, clock, CallLedger.none());
     }
 
     /** The copies of both tables and the services built over them, for one project. */
@@ -110,18 +87,26 @@ public final class NamesPassImpl implements NamesPass {
             GlossaryServiceImpl glossaryService,
             LexiconServiceImpl lexiconService) {}
 
-    /** What one pass sends its calls through. */
-    private record Run(Stage stage, ChatModel model, NamesPassSteps counter, ModelCalls calls, Instant started) {}
+    /** What one pass calls through, the ledger mark its calls count from, and its refused renderings' count. */
+    private record Run(
+            Stage stage,
+            ChatModel model,
+            NamesPassSteps counter,
+            ModelCalls calls,
+            Instant started,
+            long mark,
+            AtomicInteger rejected) {}
 
     @Override
-    public Result<NamesEstimate> estimate(final String projectId) {
+    public Result<NamesEstimate> estimate(final String projectId, final Map<CallKind, MeasuredSpeed> stored) {
         Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(stored, "stored");
         return guarded(
                 "estimate",
                 projectId,
                 () -> stage(projectId)
-                        .flatMap(
-                                stage -> stage.glossaryService().scan(projectId).map(scanned -> estimateOf(stage))));
+                        .flatMap(stage ->
+                                stage.glossaryService().scan(projectId).map(scanned -> estimateOf(stage, stored))));
     }
 
     @Override
@@ -139,67 +124,70 @@ public final class NamesPassImpl implements NamesPass {
                 () -> stage(projectId).flatMap(stage -> {
                     final NamesPassSteps counter = new NamesPassSteps(progress);
                     final ChatModel stoppable = new StoppableModel(model);
-                    final int window = ContextBudget.windowFor(detectedContext, model.contextWindowOverride());
+                    final int window = ModelWindows.of(model, detectedContext);
                     log.debug("Names pass window={} detected={}", window, detectedContext);
                     final ModelCalls calls = stage.scans().calls(stoppable, counter, stage.book(), window);
-                    return execute(new Run(stage, stoppable, counter, calls, clock.instant()));
+                    final Run run = new Run(
+                            stage, stoppable, counter, calls, clock.instant(), ledger.mark(), new AtomicInteger());
+                    final Result<NamesPassReport> result = execute(run);
+                    PrepSummary.log("names", projectId, ledger.since(run.mark()));
+                    return result;
                 }));
     }
 
     private Result<Stage> stage(final String projectId) {
-        return StagedGlossary.copyOf(glossary, projectId)
-                .flatMap(names -> StagedLexicon.copyOf(lexicon, projectId).flatMap(terms -> {
-                    final TermReview review = new TermReview(templates, mapper, names, suggestTargets);
-                    final GlossaryModelScans scans = new GlossaryModelScans(
-                            projects,
-                            openProjects,
-                            preScan,
-                            review,
-                            suggestTargets,
-                            lexiconReading,
-                            clock,
-                            requestDefaultsSource);
-                    return scans.book(projectId)
-                            .map(book -> new Stage(
-                                    projectId,
-                                    names,
-                                    terms,
-                                    names.entries(),
-                                    terms.entries(),
-                                    scans,
-                                    book,
-                                    new GlossaryServiceImpl(names, segments, deferrals, projects, openProjects, scans),
-                                    new LexiconServiceImpl(terms, names, projects, openProjects, scans)));
-                }));
+        return StagedGlossary.copyOf(stores.glossary(), projectId)
+                .flatMap(names -> StagedLexicon.copyOf(stores.lexicon(), projectId)
+                        .flatMap(terms -> stageOver(projectId, names, terms)));
+    }
+
+    private Result<Stage> stageOver(final String projectId, final StagedGlossary names, final StagedLexicon terms) {
+        final TermReview review = new TermReview(templates, mapper, names, services.suggestTargets());
+        final GlossaryModelScans scans = new GlossaryModelScans(
+                stores.projects(),
+                stores.openProjects(),
+                services.preScan(),
+                review,
+                services.suggestTargets(),
+                services.lexiconReading(),
+                clock);
+        return scans.book(projectId)
+                .map(book -> new Stage(
+                        projectId,
+                        names,
+                        terms,
+                        names.entries(),
+                        terms.entries(),
+                        scans,
+                        book,
+                        new GlossaryServiceImpl(
+                                names,
+                                stores.segments(),
+                                deferrals,
+                                stores.projects(),
+                                stores.openProjects(),
+                                scans,
+                                stores.summaries()),
+                        new LexiconServiceImpl(terms, names, stores.projects(), stores.openProjects(), scans)));
     }
 
     // The calls of the whole pass over the open names, so an empty glossary is estimated from what its scan would hold.
-    private static NamesEstimate estimateOf(final Stage stage) {
+    private static NamesEstimate estimateOf(final Stage stage, final Map<CallKind, MeasuredSpeed> stored) {
         final List<GlossaryEntry> open =
                 stage.names().entries().stream().filter(TermReview::isOpen).toList();
         final NamesEstimate estimate = NamesPassEstimate.of(
                 open,
                 stage.book().story(),
                 stage.book().dial(),
-                stage.book().frame().analysisLanguage());
-        log.debug(
-                "Names estimate project={} calls={} minutes={}-{}",
-                stage.projectId(),
-                estimate.calls(),
-                estimate.minutesLow(),
-                estimate.minutesHigh());
+                stage.book().frame().analysisLanguage(),
+                stored);
+        log.debug("Names estimate project={} {}", stage.projectId(), estimate);
         return estimate;
     }
 
     private Result<NamesPassReport> execute(final Run run) {
         final Stage stage = run.stage();
-        log.info(
-                "Names pass started project={} dial={} policy={} glossary={} terms={}",
-                stage.projectId(),
-                stage.book().dial(),
-                stage.book().names(),
-                stage.namesBefore().size(),
-                stage.termsBefore().size());
+        logStarted(stage);
         run.counter().planStages();
         return step(
                         run,
@@ -213,13 +201,32 @@ public final class NamesPassImpl implements NamesPass {
                             NamesPassStage.NAMES.code(),
                             () -> stage.scans().decide(stage.projectId(), stage.book(), run.calls()));
                 })
+                .flatMap(reviewed -> step(run, NamesPassStage.NAMES_KNOWLEDGE.code(), () -> knowledge(run))
+                        .map(known -> reviewed))
                 .flatMap(reviewed -> readTerms(run)
                         .flatMap(read -> translate(run, reviewed))
-                        .flatMap(translated -> finish(run, reviewed)));
+                        .flatMap(translated -> step(
+                                run,
+                                NamesPassStage.CHECK.code(),
+                                () -> Result.ok(SuggestionCheck.of(
+                                        stage.projectId(),
+                                        stage.book(),
+                                        stage.names().entries()))))
+                        .flatMap(checked -> finish(run, reviewed)));
+    }
+
+    private static void logStarted(final Stage stage) {
+        log.info(
+                "Names pass started project={} dial={} policy={} glossary={} terms={}",
+                stage.projectId(),
+                stage.book().dial(),
+                stage.book().names(),
+                stage.namesBefore().size(),
+                stage.termsBefore().size());
     }
 
     private static int logEstimate(final Stage stage, final int scanned) {
-        final NamesEstimate estimate = estimateOf(stage);
+        final NamesEstimate estimate = estimateOf(stage, Map.of());
         log.info(
                 "Names pass project={} scanned={} plan: about {} calls, {}-{} min",
                 stage.projectId(),
@@ -228,6 +235,16 @@ public final class NamesPassImpl implements NamesPass {
                 estimate.minutesLow(),
                 estimate.minutesHigh());
         return estimate.calls();
+    }
+
+    // The bare names nobody settled, asked after the readings so the book's and the rules' values are in; the
+    // answers go to the staged copy as likely values (design D5).
+    private Result<Integer> knowledge(final Run run) {
+        final Stage stage = run.stage();
+        return new NameKnowledgeCalls(templates, mapper)
+                .applied(stage.names().entries(), stage.book().frame(), run.calls())
+                .flatMap(applied -> stage.names().putAll(stage.projectId(), applied))
+                .map(List::size);
     }
 
     // The recurring terms: the held ones without a rendering are read first, so a term the model drops is not asked
@@ -264,7 +281,13 @@ public final class NamesPassImpl implements NamesPass {
                         run,
                         NamesPassStage.NAMES_TRANSLATE.code(),
                         () -> NamesTranslation.run(
-                                stage.names(), stage.scans(), projectId, stage.book(), reviewed, run.calls()))
+                                stage.names(),
+                                stage.scans(),
+                                projectId,
+                                stage.book(),
+                                reviewed,
+                                run.calls(),
+                                run.rejected()::addAndGet))
                 .flatMap(locked -> step(
                         run,
                         NamesPassStage.TERMS_TRANSLATE.code(),
@@ -297,25 +320,15 @@ public final class NamesPassImpl implements NamesPass {
                     terms.changed().size(),
                     run.counter().calls(),
                     elapsed);
-            return new NamesPassReport(names, terms, run.counter().calls(), elapsed, untranslated(stage));
+            NamesPassCounts.write(stage.names().entries(), run.rejected().get());
+            return new NamesPassReport(
+                    names,
+                    terms,
+                    run.counter().calls(),
+                    elapsed,
+                    NamesPassCounts.untranslated(
+                            stage.projectId(), stage.names().entries()));
         });
-    }
-
-    // An entry still without a target after the pass is the person's to give: the report lists it for the results
-    // dialog, and it is counted at WARN and listed at TRACE (15j.J10), never kept silently.
-    private static List<String> untranslated(final Stage stage) {
-        final List<String> open = stage.names().entries().stream()
-                .filter(entry -> entry.target() == null || entry.target().isBlank())
-                .map(GlossaryEntry::term)
-                .toList();
-        if (!open.isEmpty()) {
-            log.warn(
-                    "Names pass project={} left {} name(s) without a target for the person",
-                    stage.projectId(),
-                    open.size());
-            log.trace("Names pass project={} names without a target: {}", stage.projectId(), open);
-        }
-        return open;
     }
 
     private static Map<String, String> reasonsOf(final EntryChanges<GlossaryEntry> changes) {
@@ -331,7 +344,14 @@ public final class NamesPassImpl implements NamesPass {
 
     private Result<Boolean> store(
             final String projectId, final EntryChanges<GlossaryEntry> names, final EntryChanges<LexiconEntry> terms) {
-        return new NamesPassStore(glossary, lexicon, segments, deferrals).store(projectId, names, terms);
+        return new NamesPassStore(
+                        stores.glossary(),
+                        stores.lexicon(),
+                        stores.segments(),
+                        deferrals,
+                        stores.openProjects(),
+                        TargetText.targetLanguageOf(stores.projects(), projectId))
+                .store(projectId, names, terms);
     }
 
     // Stop interrupts the calling thread: a step does not start once it has, and a call in a step is refused.
@@ -355,7 +375,7 @@ public final class NamesPassImpl implements NamesPass {
         log.debug("Names pass {} project={}", action, projectId);
         try {
             return body.get();
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal, "Names pass failed", "The names could not be prepared.", null, cause);
             log.error(

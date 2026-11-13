@@ -109,9 +109,9 @@ sealed interface Scroller permits Scroller.PaneScroller, Scroller.FlowScroller {
 
         private static final String STUCK_KEY = "bookloom.smoothScroll.stuck";
 
-        // The flow's total length is not public, so only its position (not the pending distance) tells it has room;
-        // and as the position comes from estimated cell sizes, a flow that just moved zero the same way from the same
-        // position has none either, whatever the position says.
+        // The flow's total length is not public, so only its position (not the pending distance) tells it has room.
+        // The position comes from estimated cell sizes, so a flow that just moved zero the same way from the same
+        // position has no room either, whatever the position says.
         @Override
         public boolean hasRoom(final double pixels, final double pending) {
             final boolean scrolls = node.getChildrenUnmodifiable().stream()
@@ -122,9 +122,9 @@ sealed interface Scroller permits Scroller.PaneScroller, Scroller.FlowScroller {
         }
 
         private boolean isStuckToward(final double pixels) {
-            return node.getProperties().get(STUCK_KEY) instanceof Stuck stuck
-                    && stuck.direction() == Math.signum(pixels)
-                    && stuck.position() == node.getPosition();
+            return node.getProperties().get(STUCK_KEY) instanceof Stuck(var direction, var position)
+                    && direction == Math.signum(pixels)
+                    && position == node.getPosition();
         }
 
         @Override

@@ -13,9 +13,11 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobStage;
+import ua.bookloom.api.pipeline.ProofreadCoverage;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.state.FlaggedRow;
+import ua.bookloom.ui.state.RunStage;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.Throughput;
 
@@ -72,6 +74,14 @@ class TranslatingSummaryStripTest extends TranslatingScreenTestBase {
         running(RUNNING);
 
         assertThat(labelText("translating-strip-line")).isEqualTo("791 of 1,240 segments done · Chapter 7 of 11");
+    }
+
+    // IF a Continue that only proofreads named the chapter it never entered, THEN the line would read "Chapter 0 of 9".
+    @Test
+    void line_continueProofreadsADecidedBook_namesNoChapter() {
+        running(ua.bookloom.ui.ProgressFixtures.progress(0, 9, 152, 0, 0));
+
+        assertThat(labelText("translating-strip-line")).isEqualTo("152 of 152 segments done");
     }
 
     // IF a part of the line were shown while unknown, THEN it would say "elapsed" with nothing to count.
@@ -207,5 +217,63 @@ class TranslatingSummaryStripTest extends TranslatingScreenTestBase {
 
         assertThat(textOf("translating-screen")).doesNotContain("Mockup", "req(", "Chapter 2 orbits");
         assertThat(idsStartingWith("translating-")).noneMatch(id -> id.contains("mockup") || id.contains("demo"));
+    }
+
+    private List<String> stages(final RunStage stage) {
+        mirror().live().publishStage(stage);
+        WaitForAsyncUtils.waitForFxEvents();
+        return List.of(
+                labelText("translating-stage-prep"),
+                labelText("translating-stage-translate"),
+                labelText("translating-stage-proofread"));
+    }
+
+    private boolean marked(final String id) {
+        return required(id).getStyleClass().contains("chip-info");
+    }
+
+    // IF the strip did not mark the stage in work, THEN a person would not know drafting is over.
+    @Test
+    void proofreadStage_marked() {
+        running(RUNNING);
+
+        final List<String> words = stages(new RunStage(JobStage.PROOFREAD, ProofreadCoverage.MARKED_AND_DOUBTFUL, 1));
+
+        assertThat(words).containsExactly("Prepare", "Translate", "Proofread");
+        assertThat(marked("translating-stage-proofread")).isTrue();
+        assertThat(marked("translating-stage-translate")).isFalse();
+        assertThat(marked("translating-stage-prep")).isFalse();
+    }
+
+    // IF Max's second reading had no round, THEN a run reading the whole book again would look stuck.
+    @Test
+    void proofreadStage_maxNamesRound2() {
+        running(RUNNING);
+
+        final List<String> words =
+                stages(new RunStage(JobStage.PROOFREAD, ProofreadCoverage.MARKED_AND_DOUBTFUL_THEN_EVERY_PARAGRAPH, 2));
+
+        assertThat(words.getLast()).isEqualTo("Proofread · round 2 of 2: whole book");
+    }
+
+    // IF Fast's Proofread looked like the others, THEN a person would wait for model calls that never come.
+    @Test
+    void proofreadStage_fastNoCalls() {
+        running(RUNNING);
+
+        final List<String> words = stages(new RunStage(JobStage.PROOFREAD, ProofreadCoverage.NONE, 0));
+
+        assertThat(words.getLast()).isEqualTo("Proofread · marks for review, no model calls");
+    }
+
+    // IF the stages showed with no run at work, THEN a finished book would claim a stage in progress.
+    @Test
+    void stages_noRunAtWork_areHidden() {
+        running(RUNNING);
+
+        mirror().live().publishStage(null);
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(required("translating-stages").isManaged()).isFalse();
     }
 }

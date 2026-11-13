@@ -11,10 +11,11 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Genre;
-import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.pipeline.PlannedPrompts;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 
 /**
@@ -35,21 +36,19 @@ class PromptShapeTest {
     private static final Map<String, String> REPLY_KEYS = Map.ofEntries(
             Map.entry("draft", "target"),
             Map.entry("structural-repair", "target"),
-            Map.entry("placeholder-repair", "target"),
             Map.entry("directed-fix", "target"),
             Map.entry("improve", "target"),
             Map.entry("polish", "target"),
-            Map.entry("revision", "target"),
             Map.entry("reviewer", "results"),
             Map.entry("reflect", "issues"),
             Map.entry("prescan", "terms"),
-            Map.entry("consistency", "target"),
             Map.entry("file-name", "target"));
 
     private static final Map<String, String> OTHER_REPLY_KEYS = Map.ofEntries(
             Map.entry("review-terms", "verdicts"),
             Map.entry("suggest-targets", "suggestions"),
-            Map.entry("summary", "summary"),
+            Map.entry("chapter_summary", "summary"),
+            Map.entry("proofread", "unchanged"),
             Map.entry("draft-batch-json", "items"),
             Map.entry("suspicious-words", "words"),
             Map.entry("brief-suggestion", "genre"),
@@ -58,34 +57,21 @@ class PromptShapeTest {
             Map.entry("brief-synthesis", "genre"),
             Map.entry("term-reading", "windows"),
             Map.entry("lexicon-reading", "windows"),
-            Map.entry("term-summary", "usage"));
+            Map.entry("term-summary", "usage"),
+            Map.entry("name-knowledge", "items"));
 
-    // Raised from 697 by the pair's straight-quote example line (15h.C3), about 21 tokens; measured 698 before the
-    // language-rules map replaced the per-language example files.
+    // Raised from 697 by the pair's straight-quote example line (15h.C3); 698 before the language-rules map.
     private static final int DRAFT_SYSTEM_BUDGET = 720;
     private static final int SYSTEM_BUDGET = 900;
-    // The passage the dual batch arm (15i.X1) shows once more in each example, about 40 tokens.
-    private static final int DUAL_SYSTEM_BUDGET = 980;
-    // The reviewer also carries the languages' reviewer checks; the suggestion call carries its name examples.
-    private static final int LARGE_SYSTEM_BUDGET = 1230;
+    // The reviewer's language checks and the suggestion call's name examples (1302 since the title rows, 1230 before).
+    private static final int LARGE_SYSTEM_BUDGET = 1310;
 
     @ParameterizedTest
-    @EnumSource(
-            value = PromptName.class,
-            names = {"DRAFT_BATCH_MARKERS"},
-            mode = EnumSource.Mode.EXCLUDE)
+    @EnumSource(PromptName.class)
     void render_everyCall_showsALiteralReplyItsParserReads(final PromptName name) {
         assertThat(hasLiteralReply(prompt(name), replyKey(name)))
                 .as("a literal %s reply in %s", replyKey(name), name)
                 .isTrue();
-    }
-
-    // The marked arm's reply is plain text: its example shows the reply as the items in order, each at its marker.
-    @Test
-    void render_markedBatch_showsAReplyOfMarkedItsAndNoJson() {
-        final String system = system(PromptName.DRAFT_BATCH_MARKERS);
-
-        assertThat(system).containsSubsequence("Reply:\n⟦s1⟧ ", "\n\n⟦s2⟧ ").doesNotContain("JSON", "{\"");
     }
 
     @ParameterizedTest
@@ -94,28 +80,14 @@ class PromptShapeTest {
         assertThat(prompt(name)).contains("not instructions");
     }
 
-    // The name scans and the summary read display text, which carries no tokens.
+    // A planned call states the mark rule once among the book's rules, and reminds of it last.
     @ParameterizedTest
     @EnumSource(
             value = PromptName.class,
-            names = {
-                "PRESCAN",
-                "REVIEW_TERMS",
-                "SUGGEST_TARGETS",
-                "SUMMARY",
-                "SUSPICIOUS_WORDS",
-                "FILE_NAME",
-                "BRIEF_SUGGESTION",
-                "TERM_CHOICE",
-                "BOOK_KNOWLEDGE",
-                "BRIEF_SYNTHESIS",
-                "TERM_READING",
-                "LEXICON_READING",
-                "TERM_SUMMARY"
-            },
-            mode = EnumSource.Mode.EXCLUDE)
-    void render_callWithTokens_statesThePlaceholderRule(final PromptName name) {
-        assertThat(prompt(name)).contains("⟦gN⟧ token");
+            names = {"TRANSLATE", "FORMAT_REASK", "REPAIR", "PROOFREAD"})
+    void render_plannedCallWithMarks_statesTheMarkRuleAndRemindsOfItLast(final PromptName name) {
+        assertThat(system(name)).contains("- Marks: ⟦gN⟧ marks stand for");
+        assertThat(user(name)).endsWith("Keep every ⟦…⟧ mark exactly once.");
     }
 
     @ParameterizedTest
@@ -127,11 +99,10 @@ class PromptShapeTest {
     @ParameterizedTest
     @EnumSource(PromptName.class)
     void render_everyCall_keepsItsSystemMessageWithinBudget(final PromptName name) {
-        final boolean large = name == PromptName.REVIEWER || name == PromptName.SUGGEST_TARGETS;
-        final int ceiling = name == PromptName.DRAFT_BATCH_DUAL ? DUAL_SYSTEM_BUDGET : SYSTEM_BUDGET;
+        final boolean large = name == PromptName.SUGGEST_TARGETS;
 
         assertThat(TokenEstimator.estimate(system(name), "en"))
-                .isLessThanOrEqualTo(large ? LARGE_SYSTEM_BUDGET : ceiling);
+                .isLessThanOrEqualTo(large ? LARGE_SYSTEM_BUDGET : SYSTEM_BUDGET);
     }
 
     // IF the brief call invited the model's memory of a famous book, THEN its answer could not be checked against the
@@ -171,7 +142,7 @@ class PromptShapeTest {
                 PromptName.BOOK_KNOWLEDGE, Map.of("title", "The Lantern Ledger", "author", "Orsolya Venn"));
 
         assertThat(user).contains("The Lantern Ledger", "Orsolya Venn").doesNotContain("{{", "}}");
-        assertThat(system(PromptName.BOOK_KNOWLEDGE).toLowerCase(java.util.Locale.ROOT))
+        assertThat(user(PromptName.BOOK_KNOWLEDGE).toLowerCase(java.util.Locale.ROOT))
                 .contains("known")
                 .containsAnyOf("do not guess", "never guess", "not guess", "not sure", "unsure");
     }
@@ -191,7 +162,7 @@ class PromptShapeTest {
 
         assertThat(example.path("genre").fieldNames()).toIterable().containsExactly("basis", "value");
         assertThat(example.path("genre").path("basis").has("passages")).isTrue();
-        assertThat(system(PromptName.BRIEF_SYNTHESIS).toLowerCase(java.util.Locale.ROOT))
+        assertThat(user(PromptName.BRIEF_SYNTHESIS).toLowerCase(java.util.Locale.ROOT))
                 .contains("basis", "passage", "empty");
     }
 
@@ -199,7 +170,7 @@ class PromptShapeTest {
     @ParameterizedTest
     @EnumSource(Genre.class)
     void render_briefSynthesis_listsEveryGenreByItsEnglishName(final Genre genre) {
-        assertThat(system(PromptName.BRIEF_SYNTHESIS)).contains(genre.english());
+        assertThat(user(PromptName.BRIEF_SYNTHESIS)).contains(genre.english());
     }
 
     @Test
@@ -232,9 +203,9 @@ class PromptShapeTest {
     // The reading tells the model what each label means and that a pronoun inside quoted speech is no answer.
     @Test
     void render_termReading_namesEveryUsageAndSaysSpeechIsNoEvidence() {
-        final String system = system(PromptName.TERM_READING).toLowerCase(java.util.Locale.ROOT);
+        final String task = user(PromptName.TERM_READING).toLowerCase(java.util.Locale.ROOT);
 
-        assertThat(system)
+        assertThat(task)
                 .contains("part-of-name", "\"word\"", "\"title\"", "speaking", "brand", "none", "[[")
                 .containsAnyOf("inside quoted speech", "inside quotation marks", "in quoted speech");
     }
@@ -271,17 +242,18 @@ class PromptShapeTest {
     // first window; IF it were not told a word of two senses is no term, THEN "bank" would be kept.
     @Test
     void render_lexiconReading_asksOneRenderingThatFitsEveryWindowAndNamesEveryUsage() {
-        final String system = system(PromptName.LEXICON_READING).toLowerCase(java.util.Locale.ROOT);
+        final String task = user(PromptName.LEXICON_READING).toLowerCase(java.util.Locale.ROOT);
 
-        assertThat(system)
+        assertThat(task)
                 .contains("one rendering", "every window", "\"term\"", "\"word\"", "\"name\"", "senses", "[[")
                 .containsAnyOf("two senses", "more than one sense", "different senses");
     }
 
     @Test
     void render_lexiconReading_userCarriesTheTermLineAndTheWindows() {
-        final String user = TEMPLATES.renderUser(
+        final String user = TEMPLATES.renderTask(
                 PromptName.LEXICON_READING,
+                FRAME,
                 Map.of("term", "beacon — 5 mentions", "windows", "[1] The [[beacon]] was lit."));
 
         assertThat(user)
@@ -292,8 +264,7 @@ class PromptShapeTest {
     // The draft system is sent with every segment of a book; a small model must still read its last rule.
     @Test
     void render_draftSystemWithExamples_staysWithinSevenHundredTokens() {
-        final String system = system(PromptName.DRAFT);
-
+        final String system = system(PromptName.TRANSLATE);
         assertThat(system).contains("Examples (");
         assertThat(TokenEstimator.estimate(system, "en")).isLessThanOrEqualTo(DRAFT_SYSTEM_BUDGET);
     }
@@ -301,53 +272,39 @@ class PromptShapeTest {
     @ParameterizedTest
     @EnumSource(
             value = PromptName.class,
-            names = {"DRAFT", "REVIEWER", "SUMMARY", "PRESCAN", "SUGGEST_TARGETS"})
+            names = {"TRANSLATE", "SUGGEST_TARGETS"})
     void render_callWithTheLanguageRulesSlot_carriesOneSectionForThePair(final PromptName name) {
-        assertThat(system(name))
+        assertThat(prompt(name))
                 .containsOnlyOnce("[Language rules: English -> Ukrainian]\nTarget — Ukrainian")
                 .contains("Source — English", "Pair — English -> Ukrainian")
                 .doesNotContain("Polish", "Russian");
-    }
-
-    @Test
-    void render_reviewer_addsTheReviewerChecksTheDraftDoesNotCarry() {
-        assertThat(system(PromptName.REVIEWER)).contains("Check: Quotes are «…» and balanced");
-        assertThat(system(PromptName.DRAFT)).doesNotContain("Check: ");
-    }
-
-    @ParameterizedTest
-    @EnumSource(
-            value = PromptName.class,
-            names = {"REVISION"})
-    void render_rewriteOfTokenText_listsTheImmutableTokens(final PromptName name) {
-        assertThat(user(name)).contains("[Immutable tokens]\nCopy this exact ordered sequence unchanged: ⟦g0⟧ ⟦g1⟧");
-    }
-
-    @ParameterizedTest
-    @EnumSource(
-            value = PromptName.class,
-            names = {"DIRECTED_FIX", "REVISION"})
-    void render_rewrite_delimitsSourceAndTranslationApart(final PromptName name) {
-        assertThat(user(name))
-                .contains("<Source>\n" + MASKED + "\n</Source>", "<Translation>\n" + MASKED + "\n</Translation>")
-                .doesNotContain("<Text>");
     }
 
     private static String prompt(final PromptName name) {
         return system(name) + "\n" + user(name);
     }
 
-    /** The system message the call is sent with; the two repairs reuse the draft's. */
+    /** The system message the call is sent with; the translate family and the analysis calls are planned. */
     private static String system(final PromptName name) {
-        final PromptName owner = name.systemSlots().isPresent() ? name : PromptName.DRAFT;
-        return owner == PromptName.SUGGEST_TARGETS
-                ? TEMPLATES.renderSystem(
-                        owner, FRAME, Map.of("nameRule", NameRules.bundled().rule(NamePolicy.TRANSLITERATE, "uk")))
-                : TEMPLATES.renderSystem(owner, FRAME);
+        if (PlannedPrompts.PLANNED.contains(name)) {
+            return PlannedPrompts.plan(name, MASKED).systemText();
+        }
+        if (PlannedPrompts.ANALYSIS.contains(name)) {
+            return PlannedPrompts.filledAnalysisText(name, FRAME, MASKED, ChatRole.SYSTEM);
+        }
+        return name.systemSlots().isPresent()
+                ? TEMPLATES.renderSystem(name, FRAME)
+                : PlannedPrompts.plan(PromptName.TRANSLATE, MASKED).systemText();
     }
 
     /** The user message with every slot the template declares filled, tokens included where it lists them. */
     private static String user(final PromptName name) {
+        if (PlannedPrompts.PLANNED.contains(name)) {
+            return PlannedPrompts.plan(name, MASKED).userText();
+        }
+        if (PlannedPrompts.ANALYSIS.contains(name)) {
+            return PlannedPrompts.filledAnalysisText(name, FRAME, MASKED, ChatRole.USER);
+        }
         final Map<String, String> values = new HashMap<>();
         name.userSlots().required().forEach(slot -> values.put(slot, MASKED));
         name.userSlots().optional().forEach(slot -> values.put(slot, MASKED));
@@ -359,7 +316,7 @@ class PromptShapeTest {
     private static JsonNode tree(final String candidate) {
         try {
             return MAPPER.readTree(candidate);
-        } catch (JsonProcessingException notJson) {
+        } catch (JsonProcessingException _) {
             return MAPPER.missingNode();
         }
     }
@@ -381,7 +338,7 @@ class PromptShapeTest {
         try {
             final JsonNode node = MAPPER.readTree(candidate);
             return node.isObject() && node.has(key);
-        } catch (JsonProcessingException notJson) {
+        } catch (JsonProcessingException _) {
             return false;
         }
     }

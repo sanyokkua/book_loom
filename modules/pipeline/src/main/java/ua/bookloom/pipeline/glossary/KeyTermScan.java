@@ -1,12 +1,15 @@
 package ua.bookloom.pipeline.glossary;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +21,7 @@ import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.index.Occurrences;
 import ua.bookloom.pipeline.index.WordCounts;
+import ua.bookloom.pipeline.lexicon.FormGroups;
 
 /**
  * The deterministic scan for recurring common terms and titles — {@code master}, {@code imp}, {@code Mr} — that a model
@@ -47,9 +51,6 @@ public final class KeyTermScan {
     /** The most terms one scan proposes. */
     static final int MAX_PROPOSALS = 30;
 
-    /** The fewest uses a word needs before it is shown to the model as a candidate. */
-    static final int FREQUENT_MIN_COUNT = 6;
-
     private static final int FREQUENT_MIN_LETTERS = 4;
     private static final int MIN_WORD_LETTERS = 3;
 
@@ -70,25 +71,35 @@ public final class KeyTermScan {
         final Set<String> stopWords = StopWords.of(sourceLanguage);
         final Set<String> titles = StopWords.titles(sourceLanguage);
         final Map<String, NameCandidate> seen = tally(read);
-        final List<NameCandidate> kept = seen.values().stream()
-                .filter(tally -> qualifies(tally, counts, stopWords, titles))
-                .sorted(Comparator.comparingInt(NameCandidate::count).reversed())
-                .limit(MAX_PROPOSALS)
+        final Stream<NameCandidate> titlesFound = seen.values().stream()
+                .filter(tally -> titles.contains(tally.term()) && tally.count() >= TITLE_MIN_COUNT);
+        final List<NameCandidate> words = seen.values().stream()
+                .filter(tally -> !titles.contains(tally.term()))
+                .filter(tally -> tally.term().codePointCount(0, tally.term().length()) >= MIN_WORD_LETTERS)
+                .filter(tally -> !stopWords.contains(tally.term()))
                 .toList();
+        final Stream<NameCandidate> dualUse = groupsOf(words, counts, sourceLanguage).stream()
+                .filter(KeyTermScan::isDualUse)
+                .map(GroupTally::candidate);
+        final List<NameCandidate> kept = mostUsed(Stream.concat(titlesFound, dualUse), seen, MAX_PROPOSALS);
         log.debug("Key-term scan counted {} words, {} proposed", seen.size(), kept.size());
-        kept.forEach(candidate -> log.trace("Key term {} x{}", candidate.term(), candidate.count()));
+        kept.forEach(candidate ->
+                log.trace("Key term {} x{} forms {}", candidate.term(), candidate.count(), candidate.aliases()));
         return kept;
     }
 
     /**
      * The words of the segments the model may choose recurring terms among: every word the book writes mostly in lower
-     * case and often enough, that is no function word. The model, not a frequency list, decides which are terms.
+     * case and often enough, its forms counted together ({@link FormGroups}), that is no function word. The model, not
+     * a frequency list, decides which are terms.
      *
      * @param index the project's book index; never null
      * @param ordinals the ordinals of the segments to read, in reading order; never null
-     * @param sourceLanguage the book's BCP 47 tag, choosing the stop-word list; null reads every bundled list together
+     * @param sourceLanguage the book's BCP 47 tag, choosing the stop-word list and the noun endings; null reads every
+     *     bundled list together and groups nothing
      * @param limit the most words returned; positive
-     * @return the words in lower case with their counts, most frequent first; never null
+     * @return each word's representative form in lower case with the group's count and its other forms as aliases,
+     *     most frequent first; never null
      */
     public static List<NameCandidate> frequentWords(
             final BookIndex index,
@@ -99,16 +110,18 @@ public final class KeyTermScan {
         final List<Occurrences.Read> read = index.scanReads(ordinals, sourceLanguage);
         final WordCounts counts = WordCounts.of(read);
         final Set<String> stopWords = StopWords.of(sourceLanguage);
-        final List<NameCandidate> frequent = tally(read).values().stream()
-                .filter(tally -> tally.count() >= FREQUENT_MIN_COUNT)
+        final Map<String, NameCandidate> seen = tally(read);
+        final List<NameCandidate> words = seen.values().stream()
                 .filter(tally -> tally.term().codePointCount(0, tally.term().length()) >= FREQUENT_MIN_LETTERS)
                 .filter(tally -> !stopWords.contains(tally.term()))
-                .filter(tally -> counts.lowerShare(tally.term()) >= FrequencyScan.LOWER_SHARE_LIMIT)
-                .sorted(Comparator.comparingInt(NameCandidate::count).reversed())
-                .limit(limit)
                 .toList();
-        log.debug("Frequent words {} of {} kept", frequent.size(), read.size());
-        return frequent;
+        final Stream<NameCandidate> frequent = groupsOf(words, counts, sourceLanguage).stream()
+                .filter(group -> group.candidate().count() >= FormGroups.MIN_GROUP_USES)
+                .filter(group -> group.lowerShare() >= FrequencyScan.LOWER_SHARE_LIMIT)
+                .map(GroupTally::candidate);
+        final List<NameCandidate> kept = mostUsed(frequent, seen, limit);
+        log.debug("Frequent words {} of {} kept", kept.size(), read.size());
+        return kept;
     }
 
     /**
@@ -136,11 +149,16 @@ public final class KeyTermScan {
                 .flatMap(heldNames -> lexicon.all(projectId).map(heldTerms -> {
                     final Set<String> held = new HashSet<>();
                     heldNames.forEach(entry -> held.add(LexiconEntry.keyOf(entry.term())));
-                    heldTerms.forEach(entry -> held.add(LexiconEntry.keyOf(entry.term())));
+                    heldTerms.forEach(entry -> {
+                        held.add(LexiconEntry.keyOf(entry.term()));
+                        entry.forms().forEach(form -> held.add(LexiconEntry.keyOf(form)));
+                    });
                     final List<LexiconEntry> proposals = candidates(index, ordinals, sourceLanguage).stream()
-                            .filter(candidate -> !held.contains(LexiconEntry.keyOf(candidate.term())))
-                            .filter(candidate -> !wasRemoved(lexicon, projectId, candidate.term()))
-                            .map(candidate -> LexiconEntry.of(projectId, candidate.term()))
+                            .filter(candidate -> formsOf(candidate).stream()
+                                    .noneMatch(form -> held.contains(LexiconEntry.keyOf(form))))
+                            .filter(candidate ->
+                                    formsOf(candidate).stream().noneMatch(form -> wasRemoved(lexicon, projectId, form)))
+                            .map(candidate -> entryOf(projectId, candidate))
                             .toList();
                     log.debug(
                             "Key-term proposals project={} proposed={} held={}",
@@ -183,17 +201,87 @@ public final class KeyTermScan {
         return StopWords.titles(sourceLanguage).contains(Occurrences.keyOf(term));
     }
 
-    private static boolean qualifies(
-            final NameCandidate tally, final WordCounts counts, final Set<String> stopWords, final Set<String> titles) {
-        final String key = tally.term();
-        if (titles.contains(key)) {
-            return tally.count() >= TITLE_MIN_COUNT;
-        }
-        return tally.count() >= DUAL_USE_MIN_COUNT
-                && key.codePointCount(0, key.length()) >= MIN_WORD_LETTERS
-                && !stopWords.contains(key)
-                && counts.standaloneMidSentence(key) >= MID_SENTENCE_MIN_COUNT
-                && counts.lowerShare(key) >= FrequencyScan.LOWER_SHARE_LIMIT;
+    /**
+     * Every form of a candidate: its term and the forms grouped with it.
+     *
+     * @param candidate the non-null candidate
+     * @return the term first, then its aliases; never null
+     */
+    public static List<String> formsOf(final NameCandidate candidate) {
+        final List<String> forms = new ArrayList<>();
+        forms.add(candidate.term());
+        forms.addAll(candidate.aliases());
+        return forms;
+    }
+
+    /**
+     * The lexicon entry a scan adds for a candidate: its representative as the term, its other forms stored with it.
+     *
+     * @param projectId the non-null project id
+     * @param candidate the non-null candidate
+     * @return an entry with no rendering
+     */
+    public static LexiconEntry entryOf(final String projectId, final NameCandidate candidate) {
+        return new LexiconEntry(projectId, candidate.term(), List.of(), null, null, null, null, candidate.aliases());
+    }
+
+    // A word's forms counted as one: the uses and the capitals mid-sentence added up, the lower-case share weighed by
+    // each form's uses.
+    private record GroupTally(NameCandidate candidate, double lowerShare, int midSentence) {}
+
+    private static boolean isDualUse(final GroupTally group) {
+        return group.candidate().count() >= DUAL_USE_MIN_COUNT
+                && group.midSentence() >= MID_SENTENCE_MIN_COUNT
+                && group.lowerShare() >= FrequencyScan.LOWER_SHARE_LIMIT;
+    }
+
+    private static List<GroupTally> groupsOf(
+            final List<NameCandidate> forms, final WordCounts counts, @Nullable final String sourceLanguage) {
+        final Map<String, NameCandidate> byForm = new LinkedHashMap<>();
+        forms.forEach(form -> byForm.put(form.term(), form));
+        final Map<String, Integer> uses = new LinkedHashMap<>();
+        forms.forEach(form -> uses.put(form.term(), form.count()));
+        final Map<String, Integer> position = new HashMap<>();
+        forms.forEach(form -> position.putIfAbsent(form.term(), position.size()));
+        return FormGroups.of(uses, sourceLanguage).stream()
+                .map(group -> {
+                    final String first = group.forms().keySet().stream()
+                            .min(Comparator.comparingInt(position::get))
+                            .orElseThrow();
+                    final double lower = group.forms().entrySet().stream()
+                            .mapToDouble(form -> counts.lowerShare(form.getKey()) * form.getValue())
+                            .sum();
+                    final int mid = group.forms().keySet().stream()
+                            .mapToInt(counts::standaloneMidSentence)
+                            .sum();
+                    final NameCandidate candidate = new NameCandidate(
+                            group.representative(),
+                            group.uses(),
+                            Objects.requireNonNull(byForm.get(first), "first").firstSentence(),
+                            group.others());
+                    return new GroupTally(candidate, lower / group.uses(), mid);
+                })
+                .toList();
+    }
+
+    // Most used first; a tie keeps the order the book first used the words in.
+    private static List<NameCandidate> mostUsed(
+            final Stream<NameCandidate> candidates, final Map<String, NameCandidate> seen, final int limit) {
+        final Map<String, Integer> position = new HashMap<>();
+        seen.keySet().forEach(form -> position.put(form, position.size()));
+        return candidates
+                .sorted(Comparator.comparingInt(NameCandidate::count)
+                        .reversed()
+                        .thenComparingInt(candidate -> firstPosition(candidate, position)))
+                .limit(limit)
+                .toList();
+    }
+
+    private static int firstPosition(final NameCandidate candidate, final Map<String, Integer> position) {
+        return formsOf(candidate).stream()
+                .mapToInt(form -> position.getOrDefault(form, Integer.MAX_VALUE))
+                .min()
+                .orElse(Integer.MAX_VALUE);
     }
 
     private static Map<String, NameCandidate> tally(final List<Occurrences.Read> read) {

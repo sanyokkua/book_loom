@@ -1,9 +1,9 @@
 package ua.bookloom.api.llm;
 
-import java.util.Objects;
-import ua.bookloom.api.settings.ReasoningSetting;
-
-/** How much a call lets a thinking model think; a null level in a request means the provider's own default. */
+/**
+ * How much a call lets a model think: the intent a call asks for, and after the model's profile is applied, the level the
+ * model is sent (design D20).
+ */
 public enum ReasoningLevel {
     OFF,
     LOW,
@@ -16,20 +16,5 @@ public enum ReasoningLevel {
      */
     public boolean isThinking() {
         return this != OFF;
-    }
-
-    /**
-     * Maps the stored Generation setting to the level a request carries.
-     *
-     * @param setting the stored setting; never null
-     * @return the level of the same name
-     */
-    public static ReasoningLevel of(final ReasoningSetting setting) {
-        Objects.requireNonNull(setting, "setting");
-        return switch (setting) {
-            case OFF -> OFF;
-            case LOW -> LOW;
-            case ON -> ON;
-        };
     }
 }

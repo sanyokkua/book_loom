@@ -31,6 +31,7 @@ import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ReasoningLevel;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
@@ -43,7 +44,8 @@ import ua.bookloom.llm.http.HttpExchange;
 class OpenAiCompatibleClientReasoningTest {
 
     private static final String MODEL_ID = "google/gemma-4-e4b";
-    private static final String CHAT_PATH = "/v1/chat/completions";
+    // LM Studio's own route, where its chat goes first.
+    private static final String CHAT_PATH = "/api/v0/chat/completions";
 
     private final WireMockServer server =
             new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
@@ -69,13 +71,15 @@ class OpenAiCompatibleClientReasoningTest {
 
         final ChatResponse response = sendChat(cappedRequest(128, 8192));
 
-        assertThat(response).isEqualTo(new ChatResponse("{\"target\":\"Вага\"}", FinishReason.STOP));
+        assertThat(response)
+                .usingRecursiveComparison()
+                .ignoringFields("rawBody")
+                .isEqualTo(new ChatResponse("{\"target\":\"Вага\"}", FinishReason.STOP));
         server.verify(postRequestedFor(urlEqualTo(CHAT_PATH)).withRequestBody(maxTokens(128)));
         server.verify(postRequestedFor(urlEqualTo(CHAT_PATH)).withRequestBody(maxTokens(512)));
     }
 
-    // Low thinks too, so it gets the same room as On, keeps asking for Low on the repeat, and a spent cap is repeated
-    // once.
+    // Low keeps asking for Low on the repeat, and a spent cap is repeated once with four times the cap.
     @Test
     void chat_lowLevelSpentTheCapReasoning_repeatsOnceStillAskingForLowWithTheRaisedCap() {
         stubChatSequence(reasoningOnly("reasoning"), """
@@ -84,8 +88,11 @@ class OpenAiCompatibleClientReasoningTest {
 
         final ChatResponse response = sendChat(cappedRequest(ReasoningLevel.LOW, 128, 8192));
 
-        assertThat(response).isEqualTo(new ChatResponse("ok", FinishReason.STOP));
-        server.verify(1, postRequestedFor(urlEqualTo(CHAT_PATH)).withRequestBody(maxTokens(1152)));
+        assertThat(response)
+                .usingRecursiveComparison()
+                .ignoringFields("rawBody")
+                .isEqualTo(new ChatResponse("ok", FinishReason.STOP));
+        server.verify(1, postRequestedFor(urlEqualTo(CHAT_PATH)).withRequestBody(maxTokens(512)));
         server.verify(
                 2,
                 postRequestedFor(urlEqualTo(CHAT_PATH))
@@ -100,13 +107,15 @@ class OpenAiCompatibleClientReasoningTest {
         server.verify(2, postRequestedFor(urlEqualTo(CHAT_PATH)));
     }
 
+    // Four times 128 is past the window of 300; the repeat is raised but leaves the prompt its room in the window.
     @Test
-    void chat_raisedCap_isBoundByTheContextWindow() {
+    void chat_raisedCap_isBoundByWhatTheWindowLeavesAfterThePrompt() {
         stubChatSequence(reasoningOnly("reasoning"), reasoningOnly("reasoning"));
 
         client().chat(MODEL_ID, cappedRequest(128, 300));
 
-        server.verify(postRequestedFor(urlEqualTo(CHAT_PATH)).withRequestBody(maxTokens(300)));
+        server.verify(postRequestedFor(urlEqualTo(CHAT_PATH))
+                .withRequestBody(matchingJsonPath("$[?(@.max_tokens > 128 && @.max_tokens < 300)]")));
     }
 
     @Test
@@ -176,11 +185,12 @@ class OpenAiCompatibleClientReasoningTest {
 
     private OpenAiCompatibleClient client() {
         final ProviderConfig config = new ProviderConfig(
-                "lmstudio",
-                ProviderKind.OPENAI_COMPATIBLE,
-                URI.create(server.baseUrl() + "/v1"),
-                Duration.ofSeconds(2),
-                Duration.ofSeconds(2));
+                        "lmstudio",
+                        ProviderKind.OPENAI_COMPATIBLE,
+                        URI.create(server.baseUrl() + "/v1"),
+                        Duration.ofSeconds(2),
+                        Duration.ofSeconds(2))
+                .withEngine(ServerEngine.LM_STUDIO);
         return new OpenAiCompatibleClient(
                 config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
     }

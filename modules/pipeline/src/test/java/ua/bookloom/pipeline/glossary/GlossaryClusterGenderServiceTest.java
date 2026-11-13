@@ -16,8 +16,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
@@ -60,9 +60,9 @@ class GlossaryClusterGenderServiceTest {
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
                 .containsExactly(
-                        tuple("Arlo", Gender.MALE, GenderOrigin.PERSON),
-                        tuple("Arlo Venn", Gender.MALE, GenderOrigin.PERSON),
-                        tuple("Venn", Gender.MALE, GenderOrigin.PERSON));
+                        tuple("Arlo", Gender.MALE, Origin.USER),
+                        tuple("Arlo Venn", Gender.MALE, Origin.USER),
+                        tuple("Venn", Gender.MALE, Origin.USER));
     }
 
     @Test
@@ -76,17 +76,17 @@ class GlossaryClusterGenderServiceTest {
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
                 .containsExactly(
-                        tuple("Arlo", Gender.FEMALE, GenderOrigin.PERSON),
-                        tuple("Arlo Venn", Gender.FEMALE, GenderOrigin.PERSON),
-                        tuple("Venn", Gender.FEMALE, GenderOrigin.PERSON));
+                        tuple("Arlo", Gender.FEMALE, Origin.USER),
+                        tuple("Arlo Venn", Gender.FEMALE, Origin.USER),
+                        tuple("Venn", Gender.FEMALE, Origin.USER));
     }
 
     // Choosing the gender the entry shows already (a suggestion the person confirms) is a choice too.
     @ParameterizedTest
     @EnumSource(
-            value = GenderOrigin.class,
-            names = {"SUGGESTED", "VERIFIED"})
-    void update_personConfirmsTheShownGender_theOthersTakeItToo(final GenderOrigin was) {
+            value = Origin.class,
+            names = {"LIKELY", "BOOK"})
+    void update_personConfirmsTheShownGender_theOthersTakeItToo(final Origin was) {
         final GlossaryEntry shown = holding(was);
         service.add(shown);
         service.add(character("Arlo Venn"));
@@ -95,9 +95,7 @@ class GlossaryClusterGenderServiceTest {
 
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(
-                        tuple("Arlo", Gender.MALE, GenderOrigin.PERSON),
-                        tuple("Arlo Venn", Gender.MALE, GenderOrigin.PERSON));
+                .containsExactly(tuple("Arlo", Gender.MALE, Origin.USER), tuple("Arlo Venn", Gender.MALE, Origin.USER));
     }
 
     // Nothing the person set is overwritten, not even by the person's later choice for the same person.
@@ -111,8 +109,7 @@ class GlossaryClusterGenderServiceTest {
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
                 .containsExactly(
-                        tuple("Arlo", Gender.MALE, GenderOrigin.PERSON),
-                        tuple("Arlo Venn", Gender.FEMALE, GenderOrigin.PERSON));
+                        tuple("Arlo", Gender.MALE, Origin.USER), tuple("Arlo Venn", Gender.FEMALE, Origin.USER));
     }
 
     // IF the surname took the edit, THEN choosing a gender for Arlo would also change Mira's surname-only mentions.
@@ -138,7 +135,7 @@ class GlossaryClusterGenderServiceTest {
     void update_placeSharingAWordWithTheCharacter_isNotAMember() {
         service.add(character("Venn"));
         service.add(
-                new GlossaryEntry("p1:Venn Hall", PROJECT, "Venn Hall", null, TermType.PLACE, Gender.UNKNOWN, false));
+                GlossaryEntry.of("p1:Venn Hall", PROJECT, "Venn Hall", null, TermType.PLACE, Gender.UNKNOWN, false));
 
         service.update(character("Venn").withGender(Gender.FEMALE));
 
@@ -157,8 +154,7 @@ class GlossaryClusterGenderServiceTest {
 
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(
-                        tuple("Arlo", Gender.MALE, GenderOrigin.PERSON), tuple("Arlo Venn", Gender.UNKNOWN, null));
+                .containsExactly(tuple("Arlo", Gender.MALE, Origin.USER), tuple("Arlo Venn", Gender.UNKNOWN, null));
     }
 
     // Clearing a gender says "I do not know", not "this person has no gender": the others keep theirs.
@@ -171,8 +167,7 @@ class GlossaryClusterGenderServiceTest {
 
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(
-                        tuple("Arlo", Gender.UNKNOWN, null), tuple("Arlo Venn", Gender.MALE, GenderOrigin.SUGGESTED));
+                .containsExactly(tuple("Arlo", Gender.UNKNOWN, null), tuple("Arlo Venn", Gender.MALE, Origin.LIKELY));
     }
 
     // A CSV row's gender is the person's, so it is shared like a gender chosen in the table.
@@ -189,9 +184,7 @@ class GlossaryClusterGenderServiceTest {
 
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(
-                        tuple("Arlo", Gender.MALE, GenderOrigin.PERSON),
-                        tuple("Arlo Venn", Gender.MALE, GenderOrigin.PERSON));
+                .containsExactly(tuple("Arlo", Gender.MALE, Origin.USER), tuple("Arlo Venn", Gender.MALE, Origin.USER));
     }
 
     @Test
@@ -204,9 +197,7 @@ class GlossaryClusterGenderServiceTest {
 
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(
-                        tuple("Arlo Venn", Gender.MALE, GenderOrigin.PERSON),
-                        tuple("Arlo", Gender.MALE, GenderOrigin.PERSON));
+                .containsExactly(tuple("Arlo Venn", Gender.MALE, Origin.USER), tuple("Arlo", Gender.MALE, Origin.USER));
     }
 
     // Mrs Venn is often the wife of Arlo Venn: choosing a man's gender for him must not make her a man.
@@ -222,15 +213,16 @@ class GlossaryClusterGenderServiceTest {
                 .containsExactly(tuple("Arlo Venn", Gender.MALE), tuple("Mrs Venn", Gender.UNKNOWN));
     }
 
-    private static GlossaryEntry holding(final GenderOrigin origin) {
+    private static GlossaryEntry holding(final Origin origin) {
         return switch (origin) {
-            case SUGGESTED -> character("Arlo").withSuggestedGender(Gender.MALE);
-            case VERIFIED -> character("Arlo").withInferredGender(Gender.MALE);
-            case PERSON -> character("Arlo").withGender(Gender.MALE);
+            case LIKELY -> character("Arlo").withSuggestedGender(Gender.MALE);
+            case BOOK -> character("Arlo").withInferredGender(Gender.MALE);
+            case RULE -> character("Arlo").withGenderFrom(Gender.MALE, Origin.RULE);
+            case USER -> character("Arlo").withGender(Gender.MALE);
         };
     }
 
     private static GlossaryEntry character(final String term) {
-        return new GlossaryEntry("p1:" + term, PROJECT, term, null, TermType.CHARACTER, Gender.UNKNOWN, false);
+        return GlossaryEntry.of("p1:" + term, PROJECT, term, null, TermType.CHARACTER, Gender.UNKNOWN, false);
     }
 }

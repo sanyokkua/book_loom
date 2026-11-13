@@ -1,6 +1,6 @@
 /**
- * The shared {@code arch-test} boundary suite: the nine ArchUnit rules of
- * {@code docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md#archunit-rules}, the violation fixtures
+ * The shared {@code arch-test} boundary suite: the ten ArchUnit rules of
+ * {@code docs/spec_baseline/specification/02_Architecture/02_MODULES_AND_LAYERING.md#archunit-rules}, the violation fixtures
  * that prove each one bites, and the completeness test that proves none has been dropped.
  *
  * <p>Hosted in {@code :app} because {@code :app} is the only project whose classpath carries all eight modules at

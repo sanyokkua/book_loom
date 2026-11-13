@@ -37,7 +37,6 @@ class SegmentRecordTest {
                 null,
                 List.of(),
                 SegmentPath.DRAFT,
-                0,
                 false,
                 null);
     }
@@ -82,7 +81,6 @@ class SegmentRecordTest {
                 null,
                 findings,
                 SegmentPath.DRAFT,
-                0,
                 false,
                 null);
 

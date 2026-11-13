@@ -26,6 +26,7 @@ import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobReport;
@@ -149,7 +150,7 @@ class TranslationJobAuxiliaryTest {
                 .containsExactly(SegmentStatus.ACCEPTED, "Тест");
     }
 
-    // Progress must not count the title as a section: it is decided last and still reports the last section.
+    // Progress counts the book's chapters (this small book is one) and the title, decided last, reports the last one.
     @Test
     void run_auxiliaryTitle_decidedAtLastSection() {
         final Path source =
@@ -169,7 +170,7 @@ class TranslationJobAuxiliaryTest {
         assertThat(decided).extracting(SegmentDecided::segmentId).last().isEqualTo("aux:title");
         assertThat(decided.getLast().progress())
                 .extracting(p -> p.section(), p -> p.sections(), p -> p.pending())
-                .containsExactly(2, 2, 0);
+                .containsExactly(1, 1, 0);
     }
 
     // An after-section pause names body sections only, so the title costs no third pause.
@@ -208,7 +209,7 @@ class TranslationJobAuxiliaryTest {
     }
 
     private static String textOf(final ChatRequest request) {
-        return request.messages().stream().map(message -> message.content()).reduce("", String::concat);
+        return request.messages().stream().map(ChatMessage::content).reduce("", String::concat);
     }
 
     private static SegmentCounts countsFor(final TestProject project, final AlsoTranslate switches) {

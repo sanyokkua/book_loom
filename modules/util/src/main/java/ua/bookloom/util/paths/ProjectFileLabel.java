@@ -8,6 +8,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.project.NameOrigin;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.util.text.Edges;
 
 /** The part of a named project's name that tells its translation's file from another of the same book and pair. */
 // Checkstyle reads the source before Lombok adds the private constructor (see DestinationPath).
@@ -78,15 +79,19 @@ public final class ProjectFileLabel {
         return (dash < 0 ? tag : tag.substring(0, dash)).toUpperCase(Locale.ROOT);
     }
 
+    private static boolean endsWithDash(final StringBuilder text) {
+        return !text.isEmpty() && text.charAt(text.length() - 1) == '-';
+    }
+
     private static String reduced(final String text) {
         final StringBuilder out = new StringBuilder();
         for (final char c : text.toLowerCase(Locale.ROOT).toCharArray()) {
             if (Character.isLetterOrDigit(c)) {
                 out.append(c);
-            } else if (Character.isWhitespace(c) || c == '-') {
+            } else if ((Character.isWhitespace(c) || c == '-') && !endsWithDash(out)) {
                 out.append('-');
             }
         }
-        return out.toString().replaceAll("-{2,}", "-").replaceAll("^-|-$", "");
+        return Edges.strip(out.toString(), "-");
     }
 }

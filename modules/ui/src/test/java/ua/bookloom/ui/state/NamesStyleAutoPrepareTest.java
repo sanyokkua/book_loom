@@ -21,7 +21,6 @@ import org.junit.jupiter.api.Test;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.pipeline.NamesEstimate;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.ui.AutoNamesFixture;
 import ua.bookloom.ui.FxTestBase;
@@ -70,11 +69,8 @@ class NamesStyleAutoPrepareTest extends FxTestBase {
 
     private NamesStyleViewModel viewModel(final ActivityTracker activities) {
         return onFx(() -> new NamesStyleViewModel(
-                glossary,
-                lexicon,
-                namesPass,
-                ScriptedChatModelFactory.ok(),
-                settings,
+                new NamesServices(glossary, lexicon, namesPass),
+                new ModelAccess(ScriptedChatModelFactory.ok(), settings),
                 new DirectExecutor(),
                 messages,
                 activities,
@@ -321,25 +317,25 @@ class NamesStyleAutoPrepareTest extends FxTestBase {
     // IF the estimate were read once and never again, THEN a changed dial would show the old minutes.
     @Test
     void autoEstimate_screenShownThenRefreshed_followsTheNumbersThePortAnswers() {
-        namesPass.willEstimate(new NamesEstimate(12, 15, 25));
+        namesPass.willEstimate(ScriptedNamesPass.range(12, 15, 25));
         glossary.willAnswer(Result.ok(List.of(WELL, HALE)));
         run(() -> vm.show(PROJECT));
-        assertThat(onFx(() -> vm.autoEstimate().get())).isEqualTo(new NamesEstimate(12, 15, 25));
+        assertThat(onFx(() -> vm.autoEstimate().get())).isEqualTo(ScriptedNamesPass.range(12, 15, 25));
 
-        namesPass.willEstimate(new NamesEstimate(40, 30, 60));
+        namesPass.willEstimate(ScriptedNamesPass.range(40, 30, 60));
         run(vm::refreshAutoEstimate);
 
-        assertThat(onFx(() -> vm.autoEstimate().get())).isEqualTo(new NamesEstimate(40, 30, 60));
+        assertThat(onFx(() -> vm.autoEstimate().get())).isEqualTo(ScriptedNamesPass.range(40, 30, 60));
         assertThat(namesPass.estimateCalls()).contains(PROJECT);
-        assertThat(namesPass.estimateCalls().size()).isGreaterThanOrEqualTo(2);
+        assertThat(namesPass.estimateCalls()).hasSizeGreaterThanOrEqualTo(2);
     }
 
     // IF a refused estimate left the last one up, THEN the button would promise minutes nobody computed.
     @Test
     void autoEstimate_portRefuses_isEmpty() {
-        namesPass.willEstimate(new NamesEstimate(12, 15, 25));
+        namesPass.willEstimate(ScriptedNamesPass.range(12, 15, 25));
         run(vm::refreshAutoEstimate);
-        assertThat(onFx(() -> vm.autoEstimate().get())).isEqualTo(new NamesEstimate(12, 15, 25));
+        assertThat(onFx(() -> vm.autoEstimate().get())).isEqualTo(ScriptedNamesPass.range(12, 15, 25));
         namesPass.willFailToEstimate(AppError.of(ErrorCode.validation, "No book", "The book is not open."));
 
         run(vm::refreshAutoEstimate);

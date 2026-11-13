@@ -112,7 +112,6 @@ class SegmentEvidenceMarkerTest {
                 null,
                 List.of(),
                 path,
-                0,
                 false,
                 null);
     }

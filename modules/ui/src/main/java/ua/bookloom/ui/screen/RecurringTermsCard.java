@@ -67,7 +67,7 @@ final class RecurringTermsCard {
                         MessageKey.RECURRING_COLUMN_TERM_TIP,
                         TERM_WIDTH,
                         TERM_MIN,
-                        () -> new RecurringTermsCells.TermCell()),
+                        RecurringTermsCells.TermCell::new),
                 targetColumn(messages, recurring, frozen),
                 usedColumn(messages, recurring.usage()),
                 actionColumn(
@@ -105,9 +105,10 @@ final class RecurringTermsCard {
                 entry -> usage.counts().getOrDefault(LexiconEntry.keyOf(entry.term()), Integer.MAX_VALUE));
         return TermTableCard.column(
                 messages,
-                MessageKey.NAMES_STYLE_RECURRING_COLUMN_USED,
-                true,
-                MessageKey.NAMES_STYLE_RECURRING_COLUMN_USED_TIP,
+                new TermTableCard.Head(
+                        MessageKey.NAMES_STYLE_RECURRING_COLUMN_USED,
+                        true,
+                        MessageKey.NAMES_STYLE_RECURRING_COLUMN_USED_TIP),
                 USED_WIDTH,
                 USED_MIN,
                 byCount,
@@ -133,6 +134,6 @@ final class RecurringTermsCard {
             final double width,
             final double minWidth,
             final Supplier<TableCell<LexiconEntry, LexiconEntry>> cell) {
-        return TermTableCard.column(messages, header, shown, tip, width, minWidth, null, cell);
+        return TermTableCard.column(messages, new TermTableCard.Head(header, shown, tip), width, minWidth, null, cell);
     }
 }

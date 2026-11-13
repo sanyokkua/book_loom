@@ -64,7 +64,7 @@ public final class StartupFailureDialog {
         Objects.requireNonNull(error, "error");
         try {
             showBlocking(error);
-        } catch (RuntimeException e) {
+        } catch (RuntimeException _) {
             // The toolkit could not start — see the class comment. Say nothing: there is nowhere to say it that a
             // packaged-application user would ever look, and inventing a channel would mean new I/O on a machine
             // that has just demonstrated it has none.
@@ -163,7 +163,7 @@ public final class StartupFailureDialog {
             if (!dismissed.await(MAX_WAIT_SECONDS, TimeUnit.SECONDS)) {
                 Platform.exit();
             }
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
         }
     }

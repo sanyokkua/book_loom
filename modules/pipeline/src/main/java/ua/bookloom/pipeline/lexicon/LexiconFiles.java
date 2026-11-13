@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.lexicon;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -21,6 +23,7 @@ import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.pipeline.glossary.TargetText;
 
 /**
  * Reads and writes the recurring terms as a CSV file (15i.N7). An import adds the terms the lexicon lacks and gives a
@@ -40,6 +43,8 @@ final class LexiconFiles {
 
     private final LexiconRepository lexicon;
     private final GlossaryRepository glossary;
+    // The project's target language, whose file says whether a row's stress marks are removed; null when none.
+    private final @Nullable String targetLanguage;
 
     Result<GlossaryImportReport> importFrom(final String projectId, final Path source) {
         final String text;
@@ -70,7 +75,7 @@ final class LexiconFiles {
     Result<Path> exportTo(final String projectId, final Path destination) {
         final Result<List<LexiconEntry>> held = lexicon.all(projectId);
         if (held.isErr()) {
-            return Result.err(Objects.requireNonNull(held.error(), "error"));
+            return Result.err(Objects.requireNonNull(held.error(), ERROR));
         }
         final List<LexiconEntry> entries = Objects.requireNonNull(held.data(), "held");
         try {
@@ -92,16 +97,19 @@ final class LexiconFiles {
     private Result<GlossaryImportReport> applyRows(final String projectId, final LexiconCsv.Parsed parsed) {
         final Result<List<LexiconEntry>> all = lexicon.all(projectId);
         if (all.isErr()) {
-            return Result.err(Objects.requireNonNull(all.error(), "error"));
+            return Result.err(Objects.requireNonNull(all.error(), ERROR));
         }
         final Map<String, LexiconEntry> held = new LinkedHashMap<>();
+        // A row may name a held term by any of its forms; the term's own key wins over another entry's form.
+        Objects.requireNonNull(all.data(), "held")
+                .forEach(entry -> entry.forms().forEach(form -> held.putIfAbsent(LexiconEntry.keyOf(form), entry)));
         Objects.requireNonNull(all.data(), "held").forEach(entry -> held.put(LexiconEntry.keyOf(entry.term()), entry));
         final List<Integer> refused = new ArrayList<>();
         int imported = 0;
         for (final LexiconCsv.Row row : parsed.rows()) {
             final Result<Outcome> applied = applyRow(projectId, row, held.get(LexiconEntry.keyOf(row.term())));
             if (applied.isErr()) {
-                return Result.err(Objects.requireNonNull(applied.error(), "error"));
+                return Result.err(Objects.requireNonNull(applied.error(), ERROR));
             }
             switch (Objects.requireNonNull(applied.data(), "outcome")) {
                 case CHANGED -> imported++;
@@ -116,13 +124,13 @@ final class LexiconFiles {
             final String projectId, final LexiconCsv.Row row, @Nullable final LexiconEntry held) {
         final Result<Optional<GlossaryEntry>> inGlossary = glossary.findByTerm(projectId, row.term());
         if (inGlossary.isErr()) {
-            return Result.err(Objects.requireNonNull(inGlossary.error(), "error"));
+            return Result.err(Objects.requireNonNull(inGlossary.error(), ERROR));
         }
         if (Objects.requireNonNull(inGlossary.data(), "glossary").isPresent()) {
             log.debug("Lexicon import refused line {}: the glossary holds the term", row.line());
             return Result.ok(Outcome.REFUSED);
         }
-        final String target = row.target();
+        final String target = TargetText.clean(row.target(), targetLanguage);
         if (held == null) {
             final LexiconEntry added = LexiconEntry.of(projectId, row.term());
             return lexicon.put(target == null ? added : added.withChosen(target))

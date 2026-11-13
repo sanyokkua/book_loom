@@ -14,6 +14,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.TargetState;
 import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -61,6 +62,24 @@ record GlossaryRowEdits(
                 "update",
                 () -> glossary.update(changed),
                 answer -> whileCurrent.accept(() -> updated(entryId, answer)));
+    }
+
+    /**
+     * Sets a row's State; a row with no target is refused here, since a pinned or locked term needs a target and an
+     * entry with none would otherwise be left unchanged without a word.
+     */
+    void state(final String entryId, final TargetState state, final Consumer<Runnable> whileCurrent) {
+        final int at = GlossaryEdits.indexOf(rows, entryId);
+        final String target = at < 0 ? null : rows.get(at).target();
+        if (at >= 0 && (target == null || target.isBlank())) {
+            log.warn("state {} of entry {} refused: a pinned or locked term needs a target", state, entryId);
+            notice.set(new GlossaryNotice(
+                    GlossaryNotice.Level.ERROR, messages.get(MessageKey.NAMES_STYLE_LOCK_NEEDS_TARGET)));
+            rows.set(at, rows.get(at));
+            restorations.set(restorations.get() + 1);
+            return;
+        }
+        change(entryId, "state", held -> GlossaryEdits.state(held, state), whileCurrent);
     }
 
     /** Shows a loaded glossary, or the failure in place. */

@@ -29,9 +29,9 @@ class ImportSummaryTest {
             delimiter = '|',
             value = {
                 "en|Imported 0 rows. 5,000 lines could not be read: 2–5001. The type must be one of: character, place,"
-                        + " term, title, other.",
+                        + " term, title, organisation, product, material, other.",
                 "uk|Імпортовано 0 рядків. Не вдалося прочитати 5 000 рядків: 2–5001. Тип має бути одним із:"
-                        + " character, place, term, title, other."
+                        + " character, place, term, title, organisation, product, material, other."
             })
     void of_everyRowOfAnUnknownType_namesTheCauseOnceAndTheLinesAsASpan(final String language, final String expected) {
         final List<Integer> lines = IntStream.rangeClosed(2, 5001).boxed().toList();

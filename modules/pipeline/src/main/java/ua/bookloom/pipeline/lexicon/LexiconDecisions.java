@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.lexicon;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -13,12 +15,12 @@ import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
-import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.FrequencyScan;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
 import ua.bookloom.pipeline.glossary.LexiconReading.Decision;
 import ua.bookloom.pipeline.glossary.LexiconReading.Verdict;
+import ua.bookloom.pipeline.glossary.TargetText;
 import ua.bookloom.pipeline.index.BookIndex;
 
 /**
@@ -34,11 +36,16 @@ final class LexiconDecisions {
     private final GlossaryRepository glossary;
     // The open book, which says how it writes a term; null when none is open, and then no verdict is changed.
     private final @Nullable BookIndex index;
+    // The project's target language, whose file says whether a rendering's stress marks are removed; null when none.
+    private final @Nullable String targetLanguage;
 
     // A kept term enters with the rendering the reading gave, marked as the model's; a named thing goes to the
     // glossary; a dropped or undecided one is not added.
     Result<Integer> addDecided(
-            final String projectId, final List<String> candidates, final Map<String, Decision> decisions) {
+            final String projectId,
+            final List<String> candidates,
+            final Map<String, List<String>> forms,
+            final Map<String, Decision> decisions) {
         log.debug("Lexicon model scan project={} deciding {} candidates", projectId, candidates.size());
         int added = 0;
         for (final String term : candidates) {
@@ -48,7 +55,10 @@ final class LexiconDecisions {
             final Result<Boolean> stored =
                     switch (decision.verdict()) {
                         case KEEP ->
-                            lexicon.put(LexiconEntry.of(projectId, term).withModelRendering(decision.rendering()))
+                            lexicon.put(LexiconForms.with(
+                                                    LexiconEntry.of(projectId, term),
+                                                    forms.getOrDefault(LexiconEntry.keyOf(term), List.of()))
+                                            .withModelRendering(decision.rendering()))
                                     .map(entry -> true);
                         case PROMOTE ->
                             addToGlossary(projectId, term, decision.rendering(), true)
@@ -56,7 +66,7 @@ final class LexiconDecisions {
                         case DROP, UNDECIDED -> Result.ok(false);
                     };
             if (stored.isErr()) {
-                return Result.err(Objects.requireNonNull(stored.error(), "error"));
+                return Result.err(Objects.requireNonNull(stored.error(), ERROR));
             }
             added += Boolean.TRUE.equals(stored.data()) ? 1 : 0;
         }
@@ -81,7 +91,7 @@ final class LexiconDecisions {
                         case UNDECIDED -> Result.ok(false);
                     };
             if (applied.isErr()) {
-                return Result.err(Objects.requireNonNull(applied.error(), "error"));
+                return Result.err(Objects.requireNonNull(applied.error(), ERROR));
             }
         }
         return lexicon.all(projectId);
@@ -89,7 +99,8 @@ final class LexiconDecisions {
 
     // A "name" majority on a word the book writes mostly in lower case is a recurring term, not a name: a common noun
     // read in windows that happen to mention a person or a place (15i.N7). The scans' own bar decides "mostly".
-    private Decision settled(final String term, final Decision decision) {
+    private Decision settled(final String term, final Decision read) {
+        final Decision decision = new Decision(read.verdict(), TargetText.clean(read.rendering(), targetLanguage));
         if (decision.verdict() != Verdict.PROMOTE || index == null) {
             return decision;
         }
@@ -122,7 +133,7 @@ final class LexiconDecisions {
         }
         final Result<Boolean> removed = lexicon.remove(projectId, entry.term());
         log.info("Lexicon term promoted project={} hadRendering={}", projectId, rendering != null);
-        return removed.isErr() ? Result.err(Objects.requireNonNull(removed.error(), "error")) : added;
+        return removed.isErr() ? Result.err(Objects.requireNonNull(removed.error(), ERROR)) : added;
     }
 
     // The glossary holds a named thing as a term; the rendering is a suggestion unless a person wrote it. A term the
@@ -131,21 +142,16 @@ final class LexiconDecisions {
             final String projectId, final String term, @Nullable final String rendering, final boolean isModels) {
         final Result<Optional<GlossaryEntry>> held = glossary.findByTerm(projectId, term);
         if (held.isErr()) {
-            return Result.err(Objects.requireNonNull(held.error(), "error"));
+            return Result.err(Objects.requireNonNull(held.error(), ERROR));
         }
         final Optional<GlossaryEntry> found = Objects.requireNonNull(held.data(), "held");
         if (found.isPresent()) {
             log.debug("Lexicon promote project={}: the glossary already holds the term, nothing added", projectId);
             return Result.ok(found.get());
         }
-        return glossary.add(new GlossaryEntry(
-                GlossaryIds.of(projectId, term),
-                projectId,
-                term,
-                rendering,
-                TermType.TERM,
-                Gender.UNKNOWN,
-                false,
-                isModels ? TargetOrigin.SUGGESTED : TargetOrigin.PERSON));
+        final GlossaryEntry added = GlossaryEntry.of(
+                GlossaryIds.of(projectId, term), projectId, term, rendering, TermType.TERM, Gender.UNKNOWN, false);
+        log.debug("Lexicon promote project={}: model's rendering={}", projectId, isModels);
+        return glossary.add(isModels && rendering != null ? added.withSuggestedTarget(rendering) : added);
     }
 }

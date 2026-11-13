@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.state.AutomationSettings;
 import ua.bookloom.ui.state.DetailedLogSwitch;
 import ua.bookloom.ui.state.DiagnosticActions;
-import ua.bookloom.ui.state.GenerationSettings;
 import ua.bookloom.ui.state.ModelRoster;
 import ua.bookloom.ui.state.StorageSettings;
 
@@ -18,12 +17,10 @@ import ua.bookloom.ui.state.StorageSettings;
 final class SettingsTabEntries {
 
     private static final String MODELS = "settings-tab-models";
-    private static final String GENERATION = "settings-tab-generation";
-    private static final String AUTOMATION = "settings-tab-automation";
-    private static final String STORAGE = "settings-tab-storage";
+    private static final String AUTOMATION_TAB = "settings-tab-automation";
+    private static final String STORAGE_TAB = "settings-tab-storage";
 
     private final ModelRoster roster;
-    private final GenerationSettings generation;
     private final AutomationSettings automation;
     private final StorageSettings storage;
     private final DetailedLogSwitch detailedLog;
@@ -32,13 +29,11 @@ final class SettingsTabEntries {
     @Inject
     SettingsTabEntries(
             final ModelRoster roster,
-            final GenerationSettings generation,
             final AutomationSettings automation,
             final StorageSettings storage,
             final DetailedLogSwitch detailedLog,
             final DiagnosticActions diagnostics) {
         this.roster = Objects.requireNonNull(roster, "roster");
-        this.generation = Objects.requireNonNull(generation, "generation");
         this.automation = Objects.requireNonNull(automation, "automation");
         this.storage = Objects.requireNonNull(storage, "storage");
         this.detailedLog = Objects.requireNonNull(detailedLog, "detailedLog");
@@ -52,15 +47,11 @@ final class SettingsTabEntries {
                 log.debug("models tab opened: reading the models");
                 roster.refresh();
             }
-            case GENERATION -> {
-                log.debug("generation tab opened: reading the stored choices");
-                generation.load();
-            }
-            case AUTOMATION -> {
+            case AUTOMATION_TAB -> {
                 log.debug("automation tab opened: reading the stored choices");
                 automation.load();
             }
-            case STORAGE -> {
+            case STORAGE_TAB -> {
                 log.debug("storage tab opened: reading the saved work and the log marker");
                 diagnostics.clearStatus();
                 storage.load();

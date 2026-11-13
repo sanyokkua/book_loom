@@ -15,6 +15,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.ProviderAuth;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.ui.i18n.MessageKey;
 
 /** The text the Providers form edits, turned into a provider description and into findings. */
@@ -89,7 +90,11 @@ class ProviderDraftTest {
                 "/models",
                 "/chat",
                 java.util.Map.of("X-Team", "blue", "X-Auth", "${env:TEAM_TOKEN}"),
-                List.of("custom-a"));
+                List.of("custom-a"),
+                ServerEngine.GENERIC,
+                null,
+                null,
+                false);
 
         assertThat(config(ProviderDraft.of(original, "m"), "x")).isEqualTo(original);
         assertThat(ProviderDraft.of(original, "m").model()).isEqualTo("m");
@@ -314,7 +319,7 @@ class ProviderDraftTest {
         final List<String> asked = new ArrayList<>();
         final ProviderDraft bearer = officeLm().withAuth(ProviderAuth.BEARER).withCredentialRef(typed);
 
-        final ProviderDraft.CredentialStatus status = bearer.credentialStatus(name -> asked.add(name));
+        final ProviderDraft.CredentialStatus status = bearer.credentialStatus(asked::add);
 
         assertThat(status).isEqualTo(ProviderDraft.CredentialStatus.NONE);
         assertThat(asked).isEmpty();

@@ -167,7 +167,10 @@ class CapabilityRejectionsTest {
                 seed,
                 null,
                 sampling,
-                field);
+                field,
+                null,
+                null,
+                false);
     }
 
     private static ChatRequest plain() {

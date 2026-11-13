@@ -27,8 +27,8 @@ import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
@@ -100,7 +100,7 @@ class AutoSourceEndToEndTest {
                 .extracting(GlossaryEntry::term)
                 .noneMatch(term -> term.equals("Le") || term.startsWith("Le "));
         assertThat(outcome.glossary()).extracting(GlossaryEntry::gender).containsOnly(Gender.UNKNOWN);
-        assertThat(outcome.glossary()).noneMatch(entry -> entry.genderOrigin() == GenderOrigin.SUGGESTED);
+        assertThat(outcome.glossary()).noneMatch(entry -> entry.genderOrigin() == Origin.LIKELY);
         assertThat(outcome.prompts()).isNotEmpty();
         assertThat(outcome.prompts())
                 .anySatisfy(text -> assertThat(text).contains(INFER))

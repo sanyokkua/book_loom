@@ -20,6 +20,7 @@ import ua.bookloom.ui.dialog.DeleteDataPrompt;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.notify.Voice;
 
 /**
  * Delete all data of Settings › Storage &amp; logs: asks first (offering a backup), stops a translation at work and
@@ -48,8 +49,7 @@ public final class DataDeletion {
      * @param runs the window's run, stopped before anything is deleted
      * @param prompt the question asked first
      * @param restart starts BookLoom again on the fresh database
-     * @param errors where a failed delete is shown
-     * @param messages the catalogue the failure is worded from
+     * @param voice the catalogue the failure is worded from, and where it is shown
      * @param executor the daemon executor the delete runs on, never the FX thread
      */
     @Inject
@@ -59,16 +59,15 @@ public final class DataDeletion {
             final ProjectOpener.RunSwitch runs,
             final DeleteDataPrompt prompt,
             final AppRestart restart,
-            final ErrorPresenter errors,
-            final Messages messages,
+            final Voice voice,
             @BackgroundExecutor final ExecutorService executor) {
         this.storage = Objects.requireNonNull(storage, "storage");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.runs = Objects.requireNonNull(runs, "runs");
         this.prompt = Objects.requireNonNull(prompt, "prompt");
         this.restart = Objects.requireNonNull(restart, "restart");
-        this.errors = Objects.requireNonNull(errors, "errors");
-        this.messages = Objects.requireNonNull(messages, "messages");
+        this.errors = Objects.requireNonNull(voice, "voice").errors();
+        this.messages = voice.messages();
         this.calls = new OffThread(Objects.requireNonNull(executor, "executor"));
     }
 

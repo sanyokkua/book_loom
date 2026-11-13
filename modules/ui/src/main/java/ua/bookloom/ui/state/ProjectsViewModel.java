@@ -28,6 +28,7 @@ import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.notify.Voice;
 
 /**
  * What the Projects screen shows: the stored projects grouped by book, the search and filter over them, and the
@@ -61,11 +62,9 @@ public final class ProjectsViewModel {
      * @param projects the service the stored projects are listed through
      * @param providers where the providers' display names are read
      * @param current the holder that names the project open now
-     * @param messages the catalogue provider names are worded from
-     * @param opener what Continue and Open use
-     * @param actions what the row menu and the book header lead to
+     * @param voice the catalogue provider names are worded from, and where a failure to list is shown
+     * @param rows what Continue and Open use, and what the row menu and the book header lead to
      * @param revealer what Show book file asks of the system
-     * @param errors where a failure to list is shown
      * @param executor the daemon executor the service runs on, never the FX thread
      */
     @Inject
@@ -73,20 +72,18 @@ public final class ProjectsViewModel {
             final ProjectService projects,
             final ProviderConfigs providers,
             final CurrentProject current,
-            final Messages messages,
-            final ProjectOpener opener,
-            final ProjectActions actions,
+            final Voice voice,
+            final RowActions rows,
             final FileRevealer revealer,
-            final ErrorPresenter errors,
             @BackgroundExecutor final ExecutorService executor) {
         this.projects = Objects.requireNonNull(projects, "projects");
         this.providers = Objects.requireNonNull(providers, "providers");
         this.current = Objects.requireNonNull(current, "current");
-        this.messages = Objects.requireNonNull(messages, "messages");
-        this.opener = Objects.requireNonNull(opener, "opener");
-        this.actions = Objects.requireNonNull(actions, "actions");
+        this.messages = Objects.requireNonNull(voice, "voice").messages();
+        this.opener = Objects.requireNonNull(rows, "rows").opener();
+        this.actions = rows.actions();
         this.revealer = Objects.requireNonNull(revealer, "revealer");
-        this.errors = Objects.requireNonNull(errors, "errors");
+        this.errors = voice.errors();
         this.executor = Objects.requireNonNull(executor, "executor");
     }
 
@@ -176,7 +173,7 @@ public final class ProjectsViewModel {
         try {
             listed = projects.list();
             names = providerNames();
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             log.error("the project service threw instead of returning a result while listing", thrown);
             listed = Result.err(
                     AppErrors.unexpected("The projects could not be listed because of an unexpected error.", thrown));
@@ -256,7 +253,7 @@ public final class ProjectsViewModel {
                     row.summary().project().id());
             Platform.runLater(() -> actions.findBook(
                     row, new ProjectOpening.BookFileMissing(row.summary().project())));
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             log.warn("the book file could not be shown", thrown);
         }
     }

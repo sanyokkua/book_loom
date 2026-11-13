@@ -236,7 +236,7 @@ a mechanical or infrastructure test carries none. Do not invent an FR id — sev
       `ua.bookloom.document.epub` and `ua.bookloom.util.hash` rows already planned in `#inventory` match what this
       change actually built (or correcting them if the build diverged). The inventory is the citation target every
       later change resolves against, so a stale row there is a broken citation in every proposal that follows.
-      → `docs/implementation_plan/` · `01_MODULE_INVENTORY.md#as-built-baseline`
+      → `docs/spec_baseline/implementation_plan/` · `01_MODULE_INVENTORY.md#as-built-baseline`
 - [x] 6.6 Confirm the offline invariant still holds: parsing is local file I/O only, no module gained
       `java.net.http`, and neither new parser fetches a DTD or schema over the network at parse time. The last of
       those is the one worth checking rather than assuming — an XML parser resolving an external DTD is a network

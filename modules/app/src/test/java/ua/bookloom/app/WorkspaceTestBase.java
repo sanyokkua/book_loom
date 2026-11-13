@@ -172,7 +172,7 @@ abstract class WorkspaceTestBase {
         }
     }
 
-    private void showWindow(final Injector built) throws Exception {
+    private void showWindow(final Injector built) {
         final Stage stage = FxToolkit.toolkitContext().getRegisteredStage();
         injector = built;
         shell = injector.getInstance(AppShellView.class);
@@ -206,7 +206,7 @@ abstract class WorkspaceTestBase {
         WaitForAsyncUtils.waitForFxEvents();
         try {
             WaitForAsyncUtils.checkException();
-        } catch (Throwable expected) {
+        } catch (Throwable _) {
             // The rejected refresh described above, from a run this test had already finished with.
         }
     }
@@ -243,7 +243,7 @@ abstract class WorkspaceTestBase {
         return open.projectId();
     }
 
-    protected void openBook(final Path book, final int segments) throws Exception {
+    protected OpenedBook openBook(final Path book, final int segments) throws Exception {
         onFx(() -> injector.getInstance(ImportViewModel.class).open(book));
         waitUntil(() -> injector.getInstance(CurrentProject.class).book().get() != null);
         final OpenedBook opened =
@@ -253,6 +253,7 @@ abstract class WorkspaceTestBase {
         assertThat(opened.source()).isEqualTo(book);
         assertThat(opened.profile()).isNotNull();
         assertThat(Objects.requireNonNull(opened.profile()).stats().segments()).isEqualTo(segments);
+        return opened;
     }
 
     /** Chooses the source the TXT does not declare and a target, and checks the proposed destination follows the target. */
@@ -311,16 +312,16 @@ abstract class WorkspaceTestBase {
                 .isEqualTo(written.toString());
         waitUntil(() ->
                 injector.getInstance(ExportViewModel.class).exportAvailable().get());
-        final int toastsBefore = onFx(() -> toastCount());
+        final int toastsBefore = onFx(this::toastCount);
         // A card left open (the review desk a run opened) would hold the complete card back until it is closed.
         onFx(() -> injector.getInstance(ua.bookloom.ui.ModalHost.class).hide());
-        onFx(() -> ((Button) exportNode("#export-run")).fire());
+        onFx(((Button) exportNode("#export-run"))::fire);
         waitUntil(() -> injector.getInstance(ExportViewModel.class).outcome().get() != null);
         WaitForAsyncUtils.waitForFxEvents();
         assertThat(exportText("#export-complete-card .dialog-text"))
                 .contains(written.getFileName().toString());
         assertThat(onFx(() -> exportNode("#export-reveal"))).isNotNull();
-        assertThat(onFx(() -> toastCount()))
+        assertThat(onFx(this::toastCount))
                 .as("no transient message announces the export")
                 .isEqualTo(toastsBefore);
     }

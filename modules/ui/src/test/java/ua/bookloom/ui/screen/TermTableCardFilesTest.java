@@ -142,6 +142,7 @@ class TermTableCardFilesTest extends TermTableCardTestBase {
         pressImport("recurring", false);
 
         awaitFx(() -> listedTerms().contains("pentacle"));
+        assertThat(listedTerms()).contains("pentacle");
     }
 
     @ParameterizedTest

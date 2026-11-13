@@ -14,6 +14,7 @@ import javafx.scene.layout.VBox;
 import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.util.text.LineBreaks;
 
 /**
  * Turns one filled prompt part into the shape its slot has: bullets for the style sheet, a Term | Rendering | Note
@@ -23,7 +24,8 @@ import ua.bookloom.ui.i18n.Messages;
  */
 final class PromptParts {
 
-    private static final Pattern TERM = Pattern.compile("^(.+?) → (.*?)(?: \\((.*)\\))?$");
+    private static final String ARROW = " → ";
+    private static final String NOTE_OPEN = " (";
     private static final Pattern ITEM = Pattern.compile("<s id=\"([^\"]*)\">(.*?)</s>", Pattern.DOTALL);
     private static final Pattern PAIR =
             Pattern.compile("Source: (.*?)\nTranslation: (.*?)(?=\n\nSource: |\\z)", Pattern.DOTALL);
@@ -75,11 +77,7 @@ final class PromptParts {
     private Node terms(final List<String> lines, final String id) {
         final List<List<String>> rows = new ArrayList<>();
         for (final String line : lines) {
-            final Matcher match = TERM.matcher(line.strip());
-            rows.add(
-                    match.matches()
-                            ? List.of(match.group(1), match.group(2), match.group(3) == null ? "" : match.group(3))
-                            : List.of(line.strip(), "", ""));
+            rows.add(termRow(line.strip()));
         }
         return grid(
                 id,
@@ -89,6 +87,24 @@ final class PromptParts {
                         messages.get(MessageKey.LIVE_CALL_COL_NOTE)),
                 TERM_WIDTHS,
                 rows);
+    }
+
+    // "term → rendering" or "term → rendering (note)": the term ends at the first arrow, the rendering at the first
+    // " (" when the line ends with a closing bracket. A line with no arrow, or a line break, is shown whole.
+    static List<String> termRow(final String line) {
+        final int arrow = line.indexOf(ARROW, 1);
+        if (arrow < 0 || line.chars().anyMatch(c -> LineBreaks.isTerminator((char) c))) {
+            return List.of(line, "", "");
+        }
+        final String rest = line.substring(arrow + ARROW.length());
+        final int note = rest.endsWith(")") ? rest.indexOf(NOTE_OPEN) : -1;
+        if (note < 0 || note + NOTE_OPEN.length() >= rest.length()) {
+            return List.of(line.substring(0, arrow), rest, "");
+        }
+        return List.of(
+                line.substring(0, arrow),
+                rest.substring(0, note),
+                rest.substring(note + NOTE_OPEN.length(), rest.length() - 1));
     }
 
     private Optional<Node> items(final List<String> lines, final String id) {

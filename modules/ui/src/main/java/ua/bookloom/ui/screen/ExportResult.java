@@ -17,6 +17,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.BookInspection;
 import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.project.ExportRecord;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
@@ -54,6 +55,7 @@ final class ExportResult {
     private final Label auto = number("export-auto-value");
     private final Label reviewed = number("export-reviewed-value");
     private final Label valid = number("export-valid-value");
+    private final Label proofreadLine = new Label();
     private final Label writtenCaption = new Label();
     private final Label validCaption = new Label();
     private final Navigator navigator;
@@ -77,6 +79,7 @@ final class ExportResult {
                         MessageKey.EXPORT_OPEN_BOOK,
                         MessageKey.EXPORT_OPEN_BOOK_TIP,
                         () -> revealer.open(target())));
+        proofreadLine.setId("export-proofread-line");
         reset();
         showFigures(null);
     }
@@ -108,7 +111,7 @@ final class ExportResult {
                         MessageKey.TRANSLATING_STRIP_DONE_TIP),
                 new StatTile("export-valid", valid, validCaption));
         row.setPadding(new Insets(0));
-        return row;
+        return new VBox(ROW_SPACING, row, proofreadLine);
     }
 
     Node checks() {
@@ -140,6 +143,13 @@ final class ExportResult {
                     .add(check(
                             "export-check-language", messages.get(MessageKey.EXPORT_CHECK_LANGUAGE, source, target)));
         }
+        final ProofreadSummary summary = report.proofread();
+        final String proofreadWords = ExportReportLines.proofreadLine(messages, summary);
+        checks.getChildren()
+                .add(
+                        summary.waiting() == 0
+                                ? check("export-check-proofread", proofreadWords)
+                                : warning("export-check-proofread", proofreadWords));
         addReportChecks(report);
         setActionsShown(true);
     }
@@ -156,17 +166,12 @@ final class ExportResult {
                 .ifPresent(line -> checks.getChildren().add(warning("export-check-source-fallbacks", line)));
         ExportReportLines.noTargetFallbacks(messages, report)
                 .ifPresent(line -> checks.getChildren().add(warning("export-check-no-target", line)));
-        final Optional<String> unknown = ExportReportLines.awaitingGender(messages, report.consistency());
-        final Optional<String> suggested = ExportReportLines.suggestedGender(messages, report.consistency());
+        final Optional<String> unknown = ExportReportLines.awaitingGender(messages, report.proofread());
+        final Optional<String> suggested = ExportReportLines.suggestedGender(messages, report.proofread());
         unknown.ifPresent(line -> checks.getChildren().add(warning("export-check-awaiting-gender", line)));
         suggested.ifPresent(line -> checks.getChildren().add(warning("export-check-suggested-gender", line)));
         if (unknown.isPresent() || suggested.isPresent()) {
             checks.getChildren().add(namesStyleLink());
-        }
-        final List<String> passLines = ExportReportLines.consistency(messages, report.consistency());
-        for (int index = 0; index < passLines.size(); index++) {
-            checks.getChildren()
-                    .add(check("export-check-consistency" + (index == 0 ? "" : "-" + index), passLines.get(index)));
         }
     }
 
@@ -191,6 +196,8 @@ final class ExportResult {
                 messages.get(last == null ? MessageKey.EXPORT_TILE_DONE : MessageKey.EXPORT_TILE_WRITTEN));
         validCaption.setText(
                 messages.get(last == null ? MessageKey.EXPORT_TILE_VALID : MessageKey.EXPORT_TILE_VALID_DONE));
+        proofreadLine.setText(last == null ? "" : ExportReportLines.proofreadLine(messages, last.proofread()));
+        Visibility.show(proofreadLine, last != null);
         valid.setText(last == null ? DASH : CHECK);
         valid.getStyleClass().remove(Tone.OK.statusClass());
         if (last != null) {

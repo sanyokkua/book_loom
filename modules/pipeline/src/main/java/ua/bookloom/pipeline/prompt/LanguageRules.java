@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.prompt;
 
+import static ua.bookloom.util.contract.ArgNames.TARGET_TAG;
+
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,9 +13,12 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.BriefChoices;
 import ua.bookloom.api.pipeline.LanguageSupport;
+import ua.bookloom.api.project.NamePolicy;
 
 /**
  * The language-rules map: what a prompt tells a model about one language pair, read from the bundled
@@ -29,14 +34,13 @@ public final class LanguageRules implements LanguageSupport {
     static final String DIRECTORY = "languages/";
     static final String PAIR_DIRECTORY = DIRECTORY + "pairs/";
     private static final String SUFFIX = ".properties";
-    private static final String GENERIC = "generic";
+    private static final String GENERIC_FILE = "generic";
     private static final String STATUS = "status";
     private static final String TESTED = "tested";
     private static final String PITFALLS = "pitfalls";
     private static final String EXAMPLE = "example";
     private static final String BATCH_EXAMPLE = "batchExample";
     private static final String NAME_EXAMPLE = "nameExample";
-    private static final String REVIEWER_CHECKS = "reviewerChecks";
     private static final int MAX_SOURCE_NOTES = 3;
     private static final List<String> GENERIC_REQUIRED = List.of(
             STATUS,
@@ -52,13 +56,12 @@ public final class LanguageRules implements LanguageSupport {
             "names.convention");
 
     private static final class Holder {
-        static final LanguageRules NORMAL = new LanguageRules(LanguageRules::openBundled, false);
-        static final LanguageRules GENERIC_ONLY = new LanguageRules(LanguageRules::openBundled, true);
+        static final LanguageRules NORMAL = new LanguageRules(LanguageRules::openBundled);
     }
 
     private final PromptTemplates.ResourceLoader loader;
-    private final boolean genericOnly;
-    private final LanguageFile generic;
+    // Read by PreparationExamples too, which picks the names-pass examples from the same files.
+    final LanguageFile generic;
     private final Map<String, LanguageFile> files = new ConcurrentHashMap<>();
     private final Map<String, String> sections = new ConcurrentHashMap<>();
     private final Map<String, String> examples = new ConcurrentHashMap<>();
@@ -68,36 +71,20 @@ public final class LanguageRules implements LanguageSupport {
      * Opens the map over a loader.
      *
      * @param loader opens a file by its name beside the templates
-     * @param genericOnly {@code true} to build every section from the generic rules alone, which is how the eval
-     *     measures what the language files add
      */
-    LanguageRules(final PromptTemplates.ResourceLoader loader, final boolean genericOnly) {
+    LanguageRules(final PromptTemplates.ResourceLoader loader) {
         this.loader = Objects.requireNonNull(loader, "loader");
-        this.genericOnly = genericOnly;
-        this.generic = LanguageFile.load(GENERIC, DIRECTORY + GENERIC + SUFFIX, loader);
-        for (final String key : GENERIC_REQUIRED) {
+        this.generic = LanguageFile.load(GENERIC_FILE, DIRECTORY + GENERIC_FILE + SUFFIX, loader);
+        for (final String key : Stream.concat(GENERIC_REQUIRED.stream(), FrameWording.GENERIC_KEYS.stream())
+                .toList()) {
             if (generic.get(key) == null) {
-                throw new IllegalStateException(DIRECTORY + GENERIC + SUFFIX + " lacks key '" + key + "'");
+                throw new IllegalStateException(DIRECTORY + GENERIC_FILE + SUFFIX + " lacks key '" + key + "'");
             }
         }
     }
 
     /** The bundled map. */
     public static LanguageRules bundled() {
-        return Holder.NORMAL;
-    }
-
-    /**
-     * The bundled map, or the one that states only the generic rules when the eval asks for it with the system
-     * property {@code bookloom.eval.rules} or the environment variable {@code BOOKLOOM_EVAL_RULES} set to
-     * {@code generic}.
-     */
-    static LanguageRules forEnvironment() {
-        final String asked = System.getProperty("bookloom.eval.rules", System.getenv("BOOKLOOM_EVAL_RULES"));
-        if ("generic".equalsIgnoreCase(asked)) {
-            log.info("Language rules forced to the generic rules by the eval switch");
-            return Holder.GENERIC_ONLY;
-        }
         return Holder.NORMAL;
     }
 
@@ -111,48 +98,51 @@ public final class LanguageRules implements LanguageSupport {
         return tested;
     }
 
+    /** Read from the target's own file whatever the eval's generic-only choice, because the screen offers them. */
+    @Override
+    public BriefChoices briefChoices(final String targetTag) {
+        return BriefKeys.read(languageFile(Objects.requireNonNull(targetTag, TARGET_TAG)));
+    }
+
     /**
      * The one section a prompt carries for a language pair.
      *
      * @param sourceTag the source language tag, or null when it is inferred from the text, which leaves out the
      *     source notes and the pair's rules
      * @param targetTag the non-null target language tag
-     * @param reviewing {@code true} when the prompt reviews a translation, which adds the languages' reviewer checks
      * @return the section starting {@code [Language rules: <Source> -> <Target>]}; never null, built once per pair
      */
-    public String section(@Nullable final String sourceTag, final String targetTag, final boolean reviewing) {
-        Objects.requireNonNull(targetTag, "targetTag");
-        final String key = primary(sourceTag) + ">" + primary(targetTag) + (reviewing ? "!" : "");
-        return sections.computeIfAbsent(key, ignored -> build(sourceTag, targetTag, reviewing));
+    public String section(@Nullable final String sourceTag, final String targetTag) {
+        Objects.requireNonNull(targetTag, TARGET_TAG);
+        final String key = primary(sourceTag) + ">" + primary(targetTag);
+        return sections.computeIfAbsent(key, ignored -> build(sourceTag, targetTag));
     }
 
-    private String build(@Nullable final String sourceTag, final String targetTag, final boolean reviewing) {
+    private String build(@Nullable final String sourceTag, final String targetTag) {
         final List<String> parts = new ArrayList<>();
-        parts.add(targetRules(targetTag, reviewing));
-        if (sourceTag != null && !genericOnly) {
+        parts.add(targetRules(targetTag));
+        if (sourceTag != null) {
             parts.add(sourceRules(sourceTag));
-            parts.add(pairRules(sourceTag, targetTag, reviewing));
+            parts.add(pairRules(sourceTag, targetTag));
         }
         final String body =
                 String.join("\n", parts.stream().filter(part -> !part.isEmpty()).toList());
         final String heading = "[Language rules: " + (sourceTag == null ? "the source" : name(sourceTag)) + " -> "
                 + name(targetTag) + "]";
         log.debug(
-                "Language rules source={} target={} reviewing={} genericOnly={} lines={}",
+                "Language rules source={} target={} lines={}",
                 sourceTag,
                 targetTag,
-                reviewing,
-                genericOnly,
                 body.lines().count());
         log.trace("Language rules section {}", body);
         return body.isEmpty() ? "" : heading + "\n" + body;
     }
 
     /** The target language's own rules, or the generic ones when it has no file. */
-    String targetRules(final String targetTag, final boolean reviewing) {
-        final LanguageFile file = genericOnly ? generic : languageFile(targetTag);
+    String targetRules(final String targetTag) {
+        final LanguageFile file = languageFile(targetTag);
         final LanguageFile used = file.exists() ? file : generic;
-        return block("Target — " + name(targetTag), used, reviewing);
+        return block("Target — " + name(targetTag), used);
     }
 
     /** What to read carefully when the language is the source; empty when it has no file. */
@@ -164,12 +154,12 @@ public final class LanguageRules implements LanguageSupport {
     }
 
     /** The rules that exist only for the pair; empty when it has no file. */
-    String pairRules(final String sourceTag, final String targetTag, final boolean reviewing) {
+    String pairRules(final String sourceTag, final String targetTag) {
         final LanguageFile file = pairFile(sourceTag, targetTag);
-        return block("Pair — " + name(sourceTag) + " -> " + name(targetTag), file, reviewing);
+        return block("Pair — " + name(sourceTag) + " -> " + name(targetTag), file);
     }
 
-    private static String block(final String header, final LanguageFile file, final boolean reviewing) {
+    private static String block(final String header, final LanguageFile file) {
         final List<String> lines = new ArrayList<>();
         for (final RuleKey rule : RuleKey.values()) {
             final String value = file.get(rule.key());
@@ -178,9 +168,6 @@ public final class LanguageRules implements LanguageSupport {
             }
         }
         file.indexed(PITFALLS).forEach(pitfall -> lines.add("Watch: " + pitfall));
-        if (reviewing) {
-            file.indexed(REVIEWER_CHECKS).forEach(check -> lines.add("Check: " + check));
-        }
         return lines.isEmpty() ? "" : header + "\n" + bullets(lines);
     }
 
@@ -207,9 +194,12 @@ public final class LanguageRules implements LanguageSupport {
         return pick(sourceTag, targetTag, BATCH_EXAMPLE, file -> String.join("\n\n", file.indexed(BATCH_EXAMPLE)));
     }
 
-    /** The suggestion call's example, chosen like {@link #examples}. */
-    String nameExamples(@Nullable final String sourceTag, final String targetTag) {
-        return pick(sourceTag, targetTag, NAME_EXAMPLE, file -> Objects.requireNonNullElse(file.get(NAME_EXAMPLE), ""));
+    /** The suggestion call's example, chosen like {@link #examples}; a file's {@code nameExample.<POLICY>} first. */
+    String nameExamples(@Nullable final String sourceTag, final String targetTag, final NamePolicy policy) {
+        final String own = NAME_EXAMPLE + "." + policy.name();
+        final Function<LanguageFile, String> read = file ->
+                Objects.requireNonNullElse(file.get(own), Objects.requireNonNullElse(file.get(NAME_EXAMPLE), ""));
+        return pick(sourceTag, targetTag, own, read);
     }
 
     private String pick(
@@ -236,12 +226,7 @@ public final class LanguageRules implements LanguageSupport {
         });
     }
 
-    /**
-     * A name-rendering line the generic file holds.
-     *
-     * @param key the non-null key, such as {@code names.terms}
-     * @return the text; never null
-     */
+    /** A name-rendering line the generic file holds under a key such as {@code names.terms}; never null. */
     String genericValue(final String key) {
         return Objects.requireNonNull(generic.get(key), key);
     }
@@ -259,7 +244,7 @@ public final class LanguageRules implements LanguageSupport {
      * @return the value of the file's {@code genderCheck} key, or null when the language has no file or names none
      */
     public @Nullable String genderCheck(final String targetTag) {
-        return targetValue(Objects.requireNonNull(targetTag, "targetTag"), "genderCheck");
+        return targetValue(Objects.requireNonNull(targetTag, TARGET_TAG), "genderCheck");
     }
 
     /**
@@ -290,7 +275,7 @@ public final class LanguageRules implements LanguageSupport {
      * @return the lower-case letters, such as {@code ыъэё}; never null, empty when the language lists none
      */
     public String forbiddenLetters(final String targetTag) {
-        final String value = targetValue(Objects.requireNonNull(targetTag, "targetTag"), "forbiddenLetters");
+        final String value = targetValue(Objects.requireNonNull(targetTag, TARGET_TAG), "forbiddenLetters");
         return value == null ? "" : value.toLowerCase(Locale.ROOT);
     }
 
@@ -301,7 +286,17 @@ public final class LanguageRules implements LanguageSupport {
      * @return {@code false} only when the language's file says {@code namesInflect=false}
      */
     public boolean namesInflect(final String targetTag) {
-        return !"false".equalsIgnoreCase(targetValue(Objects.requireNonNull(targetTag, "targetTag"), "namesInflect"));
+        return !"false".equalsIgnoreCase(targetValue(Objects.requireNonNull(targetTag, TARGET_TAG), "namesInflect"));
+    }
+
+    /**
+     * Whether a target language capitalises its common nouns, from its {@code capitalisesNouns} key.
+     *
+     * @param targetTag the non-null target language tag
+     * @return {@code true} only when the language's file says {@code capitalisesNouns=true}
+     */
+    public boolean capitalisesNouns(final String targetTag) {
+        return "true".equalsIgnoreCase(targetValue(Objects.requireNonNull(targetTag, TARGET_TAG), "capitalisesNouns"));
     }
 
     /**
@@ -326,15 +321,9 @@ public final class LanguageRules implements LanguageSupport {
         return wordsOf(targetTag, "voicingPairs");
     }
 
-    /**
-     * The particles and negations of a target language that carry mood or polarity, from its {@code functionWords} key,
-     * so a reviewer edit that only fixes agreement can be held to leaving them alone without hard-coding a language.
-     *
-     * @param targetTag the non-null target language tag
-     * @return the lower-case words; never null, empty when the language lists none
-     */
-    public Set<String> functionWords(final String targetTag) {
-        return Set.copyOf(wordsOf(targetTag, "functionWords"));
+    /** The negations of a target language, from its {@code negationWords} key; empty when none are listed. */
+    public Set<String> negationWords(final String targetTag) {
+        return Set.copyOf(wordsOf(targetTag, "negationWords"));
     }
 
     /**
@@ -347,11 +336,6 @@ public final class LanguageRules implements LanguageSupport {
      */
     public Set<String> firstPersonPronouns(final String languageTag) {
         return Set.copyOf(wordsOf(languageTag, "firstPersonPronouns"));
-    }
-
-    /** The {@code firstPersonPast} pattern (groups {@code female}, {@code male}) of a language, if it has one. */
-    public Optional<Pattern> firstPersonPast(final String languageTag) {
-        return pattern(languageTag, "firstPersonPast");
     }
 
     public Optional<Pattern> pattern(final String tag, final String key) {
@@ -367,12 +351,12 @@ public final class LanguageRules implements LanguageSupport {
         return value == null || value.isBlank() ? List.of() : List.of(value.split("\\s+"));
     }
 
-    private LanguageFile languageFile(@Nullable final String tag) {
+    LanguageFile languageFile(@Nullable final String tag) {
         final String primary = primary(tag);
         return primary.isEmpty() ? new LanguageFile("", Map.of()) : fileOf(primary, DIRECTORY + primary + SUFFIX);
     }
 
-    private LanguageFile pairFile(final String sourceTag, final String targetTag) {
+    LanguageFile pairFile(final String sourceTag, final String targetTag) {
         final String source = primary(sourceTag);
         final String target = primary(targetTag);
         if (source.isEmpty() || target.isEmpty()) {
@@ -389,7 +373,7 @@ public final class LanguageRules implements LanguageSupport {
         return LanguageRules.class.getResourceAsStream(fileName);
     }
 
-    private static String name(final String tag) {
+    static String name(final String tag) {
         final String name = Locale.forLanguageTag(tag.strip()).getDisplayLanguage(Locale.ENGLISH);
         return name.isBlank() ? PromptLanguages.describe(tag) : name;
     }

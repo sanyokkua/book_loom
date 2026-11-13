@@ -328,7 +328,7 @@ class TreeMaskingEpubTest {
         assertThat(segment.masked()).isEqualTo("Note: \u27E6g0\u27E7 ends it.");
         // The exact fragment, not a startsWith/endsWith shape: a fragment sliced at the wrong offset still starts
         // with `<pre hidden` and still ends with `</pre>`, so a loose assertion here proves nothing.
-        assertThat(segment.placeholders().get("g0")).isEqualTo("<pre hidden>\n\ncode();</pre>");
+        assertThat(segment.placeholders()).containsEntry("g0", "<pre hidden>\n\ncode();</pre>");
     }
 
     // WHEN a non-translatable block occurs inside a translatable run, the system

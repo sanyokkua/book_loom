@@ -3,13 +3,8 @@ package ua.bookloom.ui.state;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
-import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
@@ -18,21 +13,14 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.llm.ChatModelFactory;
-import ua.bookloom.api.llm.ModelCapabilities;
-import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.NamesEstimate;
-import ua.bookloom.api.pipeline.NamesPass;
-import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
-import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -57,91 +45,55 @@ public final class NamesStyleViewModel {
     private final ObservableList<LexiconEntry> lexiconRows = FXCollections.observableArrayList();
     private final RecurringTerms recurring;
     private final GlossaryRowEdits edits;
+    private final RowChanges rowChanges;
     private final ReadOnlyObjectWrapper<@Nullable GlossaryNotice> notice = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyIntegerWrapper restorations = new ReadOnlyIntegerWrapper();
-    private final ReadOnlyIntegerWrapper suggestedCount = new ReadOnlyIntegerWrapper();
-    private final GenderConfirmations genderConfirmations;
-    private final GlossaryAdditions additions;
+    private final Suggestions suggestions;
     private final ChangeMarks marks = new ChangeMarks();
     private final ChangeLog changeLog;
     private final ResultsReview review = new ResultsReview();
     private final AutoEstimate autoEstimate;
     private String projectId = "";
+    private final InFlight loads = new InFlight();
     private final Openings openings = new Openings();
 
     /**
-     * Receives the collaborators the injector owns.
-     *
-     * @param glossary the port the glossary is read and edited through
-     * @param lexicon the port the recurring terms are read and edited through
-     * @param namesPass the port that prepares both tables in one pass
-     * @param capabilities where the chosen model's context length is detected for that pass
-     * @param models where the model of a model scan is built
-     * @param settings where the chosen provider and model are read
-     * @param executor the daemon executor every call runs on, never the FX thread
-     * @param messages the catalogue the refusals are worded from
-     * @param activities the model work under way, which the model scan and review must not overlap
+     * Receives the collaborators the injector owns: every call runs on the daemon {@code executor}, never the FX thread;
+     * {@code activities} is the model work the scan and review must not overlap; {@code measured} holds the seconds per
+     * call measured on the chosen model, read for and stored by the names pass.
      */
     @Inject
     public NamesStyleViewModel(
-            final GlossaryService glossary,
-            final LexiconService lexicon,
-            final NamesPass namesPass,
-            final ModelCapabilities capabilities,
-            final ChatModelFactory models,
-            final SettingsViewModel settings,
+            final NamesServices services,
+            final ModelAccess access,
             final @BackgroundExecutor ExecutorService executor,
             final Messages messages,
-            final ActivityTracker activities) {
-        this(
-                glossary,
-                lexicon,
-                namesPass,
-                capabilities::detectedTokens,
-                models,
-                settings,
-                executor,
-                messages,
-                activities,
-                () -> UUID.randomUUID().toString());
+            final ActivityTracker activities,
+            final MeasuredCalls measured) {
+        this(services, access, executor, messages, activities, GlossaryAdditions.randomIds(), measured);
     }
 
     // The id source is a seam so that a test states the ids it expects, and no provider is asked for a context length.
     NamesStyleViewModel(
-            final GlossaryService glossary,
-            final LexiconService lexicon,
-            final NamesPass namesPass,
-            final ChatModelFactory models,
-            final SettingsViewModel settings,
+            final NamesServices services,
+            final ModelAccess access,
             final ExecutorService executor,
             final Messages messages,
             final ActivityTracker activities,
             final Supplier<String> ids) {
-        this(
-                glossary,
-                lexicon,
-                namesPass,
-                _ -> Optional.empty(),
-                models,
-                settings,
-                executor,
-                messages,
-                activities,
-                ids);
+        this(services, access, executor, messages, activities, ids, MeasuredCalls.none());
     }
 
     private NamesStyleViewModel(
-            final GlossaryService glossary,
-            final LexiconService lexicon,
-            final NamesPass namesPass,
-            final Function<ModelSelection, Optional<Integer>> detection,
-            final ChatModelFactory models,
-            final SettingsViewModel settings,
+            final NamesServices services,
+            final ModelAccess access,
             final ExecutorService executor,
             final Messages messages,
             final ActivityTracker activities,
-            final Supplier<String> ids) {
-        this.glossary = Objects.requireNonNull(glossary, "glossary");
+            final Supplier<String> ids,
+            final MeasuredCalls measured) {
+        this.glossary = Objects.requireNonNull(services, "services").glossary();
+        final LexiconService lexicon = services.lexicon();
         this.calls = new GlossaryCalls(executor);
         this.changeLog = new ChangeLog(
                 new ChangeReverts(
@@ -149,8 +101,8 @@ public final class NamesStyleViewModel {
                 marks,
                 messages,
                 Objects.requireNonNull(activities, "activities"));
-        this.autoEstimate = new AutoEstimate(namesPass, calls);
-        this.modelRuns = newModelRuns(lexicon, namesPass, detection, models, settings, messages, activities);
+        this.autoEstimate = new AutoEstimate(services.namesPass(), calls, access.settings(), measured);
+        this.modelRuns = newModelRuns(services, access, messages, activities, measured);
         this.recurring = new RecurringTerms(
                 new LexiconActions(lexicon, calls, lexiconRows, rows, messages, notice, new ImportSummary(messages)),
                 () -> projectId,
@@ -159,37 +111,36 @@ public final class NamesStyleViewModel {
                         modelRuns::scanTerms, modelRuns::reviewTerms, modelRuns::translateTerms));
         this.edits = new GlossaryRowEdits(glossary, calls, rows, messages, notice, restorations);
         this.files = new GlossaryFiles(glossary, calls, rows, notice, new ImportSummary(messages), messages);
-        this.additions = new GlossaryAdditions(
-                glossary, calls, rows, messages, Objects.requireNonNull(ids, "ids"), () -> projectId);
-        this.genderConfirmations =
-                new GenderConfirmations(glossary, calls, rows, notice, changeLog, () -> projectId, messages);
-        rows.addListener((ListChangeListener<GlossaryEntry>) change -> suggestedCount.set(
-                (int) rows.stream().filter(GlossaryEntry::isSuggested).count()));
+        this.rowChanges = new RowChanges(
+                edits,
+                new GlossaryAdditions(
+                        glossary, calls, rows, messages, Objects.requireNonNull(ids, "ids"), () -> projectId),
+                openings);
+        this.suggestions = new Suggestions(glossary, calls, rows, notice, changeLog, () -> projectId, messages);
     }
 
     private GlossaryModelRuns newModelRuns(
-            final LexiconService lexicon,
-            final NamesPass namesPass,
-            final Function<ModelSelection, Optional<Integer>> detection,
-            final ChatModelFactory models,
-            final SettingsViewModel settings,
+            final NamesServices services,
+            final ModelAccess access,
             final Messages messages,
-            final ActivityTracker activities) {
+            final ActivityTracker activities,
+            final MeasuredCalls measured) {
         return new GlossaryModelRuns(
                 new GlossaryModelRuns.Screen(
                         glossary,
-                        Objects.requireNonNull(lexicon, "lexicon"),
-                        namesPass,
-                        detection,
-                        models,
-                        settings,
+                        services.lexicon(),
+                        services.namesPass(),
+                        access.detection(),
+                        access.models(),
+                        access.settings(),
                         messages,
                         rows,
                         lexiconRows,
                         notice,
                         () -> projectId,
                         activities,
-                        changeLog),
+                        changeLog,
+                        measured),
                 calls);
     }
 
@@ -208,21 +159,12 @@ public final class NamesStyleViewModel {
         return modelRuns.busy();
     }
 
-    /**
-     * Why the model scan and review are not offered while other model work runs.
-     *
-     * @return a read-only property, empty while they are offered or one of them runs itself
-     */
+    /** {@return why the model scan and review are not offered while other model work runs; empty while offered} */
     public ReadOnlyStringProperty modelBlockedReason() {
         return modelRuns.blockedReason();
     }
 
-    /**
-     * What the last model operation did, exactly, for the results dialog to open on.
-     *
-     * @return a read-only property holding the results of the newest operation, or {@code null} while one runs or none
-     *     has finished since the screen opened
-     */
+    /** {@return what the last model operation did, for the results dialog; null while one runs or none finished} */
     public ReadOnlyObjectProperty<@Nullable ChangeResults> results() {
         return changeLog.results();
     }
@@ -247,14 +189,13 @@ public final class NamesStyleViewModel {
         return restorations.getReadOnlyProperty();
     }
 
-    /**
-     * Loads a project's glossary and, when it is empty, runs the deterministic scan.
-     *
-     * @param project the stored project whose glossary is shown
-     */
+    /** Loads the stored project's glossary and, when it is empty, runs the deterministic scan. */
     public void show(final String project) {
         Objects.requireNonNull(project, "project");
         final boolean sameProject = project.equals(projectId);
+        if (!loads.begin(project)) {
+            return;
+        }
         projectId = project;
         final long ticket = openings.begin();
         log.debug("showing the glossary of project {} (opening {})", project, ticket);
@@ -265,38 +206,22 @@ public final class NamesStyleViewModel {
             autoEstimate.clear();
         }
         recurring.show(project);
-        calls.run(
-                "load",
-                () -> GlossaryLoad.loadOrScan(glossary, project),
-                answer -> openings.ifCurrent(ticket, () -> edits.loaded(answer)));
+        calls.run("load", () -> GlossaryLoad.loadOrScan(glossary, project), answer -> {
+            loads.end(project);
+            openings.ifCurrent(ticket, () -> edits.loaded(answer));
+        });
         refreshAutoEstimate();
     }
 
     /** Sets a row's target; a blank {@code text} clears it. */
     public void setTarget(final String entryId, final String text) {
         Objects.requireNonNull(text, "text");
-        edits.change(
-                entryId,
-                "target",
-                held -> GlossaryEdits.target(held, text.isBlank() ? null : text.strip()),
-                openings.whileCurrent());
+        edits.change(entryId, "target", held -> GlossaryEdits.target(held, text), openings.whileCurrent());
     }
 
-    /** Locks or unlocks a row's term. */
-    public void setLocked(final String entryId, final boolean locked) {
-        edits.change(entryId, "locked", held -> GlossaryEdits.locked(held, locked), openings.whileCurrent());
-    }
-
-    /** Sets a row's type. */
-    public void setType(final String entryId, final TermType type) {
-        Objects.requireNonNull(type, "type");
-        edits.change(entryId, "type", held -> GlossaryEdits.type(held, type), openings.whileCurrent());
-    }
-
-    /** Sets a row's gender. */
-    public void setGender(final String entryId, final Gender gender) {
-        Objects.requireNonNull(gender, "gender");
-        edits.change(entryId, "gender", held -> GlossaryEdits.gender(held, gender), openings.whileCurrent());
+    /** {@return the edits of a row's State, type and gender, which only the opening that was current when they began may show} */
+    public RowChanges rowChanges() {
+        return rowChanges;
     }
 
     /** Removes a row's term from the glossary. */
@@ -357,44 +282,13 @@ public final class NamesStyleViewModel {
         files.exportCsv(projectId, destination, openings.whileCurrent());
     }
 
-    /**
-     * Adds a term, refusing a blank source, a duplicate or a lock with no target before asking the service.
-     *
-     * @param term what the Add term card collected
-     * @param onAdded run on the FX thread once the term is stored and shown
-     * @param onRefused run on the FX thread with the reason, in the display language, the term was not added
-     */
-    public void add(final NewTerm term, final Runnable onAdded, final Consumer<String> onRefused) {
-        additions.add(term, onAdded, onRefused);
-    }
-
     /** Confirms a row's suggested target as the person's, so it is applied exactly and never replaced by the model. */
     public void accept(final String entryId) {
         edits.change(entryId, "accept", GlossaryEntry::accepted, openings.whileCurrent());
     }
 
-    /** Confirms every row's suggested target, each as {@link #accept(String)} would. */
-    public void acceptAll() {
-        final List<String> suggested = rows.stream()
-                .filter(GlossaryEntry::isSuggested)
-                .map(GlossaryEntry::id)
-                .toList();
-        log.info("accepting {} suggested targets of project {}", suggested.size(), projectId);
-        suggested.forEach(this::accept);
-    }
-
-    /** {@return a read-only count of the rows that hold a suggested target nobody confirmed} */
-    public ReadOnlyIntegerProperty suggestedCount() {
-        return suggestedCount.getReadOnlyProperty();
-    }
-
-    /** Turns every suggested character gender into the person's; the results list can put each back. */
-    public void confirmGenders() {
-        genderConfirmations.confirmAll();
-    }
-
-    /** {@return a read-only count of the characters whose gender is a suggestion nobody has confirmed} */
-    public ReadOnlyIntegerProperty suggestedGenderCount() {
-        return genderConfirmations.suggestedCount();
+    /** {@return the suggested targets and genders, their review flags and the counts that tell a person to look} */
+    public Suggestions suggestions() {
+        return suggestions;
     }
 }

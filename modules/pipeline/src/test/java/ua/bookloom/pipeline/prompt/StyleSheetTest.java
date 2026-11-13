@@ -5,11 +5,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.project.Address;
+import ua.bookloom.api.project.AddressForm;
 import ua.bookloom.api.project.AlsoTranslate;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.FootnotePolicy;
@@ -18,6 +22,7 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
+import ua.bookloom.api.project.QuoteStyle;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.api.project.UnitPolicy;
 
@@ -184,10 +189,45 @@ class StyleSheetTest {
                 .contains(expected);
     }
 
+    // A suggested gender is a guess: it is told as likely and orders no form.
+    @Test
+    void narrator_likelyFemale_readsLikely() {
+        final BookBrief brief = BookBrief.defaults("en")
+                .withNarrator(
+                        new Narrator(NarratorPerson.FIRST, Gender.FEMALE, Narrator.GenderOrigin.SUGGESTED, List.of()));
+
+        assertThat(StyleSheet.from(brief).text())
+                .contains("Narrator: first person, likely female")
+                .doesNotContain("feminine form");
+    }
+
     @Test
     void from_narratorUnspecified_leavesTheDefaultSheetAndHashUntouched() {
         assertThat(StyleSheet.from(BookBrief.defaults("en").withNarrator(Narrator.unspecified()))
                         .text())
                 .isEqualTo(DEFAULT_LINE);
+    }
+
+    @Test
+    void from_policyKeysDeclared_carriesOnePhraseEach() {
+        final BookBrief brief = BookBrief.defaults("en")
+                .withApostrophe("ʼ")
+                .withQuoteStyle(new QuoteStyle("„", "“", "‚", "‘"))
+                .withDefaultAddress(new Address(AddressForm.FORMAL, AddressForm.INFORMAL))
+                .withConventions(Map.of("hardG", "ґ"));
+
+        assertThat(StyleSheet.from(brief).text())
+                .startsWith(DEFAULT_LINE + "\n")
+                .contains("Apostrophe: write ʼ for every apostrophe.")
+                .contains("Quotation marks: „…“ for speech and quotes, ‚…‘ for a quote inside a quote.")
+                .contains("Address: the polite form between strangers, the familiar form within a family;")
+                .contains("Hard g in a foreign name: write ґ.");
+    }
+
+    @Test
+    void from_undeclaredConvention_usesTheGeneralPhrase() {
+        final BookBrief brief = BookBrief.defaults("en").withConventions(Map.of("softL", "ль"));
+
+        assertThat(StyleSheet.from(brief).text()).contains("Spelling convention softL: write ль.");
     }
 }

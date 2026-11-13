@@ -18,6 +18,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 import java.util.zip.ZipFile;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -146,33 +147,29 @@ class TranslationEngineEndToEndTest {
         final JobReport report = dataOf(job.run());
         assertThat(destination).doesNotExist();
         final ExportJob export = dataOf(injector.getInstance(ExportService.class)
-                .newExport(new ExportRequest(projectId, destination, false, Set.of(), false), null));
+                .newExport(new ExportRequest(projectId, destination, false, Set.of())));
         return new ExportedBook(report, dataOf(export.run()));
     }
 
     private record ExportedBook(JobReport report, ExportReport written) {}
 
+    // Answers every item of a translate prompt, a single draft being a batch of one, with its text upper-cased.
     private static ChatModel jsonUppercaseModel() {
         return request -> {
             try {
-                final String target = uppercasePreservingPlaceholders(
-                        sourceText(request.messages().get(1).content()));
+                final List<String> items =
+                        PromptItems.of(request.messages().get(1).content());
                 final ObjectNode reply = MAPPER.createObjectNode();
-                reply.put("target", target);
+                final var entries = reply.putArray("items");
+                IntStream.range(0, items.size())
+                        .forEach(i -> entries.addObject()
+                                .put("id", Integer.toString(i + 1))
+                                .put("target", uppercasePreservingPlaceholders(items.get(i))));
                 return Result.ok(new ChatResponse(MAPPER.writeValueAsString(reply), FinishReason.STOP));
             } catch (JsonProcessingException cause) {
-                throw new AssertionError("could not parse draft prompt source", cause);
+                throw new AssertionError("could not encode the reply", cause);
             }
         };
-    }
-
-    private static String sourceText(final String userMessage) {
-        return userMessage
-                .lines()
-                .dropWhile(line -> !line.equals("<Text>"))
-                .dropWhile(line -> line.equals("<Text>"))
-                .takeWhile(line -> !line.equals("</Text>"))
-                .collect(java.util.stream.Collectors.joining("\n"));
     }
 
     private static String uppercasePreservingPlaceholders(final String source) {

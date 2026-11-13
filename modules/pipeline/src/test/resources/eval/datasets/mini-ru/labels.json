@@ -1,0 +1,121 @@
+{
+ "ch01.md:1": {
+  "task": "heading",
+  "pair": "ru-uk",
+  "difficulty": "easy",
+  "length": "<=10",
+  "defectClass": "heading-number"
+ },
+ "ch01.md:3": {
+  "task": "prose",
+  "pair": "ru-uk",
+  "difficulty": "medium",
+  "length": "11-30",
+  "defectClass": "narrator-gender-past"
+ },
+ "ch01.md:5": {
+  "task": "dialogue",
+  "pair": "ru-uk",
+  "difficulty": "hard",
+  "length": "<=10",
+  "defectClass": "inflected-form-as-new-name"
+ },
+ "ch01.md:7": {
+  "task": "prose",
+  "pair": "ru-uk",
+  "difficulty": "hard",
+  "length": "11-30",
+  "defectClass": "genitive-with-own-gender"
+ },
+ "ch01.md:9": {
+  "task": "dialogue",
+  "pair": "ru-uk",
+  "difficulty": "medium",
+  "length": "11-30",
+  "defectClass": "lost-dash"
+ },
+ "ch01.md:11": {
+  "task": "prose",
+  "pair": "ru-uk",
+  "difficulty": "easy",
+  "length": "<=10",
+  "defectClass": "russian-line"
+ },
+ "ch01.md:13": {
+  "task": "prose",
+  "pair": "ru-uk",
+  "difficulty": "medium",
+  "length": "11-30",
+  "defectClass": "source-only-words"
+ },
+ "ch01.md:15": {
+  "task": "prose",
+  "pair": "ru-uk",
+  "difficulty": "medium",
+  "length": "11-30",
+  "defectClass": "stress-mark"
+ },
+ "ch01.md:17": {
+  "task": "prose",
+  "pair": "ru-uk",
+  "difficulty": "medium",
+  "length": "<=10",
+  "defectClass": "double-negation"
+ },
+ "ch02.md:2": {
+  "task": "heading",
+  "pair": "ru-uk",
+  "difficulty": "easy",
+  "length": "<=10",
+  "defectClass": "heading-number"
+ },
+ "ch02.md:4": {
+  "task": "dialogue",
+  "pair": "ru-uk",
+  "difficulty": "hard",
+  "length": "11-30",
+  "defectClass": "address-mix"
+ },
+ "ch02.md:6": {
+  "task": "name",
+  "pair": "ru-uk",
+  "difficulty": "medium",
+  "length": "<=10",
+  "defectClass": "stress-mark-seed"
+ },
+ "ch02.md:8": {
+  "task": "dialogue",
+  "pair": "ru-uk",
+  "difficulty": "hard",
+  "length": "11-30",
+  "defectClass": "three-speakers"
+ },
+ "ch02.md:10": {
+  "task": "dialogue",
+  "pair": "ru-uk",
+  "difficulty": "medium",
+  "length": "11-30",
+  "defectClass": "weak-word-da"
+ },
+ "ch02.md:12": {
+  "task": "prose",
+  "pair": "ru-uk",
+  "difficulty": "hard",
+  "length": "11-30",
+  "defectClass": "female-surname-forms"
+ },
+ "ch02.md:14": {
+  "task": "prose",
+  "pair": "ru-uk",
+  "difficulty": "hard",
+  "length": "<=10",
+  "defectClass": "proofread-trap"
+ },
+ "ch02.md:16": {
+  "task": "prose",
+  "pair": "ru-uk",
+  "difficulty": "medium",
+  "length": "<=10",
+  "defectClass": "gender-after-run"
+ }
+}

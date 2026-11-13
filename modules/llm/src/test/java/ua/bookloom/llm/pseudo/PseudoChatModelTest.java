@@ -32,22 +32,18 @@ class PseudoChatModelTest {
         assertThat(response.usage()).isNull();
     }
 
-    // A directed fix reads the rejected target from its one <Translation> block, ignoring the <Source> beside it.
-    @Test
-    void chat_directedFixFormat_repliesWithUppercasedRejectedTarget() {
-        final String message = "<Source>\nHe opened the ⟦g0⟧old⟦g1⟧ door.\n</Source>\n\n"
-                + "<Translation>\nhe opened the ⟦g0⟧old⟦g1⟧ door.\n</Translation>";
-
-        final ChatResponse response = send(message, "directed-fix");
-
-        assertThat(response.content()).isEqualTo("{\"target\":\"HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.\"}");
-    }
-
     // A batch draft answers every numbered item under its own id, tokens kept, and ignores the context blocks.
     @Test
     void chat_batchDraftFormat_repliesWithAnUppercasedEntryPerItemId() {
-        final String message = "[Previous pairs]\nSource: Hi.\nTranslation: Привіт.\n\n<Items>\n"
-                + "<s id=\"1\">He opened the ⟦g0⟧old⟦g1⟧ door.</s>\n<s id=\"2\">1881</s>\n</Items>";
+        final String message = """
+                [Previous pairs]
+                Source: Hi.
+                Translation: Привіт.
+
+                <Items>
+                <s id="1">He opened the ⟦g0⟧old⟦g1⟧ door.</s>
+                <s id="2">1881</s>
+                </Items>""";
 
         final ChatResponse response = send(message, "draft-batch-json");
 
@@ -58,19 +54,11 @@ class PseudoChatModelTest {
 
     // Every other repair-shaped format answers the same single-target object.
     @ParameterizedTest
-    @ValueSource(strings = {"structural-repair", "placeholder-repair", "directed-fix", "revision"})
+    @ValueSource(strings = {"structural-repair", "repair"})
     void chat_repairFormats_repliesWithUppercasedTargetObject(String formatName) {
         final ChatResponse response = send("<Text>\nhi\n</Text>", formatName);
 
         assertThat(response.content()).isEqualTo("{\"target\":\"HI\"}");
-    }
-
-    // The reviewer never asks for an edit, so a whole pseudo run never changes or flags a segment on its say-so.
-    @Test
-    void chat_reviewerFormat_repliesWithNoResults() {
-        final ChatResponse response = send("anything", "reviewer");
-
-        assertThat(response.content()).isEqualTo("{\"results\":[]}");
     }
 
     // The pre-scan reports each distinct capitalised word, in order of first appearance, as an unlocked other term.
@@ -125,12 +113,32 @@ class PseudoChatModelTest {
                         + "\"speaking\":false,\"brand\":false}");
     }
 
-    // Summary is always empty and reports no facts.
+    // The offline model cannot tell a term from a word, so its term choice keeps and drops nothing: every candidate
+    // stays undecided and the recurring-term step goes on.
     @Test
-    void chat_summaryFormat_repliesWithEmptyBilingualSummary() {
-        final ChatResponse response = send("anything", "summary");
+    void chat_termChoiceFormat_decidesNothing() {
+        final ChatResponse response = send("[Candidates]\n1. lantern — \"He lit the lantern.\"\n", "term-choice");
 
-        assertThat(response.content()).isEqualTo("{\"summary\":{\"source\":\"\",\"target\":\"\"},\"facts\":[]}");
+        assertThat(response.content()).isEqualTo("{\"terms\":[]}");
+    }
+
+    // The offline model summarises a chapter as it translates: the <Text> block in capitals, the instructions left out.
+    @Test
+    void answer_chapterSummary_textInCapitals() {
+        final ChatResponse response =
+                send("Summarise the chapter.\n\n<Text>\nA clerk finds a ledger.\n</Text>\n", "chapter_summary");
+
+        assertThat(response.content()).isEqualTo("{\"summary\":\"A CLERK FINDS A LEDGER.\"}");
+    }
+
+    // The offline model cannot proofread, so every window it reads stays as it is, in the proofread reply's own shape.
+    @Test
+    void answer_proofreadKind_unchanged() {
+        final ChatResponse response = send(
+                "<Items>\n<s id=\"ch1:0\">\nSource: He left.\nCurrent translation: Він пішов.\n</s>\n</Items>",
+                "proofread");
+
+        assertThat(response.content()).isEqualTo("{\"unchanged\":true}");
     }
 
     // The cap is a provider-side control the pseudo model has no use for; the reply is the same with it set.

@@ -14,8 +14,10 @@ import ua.bookloom.api.pipeline.StepsPlanned;
  * The steps one piece of work announced, folded from its {@link StepsPlanned} and {@link StepChanged} events: what is
  * planned, each step's last state, and the share done, which never falls when work is added.
  *
- * <p>The names pass plans its stages as {@link StepKind#STAGE} group rows and counts its requests; a stage is counted
- * only by work that plans nothing else. A step started again under the same kind and index keeps its row.
+ * <p>The names pass plans its stages as {@link StepKind#STAGE} group rows and lists its requests under them: work that
+ * plans stages is counted by its stages, so the figures, the bar and the results agree with the rows the person sees
+ * (its requests only time it); work that plans no stage is counted by its other steps, or by the stage rows it
+ * announces when it plans nothing. A step started again under the same kind and index keeps its row.
  *
  * @param planned the steps planned of every kind but {@link StepKind#STAGE}; not negative
  * @param stages the {@link StepKind#STAGE} steps planned; not negative
@@ -46,11 +48,10 @@ public record StepLog(int planned, int stages, boolean estimated, double reached
     public StepLog apply(final JobEvent event) {
         Objects.requireNonNull(event, "event");
         return switch (event) {
-            case StepsPlanned plan ->
-                plan.kind() == StepKind.STAGE
-                        ? new StepLog(planned, stages + plan.added(), estimated || plan.estimated(), reached, entries)
-                                .settled()
-                        : new StepLog(planned + plan.added(), stages, estimated || plan.estimated(), reached, entries)
+            case StepsPlanned(var kind, var added, var plannedEstimate) ->
+                kind == StepKind.STAGE
+                        ? new StepLog(planned, stages + added, estimated || plannedEstimate, reached, entries).settled()
+                        : new StepLog(planned + added, stages, estimated || plannedEstimate, reached, entries)
                                 .settled();
             case StepChanged changed -> apply(changed, null);
             default -> this;
@@ -117,6 +118,27 @@ public record StepLog(int planned, int stages, boolean estimated, double reached
     }
 
     /**
+     * The steps of every kind but {@link StepKind#STAGE} that have ended: what a reader times, even when the stages
+     * count.
+     *
+     * @return the count, never negative
+     */
+    public int timedDone() {
+        return (int) timed().stream()
+                .filter(entry -> !entry.isPending() && !entry.isRunning())
+                .count();
+    }
+
+    /**
+     * The steps of every kind but {@link StepKind#STAGE} planned or announced, whichever is more.
+     *
+     * @return the count, never negative
+     */
+    public int timedTotal() {
+        return Math.max(planned, timed().size());
+    }
+
+    /**
      * The step the work is on: the one that started last and has not ended.
      *
      * @return the running step, or {@code null} when none runs
@@ -145,7 +167,7 @@ public record StepLog(int planned, int stages, boolean estimated, double reached
     }
 
     private boolean isStageCounted() {
-        return planned == 0;
+        return stages > 0 || planned == 0;
     }
 
     private List<StepEntry> counted() {
@@ -153,6 +175,10 @@ public record StepLog(int planned, int stages, boolean estimated, double reached
         return entries.stream()
                 .filter(entry -> (entry.kind() == StepKind.STAGE) == stagesCount)
                 .toList();
+    }
+
+    private List<StepEntry> timed() {
+        return entries.stream().filter(entry -> entry.kind() != StepKind.STAGE).toList();
     }
 
     private StepLog settled() {

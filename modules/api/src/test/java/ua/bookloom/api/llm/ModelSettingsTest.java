@@ -3,13 +3,16 @@ package ua.bookloom.api.llm;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import ua.bookloom.api.pipeline.CallKind;
 
 class ModelSettingsTest {
 
@@ -28,8 +31,10 @@ class ModelSettingsTest {
                 maxOutput,
                 OutputLengthField.MAX_TOKENS,
                 refused,
-                null,
-                null);
+                Map.of(),
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
     }
 
     @Test
@@ -42,8 +47,7 @@ class ModelSettingsTest {
         assertThat(defaults.maxOutput()).isNull();
         assertThat(defaults.outputField()).isEqualTo(OutputLengthField.MAX_TOKENS);
         assertThat(defaults.refused()).isEmpty();
-        assertThat(defaults.measuredSecondsPerSegment()).isNull();
-        assertThat(defaults.measuredFrom()).isNull();
+        assertThat(defaults.secondsPerCall()).isEmpty();
     }
 
     @ParameterizedTest
@@ -94,7 +98,8 @@ class ModelSettingsTest {
 
     @Test
     void constructor_nullProviderId_isRejected() {
-        assertThatThrownBy(() -> ModelSettings.defaults(nullString(), "m")).isInstanceOf(NullPointerException.class);
+        final String provider = nullString();
+        assertThatThrownBy(() -> ModelSettings.defaults(provider, "m")).isInstanceOf(NullPointerException.class);
     }
 
     @SuppressWarnings("NullAway")
@@ -102,20 +107,24 @@ class ModelSettingsTest {
         return null;
     }
 
-    @Test
-    void constructor_speedWithoutSource_isRejected() {
-        assertThatThrownBy(() -> speed(1.2, null)).isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    void constructor_sourceWithoutSpeed_isRejected() {
-        assertThatThrownBy(() -> speed(null, MeasuredFrom.RUN)).isInstanceOf(IllegalArgumentException.class);
-    }
-
+    // A speed of zero or less is not a measurement.
     @ParameterizedTest
     @ValueSource(doubles = {0.0, -1.5})
-    void constructor_nonPositiveSpeed_isRejected(final double value) {
-        assertThatThrownBy(() -> speed(value, MeasuredFrom.TEST)).isInstanceOf(IllegalArgumentException.class);
+    void measuredSpeed_nonPositiveSeconds_isRejected(final double value) {
+        assertThatThrownBy(() -> new MeasuredSpeed(value, MeasuredFrom.TEST))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    // Measuring the draft must not erase what another call kind measured.
+    @Test
+    void withMeasuredSpeed_draft_keepsOtherKinds() {
+        final ModelSettings measured = ModelSettings.defaults("ollama", "gemma")
+                .withMeasuredSpeed(CallKind.PROOFREAD, 4.0, MeasuredFrom.RUN)
+                .withMeasuredSpeed(CallKind.DRAFT, 1.2, MeasuredFrom.TEST);
+
+        assertThat(measured.speedOf(CallKind.PROOFREAD)).hasValue(new MeasuredSpeed(4.0, MeasuredFrom.RUN));
+        assertThat(measured.speedOf(CallKind.DRAFT)).hasValue(new MeasuredSpeed(1.2, MeasuredFrom.TEST));
+        assertThat(measured.speedOf(CallKind.CHAPTER_SUMMARY)).isEmpty();
     }
 
     @Test
@@ -123,10 +132,10 @@ class ModelSettingsTest {
         final RefusedSetting refusal = new RefusedSetting("temperature", LocalDate.of(2026, 10, 20), "left it out");
         final ModelSettings base = with(TemperatureChoice.OMIT, null, 8192, 512, List.of(refusal));
 
-        final ModelSettings measured = base.withMeasuredSpeed(1.2, MeasuredFrom.TEST);
+        final ModelSettings measured = base.withMeasuredSpeed(CallKind.DRAFT, 1.2, MeasuredFrom.TEST);
 
-        assertThat(measured.measuredSecondsPerSegment()).isEqualTo(1.2);
-        assertThat(measured.measuredFrom()).isEqualTo(MeasuredFrom.TEST);
+        assertThat(measured.speedOf(CallKind.DRAFT).map(MeasuredSpeed::seconds)).hasValue(1.2);
+        assertThat(measured.speedOf(CallKind.DRAFT).map(MeasuredSpeed::from)).hasValue(MeasuredFrom.TEST);
         assertThat(measured.refused()).containsExactly(refusal);
         assertThat(measured.contextWindow()).isEqualTo(8192);
     }
@@ -134,25 +143,11 @@ class ModelSettingsTest {
     @Test
     void withMeasuredSpeed_secondMeasurement_overwritesSourceToo() {
         final ModelSettings measured = ModelSettings.defaults("ollama", "gemma")
-                .withMeasuredSpeed(1.2, MeasuredFrom.TEST)
-                .withMeasuredSpeed(0.8, MeasuredFrom.RUN);
+                .withMeasuredSpeed(CallKind.DRAFT, 1.2, MeasuredFrom.TEST)
+                .withMeasuredSpeed(CallKind.DRAFT, 0.8, MeasuredFrom.RUN);
 
-        assertThat(measured.measuredSecondsPerSegment()).isEqualTo(0.8);
-        assertThat(measured.measuredFrom()).isEqualTo(MeasuredFrom.RUN);
-    }
-
-    private static ModelSettings speed(final @Nullable Double seconds, final @Nullable MeasuredFrom from) {
-        return new ModelSettings(
-                "ollama",
-                "gemma",
-                TemperatureChoice.CHOOSE,
-                null,
-                null,
-                null,
-                OutputLengthField.MAX_TOKENS,
-                List.of(),
-                seconds,
-                from);
+        assertThat(measured.speedOf(CallKind.DRAFT).map(MeasuredSpeed::seconds)).hasValue(0.8);
+        assertThat(measured.speedOf(CallKind.DRAFT).map(MeasuredSpeed::from)).hasValue(MeasuredFrom.RUN);
     }
 
     @Test
@@ -165,7 +160,7 @@ class ModelSettingsTest {
     void withChoices_storedRefusalAndSpeed_keepsBoth() {
         final RefusedSetting refusal = new RefusedSetting("temperature", LocalDate.of(2026, 10, 20), "omitted");
         final ModelSettings base = with(TemperatureChoice.CHOOSE, null, null, null, List.of(refusal))
-                .withMeasuredSpeed(1.5, MeasuredFrom.RUN);
+                .withMeasuredSpeed(CallKind.DRAFT, 1.5, MeasuredFrom.RUN);
 
         final ModelSettings changed =
                 base.withChoices(TemperatureChoice.VALUE, 0.5, 16384, 256, OutputLengthField.MAX_COMPLETION_TOKENS);
@@ -176,8 +171,8 @@ class ModelSettingsTest {
         assertThat(changed.maxOutput()).isEqualTo(256);
         assertThat(changed.outputField()).isEqualTo(OutputLengthField.MAX_COMPLETION_TOKENS);
         assertThat(changed.refused()).containsExactly(refusal);
-        assertThat(changed.measuredSecondsPerSegment()).isEqualTo(1.5);
-        assertThat(changed.measuredFrom()).isEqualTo(MeasuredFrom.RUN);
+        assertThat(changed.speedOf(CallKind.DRAFT).map(MeasuredSpeed::seconds)).hasValue(1.5);
+        assertThat(changed.speedOf(CallKind.DRAFT).map(MeasuredSpeed::from)).hasValue(MeasuredFrom.RUN);
         assertThat(changed.providerId()).isEqualTo("ollama");
         assertThat(changed.modelId()).isEqualTo("gemma");
     }
@@ -209,5 +204,21 @@ class ModelSettingsTest {
         final ModelSettings base = ModelSettings.defaults("ollama", "gemma");
 
         assertThat(base.withoutRefusal("temperature")).isEqualTo(base);
+    }
+
+    @Test
+    void withProbeVerdicts_mergedWithANewerSchemaVerdict_keepsTheOlderCapVerdict() {
+        final Instant earlier = Instant.parse("2026-10-28T09:00:00Z");
+        final Instant later = Instant.parse("2026-10-29T09:00:00Z");
+        final ProbeVerdicts.Verdict cap = new ProbeVerdicts.Verdict(ProbeVerdicts.Outcome.HONOURED, "test", earlier);
+        final ProbeVerdicts.Verdict schema = new ProbeVerdicts.Verdict(ProbeVerdicts.Outcome.REFUSED, "test", later);
+        final ModelSettings base =
+                ModelSettings.defaults("ollama", "gemma").withProbeVerdicts(new ProbeVerdicts(null, null, null, cap));
+
+        final ModelSettings merged =
+                base.withProbeVerdicts(base.probeVerdicts().mergedWith(new ProbeVerdicts(schema, null, null, null)));
+
+        assertThat(merged.probeVerdicts()).isEqualTo(new ProbeVerdicts(schema, null, null, cap));
+        assertThat(merged.outputField()).isEqualTo(OutputLengthField.MAX_TOKENS);
     }
 }

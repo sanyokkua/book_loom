@@ -19,12 +19,18 @@ class ChatRequestOutputFieldTest {
                 null,
                 null,
                 null,
-                field);
+                field,
+                null,
+                null,
+                false);
     }
 
     @Test
     void tenArgumentConstructor_leavesTheOutputFieldNull() {
-        assertThat(new ChatRequest(List.of(), null, null, null, null, null, null, null, null, null).outputField())
+        assertThat(new ChatRequest(
+                                List.of(), null, null, null, null, null, null, null, null, null, null, null, null,
+                                false)
+                        .outputField())
                 .isNull();
     }
 

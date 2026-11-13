@@ -58,9 +58,9 @@ public final class SingleInstanceLock implements AutoCloseable {
                 return alreadyRunning();
             }
             return Result.ok(new SingleInstanceLock(channel, lock));
-        } catch (OverlappingFileLockException e) {
-            // Another lock is held on this file by THIS JVM. Reachable when a test acquires twice in one process;
-            // in production it means the same thing to the user as a second process would.
+        } catch (OverlappingFileLockException _) {
+            // This JVM already holds a lock on the file. Only a test that acquires twice in one process gets here;
+            // for the user it means the same as a second process would.
             closeQuietly(channel);
             return alreadyRunning();
         } catch (IOException | SecurityException e) {
@@ -88,7 +88,7 @@ public final class SingleInstanceLock implements AutoCloseable {
             if (lock.isValid()) {
                 lock.release();
             }
-        } catch (IOException e) {
+        } catch (IOException _) {
             // Nothing useful to do: the process is ending and the OS releases the lock regardless. Rethrowing
             // would turn a clean shutdown into a crash over a lock that is about to be released anyway.
         }
@@ -101,7 +101,7 @@ public final class SingleInstanceLock implements AutoCloseable {
         }
         try {
             channel.close();
-        } catch (IOException e) {
+        } catch (IOException _) {
             // Same reasoning as close(): there is no recovery, and no logger to report it to yet.
         }
     }

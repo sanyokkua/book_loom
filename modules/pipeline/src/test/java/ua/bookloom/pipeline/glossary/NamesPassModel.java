@@ -18,6 +18,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.pipeline.AnalysisData;
 
 /**
  * A hand-written model for the names pass tests: it answers each call by the response format the request names, from
@@ -29,6 +30,7 @@ final class NamesPassModel implements ChatModel {
     private static final Pattern REVIEW_LINE = Pattern.compile("(?m)^- (.+?) — \\d+×");
     private static final Pattern SUGGEST_LINE = Pattern.compile("(?m)^- (.+?) — ");
     private static final Pattern READING_WINDOW = Pattern.compile("(?m)^\\[(\\d{1,6})] ");
+    private static final Pattern BARE_NAME = Pattern.compile("(?m)^- (.+)$");
 
     /** What the model says of a term read in context. */
     record Reading(String kind, boolean speaking, boolean brand) {}
@@ -39,6 +41,7 @@ final class NamesPassModel implements ChatModel {
     private final Map<String, String> lexiconUsage = new LinkedHashMap<>();
     private final Map<String, String> targets = new LinkedHashMap<>();
     private final List<String> notNames = new ArrayList<>();
+    private final Map<String, String> knowledge = new LinkedHashMap<>();
     private Runnable hook = () -> {};
     private @Nullable String failingFormat;
     private int failingCall;
@@ -57,6 +60,15 @@ final class NamesPassModel implements ChatModel {
 
     NamesPassModel suggests(final String term, final String target) {
         targets.put(term, target);
+        return this;
+    }
+
+    /** What the name-knowledge call answers for a bare name; a name it was not told of it leaves out. */
+    NamesPassModel knows(final String term, final String gender, final String category, final double confidence) {
+        knowledge.put(
+                term,
+                "{\"term\":\"%s\",\"gender\":\"%s\",\"category\":\"%s\",\"confidence\":%s}"
+                        .formatted(term, gender, category, confidence));
         return this;
     }
 
@@ -110,7 +122,7 @@ final class NamesPassModel implements ChatModel {
         if (isNth || isFirstOfFormat) {
             return Result.err(Objects.requireNonNull(failure, "failure"));
         }
-        final String user = request.messages().getLast().content();
+        final String user = AnalysisData.of(request.messages().getLast().content());
         return Result.ok(new ChatResponse(replyTo(format, user), FinishReason.STOP));
     }
 
@@ -122,8 +134,21 @@ final class NamesPassModel implements ChatModel {
             case "suggest-targets" -> suggestReply(user);
             case "prescan" -> "{\"terms\":[]}";
             case "term-choice" -> "{\"terms\":[]}";
+            case "name-knowledge" -> knowledgeReply(user);
             default -> "{}";
         };
+    }
+
+    private String knowledgeReply(final String user) {
+        final Matcher matcher = BARE_NAME.matcher(user);
+        final List<String> items = new ArrayList<>();
+        while (matcher.find()) {
+            final String item = knowledge.get(matcher.group(1).strip());
+            if (item != null) {
+                items.add(item);
+            }
+        }
+        return "{\"items\":[" + String.join(",", items) + "]}";
     }
 
     private String reviewReply(final String user) {

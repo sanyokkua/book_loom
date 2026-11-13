@@ -73,6 +73,10 @@ final class BriefEvidenceRow {
                     evidence.samples(),
                     evidence.quotes().size());
             line.setText(text);
+            Tips.install(
+                    messages,
+                    line,
+                    evidence.isLikely() ? MessageKey.BRIEF_EVIDENCE_LIKELY_TIP : MessageKey.BRIEF_EVIDENCE_AGREED_TIP);
         }
     }
 
@@ -81,6 +85,7 @@ final class BriefEvidenceRow {
         return switch (evidence.basis()) {
             case KNOWLEDGE -> messages.get(MessageKey.BRIEF_EVIDENCE_KNOWLEDGE);
             case MEASURED -> messages.get(MessageKey.BRIEF_EVIDENCE_MEASURED);
+            case LIKELY -> messages.get(MessageKey.BRIEF_EVIDENCE_LIKELY);
             case PASSAGES, UNCERTAIN ->
                 evidence.quotes().isEmpty() || !evidence.isKept()
                         ? messages.get(MessageKey.BRIEF_EVIDENCE_AGREED, evidence.agreeing(), evidence.samples())

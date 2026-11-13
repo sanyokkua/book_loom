@@ -6,18 +6,21 @@ import java.nio.file.Path;
 import java.util.Locale;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.SafeDetails;
+import ua.bookloom.api.llm.ServerEngine;
 
 /** The words a failure is shown in: its own in English, the catalogue's by reason or by code otherwise. */
 class ErrorWordsTest {
 
     private static final Messages EN = new Messages(() -> Locale.ENGLISH);
     private static final Messages UK = new Messages(() -> Locale.forLanguageTag("uk"));
-    private static final String UK_FALLBACK = "Щось пішло не так. Подробиці пояснюють більше.";
+    private static final String UK_VALIDATION =
+            "Щось у введених даних або в книжці не так. Подробиці пояснюють, що саме.";
 
     private static AppError withReason(final FailureReason reason) {
         return AppError.of(
@@ -45,11 +48,223 @@ class ErrorWordsTest {
                 .isEqualTo("На диску бракує вільного місця. Звільніть місце або оберіть інший диск.");
     }
 
-    // IF a reason had no branch of its own, THEN it would fall to the catalogue's catch-all words.
+    // IF a reason with no words of its own took the catalogue's catch-all, THEN the person would lose the code's more
+    // useful words.
     @ParameterizedTest
-    @EnumSource(FailureReason.class)
-    void message_inUkrainian_everyReasonHasItsOwnAdvice(final FailureReason reason) {
-        assertThat(ErrorWords.message(UK, withReason(reason))).isNotEqualTo(UK_FALLBACK);
+    @EnumSource(
+            value = FailureReason.class,
+            mode = EnumSource.Mode.EXCLUDE,
+            names = {
+                "FOLDER_MISSING",
+                "ACCESS_DENIED",
+                "READ_ONLY",
+                "DISK_FULL",
+                "NOT_UTF8",
+                "CSV_HEADER",
+                "WRONG_PATH",
+                "MARKDOWN_STRUCTURE",
+                "CONTEXT_OVERFLOW",
+                "REPEAT_LIMIT",
+                "OUT_OF_MEMORY",
+                "MODEL_NOT_PULLED",
+                "HOST_FORBIDDEN",
+                "CLOUD_DISABLED",
+                "CLOUD_SIGNIN",
+                "TERMINATED",
+                "AUTH",
+                "WRONG_MODEL_SERVED",
+                "MODEL_NOT_LISTED",
+                "NOT_SUITABLE_STRUCTURED",
+                "NOT_SUITABLE_DOCUMENTS",
+                "ENGINE_MISMATCH",
+                "CREDITS",
+                "BLOCKED",
+                "NO_ENDPOINT_FOR_PARAMETERS",
+                "UNCLASSIFIED"
+            })
+    void message_inUkrainian_tokensWithoutWords_keepTheCodeWords(final FailureReason reason) {
+        assertThat(ErrorWords.message(UK, withReason(reason))).isEqualTo(UK_VALIDATION);
+    }
+
+    // The reasons a person meets in a run, each with advice they can act on. Every failure carries the counts of a
+    // prompt that did not fit, which only the context-overflow words show.
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "CONTEXT_OVERFLOW | Цей уривок не вміщується у вікно моделі (696 з 512 токенів). Його позначено."
+                        + " Завантажте модель із більшим контекстом або надішліть менше тексту.",
+                "REPEAT_LIMIT | Модель зациклилася на повторах, і сервер її зупинив. Спробуйте ще раз або оберіть"
+                        + " іншу модель.",
+                "OUT_OF_MEMORY | Бракує вільної пам’яті, щоб завантажити цю модель. Закрийте інші програми або"
+                        + " оберіть меншу модель.",
+                "MODEL_NOT_PULLED | В Ollama немає цієї моделі. Встановіть її в Ollama командою ollama pull або"
+                        + " оберіть іншу модель у налаштуваннях.",
+                "HOST_FORBIDDEN | Ollama відхилила цю адресу. Вкажіть 127.0.0.1 або дозвольте Ollama приймати"
+                        + " запити з мережі.",
+                "CLOUD_DISABLED | Хмарні моделі Ollama вимкнено на цьому комп’ютері. Увімкніть їх в Ollama або"
+                        + " оберіть локальну модель.",
+                "CLOUD_SIGNIN | Увійдіть в Ollama, щоб користуватися цією хмарною моделлю, і спробуйте ще раз.",
+                "TERMINATED | Сервер розірвав з’єднання, поки відповідав. Спробуйте ще раз за мить.",
+                "AUTH | Сервер вимагає ключ API. Укажіть у налаштуваннях провайдера назву змінної середовища, що його містить.",
+                "WRONG_MODEL_SERVED | Сервер відповів іншою моделлю, ніж обрано. Перевірте назву моделі.",
+                "MODEL_NOT_LISTED | Сервер не має моделі з таким ідентифікатором, тож нічого не надіслано. Оберіть"
+                        + " модель зі списку.",
+                "NOT_SUITABLE_STRUCTURED | Ця програма не підтримує структурованих відповідей, тому BookLoom не може нею"
+                        + " користуватися.",
+                "NOT_SUITABLE_DOCUMENTS | Ця адреса веде розмову з документами, а не з моделлю.",
+                "CREDITS | OpenRouter відхилив запит: кредити закінчилися або досягнуто ліміту ключа.",
+                "BLOCKED | Провайдер відмовився обробляти цей уривок.",
+                "NO_ENDPOINT_FOR_PARAMETERS | Жоден провайдер цієї моделі не підтримує структурованих відповідей або"
+                        + " вимкнення міркування."
+            })
+    void message_ukrainianDisplay_wordsEachNewReasonToken(final FailureReason reason, final String expected) {
+        final AppError error = AppError.of(
+                ErrorCode.upstream,
+                "Provider error",
+                "The provider failed.",
+                SafeDetails.empty().withReason(reason).withTokenCounts(696, 512).render(),
+                null);
+
+        assertThat(ErrorWords.message(UK, error)).isEqualTo(expected);
+    }
+
+    // IF the Ukrainian sentence could not name the engine, THEN a person would only learn that the server is "not
+    // Ollama"; the engine comes from the details as a constant, never from the server's words.
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "LM_STUDIO | Сервер за цією адресою — LM Studio, а не Ollama.",
+                "LLAMA_CPP | Сервер за цією адресою — llama-server, а не Ollama."
+            })
+    void message_ukrainianEngineMismatch_namesTheEngineFound(final ServerEngine found, final String expected) {
+        final AppError error = AppError.of(
+                ErrorCode.validation,
+                "Not an Ollama server",
+                "The server at this address is " + found.label() + ", not Ollama.",
+                SafeDetails.empty()
+                        .withReason(FailureReason.ENGINE_MISMATCH)
+                        .withEngine(found.name())
+                        .render(),
+                null);
+
+        assertThat(ErrorWords.message(UK, error)).isEqualTo(expected);
+    }
+
+    private static AppError engineFailure(final FailureReason reason, final ServerEngine engine) {
+        return AppError.of(
+                ErrorCode.modelNotFound,
+                "Model not found",
+                "The server has no model with the id gemma-4-e4b-typo. Check the model id.",
+                SafeDetails.empty()
+                        .withReason(reason)
+                        .withEndpoint(java.net.URI.create("http://127.0.0.1:1234/v1"))
+                        .withModelName("gemma-4-e4b-typo")
+                        .withEngine(engine.name())
+                        .render(),
+                null);
+    }
+
+    // LM Studio would answer an unlisted id with the loaded model, so the stop says so in either language.
+    @Test
+    void message_lmStudioModelNotListed_saysLmStudioHasNoModelInEnglish() {
+        assertThat(ErrorWords.message(EN, engineFailure(FailureReason.MODEL_NOT_LISTED, ServerEngine.LM_STUDIO)))
+                .isEqualTo("LM Studio has no model \"gemma-4-e4b-typo\". It would answer with the model that is"
+                        + " loaded. Pick a model from the list.");
+    }
+
+    @Test
+    void message_lmStudioModelNotListed_saysLmStudioHasNoModelInUkrainian() {
+        assertThat(ErrorWords.message(UK, engineFailure(FailureReason.MODEL_NOT_LISTED, ServerEngine.LM_STUDIO)))
+                .isEqualTo("LM Studio не має моделі «gemma-4-e4b-typo». Вона відповіла б моделлю, яку завантажено."
+                        + " Оберіть модель зі списку.");
+    }
+
+    // Unsloth's key is made in Unsloth's own settings; a refused sign-in names where.
+    @Test
+    void message_unslothAuthRefused_namesWhereTheKeyIsMade() {
+        assertThat(ErrorWords.message(UK, engineFailure(FailureReason.AUTH, ServerEngine.UNSLOTH)))
+                .isEqualTo("Unsloth потребує ключа API. Створіть його в Unsloth › Settings › API і впишіть тут назву"
+                        + " змінної середовища.");
+    }
+
+    // IF another engine's unlisted id got LM Studio's sentence, THEN it would claim a loaded model answers.
+    @Test
+    void message_unslothModelNotListedInEnglish_keepsTheFailuresOwnWords() {
+        assertThat(ErrorWords.message(EN, engineFailure(FailureReason.MODEL_NOT_LISTED, ServerEngine.UNSLOTH)))
+                .isEqualTo("The server has no model with the id gemma-4-e4b-typo. Check the model id.");
+    }
+
+    // Details that name no engine still give a whole sentence, never "— , а не".
+    @Test
+    void message_ukrainianEngineMismatchWithoutEngine_saysNotOllama() {
+        assertThat(ErrorWords.message(UK, withReason(FailureReason.ENGINE_MISMATCH)))
+                .isEqualTo("Сервер за цією адресою — не Ollama.");
+    }
+
+    // Ukrainian counts take one, few or many forms: 1 and 21 токена, 2 токенів, 5 токенів.
+    @ParameterizedTest
+    @CsvSource({"1, 696 з 1 токена", "2, 696 з 2 токенів", "5, 696 з 5 токенів", "21, 696 з 21 токена"})
+    void message_ukrainianContextOverflow_pluralisesTheWindowCount(final int window, final String counts) {
+        final AppError error = AppError.of(
+                ErrorCode.contextWindow,
+                "Too long",
+                "The passage did not fit.",
+                SafeDetails.empty()
+                        .withReason(FailureReason.CONTEXT_OVERFLOW)
+                        .withTokenCounts(696, window)
+                        .render(),
+                null);
+
+        assertThat(ErrorWords.message(UK, error)).contains("(" + counts + ")");
+    }
+
+    // IF the provider stated no counts, THEN the words say the passage did not fit without inventing figures.
+    @Test
+    void message_ukrainianContextOverflowWithoutCounts_omitsTheFigures() {
+        final AppError error = AppError.of(
+                ErrorCode.contextWindow,
+                "Too long",
+                "The passage did not fit.",
+                SafeDetails.empty().withReason(FailureReason.CONTEXT_OVERFLOW).render(),
+                null);
+
+        assertThat(ErrorWords.message(UK, error))
+                .isEqualTo("Цей уривок не вміщується у вікно моделі. Його позначено. Завантажте модель із більшим"
+                        + " контекстом або надішліть менше тексту.");
+    }
+
+    // The English catalogue holds the same advice for the screens that word a reason by its token.
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "context-overflow | This passage did not fit the model’s window (696 of 512 tokens). It was left to"
+                        + " review. Load the model with a larger context, or send less text.",
+                "repeat-limit | The model kept repeating itself and the server stopped it. Try again, or choose"
+                        + " another model.",
+                "out-of-memory | There is not enough free memory to load this model. Close other programs, or"
+                        + " choose a smaller model.",
+                "model-not-pulled | Ollama does not have this model installed. Install it in Ollama with ollama"
+                        + " pull, or choose another model in Settings.",
+                "host-forbidden | Ollama refused this address. Use 127.0.0.1 as the address, or let Ollama listen"
+                        + " on the network.",
+                "cloud-disabled | Ollama’s cloud models are turned off on this computer. Turn them on in Ollama, or"
+                        + " choose a local model.",
+                "cloud-signin | Sign in to Ollama to use this cloud model, then try again.",
+                "terminated | The server closed the connection while it was answering. Try again in a moment."
+            })
+    void code_englishReasonMessage_wordsEachNewReasonToken(final String token, final String expected) {
+        assertThat(EN.code(MessageKey.ERROR_REASON_MESSAGE, token, "counted", 696, 512))
+                .isEqualTo(expected);
+    }
+
+    // IF "unclassified" took the catalogue's catch-all, THEN the person would lose the code's more useful words.
+    @Test
+    void message_inUkrainianUnclassified_isWordedByItsCode() {
+        assertThat(ErrorWords.message(UK, withReason(FailureReason.UNCLASSIFIED)))
+                .isEqualTo("Щось у введених даних або в книжці не так. Подробиці пояснюють, що саме.");
     }
 
     @Test

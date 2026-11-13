@@ -15,10 +15,13 @@ public sealed interface JobEvent
                 ModelCallFinished,
                 MemoryUpdated,
                 ContextAssembled,
-                RoundStarted,
                 RecoveryWaiting,
                 BatchStarted,
                 CallSnapshotUpdated,
                 StepsPlanned,
                 StepChanged,
-                BriefSampleRead {}
+                BriefSampleRead,
+                ChapterSummaryKept,
+                ProofreadForecast,
+                ProofreadRoundStarted,
+                ProofreadWindowRead {}

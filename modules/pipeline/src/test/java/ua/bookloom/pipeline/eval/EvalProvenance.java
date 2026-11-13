@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.eval;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -12,6 +13,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -19,9 +21,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.QualityDial;
-import ua.bookloom.pipeline.prompt.BatchNotesSwitch;
-import ua.bookloom.pipeline.prompt.ReasoningPlan;
 
 /**
  * Where a prompt-eval report came from, so two reports can be compared knowing what changed between them: the code
@@ -38,9 +40,17 @@ import ua.bookloom.pipeline.prompt.ReasoningPlan;
  * @param dial the quality dial
  * @param brief the brief preset or file and the overrides, {@code defaults} when none
  * @param suite the suite name
- * @param reasoning the thinking plan of the run, {@code off} or the calls that are on (15i.X2)
- * @param batchNotes whether the batch draft asked for a note before each target, {@code on} or {@code off} (15i.X2)
+ * @param reasoning the thinking intent of the run's calls, {@code intent-off}: every call asks for thinking off and
+ *     the model's profile decides what is sent (design D20), which the run log's {@code profile resolved} line names
+ * @param pipelineCommit the full SHA of the commit whose sources the run measured, {@code unknown} outside a repository
+ * @param baselineOf the commit whose behaviour this run reproduces when it records a baseline, else null
+ * @param dataset the dataset the run read, or null for a suite that has no manifest yet
+ * @param quantisation the model's quantisation as the matrix script states it ({@code BOOKLOOM_EVAL_QUANT}), or null
+ * @param repeats how many times the dataset was run and with which seeds
+ * @param aggregates the run-level score of each repeat; empty until the repeats have run
+ * @param judge the judge that compared the run's outputs, or null when none did ({@code mode: none})
  */
+@Slf4j
 record EvalProvenance(
         String timestamp,
         String gitSha,
@@ -54,15 +64,26 @@ record EvalProvenance(
         String brief,
         String suite,
         String reasoning,
-        String batchNotes) {
+        String pipelineCommit,
+        @Nullable String baselineOf,
+        @Nullable EvalDataset dataset,
+        @Nullable String quantisation,
+        EvalRepeats repeats,
+        List<Double> aggregates,
+        JudgeRunner.@Nullable Block judge) {
 
+    static final int REPORT_VERSION = 2;
+    private static final double ROUNDING = 1_000_000.0;
+    // Every call asks for thinking off; the model's profile decides what reaches the server (design D20), which this
+    // report does not know (it depends on what the server said about the model), so the value names the intent only.
+    // The run log's "profile resolved" line says what was sent.
+    private static final String REASONING = "intent-off";
+
+    private static final String CALIBRATION_RESOURCE = "/eval/judge/calibration.json";
     static final String UNKNOWN = "unknown";
     private static final String PROMPT_DIR = "modules/pipeline/src/main/resources/ua/bookloom/pipeline/prompt";
     private static final int HASH_DIGITS = 12;
     private static final long GIT_TIMEOUT_SECONDS = 10;
-    private static final String[] BRIEF_KEYS = {
-        "PRESET", "GOLD", "BRIEF", "REGISTER", "NAMES", "GENRE", "RELEVANT_PAIRS", "BATCH_FORMAT"
-    };
 
     /** Rejects missing text. */
     EvalProvenance {
@@ -76,7 +97,9 @@ record EvalProvenance(
         Objects.requireNonNull(brief, "brief");
         Objects.requireNonNull(suite, "suite");
         Objects.requireNonNull(reasoning, "reasoning");
-        Objects.requireNonNull(batchNotes, "batchNotes");
+        Objects.requireNonNull(pipelineCommit, "pipelineCommit");
+        Objects.requireNonNull(repeats, "repeats");
+        aggregates = List.copyOf(aggregates);
     }
 
     /** Provenance of the run in this process: the clock, the checkout and the {@code BOOKLOOM_EVAL_*} settings. */
@@ -126,7 +149,7 @@ record EvalProvenance(
             final Path root,
             final int window,
             final String dial) {
-        final String label = joinLabel(env.getOrDefault("BOOKLOOM_EVAL_LABEL", ""), extraLabel);
+        final String label = EvalBriefLabel.joinLabel(env.getOrDefault("BOOKLOOM_EVAL_LABEL", ""), extraLabel);
         final List<String> git = git(root);
         return new EvalProvenance(
                 Instant.now(clock).truncatedTo(ChronoUnit.SECONDS).toString(),
@@ -138,11 +161,77 @@ record EvalProvenance(
                 "lmstudio".equalsIgnoreCase(env.get("BOOKLOOM_EVAL_PROVIDER")) ? "lmstudio" : "ollama",
                 window,
                 dial,
-                briefSummary(env),
+                EvalBriefLabel.briefSummary(env),
                 suite,
-                ReasoningPlan.resolve(env, System.getProperty(ReasoningPlan.PROPERTY_NAME))
-                        .token(),
-                BatchNotesSwitch.resolve(env, System.getProperty(BatchNotesSwitch.PROPERTY_NAME)) ? "on" : "off");
+                REASONING,
+                commit(root),
+                blankToNull(env.get("BOOKLOOM_EVAL_BASELINE_OF")),
+                datasetOf(suite),
+                blankToNull(env.get("BOOKLOOM_EVAL_QUANT")),
+                EvalRepeats.fromEnvironment(env),
+                List.of(),
+                null);
+    }
+
+    /** The manifest-checked dataset a suite reads, or null for a suite that has no manifest yet. */
+    private static @Nullable EvalDataset datasetOf(final String suite) {
+        return switch (suite) {
+            case MiniReport.SUITE -> EvalDataset.of(DatasetManifest.loadBundled(MiniBook.MINI_EN));
+            case JudgeCalibration.SUITE -> EvalDataset.of(DatasetManifest.loadBundled(CalItems.CAL_1));
+            case "sequence" -> EvalDataset.of(DatasetManifest.loadBundled("sequence"));
+            default -> null;
+        };
+    }
+
+    /** The same provenance reading the bundled dataset folder {@code id}, for a suite with more than one dataset. */
+    EvalProvenance withDataset(final String id) {
+        return copy(EvalDataset.of(DatasetManifest.loadBundled(id)), aggregates, judge);
+    }
+
+    /** The same provenance once the repeats have run and left their run-level scores. */
+    EvalProvenance withAggregates(final List<Double> scores) {
+        return copy(dataset, scores, judge);
+    }
+
+    /** The same provenance with the judge that compared the run's outputs. */
+    EvalProvenance withJudge(final JudgeRunner.Block block) {
+        return copy(dataset, aggregates, Objects.requireNonNull(block, "block"));
+    }
+
+    private EvalProvenance copy(
+            final @Nullable EvalDataset read, final List<Double> scores, final JudgeRunner.@Nullable Block block) {
+        return new EvalProvenance(
+                timestamp,
+                gitSha,
+                gitDirty,
+                promptHash,
+                model,
+                label,
+                provider,
+                window,
+                dial,
+                brief,
+                suite,
+                reasoning,
+                pipelineCommit,
+                baselineOf,
+                read,
+                quantisation,
+                repeats,
+                scores,
+                block);
+    }
+
+    /** The spread of the repeats' run-level scores (largest minus smallest), or null with fewer than two. */
+    @Nullable
+    Double noiseBand() {
+        if (aggregates.size() < 2) {
+            return null;
+        }
+        final double band = Collections.max(aggregates) - Collections.min(aggregates);
+        final double rounded = Math.round(band * ROUNDING) / ROUNDING;
+        log.debug("Eval noise band {} over {} aggregates", rounded, aggregates.size());
+        return rounded;
     }
 
     /** The directory name of this run in the history: {@code yyyyMMdd-HHmmss-suite-model[-label]}. */
@@ -158,7 +247,10 @@ record EvalProvenance(
         fields.put("gitSha", gitSha);
         fields.put("gitDirty", gitDirty);
         fields.put("promptHash", promptHash);
-        fields.put("model", model);
+        fields.put("version", REPORT_VERSION);
+        fields.put("pipelineCommit", pipelineCommit);
+        fields.put("baselineOf", baselineOf);
+        fields.put("model", modelBlock());
         fields.put("label", label);
         fields.put("provider", provider);
         fields.put("window", window);
@@ -166,12 +258,49 @@ record EvalProvenance(
         fields.put("brief", brief);
         fields.put("suite", suite);
         fields.put("reasoning", reasoning);
-        fields.put("batchNotes", batchNotes);
+        fields.put("dataset", dataset);
+        fields.put("judge", judge == null ? Map.of("mode", "none") : judgeJson(judge));
+        fields.put("repeats", Map.of("k", repeats.k(), "seeds", repeats.seeds()));
+        fields.put("aggregates", aggregates);
+        fields.put("noiseBand", noiseBand());
+        fields.put("comparison", null);
         try {
             return new ObjectMapper().writeValueAsString(fields);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    /** The judge block with the bundled calibration result, the evidence of how far the judge may be trusted. */
+    private static Map<String, Object> judgeJson(final JudgeRunner.Block block) {
+        final Map<String, Object> fields = block.json();
+        fields.put("calibration", calibrationResult());
+        return fields;
+    }
+
+    private static Object calibrationResult() {
+        try (InputStream in = Objects.requireNonNull(
+                EvalProvenance.class.getResourceAsStream(CALIBRATION_RESOURCE), CALIBRATION_RESOURCE)) {
+            return new ObjectMapper().readValue(in, Object.class);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private Map<String, Object> modelBlock() {
+        final Map<String, Object> block = new LinkedHashMap<>();
+        block.put("id", model);
+        block.put("provider", provider);
+        block.put("server", null);
+        block.put("serverVersion", null);
+        block.put("quantisation", quantisation);
+        block.put("contextWindow", window);
+        block.put("profileId", null);
+        block.put("thinking", reasoning);
+        block.put("sampling", null);
+        block.put("seedPolicy", "base+repeat");
+        block.put("seeds", repeats.seeds());
+        return block;
     }
 
     /** A report's JSON object with the {@code provenance} key added first. */
@@ -216,6 +345,16 @@ record EvalProvenance(
         return List.of(sha.strip(), String.valueOf(status != null && !status.isBlank()));
     }
 
+    /** The full SHA of the checkout's HEAD; {@code unknown} outside a repository. */
+    static String commit(final Path dir) {
+        final String sha = run(dir, "git", "rev-parse", "HEAD");
+        return sha == null || sha.isBlank() ? UNKNOWN : sha.strip();
+    }
+
+    private static @Nullable String blankToNull(@Nullable final String value) {
+        return value == null || value.isBlank() ? null : value.strip();
+    }
+
     /** The checkout root: the nearest ancestor of the working directory that holds {@code AGENTS.md}. */
     static Path repoRoot() {
         Path dir = Path.of("").toAbsolutePath();
@@ -236,35 +375,12 @@ record EvalProvenance(
                 return null;
             }
             return out;
-        } catch (IOException e) {
+        } catch (IOException _) {
             return null;
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             return null;
         }
-    }
-
-    private static String briefSummary(final Map<String, String> env) {
-        final StringBuilder out = new StringBuilder();
-        for (final String key : BRIEF_KEYS) {
-            final String value = env.get("BOOKLOOM_EVAL_" + key);
-            if (value != null && !value.isBlank()) {
-                final String shown = "BRIEF".equals(key) || "GOLD".equals(key)
-                        ? Path.of(value).getFileName().toString()
-                        : value;
-                out.append(out.length() == 0 ? "" : " ")
-                        .append(key.toLowerCase(java.util.Locale.ROOT))
-                        .append('=')
-                        .append(shown);
-            }
-        }
-        return out.length() == 0 ? "defaults" : out.toString();
-    }
-
-    private static String joinLabel(final String first, final String second) {
-        return Stream.of(first, second)
-                .filter(part -> !part.isBlank())
-                .collect(java.util.stream.Collectors.joining("-"));
     }
 
     private static String safe(final String name) {

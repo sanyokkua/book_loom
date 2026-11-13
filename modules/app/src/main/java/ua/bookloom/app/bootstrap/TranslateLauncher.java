@@ -2,15 +2,16 @@ package ua.bookloom.app.bootstrap;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ua.bookloom.api.AppError;
@@ -26,6 +27,7 @@ import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 import ua.bookloom.util.paths.AppPathsResolver;
+import ua.bookloom.util.paths.NameLookup;
 
 /** The file-only command-line bootstrap, ordered like the desktop launch without starting JavaFX. */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -36,41 +38,30 @@ public final class TranslateLauncher {
 
     /** Starts the command-line process and delegates its status to the operating system. */
     public static void main(String[] args) {
-        System.exit(run(args, System::getenv, System::getProperty, System.out));
+        final PrintStream out = new PrintStream(new FileOutputStream(FileDescriptor.out), true, StandardCharsets.UTF_8);
+        System.exit(run(args, System::getenv, System::getProperty, out));
     }
 
     /** Runs the command with an argument list and injectable environment, properties and output. */
-    public static int run(
-            List<String> args,
-            Function<String, @Nullable String> getEnv,
-            Function<String, @Nullable String> getProperty,
-            PrintStream out) {
+    public static int run(List<String> args, NameLookup getEnv, NameLookup getProperty, PrintStream out) {
         Objects.requireNonNull(args, "args");
         Objects.requireNonNull(getEnv, "getEnv");
         Objects.requireNonNull(getProperty, "getProperty");
         Objects.requireNonNull(out, "out");
         try {
             return runBeforeLogging(args, getEnv, getProperty, out);
-        } catch (Throwable cause) {
+        } catch (Exception | LinkageError cause) {
             return printError(startupFailure(cause), out);
         }
     }
 
     /** Array overload used by {@link #main(String[])} while tests can pass a list without touching process state. */
-    public static int run(
-            String[] args,
-            Function<String, @Nullable String> getEnv,
-            Function<String, @Nullable String> getProperty,
-            PrintStream out) {
+    public static int run(String[] args, NameLookup getEnv, NameLookup getProperty, PrintStream out) {
         Objects.requireNonNull(args, "args");
         return run(List.of(args), getEnv, getProperty, out);
     }
 
-    private static int runBeforeLogging(
-            List<String> args,
-            Function<String, @Nullable String> getEnv,
-            Function<String, @Nullable String> getProperty,
-            PrintStream out) {
+    private static int runBeforeLogging(List<String> args, NameLookup getEnv, NameLookup getProperty, PrintStream out) {
         final AppEnvironment environment = AppEnvironment.resolve(getEnv, getProperty);
         final AppPathsResolver resolver = new AppPathsResolver(getEnv, getProperty);
         final Result<AppPaths> prepared = resolver.resolve().flatMap(resolver::prepare);
@@ -90,8 +81,8 @@ public final class TranslateLauncher {
 
     private static int runAfterLock(
             List<String> args,
-            Function<String, @Nullable String> getEnv,
-            Function<String, @Nullable String> getProperty,
+            NameLookup getEnv,
+            NameLookup getProperty,
             PrintStream out,
             AppPaths paths,
             AppEnvironment environment) {
@@ -114,7 +105,7 @@ public final class TranslateLauncher {
             final int exit = runWithShutdownHook(injector, args, out);
             log.info("translate launcher exitCode={}", exit);
             return exit;
-        } catch (Throwable cause) {
+        } catch (Exception | LinkageError cause) {
             final AppError error = startupFailure(cause);
             log.error("Unexpected translate launcher failure code={}", error.code(), cause);
             final int exit = printError(error, out);
@@ -125,10 +116,7 @@ public final class TranslateLauncher {
 
     /** Configures logging as the desktop launch does, with the detailed log when it is switched on. */
     private static ResolvedLogLevel configureLogging(
-            Function<String, @Nullable String> getEnv,
-            Function<String, @Nullable String> getProperty,
-            AppPaths paths,
-            AppEnvironment environment) {
+            NameLookup getEnv, NameLookup getProperty, AppPaths paths, AppEnvironment environment) {
         final ResolvedLogLevel level = LoggingLevelResolver.resolve(getEnv, getProperty, environment);
         final ResolvedTraceFile trace = TraceFileResolver.resolve(getEnv, getProperty, environment);
         // The command line opens no window, so its session facts stay empty; the header still names the build.
@@ -139,16 +127,14 @@ public final class TranslateLauncher {
     }
 
     /** A run here has no window to pause in, so a configured mode changes nothing; say so once instead of silently. */
-    private static ResolvedReviewMode resolveIgnoredReviewMode(
-            Logger log, Function<String, @Nullable String> getEnv, Function<String, @Nullable String> getProperty) {
+    private static ResolvedReviewMode resolveIgnoredReviewMode(Logger log, NameLookup getEnv, NameLookup getProperty) {
         final ResolvedReviewMode reviewMode = ReviewModeResolver.resolve(getEnv, getProperty);
         final String rejected = reviewMode.rejectedValue();
         if (rejected != null) {
             log.info("review mode ignored by the command line value={}", rejected);
         } else if (reviewMode.source() != ResolvedReviewMode.Source.DEFAULT) {
-            log.info(
-                    "review mode ignored by the command line value={}",
-                    reviewMode.mode().name().toLowerCase(Locale.ROOT));
+            final String ignored = reviewMode.mode().name().toLowerCase(Locale.ROOT);
+            log.info("review mode ignored by the command line value={}", ignored);
         }
         return reviewMode;
     }
@@ -167,7 +153,7 @@ public final class TranslateLauncher {
     private static void removeHook(Thread hook) {
         try {
             Runtime.getRuntime().removeShutdownHook(hook);
-        } catch (IllegalStateException shuttingDown) {
+        } catch (IllegalStateException _) {
             // The JVM is already stopping and is running the hook itself; nothing is left to remove.
         }
     }

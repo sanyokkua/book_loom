@@ -26,8 +26,8 @@ import ua.bookloom.util.text.JunkRules;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class NameHygiene {
 
-    private static final Pattern CONTRACTION =
-            Pattern.compile("\\p{L}['’ʼ](?:ll|s|d|re|ve|m|t)(?![\\p{L}\\p{M}])", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CONTRACTION = Pattern.compile(
+            "\\p{L}['’ʼ](?:ll|s|d|re|ve|m|t)(?![\\p{L}\\p{M}])", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final int MIN_PLURAL_BASE = 3;
     private static final double ALONE_SHARE_LIMIT = FrequencyScan.ALIAS_STANDALONE_LIMIT;
     private static final Pattern WORDS = Pattern.compile("\\s+");

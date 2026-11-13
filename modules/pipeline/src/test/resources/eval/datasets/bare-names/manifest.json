@@ -1,0 +1,13 @@
+{
+ "id": "bare-names",
+ "version": 1,
+ "pair": "en-uk+ru-uk",
+ "ownerData": false,
+ "files": [
+  {
+   "path": "datasets/bare-names/names.json",
+   "sha256": "9f99379188f6ec3247fc2f10daa9a6fcc2b2840c9af8f0e4ee9d9f4826726891"
+  }
+ ],
+ "rootHash": "15f24644de8245d3c770d625c975956ab0b2c6c91887b6eea7a8c8e76c08858f"
+}

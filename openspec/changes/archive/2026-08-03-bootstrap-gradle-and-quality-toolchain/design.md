@@ -3,7 +3,7 @@
 ## Context
 
 See `proposal.md` — Why. The state to design against is: an empty repository with a complete frozen specification, and
-`docs/implementation_plan/01_MODULE_INVENTORY.md` already describing eight modules and their packages down to the class
+`docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md` already describing eight modules and their packages down to the class
 level. Nothing here is being discovered; it is being assembled from decisions already taken in ADR-0001 (Java 25 +
 JavaFX 25), ADR-0002 (Gradle Kotlin DSL), ADR-0014 (Lombok hybrid), and `04_Build_and_Release/01_BUILD_AND_TOOLING.md`.
 

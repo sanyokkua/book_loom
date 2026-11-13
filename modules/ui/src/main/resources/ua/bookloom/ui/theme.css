@@ -813,10 +813,17 @@
     -fx-spacing: 2px;
 }
 
+/* macOS draws a text run clipped to the box it measured, and a bold 15px glyph at the end of the run (the m of
+   "BookLoom") reaches past it, so the last letter lost its edge. Padding on the label lies outside the text node and
+   does not help; an effect that paints nothing makes the node draw into a larger area, and moves nothing. */
 .dialog-title {
     -fx-text-fill: -color-text-strong;
     -fx-font-size: 15px;
     -fx-font-weight: bold;
+}
+
+.dialog-title .text {
+    -fx-effect: dropshadow(three-pass-box, transparent, 2, 0, 0, 0);
 }
 
 .dialog-sub {
@@ -874,6 +881,10 @@
 
 .progress-marker-failed {
     -fx-text-fill: -color-err-fg;
+}
+
+.progress-marker-stopped {
+    -fx-text-fill: -color-muted;
 }
 
 .progress-detail {
@@ -1299,25 +1310,6 @@
     -fx-padding: 6px 8px 6px 8px;
 }
 
-/* Export: the last check's reread item, Before | After, with a fixed text struck through above the new one. */
-.reread-grid {
-    -fx-border-color: -color-border;
-    -fx-border-width: 1px;
-    -fx-border-radius: 6px;
-    -fx-padding: 8px;
-}
-
-.reread-heading,
-.reread-label {
-    -fx-text-fill: -color-text-strong;
-    -fx-font-weight: bold;
-}
-
-.reread-old {
-    -fx-fill: -color-muted;
-    -fx-strikethrough: true;
-}
-
 /* Export: a value shown, never edited (the original title and author). */
 .input-readonly {
     -fx-background-color: -color-surface-2;
@@ -1728,22 +1720,6 @@
 /* The thumb's shadow is a colour literal, so it lives under `.root` with the elevation effects. */
 .root .toggle-switch .thumb {
     -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,.3), 2, 0, 0, 1);
-}
-
-/* A glossary row's switch draws no shadow until it has focus: an effect on every row is repainted on every scroll
-   frame, and the table's switches sit in a row of text where position and colour already tell the state. */
-.root .glossary-table .toggle-switch .thumb {
-    -fx-effect: null;
-}
-
-.root .glossary-table .toggle-switch:focused .thumb {
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,.3), 2, 0, 0, 1);
-}
-
-/* A pooled glossary row is rebound to another entry while it scrolls: the thumb must be where the state says at once,
-   not slide there over 200 ms, or a row shows the previous row's switch for a moment. */
-.glossary-table .toggle-switch {
-    -thumb-move-animation-time: 1;
 }
 
 /* Reduced motion (Motion.isReduced): the switch's thumb jumps to its side instead of sliding there. */
@@ -2552,19 +2528,21 @@
     -fx-border-width: 0 0 1px 0;
 }
 
+/* The header's words start 3px further in, over the rows' left edge. */
 .glossary-table .column-header .label {
     -fx-text-fill: -color-muted;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
     -fx-alignment: CENTER_LEFT;
-    -fx-padding: 0 0 0 6px;
+    -fx-padding: 0 0 0 9px;
 }
 
-/* A row's separator is its own bottom border, so the cells carry no borders and an empty row draws none. */
+/* A row's separator is its own bottom border, so the cells carry no borders and an empty row draws none. Every row */
+/* keeps a transparent left edge as wide as a changed row's mark, so marking a row never moves its cells. */
 .glossary-table .table-row-cell {
     -fx-background-color: transparent;
     -fx-border-color: transparent transparent -color-divider transparent;
-    -fx-border-width: 0 0 1px 0;
+    -fx-border-width: 0 0 1px 3px;
 }
 
 .glossary-table .table-row-cell:empty {
@@ -2574,7 +2552,6 @@
 /* A row the last operation changed: a left edge, so no chip in the term cell can cut a long term (G9). */
 .glossary-table .table-row-cell:changed {
     -fx-border-color: transparent transparent -color-divider -color-info;
-    -fx-border-width: 0 0 1px 3px;
 }
 
 .glossary-table .table-row-cell:hover {
@@ -2656,12 +2633,40 @@
     -fx-font-style: italic;
 }
 
+/* JavaFX draws macOS's system font upright even in italic, so the slanted face is one with a real italic (SlantFace, */
+/* a class on the shell root). */
+.slant-segoe .glossary-table .text-field:suggested {
+    -fx-font-family: "Segoe UI";
+}
+
+.slant-helvetica .glossary-table .text-field:suggested {
+    -fx-font-family: "Helvetica Neue";
+}
+
+.slant-dejavu .glossary-table .text-field:suggested {
+    -fx-font-family: "DejaVu Sans";
+}
+
+.slant-liberation .glossary-table .text-field:suggested {
+    -fx-font-family: "Liberation Sans";
+}
+
+.slant-arial .glossary-table .text-field:suggested {
+    -fx-font-family: "Arial";
+}
+
 .glossary-suggested-badge {
     -fx-background-color: -color-info-bg;
     -fx-border-color: -color-info-bd;
     -fx-text-fill: -color-info-fg;
     -fx-font-size: 11px;
     -fx-font-weight: bold;
+    -fx-padding: 1px 6px 1px 6px;
+}
+
+/* The small chips of a glossary row: a value's origin, a review flag, the Unsure mark, a kept meaning. */
+.glossary-chip {
+    -fx-font-size: 12px;
     -fx-padding: 1px 6px 1px 6px;
 }
 
@@ -2675,6 +2680,12 @@
     -fx-border-radius: 6px;
     -fx-padding: 4px 8px 4px 0;
     -fx-cursor: hand;
+}
+
+/* A Kind or Gender value's origin wraps under it instead of ending in an ellipsis; two lines fit the 46px row. */
+.glossary-choice.glossary-wraps {
+    -fx-wrap-text: true;
+    -fx-line-spacing: -2px;
 }
 
 .glossary-choice:hover {

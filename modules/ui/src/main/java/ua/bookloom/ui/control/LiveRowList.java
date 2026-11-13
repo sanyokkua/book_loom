@@ -6,7 +6,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.regex.Pattern;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -20,6 +19,7 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -30,7 +30,9 @@ import ua.bookloom.ui.state.RunRow;
 
 /**
  * The list of the live card: one fixed-height row per segment the run has started, the chunk being translated last and
- * earlier chunks above it, each with its marker, its locator and one line of its text, the whole text on hover.
+ * earlier chunks above it, and one per kept chapter summary after its chapter, each with its marker, its locator (a
+ * summary's "Chapter {n} summarised") and one line of its text, the whole text on hover. A summary row is never
+ * followed to: it is shown when the person picks it.
  *
  * <p>It follows the newly translated segment: when rows arrive, the first one that has just become translated (or to
  * review, or translated again alone) is selected, and with none decided yet the first one being translated. A person's
@@ -46,7 +48,6 @@ public final class LiveRowList extends ListView<LiveRow> {
     public static final double ROW_HEIGHT = 32;
 
     private static final double PART_SPACING = 8;
-    private static final Pattern MARK = Pattern.compile("⟦[^⟧]*⟧");
     private static final Set<RowMarker> DECIDED = Set.of(RowMarker.TRANSLATED, RowMarker.ALONE, RowMarker.TO_REVIEW);
     private static final Set<RowMarker> IN_FLIGHT = Set.of(RowMarker.TRANSLATING, RowMarker.DRAFTED);
 
@@ -289,9 +290,12 @@ public final class LiveRowList extends ListView<LiveRow> {
             this.messages = messages;
             this.list = list;
             locator.getStyleClass().addAll("live-row-locator", "muted");
-            locator.setMinWidth(Label.USE_PREF_SIZE);
+            locator.setMinWidth(Region.USE_PREF_SIZE);
             text.getStyleClass().add("live-row-text");
             text.setMinWidth(0);
+            // The text asks for no room of its own and takes what the locator and the marker leave, so a long text
+            // never squeezes the locator away; it is the part that gives way.
+            text.setPrefWidth(0);
             text.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(text, Priority.ALWAYS);
             row.setAlignment(Pos.CENTER_LEFT);
@@ -314,16 +318,14 @@ public final class LiveRowList extends ListView<LiveRow> {
                 shownCode = item.fallbackCode();
                 row.getChildren().setAll(locator, text, markerNode(marker, item));
             }
-            locator.setText(item.locator());
-            text.setText(oneLine(item.displaySource()));
-            whole.setText(item.displaySource());
+            // A summary row's locator is a sentence ("Chapter 12 summarised"): at the list's smallest width it gives
+            // way, never the marker, which must stay whole.
+            locator.setMinWidth(LiveRowWords.isSummary(item) || LiveRowWords.isWindow(item) ? 0 : Region.USE_PREF_SIZE);
+            locator.setText(LiveRowWords.locator(item, messages));
+            text.setText(LiveRowWords.oneLine(item));
+            whole.setText(LiveRowWords.text(item));
             setTooltip(whole);
             setGraphic(row);
-        }
-
-        // The row reads as words: the inline marks are left out and line breaks become spaces; the hover keeps both.
-        private static String oneLine(final String source) {
-            return MARK.matcher(source).replaceAll("").replaceAll("\\s+", " ").strip();
         }
 
         private StateMarker markerNode(final RowMarker marker, final LiveRow item) {

@@ -1,0 +1,89 @@
+# data-version: 2026-10-28
+# deliberate: Muse Glimmer and Nemotron 3.5 Bolt are EXACT NONE rows, so the nemotron prefix rows never apply to Bolt.
+# deliberate: Qwen 2.5 is COMPLETE without uk and with ru, as its card lists.
+# deliberate: EuroLLM is COMPLETE with its 35 codes, uk and ru among them.
+# deliberate: MamayLM is POSITIVE_ONLY (uk, en); its evidence names BookLoom's own ru>uk run, so a ru>uk project on it gets no line (owner decision D-26).
+# deliberate: Lapa is POSITIVE_ONLY (uk, en) with no BookLoom run.
+# deliberate: TranslateGemma (55 codes) stays NONE: the vendor's appendix is not in the research folder, no code is invented.
+# deliberate: Qwen3 is POSITIVE_ONLY (ru, uk, en): the Qwen3 blog and report name Russian and Ukrainian; the full 119-code list is not in the research folder, so no gap is claimed and no code beyond these three is invented.
+# deliberate: Gemma 4 carries BookLoom's own run for en>uk on the effective-4B size only (token BOOKLOOM-RUN:en>uk@e4b, the e4b runs measured in docs/evaluation/results-quality-rounds.md#15d-results); no other size and no other pair counts as tested.
+# deliberate: Mistral Small 4 is NONE: the research found CONFLICT (24 codes in metadata, 11 in prose).
+# deliberate: Mistral Small 3.2 repeats the 24 codes of 3.1 (pl and uk in, la out) so a 3.2 name reaches a row; a prefix on 3.1 would not match it.
+# deliberate: Ministral 3 Reasoning is NONE: its card list was not read. MADLAD-400 and NLLB-200 are NONE: the list is 'see metadata'.
+# mapping: non-empty declared_list -> COMPLETE with its codes (parenthetical notes dropped); ENGLISH_ONLY -> COMPLETE en; NO_STATEMENT, CLAIMED_NO_LIST, CONFLICT or an empty list -> NONE.
+# mapping: matchKind PREFIX matches whole - or : segments, the longest pattern wins, EXACT beats PREFIX; key = pattern; source = declared_where; evidence = uk_quality_evidence.
+key,matchKind,pattern,listKind,codes,source,evidence
+llama-3.1,PREFIX,llama-3.1,COMPLETE,en;de;fr;it;pt;hi;es;th,card prose + HF metadata (official); prose adds 'trained on a broader collection',"Llama-3.1-8B-Instruct: Belebele-uk 63.78, MMLU-uk 42.94, WMT en-uk 16.24 (leaderboard 2026-05-06; Gemma-3-12B-it 87.22/53.77/11.90)"
+llama-3.2,PREFIX,llama-3.2,COMPLETE,en;de;fr;it;pt;hi;es;th,card prose + HF metadata (official); unsloth mirror metadata narrowed to 'en',"none found (UNKNOWN - searched: leaderboard, Llama 3.2 uk benchmark)"
+llama-3.3,PREFIX,llama-3.3,COMPLETE,en;de;fr;it;pt;hi;es;th,HF metadata (official); unsloth mirror metadata narrowed to 'en'; prose not re-read,none found
+llama-4,PREFIX,llama-4,COMPLETE,ar;de;en;es;fr;hi;id;it;pt;th;tl;vi,card prose + HF metadata; prose: pre-training covered 200 languages; out-of-scope: languages beyond those listed,none found
+qwen2.5,PREFIX,qwen2.5,COMPLETE,zh;en;fr;es;pt;de;it;ru;ja;ko;vi;th;ar,"card prose ('over 29 languages, including ... and more'); HF metadata says only 'en' (contradicts prose); GGUF general.languages=['en'] measured locally on qwen2.5:1.5b",ZNO-style exam 31/156 for 7B (chance 33); WMT25 team had to LoRA-tune it for uk (03-models/families/qwen2.5.md F8)
+qwen3,PREFIX,qwen3,POSITIVE_ONLY,ru;uk;en,"Qwen3 blog/report list (uk under Indo-European, per 03-models qwen3x.md F10); HF card prose '100+ languages and dialects' with no list; no HF metadata","Qwen3-8B-Base: Belebele 86.11, MMLU-uk 67.15, FLORES 18.53, WMT en-uk 5.16; Qwen3-8B (chat): near 0 on every task in the same harness (probable thinking/format artefact [inferred]) (leaderboard)"
+qwen3-2507,PREFIX,qwen3-2507,NONE,,card says only 'multiple languages'; no metadata,none found
+qwen3.5,PREFIX,qwen3.5,NONE,,card prose 'Expanded support to 201 languages and dialects'; list unpublished; no metadata,vendor WMT24++ average over 55 languages (includes en-uk_UA) 66.6 for 4B / see qwen3x.md; no per-uk number
+qwen3.6,PREFIX,qwen3.6,NONE,,card silent on languages; no metadata,vendor WMT24++ average only (03-models qwen3x.md)
+qwen3.8,PREFIX,qwen3.8,NONE,,card silent on languages; HF discussion #218 asking for a list is unanswered,none published
+qwen3-vl,PREFIX,qwen3-vl,NONE,,"card: 'OCR supports 32 languages' only (image text, not chat)",none found
+gemma2,PREFIX,gemma2,NONE,,card has no language statement; google repo metadata none; unsloth mirror metadata 'en',Tower+ 9B is built on Gemma 2 9B and trains uk (so uk is reachable by tuning)
+gemma3,PREFIX,gemma3,NONE,,card prose 'multilingual support in over 140 languages'; the 35 are not named; no metadata (unsloth GGUF mirror narrowed to 'en'),"Gemma-3-12B-it: Belebele-uk 87.22, MMLU-uk 53.77, WMT en-uk 11.90; 4B-it 45.33/31.09/15.18 (leaderboard); Lapa/MamayLM both chose it as base"
+gemma3n,PREFIX,gemma3n,NONE,,card prose 'trained with data in over 140 spoken languages'; unsloth mirror metadata 'en',card WMT24++ ChrF (all-language avg) E4B 50.1; no uk number
+gemma4,PREFIX,gemma4,NONE,,"card prose 'Out-of-the-box support for 35+ languages, pre-trained on 140+'; no metadata","BOOKLOOM-RUN:en>uk@e4b; BOOKLOOM-QUANT:nvfp4@e4b; 26B-A4B (reasoning): Belebele-uk 95.33, MMLU-uk 86.64, FLORES 36.68, WMT en-uk 30.03 (leaderboard, best of 13); other sizes: no uk number"
+translategemma,PREFIX,translategemma,NONE,,"tech report arXiv 2601.09012: SFT/RL over the 55 WMT24++ languages (WMT24++ configs include en-uk_UA and en-ru_RU); report names en-uk as an emphasised high-resource pair and cs-uk in human eval; full list is in an appendix not read; HF repos gated, no metadata",vendor: gains over Gemma 3 on WMT24++ 55 pairs and WMT25 human MQM (incl. cs-uk +1.0-1.6); no isolated en-uk number read
+mistral-small-3.1,PREFIX,mistral-small-3.1,COMPLETE,en;fr;de;es;pt;it;ja;ko;ru;zh;ar;fa;id;ms;ne;pl;ro;sr;sv;tr;uk;vi;hi;bn,HF metadata; 3.1 card prose names Russian and Ukrainian,no vendor uk number; community UNKNOWN
+mistral-small-3.2,PREFIX,mistral-small-3.2,COMPLETE,en;fr;de;es;pt;it;ja;ko;ru;zh;ar;fa;id;ms;ne;pl;ro;sr;sv;tr;uk;vi;hi;bn,HF metadata (same 24 codes as 3.1; the name parser reads 3.2 as its own version),none found
+mistral-small-3,PREFIX,mistral-small-3,COMPLETE,en;fr;de;es;it;pt;zh;ja;ru;ko,HF metadata,none found
+magistral-small,PREFIX,magistral-small,COMPLETE,en;fr;de;es;pt;it;ja;ko;ru;zh;ar;fa;id;ms;ne;pl;ro;sr;sv;tr;uk;vi;hi;bn,HF metadata + card prose (24 named incl. Ukrainian),none found
+devstral-small-2507,PREFIX,devstral-small-2507,COMPLETE,en;fr;de;es;pt;it;ja;ko;ru;zh;ar;fa;id;ms;ne;pl;ro;sr;sv;tr;uk;vi;hi;bn,HF metadata only (inherited from Small 3.x; a coding model),n/a (coding model)
+devstral-small-2,PREFIX,devstral-small-2,NONE,,no list in card or metadata,n/a
+mistral-small-4,PREFIX,mistral-small-4,NONE,,"metadata copies the 24-language Small 3 list; card prose says 'dozens of languages, including English, French, Spanish, German, Italian, Portuguese, Dutch, Chinese, Japanese, Korean, and Arabic'",none found
+ministral-3,PREFIX,ministral-3,COMPLETE,en;fr;es;de;it;pt;nl;zh;ja;ko;ar,HF metadata + card prose (same 11); blog says '40+ native languages' without a list,none found
+mistral-large-3,PREFIX,mistral-large-3,COMPLETE,en;fr;es;de;it;pt;nl;zh;ja;ko;ar,HF metadata + card prose (same 11); blog says '40+ native languages' without a list,none found
+mistral-nemo,PREFIX,mistral-nemo,COMPLETE,en;fr;de;es;it;pt;ru;zh;ja,HF metadata; card says 'multilingual' with a per-language MMLU table (fr de es it pt ...),none found
+mixtral,PREFIX,mixtral,COMPLETE,fr;it;de;es;en,HF metadata (Mixtral); Mistral 7B v0.3 has none,none found
+mistral-7b,PREFIX,mistral-7b,COMPLETE,fr;it;de;es;en,HF metadata (Mixtral); Mistral 7B v0.3 has none,none found
+phi-3.5-mini,PREFIX,phi-3.5-mini,COMPLETE,ar;zh;cs;da;nl;en;fi;fr;de;he;hu;it;ja;ko;no;pl;pt;ru;es;sv;th;tr;uk,card prose 'Supported languages:'; HF metadata is only the tag 'multilingual',"card per-language multilingual-MMLU table: Ukrainian 45.2 (Phi-3.5-mini column; Mistral-7B-v0.3 36.7, Llama-3.1-8B 52.9, Gemma-2-9B 62.0)"
+phi-4-mini,PREFIX,phi-4-mini,COMPLETE,ar;zh;cs;da;nl;en;fi;fr;de;he;hu;it;ja;ko;no;pl;pt;ru;es;sv;th;tr;uk,card prose 'Supported languages:' + HF metadata (23 codes + 'multilingual'); bartowski GGUF repo dropped it (None),none found
+phi-4-multimodal,PREFIX,phi-4-multimodal,COMPLETE,ar;zh;cs;da;nl;en;fi;fr;de;he;hu;it;ja;ko;no;pl;pt;ru;es;sv;th;tr;uk,card prose 'Supported languages:' + HF metadata (23 codes + 'multilingual'); bartowski GGUF repo dropped it (None),none found
+phi-4,PREFIX,phi-4,COMPLETE,en,HF metadata 'en'; card: 'primarily in English',none
+deepseek-v3,PREFIX,deepseek-v3,NONE,,no language statement; card notes R1-Zero 'language mixing'; V3 card MMMLU-non-English 79.4,none found
+deepseek-r1,PREFIX,deepseek-r1,NONE,,no language statement; card notes R1-Zero 'language mixing'; V3 card MMMLU-non-English 79.4,none found
+deepseek-r1-distill,PREFIX,deepseek-r1-distill,NONE,,no metadata; bartowski GGUF repos none; underlying base: Qwen2.5 (uk not named) or Llama 3.1 (uk not declared),none found
+glm-4,PREFIX,glm-4,NONE,,"HF metadata only (en, zh); no prose list","GLM-4-9B-Chat card: FLORES avg over 24 languages incl. uk and ru = 28.8 vs Llama-3-8B 25.0 (evaluated, not declared)"
+glm4,PREFIX,glm4,NONE,,"HF metadata only (en, zh); no prose list","GLM-4-9B-Chat card: FLORES avg over 24 languages incl. uk and ru = 28.8 vs Llama-3-8B 25.0 (evaluated, not declared)"
+granite,PREFIX,granite,COMPLETE,en;de;es;fr;ja;pt;ar;cs;it;ko;nl;zh,card prose 'Supported Languages' ('may finetune for other languages'); no metadata,none; MMMLU/INCLUDE only (03-models granite.md)
+nemotron-nano,PREFIX,nemotron-nano,COMPLETE,en;es;fr;de;it;ja,HF metadata + card prose; 12B card also lists Russian/Korean/Portuguese/Chinese under 'Supported languages include' in the input section (internal contradiction),none; 03-models nemotron.md
+nemotron-3-nano,PREFIX,nemotron-3-nano,COMPLETE,en;es;fr;de;it;ja,HF metadata + card prose; 12B card also lists Russian/Korean/Portuguese/Chinese under 'Supported languages include' in the input section (internal contradiction),none; 03-models nemotron.md
+nemotron-3-super,PREFIX,nemotron-3-super,COMPLETE,en;fr;de;it;ja;es;zh,HF metadata + card prose; pre-training 'English plus 19 other languages' unnamed,none
+nemotron3,PREFIX,nemotron3,COMPLETE,en,"per M10: card language tag English only; Lightning repo gated (HTTP 401), not read",none
+nemotron-3.5-lightning,PREFIX,nemotron-3.5-lightning,COMPLETE,en,"per M10: card language tag English only; Lightning repo gated (HTTP 401), not read",none
+gpt-oss,PREFIX,gpt-oss,NONE,,no language statement in card or metadata; MMMLU lists 14 languages without uk or ru,weakest uk of the Oct 10 local round (03-models gpt-oss note)
+command-r,PREFIX,command-r,COMPLETE,en;fr;de;es;it;pt;ja;ko;zh;ar,HF metadata (gated repo; prose not read),none
+aya,PREFIX,aya,COMPLETE,en;fr;de;es;it;pt;ja;ko;zh;ar;el;fa;pl;id;cs;he;hi;nl;ro;ru;tr;uk;vi,HF metadata (all five); Command A chat-template preamble names the same 23 languages (Ukrainian included); gated READMEs not read,none found (no uk benchmark)
+command-r7b,PREFIX,command-r7b,COMPLETE,en;fr;de;es;it;pt;ja;ko;zh;ar;el;fa;pl;id;cs;he;hi;nl;ro;ru;tr;uk;vi,HF metadata (all five); Command A chat-template preamble names the same 23 languages (Ukrainian included); gated READMEs not read,none found (no uk benchmark)
+command-a,PREFIX,command-a,COMPLETE,en;fr;de;es;it;pt;ja;ko;zh;ar;el;fa;pl;id;cs;he;hi;nl;ro;ru;tr;uk;vi,HF metadata (all five); Command A chat-template preamble names the same 23 languages (Ukrainian included); gated READMEs not read,none found (no uk benchmark)
+tiny-aya,PREFIX,tiny-aya,COMPLETE,en;nl;fr;it;pt;ro;es;cs;pl;uk;ru;el;de;da;sv;no;ca;gl;cy;ga;eu;hr;lv;lt;sk;sl;et;fi;hu;sr;bg;ar;fa;ur;tr;mt;he;hi;mr;bn;gu;pa;ta;te;ne;tl;ms;id;vi;jv;km;th;lo;zh;my;ja;ko;am;ha;ig;mg;sn;sw;wo;xh;yo;zu,HF metadata (gated),none found
+command-a-vision,PREFIX,command-a-vision,COMPLETE,en;fr;de;es;it;pt,HF metadata,none
+eurollm,PREFIX,eurollm,COMPLETE,en;de;es;fr;it;pt;pl;nl;tr;sv;cs;el;hu;ro;fi;uk;sl;sk;da;lt;lv;et;bg;no;ca;hr;ga;mt;gl;zh;ru;ko;ja;ar;hi,card prose (Language(s) list) + HF metadata,1.7B card ARC-C table has a Ukrainian column (EuroLLM-1.7B 0.3516 vs Gemma-2B 0.3601); 22B card: 'translating across all official EU languages' beats Gemma-3-27B/Qwen3-32B on its averages
+salamandra,PREFIX,salamandra,COMPLETE,bg;ca;cs;cy;da;de;el;en;es;et;eu;fi;fr;ga;gl;hr;hu;it;lt;lv;mt;nl;nn;no;oc;pl;pt;ro;ru;sh;sk;sl;sr;sv;uk,HF metadata + card ('35 European languages'); a Ukrainian-laws corpus is in the data table,none found
+alia,PREFIX,alia,COMPLETE,bg;ca;cs;cy;da;de;el;en;es;et;eu;fi;fr;ga;gl;hr;hu;it;lt;lv;mt;nl;nn;no;oc;pl;pt;ro;ru;sh;sk;sl;sr;sv;uk,HF metadata + card ('35 European languages'); a Ukrainian-laws corpus is in the data table,none found
+teuken,PREFIX,teuken,COMPLETE,de;bg;cs;da;el;en;es;et;fi;fr;ga;hr;hu;it;lt;lv;mt;nl;pl;pt;ro;sl;sv;sk,HF metadata (24 EU official languages),none
+olmo,PREFIX,olmo,COMPLETE,en,HF metadata + card 'Language(s): English',none
+smollm3,PREFIX,smollm3,COMPLETE,en;fr;es;de;it;pt;ar;zh;ru,"card prose ('6 languages'; 'also trained on Arabic, Chinese and Russian'); metadata lists 8 codes",card Flores-200/Belebele tables for fr es ... ar; none for uk
+falcon3,PREFIX,falcon3,COMPLETE,en;fr;es;pt,card prose 'supports 4 languages' + metadata,none
+falcon-h1,PREFIX,falcon-h1,COMPLETE,ar;cs;de;en;es;fr;hi;it;ja;ko;nl;pl;pt;ro;ru;sv;ur;zh,"HF metadata only; card prose says 'English, Multilingual'; H1R 7B metadata 'en'",none
+hermes-4,PREFIX,hermes-4,NONE,,HF metadata 'en' (narrowed: the base models are multilingual); card has no language statement; bartowski GGUF none,none found
+minicpm,PREFIX,minicpm,NONE,,"HF metadata zh,en (4.1); V-4.5 only the tag 'multilingual'",none
+internlm,PREFIX,internlm,NONE,,no list; prompt example 'English and Chinese',none
+intern-s1,PREFIX,intern-s1,NONE,,no list; prompt example 'English and Chinese',none
+kimi,PREFIX,kimi,NONE,,no language statement or metadata,none (all small Kimi models are 16B+ MoE)
+seed-x,PREFIX,seed-x,COMPLETE,zh;en;ar;cs;de;da;fi;fr;hr;hu;id;it;ja;ko;ms;nb;nl;no;pl;pt;ro;ru;es;sv;th;tr;uk;vi,card prose table (28 languages) + metadata,vendor tables; no isolated uk number read
+hunyuan-mt,PREFIX,hunyuan-mt,COMPLETE,zh;en;fr;pt;es;ja;tr;ru;ar;ko;th;it;de;vi;ms;id;tl;hi;pl;cs;nl;km;my;fa;gu;ur;te;mr;he;bn;ta;uk;bo;kk;mn;ug;yue,"card prose '33 languages, including five ethnic minority languages' + table (uk row present); Chimera has metadata (36 codes)",none read
+tower-plus,PREFIX,tower-plus,COMPLETE,de;nl;is;es;fr;pt;uk;hi;zh;ru;cs;ko;ja;it;en;da;pl;hu;sv;no;ro;fi,card prose 'Languages:' + metadata,none read
+towerinstruct,PREFIX,towerinstruct,COMPLETE,en;de;fr;zh;pt;nl;ru;ko;it;es,HF metadata,none
+madlad400,PREFIX,madlad400,NONE,,HF metadata (uk present in MADLAD; NLLB uses FLORES-200 codes such as ukr_Cyrl),FLORES-200 originally; no chat interface
+nllb-200,PREFIX,nllb-200,NONE,,HF metadata (uk present in MADLAD; NLLB uses FLORES-200 codes such as ukr_Cyrl),FLORES-200 originally; no chat interface
+mamaylm,PREFIX,mamaylm,POSITIVE_ONLY,uk;en,HF metadata + card ('Ukrainian-adapted'); Russian not mentioned,"BOOKLOOM-RUN:ru>uk; v1.0-12B: Belebele-uk 89.89, MMLU-uk 64.29, FLORES 20.89, WMT en-uk 25.85 (leaderboard; Gemma-3-12B-it 87.22/53.77/3.00/11.90); v2.0 figure is an image, numbers not read"
+lapa,PREFIX,lapa,POSITIVE_ONLY,uk;en,HF metadata + card ('Ukrainian-focused'); pt base declares only uk,"card: 33 BLEU en-uk on FLORES; leaderboard v0.1.2: WMT en-uk 32.98 (best), Belebele 86.89, MMLU-uk 61.85, IFEval-uk 31.79"
+muse-glimmer,EXACT,muse-glimmer,NONE,,hand row,no statement read
+nemotron-3.5-bolt,EXACT,nemotron-3.5-bolt,NONE,,hand row,no statement read
+ministral-3-reasoning,PREFIX,ministral-3-reasoning,NONE,,hand row,card list not read

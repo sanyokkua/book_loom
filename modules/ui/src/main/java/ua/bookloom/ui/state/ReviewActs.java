@@ -113,7 +113,7 @@ final class ReviewActs {
         }
         log.info("review {} of segment {} left it {}", request.name(), segmentId, stored.status());
         final String projectId = request.projectId();
-        final int remaining = queries.refreshed(projectId, request.shownCount(), mirror.live());
+        final int remaining = queries.flagged(projectId, request.shownCount(), mirror.live());
         final List<SegmentView> listed =
                 Objects.requireNonNullElse(queries.list(projectId, request.filter()), List.of());
         final String nextId = ReviewNext.after(request.name(), segmentId, stored.segmentId(), request.order(), listed);

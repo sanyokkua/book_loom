@@ -33,7 +33,7 @@ import ua.bookloom.api.pipeline.Paused;
 /** Proves recoverable errors retry only the failed model step. */
 class TranslationJobRecoveryTest {
 
-    private static final Pattern SOURCE_TEXT = Pattern.compile("<Text>\\n(.*?)\\n</Text>", Pattern.DOTALL);
+    private static final Pattern SOURCE_TEXT = Pattern.compile("<s id=\"1\">(.*?)</s>", Pattern.DOTALL);
 
     @TempDir
     private Path tempDir;

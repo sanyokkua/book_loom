@@ -60,7 +60,7 @@ final class KnowledgeAgreement {
                     case GENRE -> reply.genre();
                     case AUDIENCE -> reply.audience();
                     case VOICE -> reply.era();
-                    case REGISTER, NARRATOR, NARRATOR_GENDER -> null;
+                    case REGISTER, NARRATOR, NARRATOR_GENDER, STORY_SHAPE -> null;
                 };
         if (known == null) {
             log.debug("Knowledge has no {} to agree with", field);
@@ -85,7 +85,7 @@ final class KnowledgeAgreement {
             case GENRE -> genreAgrees(value, text);
             case AUDIENCE -> value.equals(audienceOf(text));
             case VOICE -> voiceAgrees(value, text);
-            case REGISTER, NARRATOR, NARRATOR_GENDER -> false;
+            case REGISTER, NARRATOR, NARRATOR_GENDER, STORY_SHAPE -> false;
         };
     }
 

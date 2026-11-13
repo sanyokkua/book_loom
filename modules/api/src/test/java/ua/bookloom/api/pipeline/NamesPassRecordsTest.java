@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -16,7 +17,7 @@ class NamesPassRecordsTest {
 
     @Test
     void estimate_validRange_keepsItsParts() {
-        final NamesEstimate estimate = new NamesEstimate(5, 1, 2);
+        final NamesEstimate estimate = new NamesEstimate(5, Map.of(CallKind.TERM_READING, 5), 1, 2, false);
 
         assertThat(estimate)
                 .extracting(NamesEstimate::calls, NamesEstimate::minutesLow, NamesEstimate::minutesHigh)
@@ -25,13 +26,14 @@ class NamesPassRecordsTest {
 
     @Test
     void estimate_noCalls_isAllowed() {
-        assertThat(new NamesEstimate(0, 0, 0).calls()).isZero();
+        assertThat(new NamesEstimate(0, Map.of(), 0, 0, false).calls()).isZero();
     }
 
     @ParameterizedTest
     @CsvSource({"-1, 0, 0", "1, -1, 0", "1, 3, 2"})
     void estimate_negativeOrBackwardsRange_isRefused(final int calls, final int low, final int high) {
-        assertThatThrownBy(() -> new NamesEstimate(calls, low, high)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new NamesEstimate(calls, Map.of(), low, high, false))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -46,15 +48,18 @@ class NamesPassRecordsTest {
 
     @Test
     void report_negativeCalls_isRefused() {
-        assertThatThrownBy(() -> new NamesPassReport(EntryChanges.none(), EntryChanges.none(), -1, Duration.ZERO))
+        final EntryChanges<GlossaryEntry> arg1 = EntryChanges.none();
+        final EntryChanges<LexiconEntry> arg2 = EntryChanges.none();
+        assertThatThrownBy(() -> new NamesPassReport(arg1, arg2, -1, Duration.ZERO))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void report_negativeElapsed_isRefused() {
-        assertThatThrownBy(
-                        () -> new NamesPassReport(EntryChanges.none(), EntryChanges.none(), 0, Duration.ofSeconds(-1)))
-                .isInstanceOf(IllegalArgumentException.class);
+        final EntryChanges<GlossaryEntry> arg1 = EntryChanges.none();
+        final EntryChanges<LexiconEntry> arg2 = EntryChanges.none();
+        final var arg3 = Duration.ofSeconds(-1);
+        assertThatThrownBy(() -> new NamesPassReport(arg1, arg2, 0, arg3)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

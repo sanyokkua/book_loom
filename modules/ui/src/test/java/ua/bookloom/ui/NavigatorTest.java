@@ -21,7 +21,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.CurrentProject;
-import ua.bookloom.ui.state.OpenBookForTest;
+import ua.bookloom.ui.state.OpenedBookFixture;
 
 /**
  * The navigator swaps the content region by enum constant, refuses a locked step and opens Import empty on request.
@@ -217,7 +217,7 @@ class NavigatorTest extends FxTestBase {
     void navigate_bookWithoutLanguages_refusesTranslatingButAllowsTheBrief() {
         final Injector graph = UiTestInjector.builder(Locale.ENGLISH).gated().build();
         final Navigator guarded = guardedNavigator(graph);
-        interact(() -> OpenBookForTest.open(graph.getInstance(CurrentProject.class), "en", null));
+        interact(() -> OpenedBookFixture.open(graph.getInstance(CurrentProject.class), "en", null));
 
         final boolean translating = navigateOnFxThread(guarded, ViewNames.TRANSLATING);
         final boolean brief = navigateOnFxThread(guarded, ViewNames.BOOK_BRIEF);
@@ -295,7 +295,7 @@ class NavigatorTest extends FxTestBase {
         final Injector graph = UiTestInjector.builder(Locale.ENGLISH).gated().build();
         final Navigator guarded = guardedNavigator(graph);
         final CurrentProject current = graph.getInstance(CurrentProject.class);
-        interact(() -> OpenBookForTest.open(current, "en", "uk"));
+        interact(() -> OpenedBookFixture.open(current, "en", "uk"));
         navigateOnFxThread(guarded, ViewNames.BOOK_BRIEF);
 
         final boolean accepted = openImportEmptyOnFxThread(guarded);

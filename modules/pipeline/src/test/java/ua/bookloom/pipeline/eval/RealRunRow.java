@@ -3,31 +3,19 @@ package ua.bookloom.pipeline.eval;
 import java.util.Objects;
 
 /**
- * One measured row of the real-run suite: a draft, a reviewer separation, a pair of a reviewer batch, a batch draft or a
- * repair of one case.
+ * One measured row of the real-run suite: a draft, a batch draft or a repair of one case.
  *
- * @param id the case id, with {@code #n} for the n-th pair of a reviewer batch
+ * @param id the case id,
  * @param kind the defect family the case belongs to, the grouping of the report
- * @param call which call it measured: draft, review, review-batch, batch or repair
+ * @param call which call it measured: draft, batch or repair
  * @param outcome what the row came to
- * @param stable whether repeated runs of a reviewer call asked for the same changes; true for a call made once
- * @param truncated whether the call's reply was cut by its output cap; set on the first row of a call only
  * @param items for a batch draft, how many items it held; zero otherwise
  * @param tooShort for a batch draft, the items whose target is far shorter than the source
  * @param leaked for a batch draft, the items whose target carries the protocol around the text
  * @param detail what the reply was, for the report
  */
 record RealRunRow(
-        String id,
-        String kind,
-        String call,
-        Outcome outcome,
-        boolean stable,
-        boolean truncated,
-        int items,
-        int tooShort,
-        int leaked,
-        String detail) {
+        String id, String kind, String call, Outcome outcome, int items, int tooShort, int leaked, String detail) {
 
     /** Rejects missing parts. */
     RealRunRow {
@@ -68,7 +56,7 @@ record RealRunRow(
             final boolean passed,
             final boolean knownFailure,
             final String detail) {
-        return new RealRunRow(id, kind, call, outcomeOf(passed, knownFailure), true, false, 0, 0, 0, detail);
+        return new RealRunRow(id, kind, call, outcomeOf(passed, knownFailure), 0, 0, 0, detail);
     }
 
     private static Outcome outcomeOf(final boolean passed, final boolean knownFailure) {
@@ -76,11 +64,6 @@ record RealRunRow(
             return passed ? Outcome.KNOWN_GREEN : Outcome.KNOWN_RED;
         }
         return passed ? Outcome.PASS : Outcome.FAIL;
-    }
-
-    /** This row with the repeat and cap facts of a reviewer call. */
-    RealRunRow withCall(final boolean repeatsAgreed, final boolean cut) {
-        return new RealRunRow(id, kind, call, outcome, repeatsAgreed, cut, items, tooShort, leaked, detail);
     }
 
     /** A batch draft's row: the counts the batch report adds up. */
@@ -92,8 +75,7 @@ record RealRunRow(
             final int tooShort,
             final int leaked,
             final String detail) {
-        return new RealRunRow(
-                id, kind, "batch", outcomeOf(passed, false), true, false, items, tooShort, leaked, detail);
+        return new RealRunRow(id, kind, "batch", outcomeOf(passed, false), items, tooShort, leaked, detail);
     }
 
     boolean isCounted() {

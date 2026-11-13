@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.LongStream;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
@@ -15,6 +16,7 @@ import ua.bookloom.api.pipeline.CallItemStatus;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallSegment;
 import ua.bookloom.api.pipeline.CallSnapshot;
+import ua.bookloom.api.pipeline.CallState;
 import ua.bookloom.ui.LiveCallFixtures;
 import ua.bookloom.ui.LiveRowFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
@@ -24,7 +26,7 @@ import ua.bookloom.ui.state.LiveRow.Stage;
 /** "All calls..." lists the calls the run kept, newest first, in the progress dialog's Calls view. */
 class LiveAllCallsTest extends LiveCardTestBase {
 
-    private static final List<CallKind> KINDS = List.of(CallKind.DRAFT, CallKind.REVIEW, CallKind.PLACEHOLDER_REPAIR);
+    private static final List<CallKind> KINDS = List.of(CallKind.DRAFT, CallKind.PROOFREAD, CallKind.REPAIR);
 
     // The kinds take turns so the rows tell the calls apart; the label is the pipeline's prompt name, never shown.
     private static CallSnapshot call(final long id) {
@@ -64,7 +66,7 @@ class LiveAllCallsTest extends LiveCardTestBase {
 
         assertThat(isShown("calls-card")).isTrue();
         assertThat(List.of(stepName(0), stepName(1), stepName(2)))
-                .containsExactly("Placeholder repair", "Review", "Translate");
+                .containsExactly("Repair", "Proofreading", "Translate");
     }
 
     private static CallSnapshot draft(final long id) {
@@ -91,7 +93,8 @@ class LiveAllCallsTest extends LiveCardTestBase {
     // as done, THEN "Translate is done" would sit over "Nothing yet." every time the dialog is opened; it says the call
     // is still at work, and an answered batch says the translations it brought back.
     @Test
-    void allCalls_newestCallStillWaiting_saysItIsAtWorkAndAnAnsweredBatchShowsItsTranslations() {
+    void allCalls_newestCallStillWaiting_saysItIsAtWorkAndAnAnsweredBatchShowsItsTranslations()
+            throws TimeoutException {
         final CallSnapshot answered = draft(1).answered("{\"1\":\"Джерело 1\"}", null, Duration.ofSeconds(3))
                 .withItems(List.of(new CallItem("1", "s-1", "Джерело 1", CallItemStatus.OK, List.of())));
         showLive(LiveRowFixtures.calls(LiveRowFixtures.rows(2, Stage.IN_CALL), List.of(answered, draft(2))));
@@ -100,10 +103,39 @@ class LiveAllCallsTest extends LiveCardTestBase {
         WaitForAsyncUtils.waitForFxEvents();
         final List<String> waiting = sayAndOutput();
         clickOn(required("progress-step-1"));
-        WaitForAsyncUtils.waitForFxEvents();
+        // Under a loaded machine the selection's detail can land a few pulses after the click.
+        awaitFx(() -> sayAndOutput().contains("Translate is done."));
 
         assertThat(waiting).containsExactly("Working on Translate.", "Nothing yet.");
         assertThat(sayAndOutput()).containsExactly("Translate is done.", "Джерело 1");
+    }
+
+    // IF a proofread call the person stopped were listed as failed, THEN a Stop would read as an error of the model.
+    @Test
+    void allCalls_proofreadCallCutByStop_saysStoppedNotFailed() throws TimeoutException {
+        final CallSnapshot answered = draft(1).answered("{\"1\":\"Джерело 1\"}", null, Duration.ofSeconds(3));
+        final CallSnapshot stopped = CallSnapshot.waiting(
+                        2,
+                        CallKind.PROOFREAD,
+                        "proofread",
+                        null,
+                        List.of(new CallSegment("s-1", "ch1 · p1", "Source 1", "Джерело 1")),
+                        List.of(),
+                        LiveCallFixtures.STARTED,
+                        1,
+                        2,
+                        Duration.ofMinutes(3))
+                .ended(CallState.CANCELLED, Duration.ofSeconds(2));
+        showLive(LiveRowFixtures.calls(LiveRowFixtures.rows(2, Stage.IN_CALL), List.of(answered, stopped)));
+
+        onFx(() -> button("translating-live-all-calls").fire());
+        WaitForAsyncUtils.waitForFxEvents();
+        awaitFx(() -> sayAndOutput().getFirst().contains("Proofreading"));
+
+        assertThat(stepName(0)).isEqualTo("Proofreading");
+        assertThat(sayAndOutput().getFirst()).isEqualTo("Proofreading was stopped.");
+        assertThat(((Label) required("progress-step-0").lookup(".progress-step-result")).getText())
+                .isEqualTo("Stopped");
     }
 
     // IF the dialog listed a call the card no longer keeps, THEN it would promise a prompt that is gone.
@@ -114,7 +146,7 @@ class LiveAllCallsTest extends LiveCardTestBase {
         onFx(() -> button("translating-live-all-calls").fire());
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(stepName(0)).isEqualTo("Placeholder repair");
+        assertThat(stepName(0)).isEqualTo("Repair");
         assertThat(((ListView<?>) required("calls-card").lookup(".list-view")).getItems())
                 .hasSize(50);
     }

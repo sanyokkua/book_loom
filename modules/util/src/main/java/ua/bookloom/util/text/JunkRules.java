@@ -1,5 +1,6 @@
 package ua.bookloom.util.text;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
@@ -65,10 +66,13 @@ public final class JunkRules {
     private static final Pattern LOWER_AFTER_HYPHEN = Pattern.compile("^\\p{Lu}\\p{L}+[-‐‑]\\p{Ll}\\p{L}*$");
 
     /** A line of a book's own printing notes: rights, ISBN, imprint, web address, credit line. */
-    private static final Pattern PRINTING_NOTE = Pattern.compile("(?iu)©|\\bcopyright\\b|\\ball rights reserved\\b"
-            + "|\\bisbn\\b|\\bfirst (published|edition|printing)\\b|\\blibrary of congress\\b"
-            + "|\\b(published|printed|distributed|typeset|illustrated|cover design) (by|in|for)\\b"
-            + "|\\bwww\\.|https?://|\\b[\\w.-]+@[\\w-]+\\.\\w+|^(written |translated )?by\\s+\\S+(\\s+\\S+){0,2}$");
+    private static final List<Pattern> PRINTING_NOTES = List.of(
+            Pattern.compile("(?iu)©|\\bcopyright\\b|\\ball rights reserved\\b|\\bisbn\\b|\\blibrary of congress\\b"),
+            Pattern.compile("(?iu)\\bfirst (?:published|edition|printing)\\b"),
+            Pattern.compile(
+                    "(?iu)\\b(?:published|printed|distributed|typeset|illustrated|cover design) (?:by|in|for)\\b"),
+            Pattern.compile("(?iu)\\bwww\\.|https?://|\\b[\\w.-]+@[\\w-]+\\.\\w+"),
+            Pattern.compile("(?iu)^(?:written |translated )?by\\s+\\S+(?:\\s+\\S+){0,2}$"));
 
     /**
      * How likely a term is not a name, from its shape and vocabulary alone.
@@ -124,7 +128,8 @@ public final class JunkRules {
         Objects.requireNonNull(line, "line");
         return !line.isBlank()
                 && WHITESPACE.split(line.strip()).length <= MAX_NOTE_WORDS
-                && PRINTING_NOTE.matcher(line.strip()).find();
+                && PRINTING_NOTES.stream()
+                        .anyMatch(note -> note.matcher(line.strip()).find());
     }
 
     // Every word has at least two letters and none is lower case: BRANWICK, NASA, but not I or A.

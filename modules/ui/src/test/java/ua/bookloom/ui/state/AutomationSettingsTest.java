@@ -65,36 +65,16 @@ class AutomationSettingsTest {
         assertThat(automation.reviewModeOverrideProperty().get()).isEqualTo("BOOKLOOM_REVIEW_MODE");
     }
 
+    // IF a choice still wrote the retired key, THEN a stale row would come back with every launch.
     @Test
-    void load_lastCheckUnwritten_offAndNotChosen() {
-        final AutomationSettings automation = direct(store);
-
-        automation.load();
-
-        assertThat(automation.lastCheckProperty().get()).isFalse();
-        assertThat(automation.lastCheckChosenProperty().get()).isFalse();
-    }
-
-    @Test
-    void load_lastCheckWrittenOn_onAndChosen() {
-        store.put(AppSetting.LAST_CHECK, true);
-        final AutomationSettings automation = direct(store);
-
-        automation.load();
-
-        assertThat(automation.lastCheckProperty().get()).isTrue();
-        assertThat(automation.lastCheckChosenProperty().get()).isTrue();
-    }
-
-    @Test
-    void chooseLastCheck_on_writesExplicitlyAndChosen() {
+    void chooseEveryChoice_storesNoLastCheckEntry() {
         final AutomationSettings automation = direct(store);
         automation.load();
 
-        automation.chooseLastCheck(true);
+        automation.chooseReviewMode(ReviewMode.ASSISTED);
+        automation.chooseKeepAwake(false);
 
-        assertThat(store.stored(AppSetting.LAST_CHECK)).contains(true);
-        assertThat(automation.lastCheckChosenProperty().get()).isTrue();
+        assertThat(store.all().data()).doesNotContainKey("automation.lastCheck").isNotEmpty();
     }
 
     @Test

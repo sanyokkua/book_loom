@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.checks;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -25,13 +27,15 @@ final class ResidueCheck {
     /**
      * A wrapper label where a reply puts one: at the very start of the text (after an opening quote), in front of a
      * brace, or as the text's last word. A label word inside a sentence ("Ціль: знищити міст" → "Target: destroy the
-     * bridge") is the book's own.
+     * bridge") is the book's own. The three places are read by hand around each label word, because one regular
+     * expression holding all three retries its blank runs from every start.
      */
-    private static final Pattern LABEL = Pattern.compile(
-            "^[\\s\"'«“„]*" + LABEL_WORD
-                    + "|" + LABEL_WORD + "(?=\\s*[\"'«“„]?\\s*\\{)"
-                    + "|" + LABEL_WORD + "(?=\\s*$)",
-            Pattern.CASE_INSENSITIVE);
+    private static final Pattern LABEL = Pattern.compile(LABEL_WORD, Pattern.CASE_INSENSITIVE);
+
+    private static final String LEADING = " \t\n\u000B\f\r\"'«“„";
+    private static final String BLANKS = " \t\n\u000B\f\r";
+    private static final String QUOTES = "\"'«“„";
+    private static final String UNICODE_LINE_ENDS = "\u0085\u2028\u2029";
 
     private static final String ENGLISH = "en";
     private static final String EXPLANATION =
@@ -57,15 +61,58 @@ final class ResidueCheck {
             log.debug("Reply-label rule skipped for an English target");
             return Optional.empty();
         }
-        final Matcher label = LABEL.matcher(target);
-        if (label.find() && count(LABEL, target) > count(LABEL, source)) {
-            return finding(target, label.start());
+        final List<Integer> labels = labelStarts(target);
+        if (!labels.isEmpty() && labels.size() > labelStarts(source).size()) {
+            return finding(target, labels.getFirst());
         }
         return Optional.empty();
     }
 
     private static long count(final Pattern pattern, final String text) {
         return pattern.matcher(text).results().count();
+    }
+
+    // Where each label sits that a reply would put: the start of the text for a leading one, else the label word.
+    private static List<Integer> labelStarts(final String text) {
+        final List<Integer> starts = new ArrayList<>();
+        final Matcher label = LABEL.matcher(text);
+        boolean first = true;
+        while (label.find()) {
+            // Only the first label can have nothing but opening quotes before it: any other has a label word there.
+            if (first && isLeading(text, label.start())) {
+                starts.add(0);
+            } else if (precedesBrace(text, label.end()) || endsText(text, label.end())) {
+                starts.add(label.start());
+            }
+            first = false;
+        }
+        return starts;
+    }
+
+    private static boolean isLeading(final String text, final int labelStart) {
+        return text.substring(0, labelStart).chars().allMatch(c -> LEADING.indexOf(c) >= 0);
+    }
+
+    private static boolean precedesBrace(final String text, final int from) {
+        int at = skip(text, from, BLANKS);
+        if (at < text.length() && QUOTES.indexOf(text.charAt(at)) >= 0) {
+            at++;
+        }
+        at = skip(text, at, BLANKS);
+        return at < text.length() && text.charAt(at) == '{';
+    }
+
+    private static boolean endsText(final String text, final int from) {
+        final int at = skip(text, from, BLANKS);
+        return at == text.length() || (at == text.length() - 1 && UNICODE_LINE_ENDS.indexOf(text.charAt(at)) >= 0);
+    }
+
+    private static int skip(final String text, final int from, final String members) {
+        int at = from;
+        while (at < text.length() && members.indexOf(text.charAt(at)) >= 0) {
+            at++;
+        }
+        return at;
     }
 
     private static Optional<CheckFinding> finding(final String target, final int start) {

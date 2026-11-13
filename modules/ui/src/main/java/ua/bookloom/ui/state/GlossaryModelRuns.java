@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -70,6 +69,7 @@ final class GlossaryModelRuns {
      * @param project the project the screen shows now
      * @param activities the model work under way, which a scan or review must not overlap
      * @param changes where the exact changes of an operation are kept for the results dialog
+     * @param measured where the seconds per call a names pass measured on the model are kept when it ends
      */
     record Screen(
             GlossaryService glossary,
@@ -84,7 +84,8 @@ final class GlossaryModelRuns {
             ObjectProperty<@Nullable GlossaryNotice> notice,
             Supplier<String> project,
             ActivityTracker activities,
-            ChangeLog changes) {}
+            ChangeLog changes,
+            MeasuredCalls measured) {}
 
     private static final long NO_TICKET = -1;
 
@@ -94,7 +95,7 @@ final class GlossaryModelRuns {
     private final ReadOnlyBooleanWrapper busy = new ReadOnlyBooleanWrapper();
     private final ModelBlock block;
     private final RunProgress runProgress;
-    private @Nullable Future<?> running;
+    private @Nullable Runnable cancelRunning;
     private ActivityTracker.@Nullable Handle handle;
     private @Nullable ActionSteps steps;
     private long ticket;
@@ -204,21 +205,20 @@ final class GlossaryModelRuns {
                 ActivityKind.NAMES_PASS,
                 ChangeOperation.AUTO_NAMES,
                 MessageKey.NAMES_STYLE_AUTO_NO_MODEL,
-                (model, progress) -> answers.prepare(
-                        project, model, chosen.flatMap(screen.detection()).orElse(null), progress),
+                (model, progress) -> answers.prepare(project, chosen.orElse(null), model, progress),
                 answer -> answers.autoPrepared(operation, answer));
     }
 
     /** Stops the action under way, if any; the glossary keeps what it had. */
     void stop() {
-        final Future<?> current = running;
+        final Runnable current = cancelRunning;
         if (current == null) {
             log.debug("stop of the model action ignored: none is running");
             return;
         }
         log.info("model action stopped by the person after {} requests", runProgress.requests());
-        current.cancel(true);
-        running = null;
+        current.run();
+        cancelRunning = null;
         stoppedPass = operation == ChangeOperation.AUTO_NAMES ? ticket : NO_TICKET;
         ticket++;
         steps = null;
@@ -273,7 +273,7 @@ final class GlossaryModelRuns {
         runProgress.begin(new CallFeed(handle, screen.activities()::now));
         busy.set(true);
         screen.notice().set(null);
-        running = calls.start(
+        cancelRunning = calls.start(
                 what.name(), job(selection, work, textOnly, mine), answer -> ended(mine, what, project, answer, onOk));
     }
 
@@ -311,7 +311,7 @@ final class GlossaryModelRuns {
             lateAfterStop(mine, what, project, answer, onOk);
             return;
         }
-        running = null;
+        cancelRunning = null;
         final AppError failure = answer.error();
         finishSteps(failure == null);
         screen.changes().ended(endActivity());
@@ -361,7 +361,7 @@ final class GlossaryModelRuns {
     }
 
     private void progress(final long mine, final JobEvent event) {
-        if (mine != ticket || running == null) {
+        if (mine != ticket || cancelRunning == null) {
             return;
         }
         runProgress.accept(event, handle);

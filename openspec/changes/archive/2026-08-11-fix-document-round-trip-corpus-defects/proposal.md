@@ -5,7 +5,7 @@ only ever called `DocumentPort.open`. It never wrote a single book back out, so 
 reassembly half — jsoup re-serialization, JDOM2 fragment parsing, zip repackaging, byte-splicing,
 the FB2 encoding re-decision — had been proven only against twelve hand-authored fixtures.
 
-A verification sweep over 214 real books (`docs/implementation_plan/notes-corpus-verification.md`)
+A verification sweep over 214 real books (`docs/spec_baseline/implementation_plan/notes-corpus-verification.md`)
 closed that gap. The headline is good: 207 of 208 writable books survived a full text-replacement
 round trip with byte-exact equality across 626,276 segments. But it found eight defects and one
 contradiction between two shipped requirements, and the worst of them is silent — **twelve EPUBs

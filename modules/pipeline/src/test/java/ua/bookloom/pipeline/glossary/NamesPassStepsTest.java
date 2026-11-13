@@ -22,7 +22,16 @@ import ua.bookloom.api.project.NamePolicy;
 class NamesPassStepsTest extends NamesPassTestBase {
 
     private static final List<String> STAGES = List.of(
-            "scan", "names", "terms-scan", "terms-review", "terms-read", "names-translate", "terms-translate", "write");
+            "scan",
+            "names",
+            "names-knowledge",
+            "terms-scan",
+            "terms-review",
+            "terms-read",
+            "names-translate",
+            "terms-translate",
+            "check",
+            "write");
 
     private List<StepChanged> changes(final StepKind kind, final StepState state) {
         return events.stream()
@@ -39,25 +48,25 @@ class NamesPassStepsTest extends NamesPassTestBase {
     // IF the planned count drifted from the stage list, THEN the dialog would show a wrong number of steps.
     @Test
     void stageCount_isTheNumberOfPassStages() {
-        assertThat(NamesPassSteps.STAGE_COUNT).isEqualTo(8);
-        assertThat(NamesPassSteps.STAGE_COUNT).isEqualTo(ua.bookloom.api.pipeline.NamesPassStage.values().length);
+        assertThat(NamesPassSteps.STAGE_COUNT).isEqualTo(10);
+        assertThat(ua.bookloom.api.pipeline.NamesPassStage.values()).hasSize(NamesPassSteps.STAGE_COUNT);
     }
 
-    // IF a stage were left out of the announcements, THEN the dialog would list fewer than the eight steps the pass
+    // IF a stage were left out of the announcements, THEN the dialog would list fewer than the ten steps the pass
     // takes.
     @Test
-    void run_fullPass_announcesEightStagesInOrder() {
+    void run_fullPass_announcesTenStagesInOrder() {
         seeded("uk", NamePolicy.TRANSLITERATE);
 
         final NamesPassReport report = succeeded(run(model()));
 
         assertThat(report).isNotNull();
-        assertThat(events).contains(new StepsPlanned(StepKind.STAGE, 8, false));
+        assertThat(events).contains(new StepsPlanned(StepKind.STAGE, 10, false));
         assertThat(labels(StepKind.STAGE, StepState.STARTED)).containsExactlyElementsOf(STAGES);
         assertThat(labels(StepKind.STAGE, StepState.ENDED)).containsExactlyElementsOf(STAGES);
         assertThat(changes(StepKind.STAGE, StepState.STARTED))
                 .extracting(StepChanged::index)
-                .containsExactly(0, 1, 2, 3, 4, 5, 6, 7);
+                .containsExactly(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
     }
 
     // The scan of a held glossary, the scan of the words and the write send no call, so they end with no call.
@@ -68,7 +77,8 @@ class NamesPassStepsTest extends NamesPassTestBase {
         succeeded(run(model()));
 
         assertThat(changes(StepKind.STAGE, StepState.ENDED))
-                .filteredOn(change -> List.of("scan", "terms-scan", "write").contains(change.label()))
+                .filteredOn(change ->
+                        List.of("scan", "terms-scan", "check", "write").contains(change.label()))
                 .extracting(StepChanged::result)
                 .containsOnly(StepResult.NO_CALL);
         assertThat(changes(StepKind.STAGE, StepState.ENDED))
@@ -94,7 +104,7 @@ class NamesPassStepsTest extends NamesPassTestBase {
         final List<String> begun = labels(StepKind.STAGE, StepState.STARTED);
         assertThat(begun).isNotEmpty().isSubsetOf(STAGES).doesNotContain("write");
         assertThat(begun).isEqualTo(STAGES.subList(0, begun.size()));
-        assertThat(begun.size()).isLessThan(STAGES.size());
+        assertThat(begun).hasSizeLessThan(STAGES.size());
         assertThat(changes(StepKind.STAGE, StepState.ENDED))
                 .extracting(StepChanged::result)
                 .doesNotContain(StepResult.FAILED);
@@ -108,7 +118,7 @@ class NamesPassStepsTest extends NamesPassTestBase {
 
         succeeded(run(model()));
 
-        final StepsPlanned planned = new StepsPlanned(StepKind.REQUEST, 17, true);
+        final StepsPlanned planned = new StepsPlanned(StepKind.REQUEST, 18, true);
         assertThat(events).containsOnlyOnce(planned);
         final int plannedAt = events.indexOf(planned);
         assertThat(events.get(plannedAt - 1))

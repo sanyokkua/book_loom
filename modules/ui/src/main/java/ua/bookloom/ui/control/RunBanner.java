@@ -21,7 +21,6 @@ import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ErrorPresenter;
-import ua.bookloom.ui.state.RunInterventions;
 import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.RunStateView;
 import ua.bookloom.ui.state.RunStateView.BannerView;
@@ -30,7 +29,6 @@ import ua.bookloom.ui.state.ShellBanners;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.StepLocks;
 import ua.bookloom.ui.state.Tone;
-import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
  * The run's banner, pinned above the content on every screen while its run-state row has one (README L3): one banner
@@ -79,10 +77,8 @@ public final class RunBanner {
      * @param navigator the screen shown, and where Go to Translating and the settings actions lead
      * @param banners the shell's slot the banner is pinned in
      * @param messages the catalogue the banner is worded from
-     * @param viewModel what Try again now resumes
-     * @param interventions what Skip asks to flag the segments in flight
-     * @param mirror the failure Show details opens
-     * @param errors where Show details opens it
+     * @param actions what Try again now resumes, what Skip asks to flag the segments in flight, and the failure Show
+     *     details opens and where it opens it
      * @param locks whether Translating is open, so Go to Translating is never offered for a closed step
      */
     @Inject
@@ -91,23 +87,19 @@ public final class RunBanner {
             final Navigator navigator,
             final ShellBanners banners,
             final Messages messages,
-            final TranslatingViewModel viewModel,
-            final RunInterventions interventions,
-            final StateMirror mirror,
-            final ErrorPresenter errors,
+            final RunBannerActions actions,
             final StepLocks locks) {
         this.runs = Objects.requireNonNull(runs, "runs");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.banners = Objects.requireNonNull(banners, "banners");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.locks = Objects.requireNonNull(locks, "locks");
-        Objects.requireNonNull(viewModel, "viewModel");
-        Objects.requireNonNull(interventions, "interventions");
-        Objects.requireNonNull(mirror, "mirror");
-        Objects.requireNonNull(errors, "errors");
+        Objects.requireNonNull(actions, "actions");
+        final StateMirror mirror = actions.mirror();
+        final ErrorPresenter errors = actions.errors();
         this.commands = Map.of(
-                RunStateView.RETRY, viewModel::resume,
-                RunStateView.SKIP, interventions::skipSegment,
+                RunStateView.RETRY, actions.viewModel()::resume,
+                RunStateView.SKIP, actions.interventions()::skipSegment,
                 RunStateView.OPEN_SETTINGS, () -> navigator.navigate(ViewNames.SETTINGS),
                 RunStateView.CHOOSE_MODEL, () -> navigator.navigate(ViewNames.SETTINGS),
                 RunStateView.SHOW_DETAILS, () -> showDetails(mirror.failure().get(), errors),

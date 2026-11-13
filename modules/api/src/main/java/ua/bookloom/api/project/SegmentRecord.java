@@ -30,12 +30,13 @@ import ua.bookloom.api.document.Unit;
  * @param confidence the QA/judge confidence in {@code [0,1]}
  * @param judgeScore the judge stage's score, or null when not judged
  * @param findings the QA findings recorded against this segment
- * @param path how this segment reached its current target
- * @param repairRounds how many repair rounds this segment has gone through
+ * @param path how this segment reached its current target: {@link SegmentPath#REPAIRED} when the one repair's text
+ *     stays or a flagged segment was given it
  * @param reviewed true once a person accepted, saved, reverted, applied a proposal or retried this segment successfully
- * @param context the context snapshot a retry replays, or null when none was recorded
+ * @param context what the segment's call was sent besides the run's fixed frame, or null when none was recorded
  * @param rejectedTarget the model's last refused reply in masked form, kept only while no machine target exists, so
  *     review shows the model's words labelled as unusable instead of the source; null otherwise
+ * @param proofread what the Proofread stage decided when a window read this segment, or null when none did
  */
 public record SegmentRecord(
         String projectId,
@@ -52,10 +53,10 @@ public record SegmentRecord(
         @Nullable Double judgeScore,
         List<QaFinding> findings,
         SegmentPath path,
-        int repairRounds,
         boolean reviewed,
         @Nullable ContextSnapshot context,
-        @Nullable String rejectedTarget) {
+        @Nullable String rejectedTarget,
+        @Nullable ProofreadVerdict proofread) {
 
     /**
      * Validates the invariants a caller is entitled to assume and defensively copies {@code findings} into an
@@ -88,7 +89,6 @@ public record SegmentRecord(
             @Nullable final Double judgeScore,
             final List<QaFinding> findings,
             final SegmentPath path,
-            final int repairRounds,
             final boolean reviewed,
             @Nullable final ContextSnapshot context) {
         this(
@@ -106,10 +106,38 @@ public record SegmentRecord(
                 judgeScore,
                 findings,
                 path,
-                repairRounds,
                 reviewed,
                 context,
+                null,
                 null);
+    }
+
+    /**
+     * Returns a record with a replacement proofread verdict, preserving every other field.
+     *
+     * @param proofread the verdict a Proofread window left, or null to clear it
+     * @return a new record with the supplied verdict
+     */
+    public SegmentRecord withProofread(@Nullable final ProofreadVerdict proofread) {
+        return new SegmentRecord(
+                projectId,
+                segmentId,
+                unitId,
+                ord,
+                kind,
+                status,
+                machineTarget,
+                maskedMachineTarget,
+                userTarget,
+                maskedUserTarget,
+                confidence,
+                judgeScore,
+                findings,
+                path,
+                reviewed,
+                context,
+                rejectedTarget,
+                proofread);
     }
 
     /**
@@ -134,10 +162,10 @@ public record SegmentRecord(
                 judgeScore,
                 findings,
                 path,
-                repairRounds,
                 reviewed,
                 context,
-                rejectedTarget);
+                rejectedTarget,
+                proofread);
     }
 
     /**
@@ -184,10 +212,10 @@ public record SegmentRecord(
                 judgeScore,
                 findings,
                 path,
-                repairRounds,
                 reviewed,
                 context,
-                rejectedTarget);
+                rejectedTarget,
+                proofread);
     }
 
     /**
@@ -216,10 +244,10 @@ public record SegmentRecord(
                 judgeScore,
                 findings,
                 path,
-                repairRounds,
                 reviewed,
                 context,
-                keptRejected);
+                keptRejected,
+                proofread);
     }
 
     /**
@@ -246,10 +274,10 @@ public record SegmentRecord(
                 judgeScore,
                 findings,
                 path,
-                repairRounds,
                 reviewed,
                 context,
-                rejectedTarget);
+                rejectedTarget,
+                proofread);
     }
 
     /**
@@ -275,10 +303,10 @@ public record SegmentRecord(
                 judgeScore,
                 findings,
                 path,
-                repairRounds,
                 reviewed,
                 context,
-                rejectedTarget);
+                rejectedTarget,
+                proofread);
     }
 
     /**
@@ -304,10 +332,10 @@ public record SegmentRecord(
                 judgeScore,
                 findings,
                 path,
-                repairRounds,
                 reviewed,
                 context,
-                rejectedTarget);
+                rejectedTarget,
+                proofread);
     }
 
     /**
@@ -332,9 +360,9 @@ public record SegmentRecord(
                 judgeScore,
                 findings,
                 path,
-                repairRounds,
                 reviewed,
                 context,
-                rejectedTarget);
+                rejectedTarget,
+                proofread);
     }
 }

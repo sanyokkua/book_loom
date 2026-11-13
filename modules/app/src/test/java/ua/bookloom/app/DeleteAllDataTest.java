@@ -69,8 +69,9 @@ class DeleteAllDataTest extends WorkspaceTestBase {
 
         waitUntil(() -> !atRestart.isEmpty());
         assertThat(atRestart).containsExactly("run ended, files gone");
-        assertThat(DATABASE_FILES)
-                .allSatisfy(name -> assertThat(dataDir.resolve(name)).doesNotExist());
+        for (final String name : DATABASE_FILES) {
+            assertThat(dataDir.resolve(name)).doesNotExist();
+        }
         assertThat(dataDir.resolve("logs")).as("the logs stay").isDirectory();
         assertThat(logged.list)
                 .as("no write fails once the run is stopped and the files are gone")

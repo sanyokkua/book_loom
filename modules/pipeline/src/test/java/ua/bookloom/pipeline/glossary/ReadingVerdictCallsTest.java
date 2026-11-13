@@ -22,8 +22,8 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.glossary.ReadingVerdict.Decision;
@@ -118,7 +118,7 @@ class ReadingVerdictCallsTest {
     }
 
     private static GlossaryEntry untyped() {
-        return new GlossaryEntry("p1:Brann", PROJECT, "Brann", null, TermType.OTHER, Gender.UNKNOWN, false);
+        return GlossaryEntry.of("p1:Brann", PROJECT, "Brann", null, TermType.OTHER, Gender.UNKNOWN, false);
     }
 
     /** The code's side: two review windows in which the code reads "she" after the name, and a tally of she ×4. */
@@ -196,7 +196,7 @@ class ReadingVerdictCallsTest {
 
         assertThat(model.requests()).isEmpty();
         assertThat(decision.gender()).isEqualTo(Gender.FEMALE);
-        assertThat(decision.origin()).isEqualTo(GenderOrigin.SUGGESTED);
+        assertThat(decision.origin()).isEqualTo(Origin.LIKELY);
     }
 
     @Test
@@ -215,7 +215,7 @@ class ReadingVerdictCallsTest {
 
         assertThat(model.requests()).isEmpty();
         assertThat(decision.gender()).isEqualTo(Gender.FEMALE);
-        assertThat(decision.origin()).isEqualTo(GenderOrigin.VERIFIED);
+        assertThat(decision.origin()).isEqualTo(Origin.BOOK);
     }
 
     // A tally that favours the other gender at under 80 % only keeps the votes from being verified (15i.N1); it is no
@@ -240,7 +240,8 @@ class ReadingVerdictCallsTest {
     @Test
     void verdict_personSetGender_sendsNoCall() {
         final ScriptedChatModel model = new ScriptedChatModel();
-        final GlossaryEntry person = untyped().withType(TermType.CHARACTER).withGender(Gender.MALE);
+        final GlossaryEntry person =
+                untyped().withType(TermType.CHARACTER, Origin.USER).withGender(Gender.MALE);
 
         decided(verdicts.verdict(tiebreakCase(person), FRAME, calls(model)));
 

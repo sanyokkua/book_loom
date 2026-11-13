@@ -4,17 +4,24 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.MeasuredFrom;
+import ua.bookloom.api.llm.MeasuredSpeed;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.RefusedSetting;
+import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
+import ua.bookloom.api.llm.ThinkingOverride;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.ui.i18n.MessageKey;
 
 /** The Models tab's draft: what it shows for stored settings, what stops a save, and what a save writes. */
@@ -29,6 +36,75 @@ class ModelDraftTest {
 
     private static ModelSettings saved(final Result<ModelSettings> result) {
         return Objects.requireNonNull(result.data());
+    }
+
+    // The thinking choice is the person's override on the model; the stored sampling choice is drawn and kept.
+    @Test
+    void apply_thinkingChosen_storesTheOverrideAndKeepsTheSamplingChoice() {
+        final ModelSettings current =
+                DEFAULTS.withOverrides(ThinkingOverride.RECOMMENDED, SamplingOverride.custom(null, 40, null, null));
+
+        final ModelSettings applied = saved(
+                ModelDraft.of(current).withThinking(ThinkingOverride.ALWAYS).apply(current));
+
+        assertThat(applied.thinkingOverride()).isEqualTo(ThinkingOverride.ALWAYS);
+        assertThat(applied.samplingOverride()).isEqualTo(current.samplingOverride());
+    }
+
+    // The Custom temperature and the temperature choice are one stored value.
+    @Test
+    void apply_customTemperatureTyped_isTheMyValue() {
+        final ModelSettings applied = saved(ModelDraft.of(DEFAULTS)
+                .withCustomSampling(true)
+                .withSampling(ModelDraft.of(DEFAULTS)
+                        .withCustomSampling(true)
+                        .sampling()
+                        .withTemperatureText("0.5")
+                        .withTopPText("0.9"))
+                .apply(DEFAULTS));
+
+        assertThat(applied.temperatureChoice()).isEqualTo(TemperatureChoice.VALUE);
+        assertThat(applied.temperature()).isEqualTo(0.5);
+        assertThat(applied.samplingOverride()).isEqualTo(SamplingOverride.custom(0.5, null, 0.9, null));
+    }
+
+    @Test
+    void apply_customTemperatureCleared_returnsToBookLoomsChoice() {
+        final ModelDraft custom =
+                ModelDraft.of(DEFAULTS).withChoice(TemperatureChoice.VALUE).withCustomSampling(true);
+
+        final ModelSettings applied = saved(
+                custom.withSampling(custom.sampling().withTemperatureText("")).apply(DEFAULTS));
+
+        assertThat(applied.temperatureChoice()).isEqualTo(TemperatureChoice.CHOOSE);
+        assertThat(applied.samplingOverride()).isEqualTo(SamplingOverride.custom(null, null, null, null));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"1.5,'',''", "'',0,''", "'','',2", "'',abc,''"})
+    void findings_customValueOutOfRange_holdsSave(final String topP, final String topK, final String minP) {
+        final ModelDraft custom = ModelDraft.of(DEFAULTS).withCustomSampling(true);
+        final SamplingDraft typed =
+                custom.sampling().withTopPText(topP).withTopKText(topK).withMinPText(minP);
+
+        assertThat(custom.withSampling(typed).findings()).hasSize(1);
+    }
+
+    @Test
+    void findings_profileDefault_ignoresWhatWasTyped() {
+        final ModelDraft custom = ModelDraft.of(DEFAULTS).withCustomSampling(true);
+        final ModelDraft typed = custom.withSampling(custom.sampling().withTopPText("1.5"));
+
+        assertThat(typed.withCustomSampling(false).findings()).isEmpty();
+    }
+
+    @Test
+    void withThinking_otherChoice_makesTheDraftDiffer() {
+        final ModelDraft draft = ModelDraft.of(DEFAULTS);
+
+        assertThat(draft.withThinking(ThinkingOverride.ALLOW_PROOFREAD_AND_NAMES))
+                .isNotEqualTo(draft);
+        assertThat(draft.withThinking(ThinkingOverride.RECOMMENDED)).isEqualTo(draft);
     }
 
     @Test
@@ -220,14 +296,16 @@ class ModelDraftTest {
                 null,
                 OutputLengthField.MAX_TOKENS,
                 List.of(refusal),
-                1.5,
-                MeasuredFrom.RUN);
+                Map.of(CallKind.DRAFT, new MeasuredSpeed(1.5, MeasuredFrom.RUN)),
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
 
         final ModelSettings written =
                 saved(ModelDraft.of(DEFAULTS).withChoice(TemperatureChoice.OMIT).apply(current));
 
         assertThat(written.refused()).containsExactly(refusal);
-        assertThat(written.measuredSecondsPerSegment()).isEqualTo(1.5);
+        assertThat(written.speedOf(CallKind.DRAFT).map(MeasuredSpeed::seconds)).hasValue(1.5);
     }
 
     @Test

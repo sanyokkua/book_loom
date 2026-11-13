@@ -11,7 +11,7 @@ import org.jspecify.annotations.Nullable;
  * {@code Result.err(...)} instead. Callers branch on {@link #isOk()} rather than catching.
  *
  * <p>It is a record with two nullable components rather than a sealed {@code Ok}/{@code Err} pair because
- * {@code docs/specification/02_Architecture/09_ERROR_HANDLING.md#result-envelope} fixes that form. The invariant a
+ * {@code docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#result-envelope} fixes that form. The invariant a
  * sealed pair would give structurally — exactly one side present — is enforced in the compact constructor instead,
  * so it holds for every instance however it was built.
  *

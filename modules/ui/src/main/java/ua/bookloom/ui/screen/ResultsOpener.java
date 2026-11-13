@@ -13,6 +13,7 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ChangeMarks;
 import ua.bookloom.ui.state.ChangeOperation;
 import ua.bookloom.ui.state.ChangeResults;
+import ua.bookloom.ui.state.ChangeSection;
 import ua.bookloom.ui.state.NamesStyleViewModel;
 import ua.bookloom.ui.state.ResultsView;
 
@@ -76,10 +77,22 @@ final class ResultsOpener {
         }
     }
 
+    // The same writes the tables' own target cells make.
+    private void edit(final ChangeSection section, final String key, final String text) {
+        log.debug("a target typed in the results: section={} key={}", section, key);
+        switch (section) {
+            case NAMES -> names.setTarget(key, text);
+            case TERMS -> names.recurring().setRendering(key, text);
+        }
+    }
+
     private void open(final ChangeResults results) {
         final List<ChangeMarks.Side> sides = sidesOf(results.operation(), names.marks());
         final ResultsView view = new ResultsView(
-                results, () -> sides.forEach(side -> side.onlyChanged().set(side.size() > 0)), modalHost::hide);
+                results,
+                () -> sides.forEach(side -> side.onlyChanged().set(side.size() > 0)),
+                modalHost::hide,
+                this::edit);
         modalHost.show(ProgressDialog.results(view, messages), false);
     }
 }

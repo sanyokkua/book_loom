@@ -14,7 +14,7 @@ import org.jspecify.annotations.Nullable;
  * glossary entry it is soft: the rendering is a "keep consistent" hint, never a lock.
  *
  * <p>Which rendering counts as established is decided here, once, by the conflict policy of {@link #established()}, so
- * the prompt, the reviewer and the screen agree.
+ * the prompt, the run's term learning and the screen agree.
  *
  * @param projectId the owning project's id
  * @param term the source term as proposed or typed; matched ignoring case
@@ -27,6 +27,8 @@ import org.jspecify.annotations.Nullable;
  * @param chosenOrigin who wrote {@code chosen}; null exactly when {@code chosen} is null, and a chosen rendering
  *     stated with no origin is {@link RenderingOrigin#PERSON}'s, so hand-made entries keep the person's authority. A
  *     person's rendering is never replaced by a reading or a file; a model's may be
+ * @param forms the other spellings of the term the book uses (its inflected forms, a plural), which share its
+ *     renderings; never null, empty for most entries
  */
 public record LexiconEntry(
         String projectId,
@@ -35,7 +37,8 @@ public record LexiconEntry(
         @Nullable String chosen,
         @Nullable String suggested,
         @Nullable Learned learned,
-        @Nullable RenderingOrigin chosenOrigin) {
+        @Nullable RenderingOrigin chosenOrigin,
+        List<String> forms) {
 
     /**
      * One verified rendering and its use count.
@@ -81,6 +84,19 @@ public record LexiconEntry(
         chosen = blankAsNull(chosen);
         suggested = blankAsNull(suggested);
         chosenOrigin = chosen == null ? null : Objects.requireNonNullElse(chosenOrigin, RenderingOrigin.PERSON);
+        forms = List.copyOf(Objects.requireNonNull(forms, "forms"));
+    }
+
+    /** An entry with no other form. */
+    public LexiconEntry(
+            final String projectId,
+            final String term,
+            final List<Rendering> renderings,
+            @Nullable final String chosen,
+            @Nullable final String suggested,
+            @Nullable final Learned learned,
+            @Nullable final RenderingOrigin chosenOrigin) {
+        this(projectId, term, renderings, chosen, suggested, learned, chosenOrigin, List.of());
     }
 
     /** An entry whose chosen rendering, if any, is the person's. */
@@ -91,7 +107,7 @@ public record LexiconEntry(
             @Nullable final String chosen,
             @Nullable final String suggested,
             @Nullable final Learned learned) {
-        this(projectId, term, renderings, chosen, suggested, learned, null);
+        this(projectId, term, renderings, chosen, suggested, learned, null, List.of());
     }
 
     /**
@@ -169,7 +185,7 @@ public record LexiconEntry(
         if (!found) {
             next.add(new Rendering(rendering.strip(), 1));
         }
-        return new LexiconEntry(projectId, term, next, chosen, suggested, learned, chosenOrigin);
+        return new LexiconEntry(projectId, term, next, chosen, suggested, learned, chosenOrigin, forms);
     }
 
     /**
@@ -179,7 +195,8 @@ public record LexiconEntry(
      * @return a copy with the choice set, whose origin is {@link RenderingOrigin#PERSON}
      */
     public LexiconEntry withChosen(@Nullable final String rendering) {
-        return new LexiconEntry(projectId, term, renderings, rendering, suggested, learned, RenderingOrigin.PERSON);
+        return new LexiconEntry(
+                projectId, term, renderings, rendering, suggested, learned, RenderingOrigin.PERSON, forms);
     }
 
     /**
@@ -189,7 +206,8 @@ public record LexiconEntry(
      * @return a copy with the choice set, whose origin is {@link RenderingOrigin#MODEL}
      */
     public LexiconEntry withModelRendering(@Nullable final String rendering) {
-        return new LexiconEntry(projectId, term, renderings, rendering, suggested, learned, RenderingOrigin.MODEL);
+        return new LexiconEntry(
+                projectId, term, renderings, rendering, suggested, learned, RenderingOrigin.MODEL, forms);
     }
 
     /**
@@ -209,7 +227,7 @@ public record LexiconEntry(
      * @return a copy with the suggestion set
      */
     public LexiconEntry withSuggested(@Nullable final String rendering) {
-        return new LexiconEntry(projectId, term, renderings, chosen, rendering, learned, chosenOrigin);
+        return new LexiconEntry(projectId, term, renderings, chosen, rendering, learned, chosenOrigin, forms);
     }
 
     /**
@@ -219,7 +237,7 @@ public record LexiconEntry(
      * @return a copy with the learned rendering set
      */
     public LexiconEntry withLearned(@Nullable final Learned learned) {
-        return new LexiconEntry(projectId, term, renderings, chosen, suggested, learned, chosenOrigin);
+        return new LexiconEntry(projectId, term, renderings, chosen, suggested, learned, chosenOrigin, forms);
     }
 
     /**

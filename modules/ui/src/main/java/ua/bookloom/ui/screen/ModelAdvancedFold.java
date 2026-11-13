@@ -12,7 +12,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import org.controlsfx.control.SegmentedButton;
 import ua.bookloom.api.llm.OutputLengthField;
-import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -23,7 +23,7 @@ import ua.bookloom.ui.state.TechnicalDetails;
 
 /**
  * The fold for the rarely needed field that carries the answer length. An OpenAI-compatible server is offered the two
- * fields; Ollama has its own option, so it is only told so. The fold is open while technical details are on.
+ * fields; Ollama, natively or through its {@code /v1}, has its own option, so it is only told so. The fold is open while technical details are on.
  */
 final class ModelAdvancedFold {
 
@@ -72,7 +72,7 @@ final class ModelAdvancedFold {
     void show() {
         final ModelDraft draft = form.draft().get();
         final ModelEntry entry = form.selected().get();
-        final boolean isOllama = entry != null && entry.kind() == ProviderKind.OLLAMA;
+        final boolean isOllama = entry != null && entry.engine() == ServerEngine.OLLAMA;
         final boolean offered = entry != null && !isOllama;
         for (final Node node : new Node[] {heading, segmented, completion, tokens}) {
             node.setVisible(offered);

@@ -76,8 +76,9 @@ class ReviewPauseDeskIntegrationTest {
     @TempDir
     private Path booksDir;
 
-    private final FakeModel model =
-            new FakeModel("{\"target\":\"" + FIRST_TARGET + "\"}", "{\"target\":\"" + SECOND_TARGET + "\"}");
+    // The model profile's batch of two takes both segments in one call, Manual review included (redesign 10.8).
+    private final FakeModel model = new FakeModel("{\"items\":[{\"id\":\"1\",\"target\":\"" + FIRST_TARGET
+            + "\"},{\"id\":\"2\",\"target\":\"" + SECOND_TARGET + "\"}]}");
     private Injector injector;
 
     @BeforeEach
@@ -130,7 +131,7 @@ class ReviewPauseDeskIntegrationTest {
         assertThat(afterAccept.maskedMachineTarget()).isEqualTo(FIRST_TARGET);
         assertThat(secondView.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(secondView.maskedMachineTarget()).isEqualTo(SECOND_TARGET);
-        assertThat(model.requests()).hasSize(2);
+        assertThat(model.requests()).hasSize(1);
     }
 
     private void openBookAndStartManualRun() throws Exception {

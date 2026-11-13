@@ -49,7 +49,7 @@ class ProjectActionsImplTest extends ProjectActionsTestBase {
         listStored(UK, DE);
         final Project created =
                 book("p-new", "fr", NameOrigin.AUTO, "Earth Gravity · EN → FR", ProjectFixtures.BOOK_HASH);
-        service.edits().onTranslateInto(Result.ok(new ProjectChange.Saved(created)));
+        service.edits().onTranslateInto(Result.ok(new ProjectChange.Saved(created, 0)));
         translateIntoGroup();
 
         onFx(() -> translate.create("fr", null));
@@ -64,7 +64,7 @@ class ProjectActionsImplTest extends ProjectActionsTestBase {
     @Test
     void translateInto_createdWithATypedName_passesTheNameOn() throws Exception {
         listStored(UK, DE);
-        service.edits().onTranslateInto(Result.ok(new ProjectChange.Saved(UK)));
+        service.edits().onTranslateInto(Result.ok(new ProjectChange.Saved(UK, 0)));
         translateIntoGroup();
 
         onFx(() -> translate.create("uk", "Earth Gravity · 26b"));
@@ -112,7 +112,7 @@ class ProjectActionsImplTest extends ProjectActionsTestBase {
         translateIntoGroup();
         onFx(() -> translate.create("uk", null));
         settle();
-        service.edits().onTranslateInto(Result.ok(new ProjectChange.Saved(UK)));
+        service.edits().onTranslateInto(Result.ok(new ProjectChange.Saved(UK, 0)));
 
         onFx(() -> samePair.makeSecond("Earth Gravity · second try"));
         settle();

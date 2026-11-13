@@ -113,10 +113,7 @@ public final class AppearanceController {
                 exitGuard,
                 messages,
                 system,
-                language,
-                restart,
-                restartError,
-                saveError,
+                new AppearanceLanguageRow.Controls(language, restart, restartError, saveError),
                 themeController.saveFailedProperty());
         Tips.install(messages, technical, MessageKey.APPEARANCE_TECHNICAL_TIP);
         technical.selectedProperty().bindBidirectional(technicalDetails.property());

@@ -10,9 +10,8 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
+import java.util.concurrent.locks.LockSupport;
 import javafx.application.Platform;
-import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.persistence.SettingsRepository;
@@ -25,16 +24,18 @@ import ua.bookloom.ui.UiModule;
 import ua.bookloom.ui.state.AutomationSettings;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
+import ua.bookloom.util.paths.NameLookup;
 
 /** A mode chosen in Settings reaches the next run start through the real source and the real store. */
 class AutomationReviewModeTest {
 
     private static final long WAIT_SECONDS = 10;
+    private static final long POLL_NANOS = TimeUnit.MILLISECONDS.toNanos(20);
 
     @TempDir
     private Path dataDir;
 
-    private Injector launch(final Function<String, @Nullable String> env) throws Exception {
+    private Injector launch(final NameLookup env) throws Exception {
         final Path logDir = Files.createDirectories(dataDir.resolve("logs"));
         final StartupContext startup = new StartupContext(
                 AppPaths.of(dataDir, logDir), AppEnvironment.DEV, ReviewModeResolver.resolve(env, name -> null));
@@ -51,18 +52,17 @@ class AutomationReviewModeTest {
             final CountDownLatch started = new CountDownLatch(1);
             Platform.startup(started::countDown);
             started.await(WAIT_SECONDS, TimeUnit.SECONDS);
-        } catch (IllegalStateException alreadyRunning) {
+        } catch (IllegalStateException _) {
             // The toolkit is shared by the test JVM; a running one is what is wanted.
         }
     }
 
-    private static void waitUntilStored(final SettingsRepository settings, final ReviewMode wanted)
-            throws InterruptedException {
+    private static void waitUntilStored(final SettingsRepository settings, final ReviewMode wanted) {
         final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(WAIT_SECONDS);
         while (System.nanoTime() < deadline
                 && !Optional.of(wanted)
                         .equals(settings.get(AppSetting.REVIEW_MODE).data())) {
-            Thread.sleep(20);
+            LockSupport.parkNanos(POLL_NANOS);
         }
     }
 
@@ -72,7 +72,7 @@ class AutomationReviewModeTest {
         final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(WAIT_SECONDS);
         ReviewMode read = readOnFxThread(source);
         while (read != wanted && System.nanoTime() < deadline) {
-            Thread.sleep(20);
+            LockSupport.parkNanos(POLL_NANOS);
             read = readOnFxThread(source);
         }
         return read;

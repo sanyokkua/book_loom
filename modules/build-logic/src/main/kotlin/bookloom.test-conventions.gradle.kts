@@ -2,7 +2,7 @@
 //
 // Fixing the stack here means no later change re-argues which assertion library or mocking framework to use, and
 // no module hand-rolls its own JUnit Platform wiring
-// (docs/specification/04_Build_and_Release/06_TESTING_STRATEGY.md#test-types).
+// (docs/spec_baseline/specification/04_Build_and_Release/06_TESTING_STRATEGY.md#test-types).
 //
 // Owns design decision D5: `liveLocal`, `promptEval` and `visual` are kept out of `check` by the TASK GRAPH and by
 // nothing else. See the exclusion block below for why that distinction is load-bearing.
@@ -190,32 +190,6 @@ localOnlyTags.forEach { tag ->
             // A night's run in a minute logs too much at DEBUG to be worth keeping; its numbers are INFO lines.
             systemProperty("BOOKLOOM_LOG_LEVEL", "INFO")
             outputs.upToDateWhen { false }
-        }
-
-        if (tag == "promptEval") {
-            // The eval measures one sampling mode at a time: `BOOKLOOM_EVAL_SAMPLING=server|tuned`, default server,
-            // reaches the code as the `bookloom.sampling` property (an explicit BOOKLOOM_SAMPLING still wins).
-            systemProperty("bookloom.sampling", System.getenv("BOOKLOOM_EVAL_SAMPLING") ?: "server")
-            // The relevant-pairs block (15i.T8) is measured on and off: `BOOKLOOM_EVAL_RELEVANT_PAIRS=on|off` reaches the
-            // code as the `bookloom.relevant.pairs` property; unset leaves the run's default (an explicit
-            // BOOKLOOM_RELEVANT_PAIRS still wins).
-            System.getenv("BOOKLOOM_EVAL_RELEVANT_PAIRS")?.takeIf { it.isNotBlank() }?.let {
-                systemProperty("bookloom.relevant.pairs", it)
-            }
-            // The batch format (15i.X1) of the arm being measured: `BOOKLOOM_EVAL_BATCH_FORMAT=json|markers|dual` reaches the
-            // code as `bookloom.batch.format`; unset, the property is absent and a run's own default (json) holds.
-            System.getenv("BOOKLOOM_EVAL_BATCH_FORMAT")?.takeIf { it.isNotBlank() }?.let {
-                systemProperty("bookloom.batch.format", it)
-            }
-            // Thinking per call (15i.X2): `BOOKLOOM_EVAL_REASONING="DRAFT_BATCH_JSON=on,TERM_READING=on"` reaches the
-            // code as the `bookloom.reasoning` property, `BOOKLOOM_EVAL_BATCH_NOTES=on|off` as `bookloom.batch.notes`;
-            // unset leaves both off, and an explicit BOOKLOOM_REASONING / BOOKLOOM_BATCH_NOTES still wins.
-            System.getenv("BOOKLOOM_EVAL_REASONING")?.takeIf { it.isNotBlank() }?.let {
-                systemProperty("bookloom.reasoning", it)
-            }
-            System.getenv("BOOKLOOM_EVAL_BATCH_NOTES")?.takeIf { it.isNotBlank() }?.let {
-                systemProperty("bookloom.batch.notes", it)
-            }
         }
 
         if (tag in neverUpToDateTags) {

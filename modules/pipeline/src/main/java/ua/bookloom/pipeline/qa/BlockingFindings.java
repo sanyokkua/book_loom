@@ -2,38 +2,29 @@ package ua.bookloom.pipeline.qa;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.api.project.Severity;
 
 /**
- * Which stored findings are blocking: a hard gate or a blocking text check raised them at high severity. The export
- * and the consistency pass both ask this, so a defect that kept a segment from being accepted is called blocking in
- * the same way before and after the run.
+ * Which stored findings are blocking: those whose level ({@link CheckLevels#of}) is {@link CheckLevel#BLOCK}. The
+ * export asks this, and the acceptance rule reads the same level, so a defect that kept a
+ * segment from being accepted is called blocking in the same way before and after the run.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class BlockingFindings {
 
-    private static final Set<String> RAISERS = Stream.of(CheckName.values())
-            .filter(CheckName::isHardGate)
-            .map(CheckName::raisedBy)
-            .collect(Collectors.toUnmodifiableSet());
-
     /**
      * Whether one finding blocks acceptance.
      *
      * @param finding the non-null stored finding
-     * @return {@code true} if a hard gate raised it at high severity, {@code false} otherwise
+     * @return {@code true} if its level is {@link CheckLevel#BLOCK}, {@code false} otherwise
      */
     public static boolean isBlocking(final QaFinding finding) {
         Objects.requireNonNull(finding, "finding");
-        return finding.severity() == Severity.HIGH && RAISERS.contains(finding.raisedBy());
+        return CheckLevels.of(finding) == CheckLevel.BLOCK;
     }
 
     /**

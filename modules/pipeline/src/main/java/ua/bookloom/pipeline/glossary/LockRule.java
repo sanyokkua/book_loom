@@ -26,6 +26,29 @@ public final class LockRule {
      */
     public record Basis(boolean keepOriginal, boolean verifiedName, boolean speaking, boolean renderingChecked) {}
 
+    /** The state an accepted suggestion takes. */
+    public enum Decision {
+        /** The dictionary form is fixed and the draft may decline it. */
+        PINNED,
+        /** The exact text, hidden behind a placeholder and put back. */
+        LOCKED
+    }
+
+    /**
+     * The state an accepted suggestion takes: every path that accepts one (the tick, Accept all, the names pass)
+     * reads this, so the same name gets the same state.
+     *
+     * @param term the source term; never null
+     * @param rendering the accepted rendering; never null
+     * @param basis what is known of the entry; never null
+     * @param namesInflect whether the target language declines names
+     * @return {@link Decision#LOCKED} where {@link #locks} says so, {@link Decision#PINNED} otherwise
+     */
+    public static Decision decide(
+            final String term, final String rendering, final Basis basis, final boolean namesInflect) {
+        return locks(term, rendering, basis, namesInflect) ? Decision.LOCKED : Decision.PINNED;
+    }
+
     /**
      * Decides whether to lock.
      *

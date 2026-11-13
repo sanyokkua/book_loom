@@ -13,7 +13,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.CurrentProject;
-import ua.bookloom.ui.state.OpenBookForTest;
+import ua.bookloom.ui.state.OpenedBookFixture;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.WorkflowProgress;
@@ -63,7 +63,7 @@ class ExitGuardTest extends ShellTestBase {
                 .begin(ActivityKind.GLOSSARY_SCAN, () -> stopped.add("scan")));
         request();
 
-        onFx(() -> ((Button) required("confirm-yes")).fire());
+        onFx(((Button) required("confirm-yes"))::fire);
 
         assertThat(stopped).containsExactly("scan");
         assertThat(exits).hasValue(1);
@@ -76,7 +76,7 @@ class ExitGuardTest extends ShellTestBase {
                 .begin(ActivityKind.GLOSSARY_SCAN, () -> stopped.add("scan")));
         request();
 
-        onFx(() -> ((Button) required("confirm-cancel")).fire());
+        onFx(((Button) required("confirm-cancel"))::fire);
 
         assertThat(stopped).isEmpty();
         assertThat(exits).hasValue(0);
@@ -85,7 +85,7 @@ class ExitGuardTest extends ShellTestBase {
 
     private void runEnded(final RunState state) {
         onFx(() -> {
-            OpenBookForTest.open(injector.getInstance(CurrentProject.class), "en", "uk");
+            OpenedBookFixture.open(injector.getInstance(CurrentProject.class), "en", "uk");
             injector.getInstance(StateMirror.class).publishRunState(state);
         });
     }
@@ -116,7 +116,7 @@ class ExitGuardTest extends ShellTestBase {
         assertThat(request()).isFalse();
 
         assertThat(textsUnder(required("confirm-card"))).contains("Quit without exporting?");
-        onFx(() -> ((Button) required("confirm-yes")).fire());
+        onFx(((Button) required("confirm-yes"))::fire);
         assertThat(exits).hasValue(1);
     }
 

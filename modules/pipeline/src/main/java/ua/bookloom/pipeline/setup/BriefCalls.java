@@ -36,7 +36,11 @@ final class BriefCalls {
                 request.maxOutputTokens(),
                 request.seed(),
                 request.callKind(),
-                request.sampling());
+                request.sampling(),
+                request.outputField(),
+                request.source(),
+                request.reasoningReserve(),
+                request.keepLoaded());
     }
 
     /**

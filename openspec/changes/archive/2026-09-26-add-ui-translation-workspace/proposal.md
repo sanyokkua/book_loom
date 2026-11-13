@@ -13,7 +13,7 @@ light-only five-token block that exists to prove the cascade works. There is no 
 `ViewNames`, no `Navigator`, no `ResourceBundle` and no message file. Nobody who has not read `AGENTS.md` can
 translate a book.
 
-This change gives the working pipeline a face: the shell from `docs/specification/mockups/ui-mockup.html`, and
+This change gives the working pipeline a face: the shell from `docs/spec_baseline/specification/mockups/ui-mockup.html`, and
 live screens for exactly what the command line already proves — open a book, choose the target language, choose
 one of the two preconfigured local providers and a model, start the run, watch it, and find the written file. No
 pipeline behaviour is added, extended or altered. Every region of the mockup the engine cannot yet answer is
@@ -245,10 +245,10 @@ screen that displays them — so that after archiving, "what does `export` guara
     — otherwise the first task of this change produces output its own Read list rejects.
   - `docs/next_features.md` §14 — which of its items this change answered from the screen side and which it did
     not.
-  - `docs/specification/IMPLEMENTED_REQUIREMENTS.md` — **new**: one hand-maintained row per implemented FR id
+  - `docs/spec_baseline/specification/IMPLEMENTED_REQUIREMENTS.md` — **new**: one hand-maintained row per implemented FR id
     giving the change that implemented it and the `openspec/specs/` capability that now owns it. Prose only: a
     pointer a human maintains and reads, never the id-coverage machinery ADR-0032 retired.
-  - `docs/implementation_plan/01_MODULE_INVENTORY.md`, `docs/implementation_plan/CHANGE_BACKLOG.md#where-this-stands`,
+  - `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md`, `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md#where-this-stands`,
     `AGENTS.md` "Where it stands" and `docs/DEVELOPMENT.md` are refreshed.
 - **Non-goals**, every one of them a region of the mockup that is built and disabled rather than omitted: the
   projects list and any project concept; the glossary screen and its table; the review queue and side-by-side

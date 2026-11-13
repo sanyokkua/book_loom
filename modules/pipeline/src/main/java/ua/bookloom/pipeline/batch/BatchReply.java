@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.batch;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -42,6 +43,22 @@ public record BatchReply(boolean readable, List<ItemOutcome> outcomes, boolean c
                 false);
     }
 
+    /**
+     * The same reply with its ids renamed, as a re-ask numbered its own items from 1 answers for the first call's ids.
+     *
+     * @param ids the non-null first call's id of each re-asked id; an id not named keeps its own
+     * @return the renamed reply; never null
+     */
+    public BatchReply renamed(final Map<String, String> ids) {
+        Objects.requireNonNull(ids, "ids");
+        return new BatchReply(
+                readable,
+                outcomes.stream()
+                        .map(outcome -> outcome.withId(ids.getOrDefault(outcome.id(), outcome.id())))
+                        .toList(),
+                cut);
+    }
+
     /** The outcome of an id, or empty when the reply and the batch never named it. */
     public Optional<ItemOutcome> outcome(final String id) {
         return outcomes.stream().filter(outcome -> outcome.id().equals(id)).findFirst();
@@ -66,11 +83,6 @@ public record BatchReply(boolean readable, List<ItemOutcome> outcomes, boolean c
     /** How many outcomes have {@code status}. */
     public long count(final ItemStatus status) {
         return outcomes.stream().filter(outcome -> outcome.status() == status).count();
-    }
-
-    /** Whether any item of the reply reported a key-term rendering. */
-    public boolean hasTerms() {
-        return outcomes.stream().anyMatch(outcome -> !outcome.terms().isEmpty());
     }
 
     /** Whether every expected id is accepted and no id is extra. */

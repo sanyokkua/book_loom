@@ -5,7 +5,6 @@ import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.NamePolicy;
-import ua.bookloom.pipeline.batch.RelevantPairsSwitch;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.prompt.CallFrame;
 
@@ -18,20 +17,12 @@ import ua.bookloom.pipeline.prompt.CallFrame;
  * @param frame the run's languages, style sheet and foreign-passage policy
  * @param names the brief's name policy
  * @param window the context window in tokens the run's prompts and chunks are sized against; positive
- * @param relevantPairs whether a batch shows the earlier pairs that share its names ({@code RelevantPairsSwitch})
  */
 public record RunSettings(
-        String projectId,
-        ReviewMode mode,
-        DialParameters dial,
-        CallFrame frame,
-        NamePolicy names,
-        int window,
-        boolean relevantPairs) {
+        String projectId, ReviewMode mode, DialParameters dial, CallFrame frame, NamePolicy names, int window) {
 
     /**
-     * The settings of a requested run: the brief's dial and name policy, and the relevant-pairs switch as this process
-     * has it.
+     * The settings of a requested run: the brief's dial and name policy.
      *
      * @param request the non-null run request
      * @param brief the non-null brief the run translates by
@@ -42,13 +33,7 @@ public record RunSettings(
     public static RunSettings forRun(
             final RunRequest request, final BookBrief brief, final CallFrame frame, final int window) {
         return new RunSettings(
-                request.projectId(),
-                request.mode(),
-                DialParameters.of(brief.dial()),
-                frame,
-                brief.names(),
-                window,
-                RelevantPairsSwitch.isOn());
+                request.projectId(), request.mode(), DialParameters.of(brief.dial()), frame, brief.names(), window);
     }
 
     /**
@@ -58,7 +43,7 @@ public record RunSettings(
      * @return a copy whose {@code window} is replaced
      */
     public RunSettings withWindow(final int newWindow) {
-        return new RunSettings(projectId, mode, dial, frame, names, newWindow, relevantPairs);
+        return new RunSettings(projectId, mode, dial, frame, names, newWindow);
     }
 
     /** Rejects a missing component. */

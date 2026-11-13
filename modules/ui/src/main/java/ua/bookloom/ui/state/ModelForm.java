@@ -14,7 +14,10 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelReport;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ModelSettings;
+import ua.bookloom.api.llm.ProbeVerdicts;
+import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.IoExecutor;
@@ -36,6 +39,7 @@ public final class ModelForm extends ModelFormProperties {
 
     private final ModelSettingsRepository store;
     private final ModelCapabilities capabilities;
+    private final ModelQuantChips quantChips;
     private final StructuredAnswers structured;
     private final SettingsViewModel viewModel;
     private final ExecutorService background;
@@ -49,9 +53,8 @@ public final class ModelForm extends ModelFormProperties {
     /**
      * Creates the form and follows the roster: the first time models are listed, one is chosen.
      *
-     * @param store where the per-model settings are kept
-     * @param capabilities what the providers say about a model
-     * @param structured whether a model answered in the structured form this session
+     * @param sources the per-model settings, what the providers say about a model, and whether it answered in the
+     *     structured form this session
      * @param roster the models on offer
      * @param viewModel names the current model, which is chosen first
      * @param messages the catalogue the unsaved question's model name is worded from
@@ -60,24 +63,23 @@ public final class ModelForm extends ModelFormProperties {
      */
     @Inject
     public ModelForm(
-            final ModelSettingsRepository store,
-            final ModelCapabilities capabilities,
-            final StructuredAnswers structured,
+            final ModelSources sources,
             final ModelRoster roster,
             final SettingsViewModel viewModel,
             final Messages messages,
             @BackgroundExecutor final ExecutorService background,
             @IoExecutor final ExecutorService io) {
-        this.store = Objects.requireNonNull(store, "store");
-        this.capabilities = Objects.requireNonNull(capabilities, "capabilities");
-        this.structured = Objects.requireNonNull(structured, "structured");
+        this.store = Objects.requireNonNull(sources, "sources").store();
+        this.capabilities = sources.capabilities();
+        this.quantChips = sources.quantChips();
+        this.structured = sources.structured();
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.background = Objects.requireNonNull(background, "background");
         this.io = Objects.requireNonNull(io, "io");
         Objects.requireNonNull(roster, "roster").entries().addListener((ListChangeListener<ModelEntry>)
                 change -> followOffer(roster.entries()));
-        structured.revision().addListener(observed -> followStructured());
+        this.structured.revision().addListener(observed -> followStructured());
     }
 
     /**
@@ -100,7 +102,7 @@ public final class ModelForm extends ModelFormProperties {
         show(baseline);
         refused.clear();
         clearFeedback();
-        facts.set(new ModelFacts(null, null, structuredOf(entry), true));
+        facts.set(new ModelFacts(null, null, null, List.of(), ProbeVerdicts.none(), structuredOf(entry), true, null));
         reading.set(true);
         background.execute(() -> loadStored(entry, mine));
     }
@@ -168,29 +170,33 @@ public final class ModelForm extends ModelFormProperties {
     }
 
     /**
-     * Forgets one refusal at once: the next request to the model carries the setting again. The draft, the baseline
-     * and whether the form is dirty stay as they are.
+     * Forgets one refusal at once, for its scope only: the next request it covered carries the setting again, and a
+     * refusal of the same setting for another call kind stays. The draft, the baseline and whether the form is dirty
+     * stay as they are.
      *
-     * @param name the refused setting
+     * @param refused the listed refusal; non-null
      */
-    public void sendAgain(final String name) {
-        Objects.requireNonNull(name, "name");
+    public void sendAgain(final RefusedSetting refused) {
+        Objects.requireNonNull(refused, "refused");
+        final String name = refused.name();
+        final @Nullable String scope = refused.scope();
         final @Nullable ModelEntry entry = selected.get();
         if (entry == null || sendingAgain.get()) {
             log.debug(
-                    "send again of '{}' ignored: model chosen {}, under way {}",
+                    "send again of '{}' scope={} ignored: model chosen {}, under way {}",
                     name,
+                    scope,
                     entry != null,
                     sendingAgain.get());
             return;
         }
-        log.debug("send again of '{}' for {}", name, entry.modelId());
+        log.debug("send again of '{}' scope={} for {}", name, scope, entry.modelId());
         sendingAgain.set(true);
         refusedFailed.set(false);
         final long mine = epoch;
         background.execute(() -> {
             final Result<ModelSettings> kept =
-                    store.update(entry.providerId(), entry.modelId(), current -> current.withoutRefusal(name));
+                    store.update(entry.providerId(), entry.modelId(), current -> current.withoutRefusal(name, scope));
             Platform.runLater(() -> forgotten(mine, kept));
         });
     }
@@ -229,14 +235,17 @@ public final class ModelForm extends ModelFormProperties {
         baseline = ModelDraft.of(settings);
         show(baseline);
         refused.setAll(settings.refused());
+        facts.set(facts.get().withVerdicts(settings.probeVerdicts()));
         reading.set(false);
         log.debug("stored settings of {} shown", entry.modelId());
         io.execute(() -> askReport(entry, mine));
     }
 
     private void askReport(final ModelEntry entry, final long mine) {
-        final Result<ModelReport> asked = capabilities.report(entry.providerId(), entry.modelId());
-        final ModelReport report = asked.isOk() ? Objects.requireNonNull(asked.data()) : new ModelReport(null, null);
+        final Result<ModelReport> asked = capabilities.report(new ModelSelection(entry.providerId(), entry.modelId()));
+        final ModelReport report =
+                asked.isOk() ? Objects.requireNonNull(asked.data()) : ModelReport.windowsOnly(null, null);
+        quantChips.publishFacts(new ModelSelection(entry.providerId(), entry.modelId()), report.quantAdvice());
         Platform.runLater(() -> reported(entry, mine, report));
     }
 
@@ -245,12 +254,23 @@ public final class ModelForm extends ModelFormProperties {
             log.debug("report #{} of {} dropped: the latest is #{}", mine, entry.modelId(), epoch);
             return;
         }
-        facts.set(new ModelFacts(report.contextLength(), report.loadedContext(), structuredOf(entry), false));
+        facts.set(new ModelFacts(
+                report.contextLength(),
+                report.loadedContext(),
+                report.verdict(),
+                report.warnings(),
+                facts.get().verdicts(),
+                structuredOf(entry),
+                false,
+                report.thinking()));
         log.debug(
-                "model {} reported: context {}, loaded {}",
+                "model {} reported: context {}, loaded {}, verdict {}, warnings {}, thinking {}",
                 entry.modelId(),
                 report.contextLength(),
-                report.loadedContext());
+                report.loadedContext(),
+                report.verdict(),
+                report.warnings().size(),
+                report.thinking().kind());
     }
 
     private void saved(
@@ -338,8 +358,7 @@ public final class ModelForm extends ModelFormProperties {
     private void followStructured() {
         final @Nullable ModelEntry entry = selected.get();
         if (entry != null) {
-            final ModelFacts now = facts.get();
-            facts.set(new ModelFacts(now.contextLength(), now.loaded(), structuredOf(entry), now.loading()));
+            facts.set(facts.get().withStructured(structuredOf(entry)));
         }
     }
 

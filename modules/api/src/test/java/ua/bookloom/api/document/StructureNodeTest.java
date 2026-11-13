@@ -27,7 +27,8 @@ class StructureNodeTest {
     void children_returned_isUnmodifiable() {
         final StructureNode node = new StructureNode("Book", null, null, List.of());
 
-        assertThatThrownBy(() -> node.children().add(null)).isInstanceOf(UnsupportedOperationException.class);
+        final var target = node.children();
+        assertThatThrownBy(() -> target.add(null)).isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
@@ -42,5 +43,19 @@ class StructureNodeTest {
         final StructureNode node = new StructureNode("", "ch1", 5, List.of());
 
         assertThat(node.title()).isEmpty();
+    }
+
+    @Test
+    void constructor_navigationShape_isListed() {
+        final StructureNode node = new StructureNode("Chapter 1", "ch1", 5, List.of(), 0);
+
+        assertThat(node.listed()).isTrue();
+    }
+
+    @Test
+    void constructor_addedNode_isKeptUnlisted() {
+        final StructureNode node = new StructureNode("", "cover", 2, List.of(), null, false);
+
+        assertThat(node.listed()).isFalse();
     }
 }

@@ -88,8 +88,8 @@ final class RunToolbar {
     // No model chosen is the one input the row knows is missing before a press; the tooltip names it.
     private static RunAction start(final MessageKey label, final MessageKey tip, final RunStateInputs in) {
         final boolean offered = in.controls().start().isEnabled();
-        final boolean noTarget = in.notice() instanceof RunNotice.MissingInput missing
-                && missing.which() == RunNotice.Input.TARGET_LANGUAGE;
+        final boolean noTarget =
+                in.notice() instanceof RunNotice.MissingInput(var which) && which == RunNotice.Input.TARGET_LANGUAGE;
         final boolean enabled = offered && in.model().chosen() && !noTarget;
         final ActivityKind blocker = in.otherWork();
         final Text why;

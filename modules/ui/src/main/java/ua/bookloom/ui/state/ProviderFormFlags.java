@@ -1,6 +1,7 @@
 package ua.bookloom.ui.state;
 
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyLongWrapper;
 import lombok.extern.slf4j.Slf4j;
 
 /** The yes/no facts the Providers form reports about its last action; FX thread only. */
@@ -11,6 +12,7 @@ final class ProviderFormFlags {
     final ReadOnlyBooleanWrapper saveFailed = new ReadOnlyBooleanWrapper(false);
     final ReadOnlyBooleanWrapper justSaved = new ReadOnlyBooleanWrapper(false);
     final ReadOnlyBooleanWrapper errorsShown = new ReadOnlyBooleanWrapper(false);
+    final ReadOnlyLongWrapper saves = new ReadOnlyLongWrapper(0);
 
     /** Notes that storage refused what the form asked of it; the draft stays as typed. */
     void failed(final String what) {

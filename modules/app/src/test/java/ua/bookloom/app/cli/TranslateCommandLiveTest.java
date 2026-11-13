@@ -91,7 +91,7 @@ class TranslateCommandLiveTest {
         final Path destination = tempDir.resolve("Book.uk.md");
         final CommandRun run = runCommand(injector, source, provider, model, baseUrl.apply(endpoint));
 
-        assertThat(run.exit()).isEqualTo(0);
+        assertThat(run.exit()).isZero();
         assertThat(run.console()).contains("connection: ok", "models: ok", "inference: ok (structured output:");
         // A real model need not reach any one outcome; what must hold is that every paragraph was decided.
         assertThat(run.console())

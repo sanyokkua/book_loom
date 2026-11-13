@@ -34,15 +34,17 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.BlockedWords;
+import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.BriefEstimate;
+import ua.bookloom.ui.state.BriefLock;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.RunStateView;
-import ua.bookloom.ui.state.SceneSummary;
 import ua.bookloom.ui.state.SectionMemory;
 import ua.bookloom.ui.state.SleepHelp;
+import ua.bookloom.ui.state.StartAdvice;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.TechnicalDetails;
 import ua.bookloom.ui.state.TranslatingViewModel;
@@ -83,10 +85,17 @@ final class TranslatingView {
             RunStateSource runs) {}
 
     /**
-     * What the strip and the live card read besides the mirror: the estimate before a start, the scene summary, the
-     * sleep help line and whether technical details are on.
+     * What the strip, the ready card and the live card read besides the mirror: the estimate before a start, the sleep
+     * help line, whether technical details are on, and the brief and lock the ready card's Chapter
+     * summaries switch shares with the Book Brief.
      */
-    record Reads(BriefEstimate estimate, SceneSummary summary, SleepHelp sleep, TechnicalDetails technical) {}
+    record Reads(
+            BriefEstimate estimate,
+            SleepHelp sleep,
+            TechnicalDetails technical,
+            StartAdvice advice,
+            BookBriefViewModel brief,
+            BriefLock lock) {}
 
     static Node build(
             final TranslatingViewModel viewModel,
@@ -124,8 +133,7 @@ final class TranslatingView {
                 .addAll(
                         TranslatingSummaryStrip.build(mirror, stripInputs(mirror, exits, reads), messages),
                         StateVisibility.shownIn(
-                                TranslatingReadyCard.build(
-                                        viewModel, mirror, current, exits.runs().view(), messages),
+                                readyCard(viewModel, mirror, current, names, messages, exits, reads),
                                 mirror.runState(),
                                 Set.of(RunState.IDLE)),
                         StateVisibility.shownIn(
@@ -134,6 +142,26 @@ final class TranslatingView {
                                 WATCHED),
                         footer(viewModel, mirror, messages, exits));
         return screen;
+    }
+
+    // Before any run: what Start will do, with the Book Brief's own Chapter summaries switch.
+    private static Node readyCard(
+            final TranslatingViewModel viewModel,
+            final StateMirror mirror,
+            final CurrentProject current,
+            final LanguageNames names,
+            final Messages messages,
+            final Exits exits,
+            final Reads reads) {
+        return TranslatingReadyCard.build(
+                viewModel,
+                mirror,
+                current,
+                exits.runs().view(),
+                messages,
+                StartAdviceLines.readyLanguageLine(reads.advice(), messages, names),
+                new ChapterSummariesSwitch(
+                        "translating-ready-summaries", false, reads.brief(), reads.lock(), messages));
     }
 
     private static TranslatingSummaryStrip.Inputs stripInputs(
@@ -220,8 +248,7 @@ final class TranslatingView {
                 exits.runs().view(),
                 mirror.live().waitingCall(),
                 mirror.activityLog(),
-                reads.technical().property(),
-                reads.summary().text());
+                reads.technical().property());
         return new LiveCallPanel(sources, columnNames, exits.sections(), exits.dialogs()::showCalls, messages);
     }
 

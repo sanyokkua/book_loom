@@ -2,7 +2,7 @@
 //
 // Applied ONLY by `:api :util :document :llm :pipeline :persistence`. `:ui` and `:app` deliberately do not apply
 // it: JavaFX presentation code is covered behaviourally by the headless TestFX suites, not by a branch percentage
-// (docs/specification/04_Build_and_Release/02_QUALITY_GATES.md#coverage-gate,
+// (docs/spec_baseline/specification/04_Build_and_Release/02_QUALITY_GATES.md#coverage-gate,
 // `06_TESTING_STRATEGY.md#coverage-traceability`).
 //
 // Opt-in by explicit `plugins { }` application rather than a project-name check inside a shared plugin, so which

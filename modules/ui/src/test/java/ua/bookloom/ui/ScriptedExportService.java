@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -17,15 +15,14 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatModel;
-import ua.bookloom.api.pipeline.CallSnapshot;
-import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportJob;
+import ua.bookloom.api.pipeline.ExportOpenWork;
 import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.ExportProgressListener;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 
 /**
  * A hand-written {@link ExportService} that records each request, each cancel and each write-now and answers with one scripted report, or one scripted
@@ -36,21 +33,29 @@ public final class ScriptedExportService implements ExportService {
     private static final long HOLD_SECONDS = 10;
 
     private final List<ExportRequest> requests = new CopyOnWriteArrayList<>();
-    private final List<@Nullable ChatModel> models = new CopyOnWriteArrayList<>();
     private final List<Boolean> ranOnFxThread = new CopyOnWriteArrayList<>();
     private volatile @Nullable AppError failure;
     private volatile @Nullable ExportReport report;
     private volatile boolean isWritingFiles;
     private final List<ExportProgress> scriptedProgress = new CopyOnWriteArrayList<>();
-    private final List<CallSnapshot> scriptedCalls = new CopyOnWriteArrayList<>();
     private final AtomicInteger cancels = new AtomicInteger();
-    private final AtomicInteger writeNows = new AtomicInteger();
     private volatile @Nullable CountDownLatch hold;
     private volatile @Nullable Error thrown;
+    private volatile ExportOpenWork openWork = ExportOpenWork.NONE;
 
     /** Makes every successful export answer with {@code scripted}; {@code null} answers a one-segment report. */
     public void reportWith(@Nullable final ExportReport scripted) {
         report = scripted;
+    }
+
+    /** Makes {@link #openWork} answer with {@code scripted} for every project. */
+    public void openWorkIs(final ExportOpenWork scripted) {
+        openWork = Objects.requireNonNull(scripted, "scripted");
+    }
+
+    @Override
+    public Result<ExportOpenWork> openWork(final String projectId) {
+        return Result.ok(openWork);
     }
 
     /** Makes every successful export create its destination file, as a real one does, holding one byte. */
@@ -64,15 +69,13 @@ public final class ScriptedExportService implements ExportService {
     }
 
     @Override
-    public Result<ExportJob> newExport(final ExportRequest request, @Nullable final ChatModel model) {
-        return newExport(request, model, ExportProgressListener.NONE);
+    public Result<ExportJob> newExport(final ExportRequest request) {
+        return newExport(request, ExportProgressListener.NONE);
     }
 
     @Override
-    public Result<ExportJob> newExport(
-            final ExportRequest request, @Nullable final ChatModel model, final ExportProgressListener progress) {
+    public Result<ExportJob> newExport(final ExportRequest request, final ExportProgressListener progress) {
         requests.add(Objects.requireNonNull(request, "request"));
-        models.add(model);
         return Result.ok(new ScriptedExportJob(request, progress));
     }
 
@@ -85,12 +88,6 @@ public final class ScriptedExportService implements ExportService {
     public void announce(final ExportProgress... events) {
         scriptedProgress.clear();
         scriptedProgress.addAll(List.of(events));
-    }
-
-    /** Makes every job show {@code calls} when it runs, in order, after its progress and before it answers. */
-    public void announceCalls(final CallSnapshot... calls) {
-        scriptedCalls.clear();
-        scriptedCalls.addAll(List.of(calls));
     }
 
     /** Makes every job wait, after announcing, until it is cancelled or {@link #release} is called. */
@@ -111,19 +108,9 @@ public final class ScriptedExportService implements ExportService {
         return cancels.get();
     }
 
-    /** How many times a job was told to write the file now. */
-    public int writeNows() {
-        return writeNows.get();
-    }
-
     /** Every request asked for, in order. */
     public List<ExportRequest> requests() {
         return List.copyOf(requests);
-    }
-
-    /** The model each request was made with, in order; an entry is {@code null} when none was passed. */
-    public List<@Nullable ChatModel> models() {
-        return Collections.unmodifiableList(new ArrayList<>(models));
     }
 
     /** One entry per {@code run()}: {@code true} when it ran on the FX Application Thread. */
@@ -146,7 +133,6 @@ public final class ScriptedExportService implements ExportService {
         public Result<ExportReport> run() {
             ranOnFxThread.add(Platform.isFxApplicationThread());
             scriptedProgress.forEach(progress::onProgress);
-            scriptedCalls.forEach(progress::onCall);
             final Error error = thrown;
             if (error != null) {
                 throw error;
@@ -165,8 +151,7 @@ public final class ScriptedExportService implements ExportService {
                 return Result.ok(scripted);
             }
             final Path destination = request.destination();
-            return Result.ok(
-                    new ExportReport(destination, 1, 0, 0, 0, 0, 0, List.of(), 0, ConsistencySummary.NOT_RUN, 0));
+            return Result.ok(new ExportReport(destination, 1, 0, 0, 0, 0, 0, List.of(), 0, ProofreadSummary.NONE, 0));
         }
 
         private void writeDestination() {
@@ -183,7 +168,7 @@ public final class ScriptedExportService implements ExportService {
         private boolean awaits(final CountDownLatch gate) {
             try {
                 return gate.await(HOLD_SECONDS, TimeUnit.SECONDS) && !isCancelled;
-            } catch (InterruptedException interrupted) {
+            } catch (InterruptedException _) {
                 Thread.currentThread().interrupt();
                 return false;
             }
@@ -193,13 +178,6 @@ public final class ScriptedExportService implements ExportService {
         public void cancel() {
             cancels.incrementAndGet();
             isCancelled = true;
-            release();
-        }
-
-        // Write now ends a held check early: the job then answers as a finished export.
-        @Override
-        public void writeNow() {
-            writeNows.incrementAndGet();
             release();
         }
     }

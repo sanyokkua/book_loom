@@ -35,16 +35,14 @@ public final class ImportVerdicts {
         Objects.requireNonNull(state, "state");
         final Optional<ImportVerdict> verdict =
                 switch (state) {
-                    case ImportState.Idle idle -> Optional.empty();
-                    case ImportState.Opening opening ->
-                        line(Kind.READING, messages.get(MessageKey.IMPORT_VERDICT_READING));
+                    case ImportState.Idle _ -> Optional.empty();
+                    case ImportState.Opening _ -> line(Kind.READING, messages.get(MessageKey.IMPORT_VERDICT_READING));
                     case ImportState.Detected detected -> detected(messages, detected);
                     case ImportState.DrmBlocked blocked -> line(Kind.DRM, drm(messages, blocked));
                     case ImportState.Unsupported unsupported ->
                         line(Kind.UNSUPPORTED, unsupported(messages, unsupported));
                     case ImportState.Refused refused -> line(Kind.DAMAGED, damaged(messages, refused.fileName()));
-                    case ImportState.NoText empty ->
-                        line(Kind.NO_TEXT, messages.get(MessageKey.IMPORT_VERDICT_NO_TEXT));
+                    case ImportState.NoText _ -> line(Kind.NO_TEXT, messages.get(MessageKey.IMPORT_VERDICT_NO_TEXT));
                     case ImportState.AlreadyInProjects already ->
                         line(
                                 Kind.ALREADY,
@@ -64,16 +62,16 @@ public final class ImportVerdicts {
     private static Optional<ImportVerdict> detected(final Messages messages, final ImportState.Detected detected) {
         final BookCard card = detected.card();
         final LanguageWarning warning = detected.warning();
-        if (warning instanceof LanguageWarning.Mismatch mismatch) {
+        if (warning instanceof LanguageWarning.Mismatch(var declared, var content)) {
             return line(
                     Kind.TWO_MARKS,
                     messages.get(
                             MessageKey.IMPORT_VERDICT_TWO_MARKS,
-                            NAMES.nameOf(mismatch.declared(), messages.locale()),
-                            NAMES.nameOf(mismatch.content(), messages.locale())));
+                            NAMES.nameOf(declared, messages.locale()),
+                            NAMES.nameOf(content, messages.locale())));
         }
-        if (warning instanceof LanguageWarning.Unrecognized unrecognized) {
-            return line(Kind.UNRECOGNIZED, messages.get(MessageKey.IMPORT_UNRECOGNIZED_TEXT, unrecognized.rawCode()));
+        if (warning instanceof LanguageWarning.Unrecognized(var rawCode)) {
+            return line(Kind.UNRECOGNIZED, messages.get(MessageKey.IMPORT_UNRECOGNIZED_TEXT, rawCode));
         }
         return line(
                 Kind.READY,

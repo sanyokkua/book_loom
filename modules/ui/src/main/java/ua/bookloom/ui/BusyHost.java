@@ -1,7 +1,6 @@
 package ua.bookloom.ui;
 
 import com.google.inject.Inject;
-import com.google.inject.Provider;
 import com.google.inject.Singleton;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,7 +29,6 @@ import ua.bookloom.ui.notify.DialogFeedback;
 import ua.bookloom.ui.state.Activity;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
-import ua.bookloom.ui.state.ExportWriteNow;
 import ua.bookloom.ui.state.ProgressDialogDefaults;
 import ua.bookloom.ui.state.ProgressDialogModel;
 import ua.bookloom.ui.state.ProgressFigures;
@@ -69,13 +67,12 @@ public final class BusyHost {
     private final ProgressFigures.Factory figures;
     private final WorkVisibility work;
     private final ConfirmPrompt confirm;
-    private final Provider<ExportWriteNow> writeEarly;
     private final StackPane host = new StackPane();
     private final Region scrim = new Region();
     private final Map<Long, Shown> dialogs = new HashMap<>();
-    private final PauseTransition delay = new PauseTransition(DELAY);
-    private final PauseTransition coalesce = new PauseTransition(COALESCE);
-    private final FadeTransition fade = new FadeTransition(FADE, host);
+    private final PauseTransition delayTimer = new PauseTransition(DELAY);
+    private final PauseTransition coalesceTimer = new PauseTransition(COALESCE);
+    private final FadeTransition fadeTransition = new FadeTransition(FADE, host);
     private final Timeline clock = new Timeline(new KeyFrame(TICK, event -> tick()));
     private final BusyKeyboard keyboard;
     private final DialogFeedback feedback;
@@ -91,33 +88,26 @@ public final class BusyHost {
      * @param activities where the blocking work is read, hidden, stopped and timed
      * @param messages the catalogue every word of the dialogs comes from
      * @param modalHost the dialog layer above this one, whose card takes the keyboard while it is shown
-     * @param defaults the view a new dialog opens in
-     * @param figures how each dialog gets its own reader of its figures
-     * @param work where this layer says whether a dialog is showing
+     * @param kit the view a new dialog opens in, how each dialog gets its own reader of its figures, and where this
+     *     layer says whether a dialog is showing
      * @param confirm the question asked before the export is cancelled, shown on the layer above
      * @param feedback told which dialog is shown, so a message raised meanwhile becomes its footer line
-     * @param writeEarly the export's "Write the file now", which asks first; got only when pressed, so the export's
-     *     state is not built for a window that never exports
      */
     @Inject
     public BusyHost(
             final ActivityTracker activities,
             final Messages messages,
             final ModalHost modalHost,
-            final ProgressDialogDefaults defaults,
-            final ProgressFigures.Factory figures,
-            final WorkVisibility work,
+            final ProgressKit kit,
             final ConfirmPrompt confirm,
-            final DialogFeedback feedback,
-            final Provider<ExportWriteNow> writeEarly) {
+            final DialogFeedback feedback) {
         this.activities = Objects.requireNonNull(activities, "activities");
         this.messages = Objects.requireNonNull(messages, "messages");
-        this.defaults = Objects.requireNonNull(defaults, "defaults");
-        this.figures = Objects.requireNonNull(figures, "figures");
-        this.work = Objects.requireNonNull(work, "work");
+        this.defaults = Objects.requireNonNull(kit, "kit").defaults();
+        this.figures = kit.figures();
+        this.work = kit.work();
         this.confirm = Objects.requireNonNull(confirm, "confirm");
         this.feedback = Objects.requireNonNull(feedback, "feedback");
-        this.writeEarly = Objects.requireNonNull(writeEarly, "writeEarly");
         keyboard = new BusyKeyboard(host, Objects.requireNonNull(modalHost, "modalHost"));
         host.setId(HOST_ID);
         host.getStyleClass().add("shell-modal-host");
@@ -128,9 +118,9 @@ public final class BusyHost {
         host.setVisible(false);
         host.widthProperty().addListener((observed, was, now) -> fit());
         host.heightProperty().addListener((observed, was, now) -> fit());
-        clock.setCycleCount(Timeline.INDEFINITE);
-        delay.setOnFinished(event -> reveal());
-        coalesce.setOnFinished(event -> flush());
+        clock.setCycleCount(Animation.INDEFINITE);
+        delayTimer.setOnFinished(event -> reveal());
+        coalesceTimer.setOnFinished(event -> flush());
         activities.blockingActivity().addListener((observed, was, now) -> follow(now));
         activities.running().addListener((ListChangeListener<Activity>) change -> changed());
         follow(activities.blockingActivity().get());
@@ -147,8 +137,8 @@ public final class BusyHost {
 
     // Many changes a second reach the tracker during a pass; the dialogs redraw at most every COALESCE.
     private void changed() {
-        if (coalesce.getStatus() != Animation.Status.RUNNING) {
-            coalesce.playFromStart();
+        if (coalesceTimer.getStatus() != Animation.Status.RUNNING) {
+            coalesceTimer.playFromStart();
         }
     }
 
@@ -166,14 +156,14 @@ public final class BusyHost {
     private void follow(final @Nullable Activity now) {
         if (now == null) {
             log.debug("work layer: no shown work blocks any more");
-            delay.stop();
+            delayTimer.stop();
             conceal();
         } else if (revealed && now.id() != shownId) {
             log.debug("work layer: the dialog of {} #{} replaces #{}", now.kind(), now.id(), shownId);
             show(now);
-        } else if (!revealed && delay.getStatus() != Animation.Status.RUNNING) {
+        } else if (!revealed && delayTimer.getStatus() != Animation.Status.RUNNING) {
             log.debug("work layer: {} #{} blocks; its dialog follows after the delay", now.kind(), now.id());
-            delay.playFromStart();
+            delayTimer.playFromStart();
         }
     }
 
@@ -188,14 +178,14 @@ public final class BusyHost {
         host.setVisible(true);
         show(now);
         work.visibleProperty().set(true);
-        fade.stop();
+        fadeTransition.stop();
         if (Motion.isReduced()) {
             host.setOpacity(1);
         } else {
-            fade.setFromValue(0);
-            fade.setToValue(1);
-            fade.setOnFinished(null);
-            fade.playFromStart();
+            fadeTransition.setFromValue(0);
+            fadeTransition.setToValue(1);
+            fadeTransition.setOnFinished(null);
+            fadeTransition.playFromStart();
         }
         clock.playFromStart();
     }
@@ -216,9 +206,7 @@ public final class BusyHost {
         final ProgressDialogModel model = new ProgressDialogModel(first, figures.create(), mode, activities::now);
         final long id = first.id();
         final Runnable hide = first.kind().isHideable() ? () -> activities.hide(id) : null;
-        final Runnable writeNow =
-                first.kind() == ActivityKind.EXPORT ? () -> writeEarly.get().ask() : null;
-        return new Shown(model, new ProgressDialog(model, messages, () -> cancel(first.kind(), id), hide, writeNow));
+        return new Shown(model, new ProgressDialog(model, messages, () -> cancel(first.kind(), id), hide));
     }
 
     private void cancel(final ActivityKind kind, final long id) {
@@ -241,20 +229,20 @@ public final class BusyHost {
         feedback.close(DialogFeedback.Layer.WORK);
         clock.stop();
         keyboard.release();
-        fade.stop();
+        fadeTransition.stop();
         if (Motion.isReduced()) {
             host.setOpacity(0);
             hideHost();
             return;
         }
-        fade.setFromValue(host.getOpacity());
-        fade.setToValue(0);
-        fade.setOnFinished(event -> {
+        fadeTransition.setFromValue(host.getOpacity());
+        fadeTransition.setToValue(0);
+        fadeTransition.setOnFinished(event -> {
             if (!revealed) {
                 hideHost();
             }
         });
-        fade.playFromStart();
+        fadeTransition.playFromStart();
     }
 
     // A dialog that has gone is not left in the scene behind the invisible layer; the next one is put there again.

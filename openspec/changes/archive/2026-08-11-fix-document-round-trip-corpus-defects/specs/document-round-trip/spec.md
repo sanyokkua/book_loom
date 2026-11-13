@@ -69,7 +69,7 @@ system SHALL NOT emit an additional copy of that element, SHALL NOT move a sibli
 duplicate its `id` attribute.
 
 Source: FR-DOC-03, FR-DOC-09 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-43,
-ADR-0025 (`docs/adr/ADR-0025-reassembly-replaces-run-inner-content.md`),
+ADR-0025 (`docs/spec_baseline/adr/ADR-0025-reassembly-replaces-run-inner-content.md`),
 `02_Architecture/01_SYSTEM_ARCHITECTURE.md#skeleton-and-segments`.
 In plain words: "the skeleton is never regenerated, only text nodes change" has to hold on a write that changes no
 text at all, or it does not hold anywhere. Three real books show it failing today. One duplicates an index anchor's
@@ -370,7 +370,7 @@ The measurement SHALL compare like with like for every format: the text taken fr
 the source SHALL both have inline markup removed, and both SHALL be decoded with the encoding resolved for that
 document rather than an assumed one.
 
-Source: FR-DOC-01, FR-DOC-09, ADR-0027 (`docs/adr/ADR-0027-structural-block-segmentation.md`),
+Source: FR-DOC-01, FR-DOC-09, ADR-0027 (`docs/spec_baseline/adr/ADR-0027-structural-block-segmentation.md`),
 `04_Build_and_Release/06_TESTING_STRATEGY.md`.
 In plain words: every other assertion in the document suite checks that nothing was *damaged*, and a book that yields
 no segments at all satisfies every one of them perfectly — the skeleton round-trips, the bytes match, the gate is

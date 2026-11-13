@@ -162,7 +162,7 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
         }
         try {
             held.await(10, TimeUnit.SECONDS);
-        } catch (InterruptedException stopped) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
         }
     }

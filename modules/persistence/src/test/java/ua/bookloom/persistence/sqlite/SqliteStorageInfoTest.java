@@ -176,7 +176,7 @@ class SqliteStorageInfoTest {
     void sizeBytes_afterTheOnlyLargeProjectIsRemoved_shrinksWithIt() {
         storeProjects("a");
         final List<GlossaryEntry> entries = IntStream.range(0, 3000)
-                .mapToObj(i -> new GlossaryEntry(
+                .mapToObj(i -> GlossaryEntry.of(
                         "a:" + i, "a", "Name" + i, "Імʼя".repeat(100), TermType.CHARACTER, Gender.UNKNOWN, false))
                 .toList();
         assertThat(new SqliteGlossaryRepository(db, new JsonCodec())
@@ -248,7 +248,7 @@ class SqliteStorageInfoTest {
 
     // IF a read-only folder half-deleted the files, THEN the person would lose work while being told nothing changed.
     @Test
-    void deleteAll_folderReadOnly_internalNothingDeletedStillUsable() throws Exception {
+    void deleteAll_folderReadOnly_internalNothingDeletedStillUsable() {
         storeProjects("a", "b");
         assertThat(dir.toFile().setWritable(false)).isTrue();
         try {

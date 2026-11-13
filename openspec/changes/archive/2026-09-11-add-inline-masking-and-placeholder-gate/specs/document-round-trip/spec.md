@@ -99,7 +99,7 @@ Source: FR-DOC-04, FR-DOC-EPUB-9 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-d
 (`01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`), DD-49
 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-49-code-and-technical-content-preservation`),
 `02_Architecture/03_DOCUMENT_MODEL.md#inline-masking` (paired-markup placeholder group), ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`).
+(`docs/spec_baseline/adr/ADR-0031-masked-text-is-character-data.md`).
 In plain words: a link's target and an index anchor's id must survive untouched, but the words a reader sees between
 `<a>` and `</a>` are ordinary prose and must still be translated. Swallowing the whole element into one token would
 hide those words from the model; leaving the element visible would let the model rewrite the href. The
@@ -167,7 +167,7 @@ Source: FR-DOC-04, FR-DOC-EPUB-9, FR-DOC-MD-2 (`01_Product/01_FUNCTIONAL_REQUIRE
 (`01_Product/03_DOCUMENT_FORMATS.md#code-edge-cases`), EC-IMG-1
 (`01_Product/03_DOCUMENT_FORMATS.md#images-and-fonts`),
 `02_Architecture/03_DOCUMENT_MODEL.md#inline-masking` (atomic placeholders), `#xml-round-trip-config`, ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`).
+(`docs/spec_baseline/adr/ADR-0031-masked-text-is-character-data.md`).
 In plain words: translating an identifier, a keyword or a mathematical expression corrupts the book, so nothing
 inside an XHTML code span or inside a `<math>` in either format may reach the model at all — one token swallows
 the whole span. (An FB2 `<code>` is the deliberate exception, and is treated below.) A vector graphic
@@ -286,7 +286,7 @@ content it replaced.
 Source: FR-DOC-04, FR-DOC-EPUB-9 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`,
 `01_Product/03_DOCUMENT_FORMATS.md#epub`), DD-49
 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-49-code-and-technical-content-preservation`), ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`).
+(`docs/spec_baseline/adr/ADR-0031-masked-text-is-character-data.md`).
 In plain words: "a code listing is never a segment, it lives in the skeleton alone" is written for a listing that
 stands on its own, and it holds there. A listing that a book has nested inside a text-owning block has no such
 option — that block *is* a segment, so the listing either becomes a placeholder or reaches the model as raw `<pre>`
@@ -326,7 +326,7 @@ that no structural signal carries.
 
 Source: FR-DOC-04, FR-DOC-EPUB-5 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`,
 `01_Product/03_DOCUMENT_FORMATS.md#epub`), ADR-0027
-(`docs/adr/ADR-0027-structural-block-segmentation.md`),
+(`docs/spec_baseline/adr/ADR-0027-structural-block-segmentation.md`),
 `02_Architecture/03_DOCUMENT_MODEL.md#inline-masking`.
 In plain words: the frozen spec lists `<em>`, `<a href>`, `<sup>` and `<span>` as examples, not as a closed set, and
 a whitelist of block tags already failed this project once — it reached 73.74% of a 194-book corpus and left 42
@@ -354,7 +354,7 @@ Source: FR-DOC-04 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
 `02_Architecture/03_DOCUMENT_MODEL.md#inline-masking` (which both lists "inline descendant elements **and their
 tails**" among what is replaced and states that "Prose numerals are NOT masked"),
 `01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`, ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`).
+(`docs/spec_baseline/adr/ADR-0031-masked-text-is-character-data.md`).
 In plain words: masking hides formatting, not words. The frozen phrase "and their tails" reads, taken alone, as
 though the text after `</em>` were masked too — but a reading that masked tails would leave the model almost nothing
 to translate, which cannot be what a masking scheme is for, and the worked appendix reads the same way. ADR-0031
@@ -395,7 +395,7 @@ with its own placeholder token, and restoring SHALL return the original characte
 Source: FR-DOC-04 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), EC-INLINE-5, EC-CODE-2
 (`01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`, `#code-edge-cases`),
 `02_Architecture/03_DOCUMENT_MODEL.md#inline-masking` (escape rule), ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`).
+(`docs/spec_baseline/adr/ADR-0031-masked-text-is-character-data.md`).
 In plain words: a book that happens to print a mathematical white square bracket must not have that bracket read as
 part of a placeholder. The frozen rule says such a bracket is "escaped before masking and un-escaped on unmask" but
 never says with what, and names only the opening bracket. Treating both brackets as ordinary protected spans meets
@@ -452,7 +452,7 @@ Source: FR-DOC-04 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
 `02_Architecture/03_DOCUMENT_MODEL.md#data-model` ("the model sees clean block-level prose interleaved with
 placeholders"), `#inline-masking`, DD-43
 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-43-canonical-round-trip`), ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`).
+(`docs/spec_baseline/adr/ADR-0031-masked-text-is-character-data.md`).
 In plain words: if the model is handed `Smith &amp; Sons`, it is being asked to translate escaped syntax and graded
 on reproducing it. Decoding first means it reads `Smith & Sons` and answers in prose — which is also what makes the
 restored fragment safe, because everything the model returns can then be treated as text rather than parsed as
@@ -482,7 +482,7 @@ expansion of character references.
 Source: FR-DOC-MD-1 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-TXT-3 (`#txt`), FR-DOC-04
 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-43
 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-43-canonical-round-trip`), ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`).
+(`docs/spec_baseline/adr/ADR-0031-masked-text-is-character-data.md`).
 In plain words: these two formats reassemble by splicing bytes back into the file they came from, so any re-spelling
 of the text is a change to the document. `\*` in Markdown source means a literal asterisk and `AT&amp;T` means
 `AT&T`, but writing either decoded form back into the buffer would change what the next parse sees. The contrast
@@ -564,7 +564,7 @@ Source: FR-DOC-05, FR-QA-01, FR-QA-04 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md
 (`01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`),
 `02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`,
 `02_Architecture/05_PIPELINE_ENGINE.md#qa-checks` (tag integrity is a hard gate, pre-QA), ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`).
+(`docs/spec_baseline/adr/ADR-0031-masked-text-is-character-data.md`).
 In plain words: the model may rewrite every word and may move the formatting around the sentence, because word order
 differs between languages — but it may not lose, invent or duplicate a piece of formatting. This is the one check no
 confidence score and no judge verdict can outvote, and it runs before any of them. It reports; it never fixes.
@@ -692,7 +692,7 @@ again.
 
 Source: FR-DOC-04, FR-DOC-03 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
 `02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate` (step 1), `#reassembly`, ADR-0025
-(`docs/adr/ADR-0025-reassembly-replaces-run-inner-content.md`).
+(`docs/spec_baseline/adr/ADR-0025-reassembly-replaces-run-inner-content.md`).
 In plain words: restoring is a substitution, not a re-derivation — the fragment that comes back is byte-for-byte the
 fragment that went in, which is the only way an anchor's id, a link's href, or a font-dependent `<span>`'s class
 survives translation. The single-pass clause matters because a code span may legitimately contain the literal text
@@ -741,8 +741,8 @@ reassembly.
 
 Source: FR-DOC-04, FR-DOC-03 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
 `02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, `#xml-round-trip-config`, ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`), ADR-0025
-(`docs/adr/ADR-0025-reassembly-replaces-run-inner-content.md`).
+(`docs/spec_baseline/adr/ADR-0031-masked-text-is-character-data.md`), ADR-0025
+(`docs/spec_baseline/adr/ADR-0025-reassembly-replaces-run-inner-content.md`).
 In plain words: after masking, every piece of markup in a translated segment came from a fragment the parser itself
 recorded — so nothing the model wrote needs to be markup, and nothing it wrote should be parsed as markup. A model
 that writes "x < y" or "Tom & Jerry" is writing ordinary prose, and the book should say so rather than refusing the
@@ -815,7 +815,7 @@ Source: FR-DOC-FB2-1 (`01_Product/03_DOCUMENT_FORMATS.md#fb2`), FR-DOC-02
 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
 `02_Architecture/03_DOCUMENT_MODEL.md#xml-round-trip-config`,
 `03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#offline-invariant`, ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`).
+(`docs/spec_baseline/adr/ADR-0031-masked-text-is-character-data.md`).
 In plain words: an entity reference is masked atomically, so its fragment is the reference itself — and a fragment
 is re-parsed on its own, outside the document that declared it. Without the declaration in scope that parse fails
 with "the entity was referenced, but not declared", which would make every FB2 segment containing a non-breaking
@@ -978,7 +978,7 @@ kind, since neutralising it spends a visible character on a difference the compa
 
 Source: FR-DOC-MD-4 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-04
 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`).
+(`docs/spec_baseline/adr/ADR-0031-masked-text-is-character-data.md`).
 In plain words: this is the same rule that turns a model's stray `<` into `&lt;` for EPUB, applied to the format
 whose markup is punctuation rather than tags. A translation containing `5 * 3`, a footnote marker, or an asterisked
 aside is ordinary prose, and the book should print it rather than gain emphasis the author never wrote. The
@@ -1083,7 +1083,7 @@ Source: FR-DOC-MD-4 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-05
 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), EC-MD-1
 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), DD-43
 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-43-canonical-round-trip`), ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`).
+(`docs/spec_baseline/adr/ADR-0031-masked-text-is-character-data.md`).
 In plain words: Markdown's delimiters are context-sensitive in a way tags are not — `*old*` is emphasis but
 `* old *` is three literal characters, and at the start of a line it is a bullet list. A model that returns
 `⟦g0⟧ старі ⟦g1⟧` satisfies the placeholder multiset perfectly and still deletes the formatting from the book,
@@ -1275,7 +1275,7 @@ The system SHALL preserve such a block through the skeleton alone where it stand
 nested one inside a block that owns translatable text, the separate requirement covering that case applies instead.
 
 Source: DD-49, `01_Product/03_DOCUMENT_FORMATS.md#code-and-technical-content`, FR-DOC-EPUB-9, ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`).
+(`docs/spec_baseline/adr/ADR-0031-masked-text-is-character-data.md`).
 In plain words: source code and mathematics must not be translated — renaming a variable or altering an equation
 corrupts a technical book. They are excluded from the segment list entirely rather than marked as "do not
 translate", because a segment that exists still consumes the token budget and still has to be explained to the
@@ -1355,7 +1355,7 @@ The measurement SHALL compare like with like for every format: the text taken fr
 the source SHALL both have inline markup removed, and both SHALL be decoded with the encoding resolved for that
 document rather than an assumed one.
 
-Source: FR-DOC-01, FR-DOC-09, ADR-0027 (`docs/adr/ADR-0027-structural-block-segmentation.md`), DD-49
+Source: FR-DOC-01, FR-DOC-09, ADR-0027 (`docs/spec_baseline/adr/ADR-0027-structural-block-segmentation.md`), DD-49
 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-49-code-and-technical-content-preservation`),
 `04_Build_and_Release/06_TESTING_STRATEGY.md`.
 In plain words: every other assertion in the document suite checks that nothing was *damaged*, and a book that
@@ -1430,7 +1430,7 @@ comparison and its coverage floor. Each fixture's expectations SHALL be declared
 computed from the parser's own output.
 
 Source: FR-DOC-09 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), FR-DOC-01, FR-DOC-04, ADR-0027
-(`docs/adr/ADR-0027-structural-block-segmentation.md`), `04_Build_and_Release/06_TESTING_STRATEGY.md`,
+(`docs/spec_baseline/adr/ADR-0027-structural-block-segmentation.md`), `04_Build_and_Release/06_TESTING_STRATEGY.md`,
 `01_Product/03_DOCUMENT_FORMATS.md#round-trip-golden-requirement`.
 In plain words: a fixture that exists but is not asserted proves nothing. The placeholder count joins the segment
 count for the same reason the segment count exists: a masker that silently stopped emitting tokens would pass every

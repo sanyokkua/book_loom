@@ -1,12 +1,10 @@
 package ua.bookloom.pipeline.heal;
 
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.qa.CheckName;
 import ua.bookloom.pipeline.qa.QaResult;
 
@@ -19,12 +17,12 @@ import ua.bookloom.pipeline.qa.QaResult;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class SegmentHealerLogging {
 
-    static void logEvaluation(final String segmentId, final int round, final QaResult qa) {
+    static void logEvaluation(final String segmentId, final int repairs, final QaResult qa) {
         log.debug(
-                "Evaluated segment={} round={} confidence={} failedOutright={} hardGatesPass={} margins={}"
+                "Evaluated segment={} repairs={} confidence={} failedOutright={} hardGatesPass={} margins={}"
                         + " hardGates={}",
                 segmentId,
-                round,
+                repairs,
                 qa.confidence(),
                 qa.failedOutright(),
                 qa.hardGatesPass(),
@@ -44,32 +42,19 @@ final class SegmentHealerLogging {
         return results;
     }
 
-    static void logAcceptanceDecision(
-            final String segmentId, final QaResult qa, final int verifiedBlockersLeft, final boolean accepted) {
+    static void logAcceptanceDecision(final String segmentId, final QaResult qa, final boolean accepted) {
+        final AcceptanceRule.Decision decision = AcceptanceRule.decide(qa);
         log.debug(
-                "Acceptance decision segment={} confidence={} accepted={} blockingFindings={} verifiedBlockersLeft={}",
+                "Acceptance decision segment {} findings block={} repair={} note={} outcome={} mark={} confidence={}"
+                        + " blockingFindings={}",
                 segmentId,
+                decision.block().size(),
+                decision.repair().size(),
+                decision.note().size(),
+                accepted ? "accepted" : "flagged",
+                decision.mark(),
                 qa.confidence(),
-                accepted,
-                SegmentFindings.kindsOf(SegmentFindings.concrete(qa)),
-                verifiedBlockersLeft);
-    }
-
-    static void logRoundChoice(
-            final String segmentId, final int round, final List<QaFinding> concreteFindings, final QaResult qa) {
-        if (concreteFindings.isEmpty()) {
-            log.debug(
-                    "Round choice segment={} round={} kind=none confidence={}: no evidenced finding to fix",
-                    segmentId,
-                    round,
-                    qa.confidence());
-            return;
-        }
-        log.debug(
-                "Round choice segment={} round={} kind=directed-fix findingKinds={}",
-                segmentId,
-                round,
-                SegmentFindings.kindsOf(concreteFindings));
+                SegmentFindings.kindsOf(SegmentFindings.concrete(qa)));
     }
 
     static void logTraceTarget(final String segmentId, final String masked, final String restored) {

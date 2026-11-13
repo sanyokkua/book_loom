@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
 import ua.bookloom.pipeline.glossary.TermReading.Reading;
 import ua.bookloom.pipeline.prompt.CallFrame;
@@ -47,7 +48,9 @@ final class SuggestionLocks {
         suggestions.forEach(suggestion -> byId.putIfAbsent(suggestion.entry().id(), suggestion));
         log.debug("Lock facts for {} suggestions, names inflect {}", byId.size(), inflects);
         return byId.values().stream()
-                .map(suggestion -> suggestion.locking(basisOf(suggestion.entry(), policy, context), inflects))
+                .map(suggestion -> suggestion.fixedByRule()
+                        ? suggestion
+                        : suggestion.locking(basisOf(suggestion.entry(), policy, context), inflects))
                 .toList();
     }
 
@@ -55,18 +58,50 @@ final class SuggestionLocks {
      * Whether the entry is a name, or a brand, which a name policy treats as a name. A character or a place is a
      * name; a title or another entry is one only when the readings verified it as a proper name or it is a phrase of
      * capitalised words ({@code Harbour Guild}); a term is one only when called a brand; a demoted common noun is
-     * translated, whatever the policy.
+     * translated, whatever the policy. A single word the book also writes in lower case ({@code Houses}) is an ordinary
+     * word, not a name, whatever type it was given.
      */
     static boolean isNameLike(final GlossaryEntry entry, final TargetContext context) {
+        if (isCommonWord(entry, context)) {
+            return false;
+        }
         final Reading reading = context.readings().get(entry.id());
         if (reading != null && reading.brand()) {
             return true;
         }
         return switch (entry.type()) {
             case CHARACTER, PLACE -> true;
-            case TITLE, OTHER -> context.verified().contains(entry.id()) || isCapitalisedPhrase(entry.term());
-            case TERM -> false;
+            case TITLE, ORGANISATION, PRODUCT, OTHER ->
+                context.verified().contains(entry.id()) || isCapitalisedPhrase(entry.term());
+            case TERM, MATERIAL -> false;
         };
+    }
+
+    // A speaking name or a name holding a common word is translated in part, so no letter table or word count binds it.
+    static boolean isTranslatable(final GlossaryEntry entry, final TargetContext context) {
+        final Reading reading = context.readings().get(entry.id());
+        return (reading != null && reading.speaking()) || hasCommonWord(entry, context);
+    }
+
+    // A technical word (Markdown, HTML): one plain word the book never writes in lower case is no ordinary word, so a
+    // model that keeps it as written is right and sounding it out would invent a word. A term of several words is a
+    // phrase the book coined (Glass Ministry), which is translated, so a copy of it is the source spelling.
+    static boolean isTechnicalTerm(final GlossaryEntry entry, final TargetContext context) {
+        final Reading reading = context.readings().get(entry.id());
+        return entry.type() == TermType.TERM
+                && SPACES.split(entry.term().strip()).length == 1
+                && !isCommonWord(entry, context)
+                && (reading == null || !reading.brand());
+    }
+
+    static boolean hasCommonWord(final GlossaryEntry entry, final TargetContext context) {
+        return !context.commonWordsOf(entry).isEmpty();
+    }
+
+    // One word, and the book writes it in lower case too.
+    static boolean isCommonWord(final GlossaryEntry entry, final TargetContext context) {
+        return !context.commonWordsOf(entry).isEmpty()
+                && SPACES.split(entry.term().strip()).length == 1;
     }
 
     // A single capitalised word may be a demoted common noun (Rose); a run of capitalised words is a proper name.
@@ -82,9 +117,9 @@ final class SuggestionLocks {
         return policy == NamePolicy.KEEP_ORIGINAL && isNameLike(entry, context);
     }
 
-    // A kept suggestion has passed the identity rule and, under Transliterate, the letter table.
-    private static LockRule.Basis basisOf(
-            final GlossaryEntry entry, final NamePolicy policy, final TargetContext context) {
+    // A kept suggestion has passed the identity rule and, under Transliterate, the letter table. Accept all reads the
+    // same facts, so a name gets the same state by every path.
+    static LockRule.Basis basisOf(final GlossaryEntry entry, final NamePolicy policy, final TargetContext context) {
         final Reading reading = context.readings().get(entry.id());
         final boolean kept = isKeptAsWritten(entry, policy, context);
         log.debug("Entry {} (type {}) is {}", entry.id(), entry.type(), kept ? "kept as written" : "left to the model");

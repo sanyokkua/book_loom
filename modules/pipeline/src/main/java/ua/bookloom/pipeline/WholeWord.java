@@ -1,9 +1,12 @@
 package ua.bookloom.pipeline;
 
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -42,6 +45,26 @@ public final class WholeWord {
         return PATTERNS.computeIfAbsent(
                 term,
                 key -> Pattern.compile(NOT_AFTER_WORD_CHARACTER + Pattern.quote(key) + NOT_BEFORE_WORD_CHARACTER));
+    }
+
+    /**
+     * One pattern matching any of several terms as a whole word, the longest first where two start at one place, so
+     * each match is one of the terms and a replacement made from the matches never touches its own output. Not cached:
+     * a set of terms is matched once.
+     *
+     * @param terms the non-empty literal texts to find; none interpreted as a regular expression
+     * @return the pattern; its whole match is one of {@code terms}
+     */
+    public static Pattern anyOf(final Collection<String> terms) {
+        Objects.requireNonNull(terms, "terms");
+        if (terms.isEmpty()) {
+            throw new IllegalArgumentException("terms must not be empty");
+        }
+        final String alternatives = terms.stream()
+                .sorted(Comparator.comparingInt(String::length).reversed().thenComparing(Comparator.naturalOrder()))
+                .map(Pattern::quote)
+                .collect(Collectors.joining("|"));
+        return Pattern.compile(NOT_AFTER_WORD_CHARACTER + "(?:" + alternatives + ")" + NOT_BEFORE_WORD_CHARACTER);
     }
 
     /** How many compiled patterns the cache holds now; never more than {@link #MAX_PATTERNS}. */

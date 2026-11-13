@@ -26,18 +26,16 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.notify.ErrorPresenter;
-import ua.bookloom.ui.notify.Toasts;
+import ua.bookloom.ui.notify.Reporting;
 
 /**
  * What the review desk does: list the segments of a filter through the review desk port, hold the selected segment's
- * editor text, and accept, save, undo, retry, leave for later or apply a proposal to it.
+ * editor text, and accept, save, undo an edit or a proofread rewrite, retry, leave for later or apply a proposal.
  *
  * <p>A singleton: the count, the list and the marks of "later" outlive the dialog. Desk calls run on the background
- * executor, properties change on the FX thread. Actions are off while the run translates or a retry is in flight; a run
- * started in between makes the desk answer {@code busy} (one warning). The to-review count is read from the desk, not
- * the mirror's queue (cleared when a run starts), which only cues a re-read. A refused accept or save is shown in place
- * through {@link #problem()}, and the segment keeps its status.
+ * executor, properties change on the FX thread. Actions are off while the run translates or a retry is in flight (a
+ * run started in between makes the desk answer {@code busy}). The to-review count is read from the desk, not the
+ * mirror's queue, which only cues a re-read. A refused accept or save is shown in place through {@link #problem()}.
  */
 @Slf4j
 @Singleton
@@ -64,38 +62,35 @@ public final class ReviewViewModel {
     private final ListChangeListener<FlaggedRow> onMirrorQueue = change -> refreshCount();
 
     /**
-     * @param desk the review desk every read and action goes through
+     * @param services the review desk every read and action goes through, and the model, the desk call and the hold on
+     *     the run for a retry
      * @param mirror the run's state, whose run state gates the actions and whose flagged queue prompts a recount
      * @param current the open book, whose project the desk is asked about
-     * @param reviewMode the mode a run keeps or the next would use; All segments no longer depends on it, so it is
-     *     only checked present, keeping one constructor for the injector and the tests
-     * @param toasts where an accept, a save and the busy refusal are announced
-     * @param errors where a failure that is neither busy nor validation is shown
-     * @param retry the model, the desk call and the hold on the run for a retry
+     * @param reviewMode the mode a run keeps or the next would use; only checked present, as nothing depends on it
+     * @param reporting where actions are announced, and where a failure other than busy or validation is shown
      * @param executor the daemon executor desk calls run on, never the FX thread
      * @param messages the catalogue a refusal shown in place is worded from
      */
     @Inject
     public ReviewViewModel(
-            final ReviewDesk desk,
+            final ReviewServices services,
             final StateMirror mirror,
             final CurrentProject current,
             final Provider<ReviewMode> reviewMode,
-            final Toasts toasts,
-            final ErrorPresenter errors,
-            final ReviewRetry retry,
+            final Reporting reporting,
             @BackgroundExecutor final ExecutorService executor,
             final Messages messages) {
-        this.desk = Objects.requireNonNull(desk, "desk");
+        this.desk = Objects.requireNonNull(services, "services").desk();
         Objects.requireNonNull(reviewMode, "reviewMode");
         this.queries = new ReviewQueries(desk);
         this.reads = new ReviewReads(queries, executor);
-        this.counts = new FlaggedCount(queries, executor);
         this.mirror = Objects.requireNonNull(mirror, "mirror");
+        this.counts = new FlaggedCount(queries, executor, mirror.live());
         this.current = Objects.requireNonNull(current, "current");
         this.availability = new ReviewAvailability(mirror, this::refreshAvailability);
-        this.refusals = new ReviewRefusals(toasts, errors, refused::show, messages);
-        this.retry = Objects.requireNonNull(retry, "retry");
+        this.refusals = new ReviewRefusals(
+                Objects.requireNonNull(reporting, "reporting").toasts(), reporting.errors(), refused::show, messages);
+        this.retry = services.retry();
         this.acts = new ReviewActs(queries, mirror, refusals, executor);
         mirror.runState().addListener((observed, was, now) -> {
             refreshAvailability();
@@ -311,9 +306,14 @@ public final class ReviewViewModel {
         }
     }
 
-    /** Applies the selected segment's backward-revision proposal as the person's edit. FX thread only. */
+    /** Applies the selected segment's proofread proposal as the person's edit. FX thread only. */
     public void acceptProposal() {
         act("acceptProposal", desk::acceptProposal);
+    }
+
+    /** Puts back what the selected segment's kept proofread rewrite replaced. FX thread only. */
+    public void undoProofread() {
+        act("undoProofread", desk::undoProofread);
     }
 
     private boolean act(final String name, final BiFunction<String, String, Result<SegmentRecord>> call) {

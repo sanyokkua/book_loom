@@ -15,7 +15,7 @@ import ua.bookloom.api.project.TermType;
 class NameVariantsTest {
 
     private static GlossaryEntry name(final String term, final String target, final TermType type) {
-        return new GlossaryEntry("g-" + term, "p", term, target, type, Gender.UNKNOWN, false);
+        return GlossaryEntry.of("g-" + term, "p", term, target, type, Gender.UNKNOWN, false);
     }
 
     private static Map<String, String> targets(final String... segmentAndText) {

@@ -41,7 +41,7 @@ abstract class LiveCardTestBase extends TranslatingScreenTestBase {
     }
 
     void chooseMode(final boolean detailed) {
-        onFx(() -> ((ToggleButton) required("translating-live-mode-" + (detailed ? "detailed" : "simple"))).fire());
+        onFx(((ToggleButton) required("translating-live-mode-" + (detailed ? "detailed" : "simple")))::fire);
         WaitForAsyncUtils.waitForFxEvents();
     }
 

@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatMessage;
@@ -44,7 +45,7 @@ class CancellableChatModelTest {
 
         final Result<ChatResponse> result = model.chat(REQUEST);
 
-        assertThat(result.error()).isNotNull().extracting(error -> error.code()).isEqualTo(ErrorCode.cancelled);
+        assertThat(result.error()).isNotNull().extracting(AppError::code).isEqualTo(ErrorCode.cancelled);
         assertThat(delegate.requests()).isEmpty();
     }
 
@@ -54,7 +55,7 @@ class CancellableChatModelTest {
 
         final Result<ChatResponse> result = model.chat(REQUEST);
 
-        assertThat(result.error()).isNotNull().extracting(error -> error.code()).isEqualTo(ErrorCode.cancelled);
+        assertThat(result.error()).isNotNull().extracting(AppError::code).isEqualTo(ErrorCode.cancelled);
         assertThat(delegate.requests()).isEmpty();
     }
 

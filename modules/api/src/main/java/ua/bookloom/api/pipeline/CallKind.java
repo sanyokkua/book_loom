@@ -11,14 +11,11 @@ public enum CallKind {
     /** A repair call fixing a structural (tag/placeholder-count) hard-gate failure. */
     STRUCTURAL_REPAIR,
 
-    /** A repair call fixing a placeholder-multiset hard-gate failure. */
-    PLACEHOLDER_REPAIR,
-
-    /** A reviewer call: reads a batch of candidates and answers with find-and-replace edits. */
-    REVIEW,
-
-    /** A directed-fix call repairing the findings a check or the reviewer named. */
-    DIRECTED_FIX,
+    /**
+     * The one repair of a segment whose draft kept a blocking or repair-level finding: translated again with its
+     * previous attempt and its defects named.
+     */
+    REPAIR,
 
     /** A glossary prescan call. */
     PRESCAN,
@@ -29,11 +26,11 @@ public enum CallKind {
     /** A glossary suggestion call: the model proposes a target rendering and a gender for held terms. */
     SUGGEST_TARGETS,
 
-    /** A rolling-summary update call. */
-    SUMMARY,
+    /** The summary of one finished chapter, written in the target language for later windows (design D10). */
+    CHAPTER_SUMMARY,
 
-    /** A backward-revision call re-rendering an already-decided segment. */
-    REVISION,
+    /** A proofread call re-reading an already-decided segment. */
+    PROOFREAD,
 
     /** A setup call proposing the translated book's file name. */
     FILE_NAME,
@@ -51,5 +48,8 @@ public enum CallKind {
     TERM_READING,
 
     /** A recurring-term call: the model chooses which candidate words a translator must render the same way. */
-    TERM_CHOICE
+    TERM_CHOICE,
+
+    /** A names call: the model gives the most probable gender and kind of bare names, with no book text (design D5). */
+    NAME_KNOWLEDGE
 }

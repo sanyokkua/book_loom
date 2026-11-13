@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.setup;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -13,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.MetadataKey;
 import ua.bookloom.api.llm.ChatRequest;
@@ -48,8 +51,9 @@ final class BriefSuggester {
 
     // Six fields, each a quote of up to fifteen words, a value and a confidence, the narrator's name and the language.
     private static final int WINDOW_TOKENS = 512;
-    // Three fields of a basis and a value; the longest is a voice of twelve words.
-    private static final OutputLimit SYNTHESIS_LIMIT = new OutputLimit(160, 320);
+    // Four fields of a basis and a value, the longest a voice of twelve words, the narrator with a quote, and the
+    // story shape with two quotes.
+    private static final OutputLimit SYNTHESIS_LIMIT = new OutputLimit(300, 560);
     private static final List<BriefField> SYNTHESIZED =
             List.of(BriefField.GENRE, BriefField.AUDIENCE, BriefField.VOICE);
     // The prompt's own text is English whatever the book's language.
@@ -77,20 +81,15 @@ final class BriefSuggester {
      * Suggests the brief's tone and style.
      *
      * @param book the book
-     * @param detectedContext the model's context window in tokens, or null when unknown
-     * @param override the window the person set for the model, or null; replaces the detected one
+     * @param window the model's one window in tokens ({@code ModelWindow}); positive
      * @param calls the model-call seam
      * @return the suggestion held to the brief's narrator; the first window call's error when every window call failed;
      *     the {@code cancelled} error of any call the person stopped; a validation error when the book has no story to
      *     read or no window's reply could be read
      */
-    Result<BriefSuggestion> suggest(
-            final SetupBook book,
-            final @Nullable Integer detectedContext,
-            final @Nullable Integer override,
-            final ModelCalls calls) {
+    Result<BriefSuggestion> suggest(final SetupBook book, final int window, final ModelCalls calls) {
         final QualityDial dial = book.project().brief().dial();
-        final int windowTokens = BookSamples.windowTokens(dial, detectedContext, override, fixedTokens(book));
+        final int windowTokens = BookSamples.windowTokens(dial, window, fixedTokens(book));
         final List<BookSample> windows =
                 BookSamples.of(book.document(), book.languageOf(), BookSamples.windowCount(dial), windowTokens);
         if (windows.isEmpty()) {
@@ -119,11 +118,6 @@ final class BriefSuggester {
                         book, windows, new NarratorGenderEvidence(people, book.languageOf()), kept, calls, steps)));
     }
 
-    Result<BriefSuggestion> suggest(
-            final SetupBook book, final @Nullable Integer detectedContext, final ModelCalls calls) {
-        return suggest(book, detectedContext, null, calls);
-    }
-
     // What each window's call spends besides the passage: its system message, its other user text and the reply.
     private int fixedTokens(final SetupBook book) {
         final ChatRequest bare = windowRequest(book, new BookSample(List.of(), 0));
@@ -143,7 +137,7 @@ final class BriefSuggester {
             final BriefSteps steps) {
         final Result<Readings> readings = readWindows(book, windows, genders, calls, steps);
         if (readings.isErr()) {
-            return Result.err(Objects.requireNonNull(readings.error(), "error"));
+            return Result.err(Objects.requireNonNull(readings.error(), ERROR));
         }
         final Readings read = Objects.requireNonNull(readings.data(), "readings");
         if (read.failures().size() == windows.size()) {
@@ -154,17 +148,30 @@ final class BriefSuggester {
             return Result.err(AppError.of(
                     ErrorCode.validation, "Unreadable answer", "The model's suggestion could not be read."));
         }
-        final Result<Synthesis> synthesis = synthesize(book, known, read.answers(), calls, steps);
+        final Result<Synthesis> synthesis = synthesize(book, known, read.answers(), windows, calls, steps);
         if (synthesis.isErr()) {
-            return Result.err(Objects.requireNonNull(synthesis.error(), "error"));
+            return Result.err(Objects.requireNonNull(synthesis.error(), ERROR));
         }
         final boolean wholeStory = windows.size() == 1 && windows.getFirst().wholeStory();
         return Result.ok(decided(
                 book,
                 read,
-                Objects.requireNonNull(synthesis.data(), "synthesis").reply(),
+                new Synthesized(
+                        Objects.requireNonNull(synthesis.data(), "synthesis").reply(), windows, genders),
                 known,
                 wholeStory));
+    }
+
+    /** The synthesis reply with the windows and the check its narrator quote is held to. */
+    private record Synthesized(@Nullable JsonNode reply, List<BookSample> windows, NarratorGenderEvidence genders) {}
+
+    private static void logWindowFailed(final int window, final int windows, final AppError error) {
+        log.warn(
+                "Brief window {} of {} failed code={} reason={}; it counts as a window with no reading",
+                window,
+                windows,
+                error.code(),
+                FailureReason.tokenIn(error.details()));
     }
 
     private Result<Readings> readWindows(
@@ -186,16 +193,12 @@ final class BriefSuggester {
                 languages.add(reading.language());
                 continue;
             }
-            final AppError error = Objects.requireNonNull(one.error(), "error");
+            final AppError error = Objects.requireNonNull(one.error(), ERROR);
             if (error.code() == ErrorCode.cancelled) {
                 log.info("Brief suggestion stopped by the person at window {} of {}", index + 1, windows.size());
                 return Result.err(error);
             }
-            log.warn(
-                    "Brief window {} of {} failed with {}; it counts as a window with no reading",
-                    index + 1,
-                    windows.size(),
-                    error.code());
+            logWindowFailed(index + 1, windows.size(), error);
             failures.add(error);
             answers.add(null);
             languages.add(null);
@@ -211,9 +214,13 @@ final class BriefSuggester {
             final BriefSteps steps,
             final int number) {
         steps.sampleStarted(number, window.location());
-        final Result<String> reply = setup.send(windowRequest(book, window), PromptName.BRIEF_SUGGESTION, calls);
+        final Result<String> reply = setup.send(
+                windowRequest(book, window),
+                PromptName.BRIEF_SUGGESTION,
+                calls,
+                List.of(SetupCalls.excerpt("Passages from " + window.location())));
         if (reply.isErr()) {
-            final AppError error = Objects.requireNonNull(reply.error(), "error");
+            final AppError error = Objects.requireNonNull(reply.error(), ERROR);
             steps.sampleFailed(number, error);
             return Result.err(error);
         }
@@ -234,25 +241,30 @@ final class BriefSuggester {
             final SetupBook book,
             final Knowledge known,
             final List<@Nullable Map<BriefField, Answer>> answers,
+            final List<BookSample> windows,
             final ModelCalls calls,
             final BriefSteps steps) {
         if (!known.isKnown() && !readSynthesizedField(answers)) {
-            log.debug("Brief synthesis skipped: the book is unknown and no window read genre, audience or voice");
+            log.debug("Brief synthesis skipped: the book is unknown and no window read genre, audience or voice;"
+                    + " the story shape stays unread");
             steps.synthesisSkipped();
             return Result.ok(new Synthesis(null));
         }
-        final Map<String, String> user = BriefSynthesisInput.of(BookFacts.of(book.document()), known, answers);
+        final Map<String, String> user = BriefSynthesisInput.of(BookFacts.of(book.document()), known, answers, windows);
         final ChatRequest request = setup.requestOf(book, PromptName.BRIEF_SYNTHESIS, user, SYNTHESIS_LIMIT);
         steps.synthesisStarted();
-        final Result<String> reply = setup.send(request, PromptName.BRIEF_SYNTHESIS, calls);
+        final Result<String> reply = setup.send(request, PromptName.BRIEF_SYNTHESIS, calls, SetupCalls.askedOf(user));
         if (reply.isErr()) {
-            final AppError error = Objects.requireNonNull(reply.error(), "error");
+            final AppError error = Objects.requireNonNull(reply.error(), ERROR);
             if (error.code() == ErrorCode.cancelled) {
                 log.info("Brief synthesis stopped by the person");
                 return Result.err(error);
             }
             steps.synthesisEnded(false);
-            log.warn("Brief synthesis failed with {}; genre, audience and voice stay uncertain", error.code());
+            log.warn(
+                    "Brief synthesis failed code={} reason={}; genre, audience and voice stay uncertain",
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return Result.ok(new Synthesis(null));
         }
         final JsonNode node = setup.json(Objects.requireNonNull(reply.data(), "reply"));
@@ -278,25 +290,31 @@ final class BriefSuggester {
     private static BriefSuggestion decided(
             final SetupBook book,
             final Readings read,
-            final @Nullable JsonNode synthesis,
+            final Synthesized synthesized,
             final Knowledge known,
             final boolean wholeStory) {
+        final JsonNode synthesis = synthesized.reply();
         final List<@Nullable Map<BriefField, Answer>> answers = read.answers();
         final NarratorHint detected =
                 NarratorDetector.detect(book.document(), book.languageOf()).orElse(null);
         final Decided<NarratorPerson> person = BriefDecision.narrator(detected, answers);
-        final Map<BriefField, Text> synthesized = new EnumMap<>(BriefField.class);
-        SYNTHESIZED.forEach(field ->
-                synthesized.put(field, BriefDecision.synthesized(field, synthesis, known, answers, wholeStory)));
+        final Map<BriefField, Text> fields = new EnumMap<>(BriefField.class);
+        SYNTHESIZED.forEach(
+                field -> fields.put(field, BriefDecision.synthesized(field, synthesis, known, answers, wholeStory)));
         final String language = book.project().brief().sourceLanguage() == null
                 ? BriefDecision.languageProposal(read.languages())
                 : null;
+        final Decided<Gender> answered = BriefDecision.narratorGender(person.value(), answers);
+        final Decided<Gender> gender = person.value() == NarratorPerson.THIRD
+                ? answered
+                : NarratorGenderOrder.of(book, answered, synthesis, synthesized.windows(), synthesized.genders());
         final BriefSuggestion suggestion = suggestion(
-                BriefDecision.register(answers),
+                BriefDecision.register(answers, synthesis),
                 person,
-                BriefDecision.narratorGender(person.value(), answers),
-                synthesized,
-                language);
+                gender,
+                fields,
+                language,
+                StoryShapeDecision.of(synthesis, synthesized.windows()));
         return aligned(book, suggestion, answers.size());
     }
 
@@ -305,7 +323,8 @@ final class BriefSuggester {
             final Decided<NarratorPerson> person,
             final Decided<Gender> gender,
             final Map<BriefField, Text> synthesized,
-            final @Nullable String language) {
+            final @Nullable String language,
+            final StoryShapeDecision.Shape shape) {
         final Map<BriefField, FieldEvidence> evidence = new EnumMap<>(BriefField.class);
         synthesized.forEach((field, decided) -> evidence.put(field, decided.evidence()));
         evidence.put(BriefField.REGISTER, register.evidence());
@@ -313,6 +332,10 @@ final class BriefSuggester {
         // A gender belongs to a first-person narrator; a third-person book has no narrator character to give one.
         if (person.value() != NarratorPerson.THIRD) {
             evidence.put(BriefField.NARRATOR_GENDER, gender.evidence());
+        }
+        final FieldEvidence shapeEvidence = shape.evidence();
+        if (shapeEvidence != null) {
+            evidence.put(BriefField.STORY_SHAPE, shapeEvidence);
         }
         return new BriefSuggestion(
                 valueOf(synthesized, BriefField.GENRE),
@@ -322,7 +345,9 @@ final class BriefSuggester {
                 person.value(),
                 gender.value(),
                 evidence,
-                language);
+                language,
+                shape.value(),
+                shape.quotes());
     }
 
     private static @Nullable String valueOf(final Map<BriefField, Text> synthesized, final BriefField field) {

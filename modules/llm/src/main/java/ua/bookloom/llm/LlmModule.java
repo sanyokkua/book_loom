@@ -7,28 +7,34 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import java.time.Clock;
 import java.util.Objects;
-import java.util.function.Function;
 import java.util.function.LongSupplier;
-import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderVerifier;
+import ua.bookloom.llm.engine.EngineFacts;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
+import ua.bookloom.llm.knowledge.BaseKeyResolver;
+import ua.bookloom.llm.profile.BaseFamilyAliases;
+import ua.bookloom.llm.profile.BuiltInRows;
+import ua.bookloom.llm.profile.ObservedReasoning;
+import ua.bookloom.llm.profile.ProfileRows;
 import ua.bookloom.llm.provider.ModelSettingsCache;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 import ua.bookloom.llm.provider.RefusalMemory;
 import ua.bookloom.llm.retry.RetryPolicy;
 import ua.bookloom.llm.verify.ProviderVerifierImpl;
+import ua.bookloom.util.paths.NameLookup;
 
 /**
  * Guice bindings owned by {@code :llm}, including the shared tolerant mapper for provider wire records.
  */
 public final class LlmModule extends AbstractModule {
 
-    private final Function<String, @Nullable String> environment;
+    private final NameLookup environment;
 
     /** Resolves credential variables from the process environment only; for tests and tools that install this alone. */
     public LlmModule() {
@@ -41,7 +47,7 @@ public final class LlmModule extends AbstractModule {
      *
      * @param environment looks up a credential or header variable at call time; a null or blank answer is unset
      */
-    public LlmModule(final Function<String, @Nullable String> environment) {
+    public LlmModule(final NameLookup environment) {
         this.environment = Objects.requireNonNull(environment, "environment");
     }
 
@@ -55,6 +61,13 @@ public final class LlmModule extends AbstractModule {
         bind(ProviderClientFactory.class).in(Singleton.class);
         bind(ModelSettingsCache.class).in(Singleton.class);
         bind(RefusalMemory.class).in(Singleton.class);
+        bind(ObservedReasoning.class).in(Singleton.class);
+        bind(BuiltWrongLog.class).in(Singleton.class);
+        bind(CapIgnoredLog.class).in(Singleton.class);
+        bind(EngineFacts.class).in(Singleton.class);
+        bind(BaseKeyResolver.class).to(BaseFamilyAliases.class).in(Singleton.class);
+        bind(ProfileRows.class).to(BuiltInRows.class).in(Singleton.class);
+        bind(CallLedger.class).to(CallLedgerImpl.class).in(Singleton.class);
     }
 
     /** Provides shared retry decisions with production clock, random jitter, and a blocking sleeper. */

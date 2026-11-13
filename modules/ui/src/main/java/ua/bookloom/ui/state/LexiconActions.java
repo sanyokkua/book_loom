@@ -64,7 +64,7 @@ record LexiconActions(
         calls.run(
                 "lexicon add",
                 () -> lexicon.add(project, term),
-                answer -> whileCurrent.accept(() -> settle("add", answer, added -> rows.add(added))));
+                answer -> whileCurrent.accept(() -> settle("add", answer, rows::add)));
     }
 
     /** Sets the person's rendering of a row; a blank text clears it. */
@@ -74,7 +74,7 @@ record LexiconActions(
         calls.run(
                 "lexicon edit",
                 () -> lexicon.edit(project, term, text.isBlank() ? null : text.strip()),
-                answer -> whileCurrent.accept(() -> settle("edit", answer, edited -> replace(edited))));
+                answer -> whileCurrent.accept(() -> settle("edit", answer, this::replace)));
     }
 
     /** Moves a row to the glossary with its established rendering as the target. */
@@ -154,7 +154,7 @@ record LexiconActions(
     }
 
     private void setAll(final Result<List<LexiconEntry>> answer) {
-        settle("load", answer, all -> rows.setAll(all));
+        settle("load", answer, rows::setAll);
     }
 
     private <T> void settle(final String what, final Result<T> answer, final Consumer<T> onOk) {

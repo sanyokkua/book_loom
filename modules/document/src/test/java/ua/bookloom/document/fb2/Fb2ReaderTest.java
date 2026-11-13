@@ -234,7 +234,8 @@ class Fb2ReaderTest {
         final Path file = Fb2Fixtures.writeFb2(
                 tempDir.resolve("book.fb2"), Fb2Fixtures.CONTRADICTED_DECLARATION_XML, Fb2Fixtures.WINDOWS_1251);
 
-        assertThatThrownBy(() -> new Fb2Reader(new OpenFb2Registry()).read(file))
+        final var reader = new Fb2Reader(new OpenFb2Registry());
+        assertThatThrownBy(() -> reader.read(file))
                 .isInstanceOf(CorruptContainerException.class)
                 .hasMessageContaining("contradicts");
     }
@@ -246,8 +247,8 @@ class Fb2ReaderTest {
         final String misdeclared = Fb2Fixtures.PRIMARY_XML.replace("windows-1251", "iso-8859-1");
         final Path file = Fb2Fixtures.writeFb2(tempDir.resolve("book.fb2"), misdeclared, Fb2Fixtures.WINDOWS_1251);
 
-        assertThatThrownBy(() -> new Fb2Reader(new OpenFb2Registry()).read(file))
-                .isInstanceOf(CorruptContainerException.class);
+        final var reader = new Fb2Reader(new OpenFb2Registry());
+        assertThatThrownBy(() -> reader.read(file)).isInstanceOf(CorruptContainerException.class);
     }
 
     // WHERE the source is a .fb2.zip, the FB2 member inside it is read and the result is
@@ -269,7 +270,8 @@ class Fb2ReaderTest {
         final Path file = Fb2Fixtures.writeFb2Zip(
                 tempDir.resolve("book.fb2.zip"), "readme.txt", "just a readme", StandardCharsets.UTF_8);
 
-        assertThatThrownBy(() -> new Fb2Reader(new OpenFb2Registry()).read(file))
+        final var reader = new Fb2Reader(new OpenFb2Registry());
+        assertThatThrownBy(() -> reader.read(file))
                 .isInstanceOf(CorruptContainerException.class)
                 .hasMessageContaining("no FictionBook member");
     }
@@ -280,7 +282,8 @@ class Fb2ReaderTest {
     void read_encryptedZipMember_isRefusedAsProtectedNotCorrupt() {
         final Path file = Fb2Fixtures.writeEncryptedFb2Zip(tempDir.resolve("book.fb2.zip"));
 
-        assertThatThrownBy(() -> new Fb2Reader(new OpenFb2Registry()).read(file))
+        final var reader = new Fb2Reader(new OpenFb2Registry());
+        assertThatThrownBy(() -> reader.read(file))
                 .isInstanceOf(DrmRefusedException.class)
                 .hasMessageContaining("encrypted");
     }
@@ -291,7 +294,7 @@ class Fb2ReaderTest {
         final Path file = Fb2Fixtures.writeFb2(
                 tempDir.resolve("book.fb2"), "<FictionBook><body><p>unclosed", StandardCharsets.UTF_8);
 
-        assertThatThrownBy(() -> new Fb2Reader(new OpenFb2Registry()).read(file))
-                .isInstanceOf(CorruptContainerException.class);
+        final var reader = new Fb2Reader(new OpenFb2Registry());
+        assertThatThrownBy(() -> reader.read(file)).isInstanceOf(CorruptContainerException.class);
     }
 }

@@ -6,8 +6,9 @@ import java.util.Objects;
 /**
  * What one suggested brief field stands on (15i.B4). A field is decided once, on a basis the code can check: a strict
  * majority of the passages read, accepted knowledge of the book that agrees with the value, or the code's own count of
- * the whole book; a field with none of these is {@link Basis#UNCERTAIN}, stays neutral or empty and is shown with the
- * "uncertain" chip, however many quotes its readings had.
+ * the whole book. A field with none of these holds the model's most probable value as {@link Basis#LIKELY}, shown as
+ * likely, or, when the model gave none, is {@link Basis#UNCERTAIN} and stays neutral or empty, however many quotes its
+ * readings had.
  *
  * @param basis what the field stands on
  * @param quotes the book's own words behind the value, each found in the passage it came from; never null, empty for a
@@ -15,7 +16,8 @@ import java.util.Objects;
  *     are pending evidence: they name the narrator by a name the glossary does not know yet (15i.T5)
  * @param agreeing how many passages support the value, or for an uncertain field the most that supported any one
  *     value; from zero to {@code samples}
- * @param samples how many passages were read; at least one
+ * @param samples how many passages were read; at least one. The story shape compares two windows, so its count is over
+ *     those two (at most the number read): "2 of 2" when two different windows each hold one of its quotes
  */
 public record FieldEvidence(Basis basis, List<String> quotes, int agreeing, int samples) {
 
@@ -27,7 +29,12 @@ public record FieldEvidence(Basis basis, List<String> quotes, int agreeing, int 
         KNOWLEDGE,
         /** The code's own count over the whole book, such as the narrator detector's. */
         MEASURED,
-        /** Nothing the code can check; the field is left as it was. */
+        /**
+         * Nothing the code can check, but the model gave its most probable value, which the field holds marked likely
+         * until the person confirms or changes it.
+         */
+        LIKELY,
+        /** Nothing the code can check and no value; the field is left as it was. */
         UNCERTAIN
     }
 
@@ -52,10 +59,19 @@ public record FieldEvidence(Basis basis, List<String> quotes, int agreeing, int 
     /**
      * Whether the field holds the suggested value rather than the neutral one it falls back to.
      *
-     * @return {@code true} unless the field is {@link Basis#UNCERTAIN}
+     * @return {@code true} unless the field is {@link Basis#UNCERTAIN}; a {@link Basis#LIKELY} field holds a value
      */
     public boolean isKept() {
         return basis != Basis.UNCERTAIN;
+    }
+
+    /**
+     * Whether the value is only the model's most probable one, which the screen marks likely.
+     *
+     * @return {@code true} for a {@link Basis#LIKELY} field, {@code false} otherwise
+     */
+    public boolean isLikely() {
+        return basis == Basis.LIKELY;
     }
 
     /**
@@ -68,6 +84,7 @@ public record FieldEvidence(Basis basis, List<String> quotes, int agreeing, int 
             case PASSAGES -> "from " + agreeing + " of " + samples + " passages";
             case KNOWLEDGE -> "from what the model knows of this book";
             case MEASURED -> "from the code's count of the whole book";
+            case LIKELY -> "the model's best guess: " + agreeing + " of " + samples + " passages agree";
             case UNCERTAIN -> "uncertain: " + agreeing + " of " + samples + " passages agree";
         };
     }

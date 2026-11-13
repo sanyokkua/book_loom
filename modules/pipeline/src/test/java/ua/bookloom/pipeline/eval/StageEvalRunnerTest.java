@@ -19,9 +19,10 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
+import ua.bookloom.pipeline.context.AnalysisFrame;
+import ua.bookloom.pipeline.context.Block;
 import ua.bookloom.pipeline.eval.StageCases.RetryBook;
 import ua.bookloom.pipeline.prompt.PromptName;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
  * The stage suites proven offline: each runner against a fake model that answers like a good one, then a silent one,
@@ -38,6 +39,10 @@ class StageEvalRunnerTest {
                 .findFirst()
                 .orElseThrow();
     }
+
+    // What the production sends as an analysis call's system part for an English book: the ANALYSIS frame alone.
+    private static final String ANALYSIS_SYSTEM = String.join(
+            "\n\n", AnalysisFrame.of("en").blocks().stream().map(Block::text).toList());
 
     private static String system(final ChatRequest request) {
         return request.messages().getFirst().content();
@@ -91,10 +96,7 @@ class StageEvalRunnerTest {
         assertThat(rows).extracting(StageRow::passed).as(rows.toString()).containsOnly(true);
         final ChatRequest sent = firstOf(runner.probe(), CallKind.PRESCAN);
         assertThat(sent.responseFormat().name()).isEqualTo(PromptName.PRESCAN.responseFormatName());
-        assertThat(system(sent))
-                .isEqualTo(new PromptTemplates()
-                        .renderSystem(PromptName.PRESCAN, StageFrames.frame(StageFrames.brief("en", "uk"), "en", "uk"))
-                        .strip());
+        assertThat(system(sent)).isEqualTo(ANALYSIS_SYSTEM);
         assertThat(rows.getFirst().calls()).isGreaterThanOrEqualTo(2);
     }
 
@@ -116,11 +118,7 @@ class StageEvalRunnerTest {
                 .extracting(StageRow::id)
                 .contains("terms-en-uk-everyday-vs-jargon:choice", "terms-en-uk-everyday-vs-jargon:review");
         assertThat(rows).extracting(StageRow::passed).as(rows.toString()).containsOnly(true);
-        assertThat(system(firstOf(runner.probe(), CallKind.TERM_CHOICE)))
-                .isEqualTo(new PromptTemplates()
-                        .renderSystem(
-                                PromptName.TERM_CHOICE, StageFrames.frame(StageFrames.brief("en", "uk"), "en", "uk"))
-                        .strip());
+        assertThat(system(firstOf(runner.probe(), CallKind.TERM_CHOICE))).isEqualTo(ANALYSIS_SYSTEM);
     }
 
     @Test
@@ -184,33 +182,6 @@ class StageEvalRunnerTest {
     }
 
     @Test
-    void consistency_goodModel_repairsEveryPlantedDefect() {
-        final List<RetryBook> books = StageCases.retry();
-        final RetryEvalRunner runner = new RetryEvalRunner(new PlantedDrafts(draftsOf(books, true)), workDir);
-
-        final List<StageRow> rows = runner.consistency(books);
-
-        assertThat(rows.stream().filter(row -> row.id().endsWith(":pass"))).hasSize(2);
-        assertThat(rows).extracting(StageRow::passed).as(rows.toString()).containsOnly(true);
-        assertThat(rows.stream().filter(row -> row.id().endsWith(":pass")))
-                .allSatisfy(row -> assertThat(row.calls()).isPositive());
-        assertThat(runner.probe().requests())
-                .extracting(request -> request.callKind())
-                .contains(CallKind.DRAFT);
-    }
-
-    @Test
-    void consistency_modelThatKeepsThePlantedDrafts_failsTheDefectiveCases() {
-        final List<RetryBook> books = StageCases.retry();
-
-        final List<StageRow> rows =
-                new RetryEvalRunner(new PlantedDrafts(draftsOf(books, false)), workDir).consistency(books);
-
-        assertThat(rows.stream().filter(row -> row.id().endsWith(":mixed-script")))
-                .allSatisfy(row -> assertThat(row.passed()).isFalse());
-    }
-
-    @Test
     void retry_goodModel_fixesEachCaseAndSendsDraftRequests() {
         final List<RetryBook> books = StageCases.retry();
         final RetryEvalRunner runner = new RetryEvalRunner(new PlantedDrafts(draftsOf(books, true)), workDir);
@@ -220,16 +191,14 @@ class StageEvalRunnerTest {
         assertThat(rows).hasSize(8);
         assertThat(rows).extracting(StageRow::passed).as(rows.toString()).containsOnly(true);
         final ChatRequest sent = firstOf(runner.probe(), CallKind.DRAFT);
-        assertThat(sent.responseFormat().name()).isEqualTo(PromptName.DRAFT.responseFormatName());
+        assertThat(sent.responseFormat().name()).isEqualTo(PromptName.TRANSLATE.responseFormatName());
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"prescan", "terms", "setup", "consistency", "retry"})
+    @ValueSource(strings = {"prescan", "terms", "setup", "retry"})
     void suites_everyName_runsAndReports(final String suite) {
         final List<RetryBook> books = StageCases.retry();
-        final var model = suite.equals("consistency") || suite.equals("retry")
-                ? new PlantedDrafts(draftsOf(books, true))
-                : new StageFakeModel(false);
+        final var model = suite.equals("retry") ? new PlantedDrafts(draftsOf(books, true)) : new StageFakeModel(false);
 
         final StageReport report = StageSuites.run(suite, "fake", model, workDir);
 

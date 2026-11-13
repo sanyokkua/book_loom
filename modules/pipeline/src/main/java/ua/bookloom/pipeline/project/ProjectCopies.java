@@ -16,7 +16,6 @@ import ua.bookloom.api.project.IdSource;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.api.project.TargetOrigin;
 
 /**
  * Copies what is about the book, not about one translation, into the project of another target language: the
@@ -61,27 +60,34 @@ public final class ProjectCopies {
                         null,
                         List.of(),
                         SegmentPath.DRAFT,
-                        0,
                         false,
                         null))
                 .toList();
     }
 
     private Result<Integer> copyGlossary(final List<GlossaryEntry> entries, final String toId) {
+        log.debug("copy glossary to={} entries={} (targets dropped, forms and origins kept)", toId, entries.size());
         for (final GlossaryEntry entry : entries) {
             final Result<GlossaryEntry> added = glossary.add(new GlossaryEntry(
                     ids.newId(),
                     toId,
                     entry.term(),
+                    entry.forms(),
+                    entry.lemmaInferred(),
+                    null,
+                    entry.targetState(),
                     null,
                     entry.type(),
+                    entry.placeKind(),
+                    entry.typeOrigin(),
                     entry.gender(),
-                    entry.locked(),
-                    TargetOrigin.PERSON,
                     entry.genderOrigin(),
                     entry.genderSeedTried(),
-                    entry.aliases(),
-                    entry.noGenderEvidence()));
+                    entry.noGenderEvidence(),
+                    entry.meaning(),
+                    entry.meaningChoice(),
+                    entry.knowledge(),
+                    entry.unsureMentions()));
             if (added.isErr()) {
                 return Result.err(failure(added));
             }

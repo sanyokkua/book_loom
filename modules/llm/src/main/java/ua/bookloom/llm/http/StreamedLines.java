@@ -90,9 +90,9 @@ final class StreamedLines implements Flow.Subscriber<String> {
             final long wait = Math.min(idle.toNanos(), remaining);
             final Signal signal = next(wait);
             switch (signal) {
-                case Signal.Line line -> {
-                    body.append(line.text()).append('\n');
-                    if (counted.test(line.text())) {
+                case Signal.Line(String text) -> {
+                    body.append(text).append('\n');
+                    if (counted.test(text)) {
                         lines++;
                     }
                     if (lines >= maxLines) {
@@ -100,13 +100,13 @@ final class StreamedLines implements Flow.Subscriber<String> {
                         return new Outcome.Cut(body.toString());
                     }
                 }
-                case Signal.Done done -> {
+                case Signal.Done _ -> {
                     log.debug("Streamed reply complete lines={} length={}", lines, body.length());
                     return new Outcome.Collected(body.toString());
                 }
-                case Signal.Failed failed -> {
-                    log.debug("Streamed reply ended early lines={} failureType={}", lines, typeOf(failed.failure()));
-                    return new Outcome.Failed(failed.failure(), wait < idle.toNanos() ? limit : idle);
+                case Signal.Failed(Throwable failure) -> {
+                    log.debug("Streamed reply ended early lines={} failureType={}", lines, typeOf(failure));
+                    return new Outcome.Failed(failure, wait < idle.toNanos() ? limit : idle);
                 }
             }
         }
@@ -122,6 +122,7 @@ final class StreamedLines implements Flow.Subscriber<String> {
                     ? new Signal.Failed(new HttpTimeoutException("the streamed reply stopped sending"))
                     : signal;
         } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
             return new Signal.Failed(interrupted);
         }
     }

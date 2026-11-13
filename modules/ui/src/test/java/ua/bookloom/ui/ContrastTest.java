@@ -200,7 +200,7 @@ class ContrastTest extends ConformanceTestBase {
 
     // A Labeled's own words are drawn by a LabeledText inside it; that node is the Labeled's, read through it.
     private static boolean isLabeledText(final Text text) {
-        return "LabeledText".equals(text.getClass().getSimpleName());
+        return text.getParent() instanceof Labeled;
     }
 
     private static Font fontOf(final Node node) {

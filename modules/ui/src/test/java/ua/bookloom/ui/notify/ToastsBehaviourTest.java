@@ -47,8 +47,8 @@ class ToastsBehaviourTest extends ToastsTestBase {
     // IF the lifetimes drifted from the spec, THEN a warning would vanish before it can be read.
     @Test
     void lifetimes_standard_areFiveSecondsAndTwelveSeconds() {
-        assertThat(ToastStack.GLANCE_LIFETIME).isEqualTo(Duration.ofSeconds(5));
-        assertThat(ToastStack.READ_LIFETIME).isEqualTo(Duration.ofSeconds(12));
+        assertThat(ToastStack.GLANCE_LIFETIME.toSeconds()).isEqualTo(5);
+        assertThat(ToastStack.READ_LIFETIME.toSeconds()).isEqualTo(12);
     }
 
     // IF a message about a provider stayed after the provider was closed or deleted, THEN it would sit over another

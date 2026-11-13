@@ -1,0 +1,1 @@
+{"id":"gen-example-1","model":"vendor/some-model","provider":"Example Host","choices":[{"index":0,"message":{"role":"assistant","content":""},"finish_reason":"error"}],"error":{"code":502,"message":"Provider returned error","metadata":{"error_type":"provider_unavailable","provider_name":"Example Host"}}}

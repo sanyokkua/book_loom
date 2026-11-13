@@ -73,4 +73,21 @@ class SqliteSettingsContractTest extends SettingsContractTest {
                 .data());
         assertThat(row).startsWith("false/").doesNotEndWith("/");
     }
+
+    // IF a database from before kept `automation.lastCheck`, THEN no setting may read it back as its own value.
+    @Test
+    void all_staleLastCheckRow_isReadByNoSetting() {
+        db.write(
+                "test row",
+                h -> h.createUpdate(
+                                "INSERT INTO settings (key, value, type) VALUES ('automation.lastCheck', 'true', 'boolean')")
+                        .execute());
+
+        assertThat(repository.all().data()).containsEntry("automation.lastCheck", "true");
+        assertThat(repository.get(AppSetting.KEEP_AWAKE).data()).hasValue(true);
+        assertThat(repository.get(AppSetting.OPEN_REVIEW_DESK).data()).hasValue(true);
+        assertThat(repository.get(AppSetting.REOPEN_LAST_PROJECT).data()).hasValue(true);
+        assertThat(repository.get(AppSetting.TECHNICAL_DETAILS).data()).hasValue(false);
+        assertThat(repository.get(AppSetting.FIRST_LAUNCH_PROBED).data()).isEmpty();
+    }
 }

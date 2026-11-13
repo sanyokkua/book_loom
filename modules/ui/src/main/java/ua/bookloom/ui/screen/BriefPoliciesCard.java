@@ -16,7 +16,10 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
 
-/** The Translation policies card: the four policy choices and the faithful-to-natural balance slider. */
+/**
+ * The Translation policies card: the four policy choices, the faithful-to-natural balance slider and the rows the
+ * target language's file sets.
+ */
 final class BriefPoliciesCard {
 
     private static final double PAIR_SPACING = 14;
@@ -27,6 +30,7 @@ final class BriefPoliciesCard {
     private final BriefChoice<ForeignPassagePolicy> foreign;
     private final BriefChoice<FootnotePolicy> footnotes;
     private final BriefChoice<UnitPolicy> units;
+    private final BriefKeyRows keyRows;
     private final Slider balance = new Slider(0, BALANCE_MAX, BALANCE_START);
     private final Node node;
     // True while a value from the view model is written into the slider, so it is not handed back as a person's choice.
@@ -37,6 +41,7 @@ final class BriefPoliciesCard {
         this.foreign = foreignChoice(viewModel, messages);
         this.footnotes = footnoteChoice(viewModel, messages);
         this.units = unitChoice(viewModel, messages);
+        this.keyRows = new BriefKeyRows(viewModel.policyKeys(), messages);
         balance.setId("brief-policy-balance");
         Tips.install(messages, balance, MessageKey.BRIEF_POLICY_BALANCE_TIP);
         Tips.install(messages, names.node(), MessageKey.BRIEF_POLICY_NAMES_TIP);
@@ -56,7 +61,8 @@ final class BriefPoliciesCard {
                         MessageKey.BRIEF_POLICY_FOREIGN_HINT),
                 footnotesAndUnits(messages),
                 BriefCards.field(
-                        messages, MessageKey.BRIEF_POLICY_BALANCE, balance, MessageKey.BRIEF_POLICY_BALANCE_HINT));
+                        messages, MessageKey.BRIEF_POLICY_BALANCE, balance, MessageKey.BRIEF_POLICY_BALANCE_HINT),
+                keyRows.node());
     }
 
     private static BriefChoice<FootnotePolicy> footnoteChoice(
@@ -138,6 +144,7 @@ final class BriefPoliciesCard {
         foreign.show(brief.foreignPassages());
         footnotes.show(brief.footnotes());
         units.show(brief.units());
+        keyRows.show(brief);
         if ((int) Math.round(balance.getValue()) != brief.balance()) {
             applying = true;
             try {

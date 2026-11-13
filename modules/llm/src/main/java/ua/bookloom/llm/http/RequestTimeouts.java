@@ -11,32 +11,33 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ProviderConfig;
 
 /**
- * Chooses a chat call's request timeout by what the call is for. The reviewer and the helper calls have a capped,
- * short reply, so their own bound ends a stuck call long before the provider's flat timeout would; every other call
- * scales with its expected output, never below the provider's configured timeout.
+ * Chooses a chat call's request timeout by what the call is for. The helper calls have a capped,
+ * short reply, so their own bound ends a stuck call long before the provider's flat timeout would, unless the call
+ * thinks first, which lengthens the bound to 60 ms per expected token; every other call scales with its expected
+ * output, the reasoning reserve included, never below the provider's configured timeout.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RequestTimeouts {
 
-    private static final long MILLIS_PER_EXPECTED_TOKEN = 500;
-    // A streaming reply that sends nothing for this long has stalled, however long the whole call may take.
-    private static final Duration STREAM_IDLE_TIMEOUT = Duration.ofSeconds(60);
+    // A model that thinks first writes its reasoning before the short reply a fixed bound was set for.
+    private static final long MILLIS_PER_THINKING_TOKEN = 60;
 
     /**
      * Returns a copy of {@code config} whose request timeout fits {@code request}.
      *
      * @param config the provider config a chat call is about to be sent with
      * @param request the call; its kind and expected output choose the timeout
-     * @return a copy whose timeout is 90 s for a reviewer call, 120 s for a prescan, glossary review or summary call, and otherwise
+     * @return a copy whose timeout is {@link CallLimits#HELPER_TIMEOUT} for a prescan, glossary review, summary or other helper call
+     *     (for a call with room reserved for reasoning, the longer of that and 60 ms per expected token), and otherwise
      *     {@code max(config.requestTimeout(), min(600s, expectedOutputTokens * 500ms))}; {@code config} unchanged when
      *     the call has neither one of those kinds nor an expected output
      */
     public static ProviderConfig forChat(ProviderConfig config, ChatRequest request) {
         Objects.requireNonNull(config, "config");
         Objects.requireNonNull(request, "request");
-        final Duration fixed = fixedFor(request);
+        final Duration fixed = thinkingAware(fixedFor(request), request);
         final ProviderConfig chosen =
                 fixed == null ? scaled(config, request.expectedOutputTokens()) : config.withRequestTimeout(fixed);
         log.debug(
@@ -57,9 +58,9 @@ public final class RequestTimeouts {
      */
     public static Duration streamIdle(ProviderConfig providerConfig) {
         Objects.requireNonNull(providerConfig, "providerConfig");
-        return providerConfig.requestTimeout().compareTo(STREAM_IDLE_TIMEOUT) < 0
+        return providerConfig.requestTimeout().compareTo(CallLimits.STREAM_IDLE) < 0
                 ? providerConfig.requestTimeout()
-                : STREAM_IDLE_TIMEOUT;
+                : CallLimits.STREAM_IDLE;
     }
 
     private static @Nullable Duration fixedFor(ChatRequest request) {
@@ -67,26 +68,36 @@ public final class RequestTimeouts {
             return null;
         }
         return switch (request.callKind()) {
-            case REVIEW -> CallLimits.REVIEW_TIMEOUT;
             case PRESCAN,
                     REVIEW_TERMS,
                     SUGGEST_TARGETS,
-                    SUMMARY,
+                    CHAPTER_SUMMARY,
                     FILE_NAME,
                     BRIEF_SUGGESTION,
                     BOOK_KNOWLEDGE,
                     BRIEF_SYNTHESIS,
                     TERM_READING,
-                    TERM_CHOICE -> CallLimits.HELPER_TIMEOUT;
-            case DRAFT, STRUCTURAL_REPAIR, PLACEHOLDER_REPAIR, DIRECTED_FIX, REVISION -> null;
+                    TERM_CHOICE,
+                    NAME_KNOWLEDGE -> CallLimits.HELPER_TIMEOUT;
+            case DRAFT, STRUCTURAL_REPAIR, REPAIR, PROOFREAD -> null;
         };
+    }
+
+    private static @Nullable Duration thinkingAware(final @Nullable Duration fixed, final ChatRequest request) {
+        final Integer expected = request.expectedOutputTokens();
+        if (fixed == null || request.reasoningReserve() == null || expected == null) {
+            return fixed;
+        }
+        final Duration thinking = Duration.ofMillis(expected * MILLIS_PER_THINKING_TOKEN);
+        log.debug("Fixed bound for a thinking call fixed={} expected={} thinking={}", fixed, expected, thinking);
+        return thinking.compareTo(fixed) > 0 ? thinking : fixed;
     }
 
     private static ProviderConfig scaled(ProviderConfig config, @Nullable Integer expectedOutputTokens) {
         if (expectedOutputTokens == null) {
             return config;
         }
-        final Duration scaled = Duration.ofMillis(expectedOutputTokens * MILLIS_PER_EXPECTED_TOKEN);
+        final Duration scaled = CallLimits.PER_EXPECTED_TOKEN.multipliedBy(expectedOutputTokens);
         final Duration capped =
                 scaled.compareTo(CallLimits.MAX_CHAT_TIMEOUT) > 0 ? CallLimits.MAX_CHAT_TIMEOUT : scaled;
         final Duration effective = capped.compareTo(config.requestTimeout()) > 0 ? capped : config.requestTimeout();

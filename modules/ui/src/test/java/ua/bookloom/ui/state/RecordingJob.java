@@ -96,13 +96,6 @@ public final class RecordingJob implements TranslationJob {
         });
     }
 
-    /** Queues the end of {@code run()} by throwing an {@link Error}. */
-    void finishThrowing(final Error thrown) {
-        steps.add(() -> {
-            throw thrown;
-        });
-    }
-
     /** Blocks the caller until the job thread has processed everything queued so far. */
     public void drain() throws InterruptedException {
         final CountDownLatch processed = new CountDownLatch(1);

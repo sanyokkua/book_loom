@@ -18,7 +18,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TmEntry;
-import ua.bookloom.util.text.GlossaryKeys;
+import ua.bookloom.persistence.GlossaryIndex;
 
 /**
  * Writes one chunk's segment decisions, translation-memory entries, deferrals, glossary additions and run record in one write
@@ -37,11 +37,14 @@ public final class SqliteCheckpoint implements CheckpointPort {
     public Result<Integer> commit(final ChunkCommit commit) {
         Objects.requireNonNull(commit, "commit");
         log.debug(
-                "Commit projectId={} segments={} tmEntries={} deferrals={} glossaryAdditions={}",
+                "Commit projectId={} segments={} verdicts={} tmEntries={} deferrals={} resolvedDeferrals={} "
+                        + "glossaryAdditions={}",
                 commit.projectId(),
                 commit.segments().size(),
+                commit.verdictCount(),
                 commit.tmEntries().size(),
                 commit.deferrals().size(),
+                commit.resolvedDeferralIds().size(),
                 commit.glossaryAdditions().size());
         return db.write("checkpoint commit", h -> commitIn(h, commit)).flatMap(Function.identity());
     }
@@ -78,6 +81,10 @@ public final class SqliteCheckpoint implements CheckpointPort {
         for (final TmEntry entry : commit.tmEntries()) {
             SqliteTmRepository.upsert(h, codec, projectId, entry);
         }
+        // Resolved first: a new proposal shares the key of the earlier one it supersedes.
+        for (final String deferralId : commit.resolvedDeferralIds()) {
+            SqliteDeferralRepository.resolveIn(h, projectId, deferralId);
+        }
         for (final Deferral deferral : commit.deferrals()) {
             SqliteDeferralRepository.insertIfAbsent(h, codec, projectId, deferral);
         }
@@ -102,20 +109,25 @@ public final class SqliteCheckpoint implements CheckpointPort {
                 .findFirst();
     }
 
-    /** Adds each new term; one already held, ignoring case, or removed by the person is skipped. */
+    /**
+     * Adds each new term; one whose lemma or a form is held as a lemma or a form, ignoring case, or was removed by the
+     * person is skipped.
+     */
     private int applyGlossaryAdditions(final Handle h, final ChunkCommit commit) {
         if (commit.glossaryAdditions().isEmpty()) {
             return 0;
         }
         GlossaryDocument doc = SqliteGlossaryRepository.load(h, codec, commit.projectId());
+        final GlossaryIndex index = GlossaryIndex.of(doc.entries());
         int applied = 0;
         for (final GlossaryEntry entry : commit.glossaryAdditions()) {
-            final String key = GlossaryKeys.of(entry.term());
-            if (doc.findByKey(key).isPresent() || doc.wasRemoved(key)) {
-                log.trace("Glossary addition skipped projectId={} term={}", commit.projectId(), key);
+            if (index.holderOf(entry).isPresent()
+                    || GlossaryIndex.keysOf(entry).stream().anyMatch(doc::wasRemoved)) {
+                log.trace("Glossary addition skipped projectId={} term={}", commit.projectId(), entry.term());
                 continue;
             }
             doc = doc.added(entry);
+            index.add(entry);
             applied++;
         }
         if (applied > 0) {

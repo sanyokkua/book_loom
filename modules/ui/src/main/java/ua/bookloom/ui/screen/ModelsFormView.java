@@ -8,18 +8,23 @@ import javafx.collections.WeakListChangeListener;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.ui.control.Banner;
+import ua.bookloom.ui.control.Visibility;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ModelEntry;
 import ua.bookloom.ui.state.ModelFacts;
 import ua.bookloom.ui.state.ModelForm;
+import ua.bookloom.ui.state.ModelReportRows;
 import ua.bookloom.ui.state.TechnicalDetails;
 import ua.bookloom.ui.state.Tone;
 
 /**
- * The body of the Models tab: what the program says about the chosen model, then its temperature, the settings it
- * refused, its two optional numbers and the fold of advanced options. It only draws what {@link ModelForm} holds and
+ * The body of the Models tab: what the program says about the chosen model, then its temperature, its thinking, its
+ * sampling, the settings it refused, its two optional numbers and the fold of advanced options. It only draws what {@link ModelForm} holds and
  * turns edits back into draft changes. The form outlives it, so it listens through weak listeners held by the fields
  * below, which live exactly as long as the nodes that use them.
  */
@@ -29,8 +34,13 @@ final class ModelsFormView {
     private final ModelForm form;
     private final Messages messages;
     private final VBox root = new VBox(14);
+    private final ModelReportRows rows;
+    private final Label verdict = Wrapped.label("", "hint");
     private final Banner found = new Banner("models-found", Tone.INFO, "i", "", "");
+    private final Label structured = Wrapped.label("", "hint");
     private final ModelTemperatureSection temperature;
+    private final ModelThinkingSection thinking;
+    private final ModelSamplingSection sampling;
     private final ModelRefusedSection refused;
     private final ModelLimitsSection limits;
     private final ModelAdvancedFold advanced;
@@ -42,16 +52,41 @@ final class ModelsFormView {
     ModelsFormView(final ModelForm form, final Messages messages, final TechnicalDetails technical) {
         this.form = Objects.requireNonNull(form, "form");
         this.messages = Objects.requireNonNull(messages, "messages");
+        rows = new ModelReportRows(messages);
+        verdict.setId("models-verdict");
+        structured.setId("models-found-structured");
         temperature = new ModelTemperatureSection(form, messages);
+        thinking = new ModelThinkingSection(form, messages);
+        sampling = new ModelSamplingSection(form, messages);
         refused = new ModelRefusedSection(form, messages);
         limits = new ModelLimitsSection(form, messages, technical);
         advanced = new ModelAdvancedFold(form, messages, technical);
+        buildRoot();
+        root.disableProperty().bind(form.reading());
+        // The listeners below are weak, so the node (which the scene keeps) holds this view for as long as it is shown.
+        root.getProperties().put(ModelsFormView.class, this);
+        listen(technical);
+        showAll();
+    }
+
+    private void buildRoot() {
         errors.setId("models-errors");
         errors.getStyleClass().add("form-errors");
         errorsText.setId("models-errors-text");
         errorsText.setWrapText(true);
-        root.getChildren().addAll(found, temperature.node(), refused.node(), limits.node(), advanced.node(), errors);
-        root.disableProperty().bind(form.reading());
+        root.getChildren()
+                .addAll(
+                        verdict,
+                        found,
+                        structured,
+                        temperature.node(),
+                        thinking.node(),
+                        sampling.node(),
+                        refused.node());
+        root.getChildren().addAll(limits.node(), advanced.node(), errors);
+    }
+
+    private void listen(final TechnicalDetails technical) {
         form.draft().addListener(new WeakChangeListener<>(onChange));
         form.facts().addListener(new WeakChangeListener<>(onChange));
         form.selected().addListener(new WeakChangeListener<>(onChange));
@@ -60,7 +95,6 @@ final class ModelsFormView {
         form.refusedFailed().addListener(new WeakChangeListener<>(onChange));
         technical.property().addListener(new WeakChangeListener<>(onChange));
         form.refused().addListener(new WeakListChangeListener<>(onRefused));
-        showAll();
     }
 
     VBox node() {
@@ -69,10 +103,13 @@ final class ModelsFormView {
 
     private void showRefused() {
         refused.show();
+        showFound(form.facts().get());
     }
 
     private void showAll() {
         temperature.show(form.draft().get());
+        thinking.show(form.draft().get(), form.facts().get());
+        sampling.show(form.draft().get());
         limits.show();
         advanced.show();
         refused.show();
@@ -81,29 +118,18 @@ final class ModelsFormView {
     }
 
     private void showFound(final ModelFacts facts) {
+        final String verdictText = rows.verdict(facts);
+        verdict.setText(verdictText);
+        Visibility.show(verdict, !verdictText.isEmpty());
         if (facts.loading()) {
             found.setText(messages.get(MessageKey.SETTINGS_MODELS_FOUND_LOADING));
+            structured.setText("");
             return;
         }
-        found.setText(messages.get(MessageKey.SETTINGS_MODELS_FOUND, readable(facts), structured(facts)));
-    }
-
-    private String readable(final ModelFacts facts) {
-        final Integer length = facts.contextLength();
-        if (length == null) {
-            return messages.get(MessageKey.SETTINGS_MODELS_FOUND_UNKNOWN);
-        }
-        final String read = messages.get(MessageKey.SETTINGS_MODELS_FOUND_READ, length);
-        final Integer loaded = facts.loaded();
-        return loaded == null ? read : messages.get(MessageKey.SETTINGS_MODELS_FOUND_LOADED, read, loaded);
-    }
-
-    private String structured(final ModelFacts facts) {
-        final Boolean answered = facts.structured();
-        if (answered == null) {
-            return messages.get(MessageKey.SETTINGS_MODELS_FOUND_UNCHECKED);
-        }
-        return messages.get(answered ? MessageKey.SETTINGS_MODELS_FOUND_YES : MessageKey.SETTINGS_MODELS_FOUND_NO);
+        final @Nullable ModelEntry entry = form.selected().get();
+        final String window = entry == null ? "" : rows.context(entry, facts);
+        found.setText(messages.get(MessageKey.SETTINGS_MODELS_FOUND, window));
+        structured.setText(String.join("\n", rows.structured(facts, form.refused())));
     }
 
     private void showErrors() {

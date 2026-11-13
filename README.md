@@ -1,190 +1,136 @@
 # BookLoom
 
-A **local-first, offline desktop application** that translates whole books — EPUB, FB2, Markdown, TXT — using a
-general-purpose LLM you run locally (Ollama or LM Studio) or any OpenAI-compatible endpoint. It keeps the document's
-structure, images, fonts and IDs intact — a structure-and-text-preserving (canonical-equal) round trip; exact bytes may
-differ on re-serialization — translating only the text, and runs automatically end-to-end: typically about 99% of a book
-completes with no human interaction, and only the chunks it isn't sure about are flagged for optional side-by-side
-review. Nothing leaves your machine.
+BookLoom is a desktop application that translates whole books (EPUB, FB2, Markdown, TXT) with a language model that
+runs on your own computer (Ollama or LM Studio) or with any OpenAI-compatible endpoint. It translates only the text
+and writes the book back in the same format with its structure, identifiers, images and fonts intact.
 
-- **Formats:** EPUB, FB2 (incl. `.fb2.zip`), Markdown, TXT.
-- **Private:** fully offline, no account, no telemetry; the only network traffic is your own requests to your own model
-  server (inference, model discovery, verification).
-- **Faithful:** structure-preserving round-trip — the translated book opens exactly like the original.
-- **Consistent:** a name/term glossary, translation memory, rolling summary, deterministic quality checks and an
-  LLM-as-judge keep names, tone and formatting steady across a whole book.
-- **Cross-platform:** Java 25 + JavaFX 26; unsigned native packages for macOS (`.app`/`.dmg`), Windows (portable zip —
-  no installer), and Linux (tar.gz/`.deb`).
-- **MIT licensed.**
+Opening a book never needs the network. The only network traffic is the requests you start to the model server you
+configure. With a local model the book stays on your computer; with a server elsewhere the text being translated is
+sent to that server. There is no account, telemetry or update check.
+
+![Translating a book](docs/screens/04-translating.png)
+
+## What it does
+
+- **Formats.** EPUB, FB2 (including `.fb2.zip`), Markdown and TXT. Every format round-trips: the book you write is
+  canonical-equal to the one you read, apart from the translated text and a few listed fields (title, author,
+  language, image alt text). Verified on a 235-book local corpus.
+- **A five-step workflow.** Import, Book Brief (languages, tone, who narrates, how to treat names, the "Also
+  translate" switches, quality), Names & style (a glossary the book shares across chapters), Translating, Export.
+- **Quality control.** Placeholders protect formatting inside a paragraph; deterministic checks decide each segment;
+  a draft that fails gets one repair call and is kept only if it is not worse; a final Proofread stage reads the
+  book again. A review desk lists whatever still needs a person.
+- **Resumable.** Everything is stored in a local SQLite database; a stopped or crashed run continues where it
+  stopped, and a partial book can be exported.
+- **Interface** in English and Ukrainian (chosen from the operating system), light and dark themes.
+- **Platforms.** Java 25 and JavaFX 26. Unsigned packages for macOS, Linux and Windows are built by the scripts in
+  `scripts/`; see [release and packaging](docs/project/release-and-packaging.md).
+
+## How it works
+
+```mermaid
+flowchart LR
+  A[Import book] --> B[Book Brief]
+  B --> C[Names and style]
+  C --> D[Run: Prepare]
+  D --> E[Run: Translate]
+  E --> F[Run: Proofread]
+  F --> G[Export]
+  E -.-> H[Review desk]
+  F -.-> H
+```
+
+The book is parsed into a skeleton and an ordered list of text segments. Inline formatting inside a segment is
+replaced by placeholders (`⟦g1⟧`), so the model sees plain text. Segments are packed into chunks, drafted in JSON
+batches, checked and decided one by one; the placeholders are restored behind a hard gate that checks their count and
+the order of paired ones. The skeleton is never regenerated. Details: [translation
+pipeline](docs/pipeline/translation-pipeline.md) and [document engine](docs/architecture/document-engine.md).
+
+The quality setting (Fast, Balanced, Max) changes only the fixing call and how far Proofread reads. The review mode
+(Unattended, Assisted, Manual) changes only when the run pauses for you.
+
+## Screens
+
+| Import | Book Brief |
+|---|---|
+| ![Import](docs/screens/01-import.png) | ![Book Brief](docs/screens/02-book-brief.png) |
+| **Names & style** | **Export** |
+| ![Names and style](docs/screens/03-names-and-style.png) | ![Export](docs/screens/05-export.png) |
+
+Settings has Providers (engine detection, connection tests), Models (per-model facts and overrides), Generation,
+Automation, Appearance and Storage & logs: ![Settings, Models tab](docs/screens/06-settings-models.png)
+
+The screens show invented sample books.
+
+## Build and run
+
+JDK 25 is required and is not downloaded for you. Gradle comes from the committed wrapper; always use `./gradlew`.
+
+```bash
+./gradlew :app:run                          # the desktop app
+./gradlew build                             # compile, lint and test
+./gradlew clean build check spotlessCheck   # the full gate (about 20 minutes); what CI and pre-push run
+```
+
+Headless, with the same pipeline (quote a path that contains spaces):
+
+```bash
+./gradlew -q :app:translate --args="'/path/to/book.epub' --to uk --provider ollama --model <model>"
+```
+
+A provider that needs a key stores only the name of an environment variable; see
+[provider keys](docs/development/provider-keys.md). First-time setup, IDE, packaging and troubleshooting:
+[docs/development/getting-started.md](docs/development/getting-started.md).
+
+## Built with
+
+| | |
+|---|---|
+| Language and UI | Java 25, JavaFX 26, a custom token-based theme |
+| Build | Gradle (Kotlin DSL) with convention plugins in `modules/build-logic`, JPMS modules |
+| Injection | Guice 7 |
+| Documents | jsoup, JDOM2, commonmark, ICU4J |
+| Models | HTTP clients for Ollama's native API and OpenAI-compatible servers (JDK `java.net.http`, Jackson) |
+| Storage | SQLite (WAL) through JDBI, state kept as JSON documents |
+| Verification | JUnit 5, AssertJ, WireMock, TestFX on the headless platform, ArchUnit, JaCoCo, Spotless, Checkstyle, Error Prone with NullAway, SonarQube (local) |
+
+Dependency versions are in `gradle/libs.versions.toml`.
 
 ## Repository layout
 
 ```
-AGENTS.md                     Operating manual for agents (read first)
-docs/Architecture.md          What is built, what is not, and how to verify each claim
-CLAUDE.md                     Pointer to AGENTS.md; holds no rules of its own
-.claude/                      Claude Code config: rules, skills, agents, slash commands
-docs/
-  DEVELOPMENT.md               Human developer guide: prerequisites, build, run, debug, IDE, troubleshooting
-  specification/              The spec: requirements, architecture, decisions, mockup, diagrams (editable)
-    INDEX.md                    Start here for the spec map
-    00_Foundation/ … 05_Dependencies/
-    mockups/ui-mockup.html      Binding UI source of truth
-    diagrams/                   Pipeline diagrams (mermaid)
-    assets/icon/                App icon: source + background-removal/derivation pipeline + per-OS .icns/.ico/.png
-  implementation_plan/        CHANGE_BACKLOG.md (order of work), 01_MODULE_INVENTORY.md (as-built log),
-                              07_ROADMAP.md, notes-corpus-verification.md, 04_ADR_FORMAT.md
-  adr/                        Architecture Decision Records (ADR-0001 … )
-openspec/
-  config.yaml                 Project context + the authoring rules that steer generated artifacts
-  changes/<name>/             THE UNIT OF WORK: proposal.md, design.md, specs/, tasks.md
-  specs/<capability>/         The ledger of what is actually BUILT — grows on archive
-modules/                      ALL the code lives here (ADR-0021) — the root stays prose + build config
-  api/                        Contracts: interfaces, records/DTOs, Result/AppError — the dependency floor
-  util/                       Per-OS paths, shared helpers, the language catalogue
-  document/                   EPUB/FB2/Markdown/TXT parsing, masking, reassembly
-  llm/                        Provider clients (Ollama-native, OpenAI-compatible), the pseudo model, model discovery
-  pipeline/                   Translation engine: the pausable job, checked export; prompts, chunking, QA, the judge
-                              and self-heal are built and tested but not yet wired into a run
-  persistence/                In-memory adapters behind the `:api` storage ports (ADR-0034); SQLite + Flyway + JDBI
-                              planned
-  ui/                         JavaFX shell, screens, state mirror, en/uk bundles, theme (only ui/ and app/ see JavaFX)
-  app/                        Launcher, Application, Guice composition root, the arch-test suite
-  build-logic/                Gradle convention plugins (an included build)
-                              Gradle project names are UNCHANGED by the move: still :api … :app, still
-                              ./gradlew :app:run. Only `-p modules/build-logic` gained a prefix.
-lefthook.yml                  Git hook stages (see "Git hooks" below)
-.lefthook/pre-push/           The pre-push gate script
-tooling/hooks/                Helper scripts the hooks call: file-size guard, commit-message check
+modules/            api  util  document  llm  persistence  pipeline  ui  app  build-logic
+docs/               architecture, pipeline, development, evaluation, project, screens, spec_baseline
+openspec/           live behavioural specs (specs/) and the changes that produced them (changes/)
+scripts/            gate helpers, packaging, evaluation and fixture tools
+AGENTS.md           operating manual for contributors and coding agents
 ```
 
-## How work is planned
+The dependency rule is one-way: `:app` and `:ui` (the only modules that see JavaFX) sit above `:pipeline`, which sits
+above the services `:document`, `:llm` and `:persistence`, which sit above `:util` and `:api`. See the [repository
+map](docs/project/repository-map.md).
 
-`AGENTS.md` is the operating manual. In short: a change is one short brief (an OpenSpec proposal under `openspec/`
-when the owner wants one), an acceptance test seen red before the implementation, a green gate, and the change
-exercised in the running app. The specification is a reference that is edited when the code legitimately differs from
-it; `docs/adr/` records the decisions that are costly to reverse.
+## Documentation
 
-## Local setup
+Start at [docs/README.md](docs/README.md). The short list:
 
-**JDK 25 is required and you must install it yourself.** There is no toolchain auto-provisioning: the build declares
-no toolchain download repository, so a machine without a Java 25 installation fails at configuration time with
-`Cannot find a Java installation on your machine ... Toolchain download repositories have not been configured.`
-Gradle itself arrives through the committed wrapper — always invoke `./gradlew`, never a system `gradle`.
+| Topic | Document |
+|---|---|
+| Architecture and design | [docs/architecture/overview.md](docs/architecture/overview.md) |
+| How translation works | [docs/pipeline/translation-pipeline.md](docs/pipeline/translation-pipeline.md) |
+| Build, run, test | [docs/development/getting-started.md](docs/development/getting-started.md) |
+| Evaluation of prompts and models | [docs/evaluation/README.md](docs/evaluation/README.md) |
+| Scripts, CI and hooks | [docs/project/scripts.md](docs/project/scripts.md), [docs/project/ci-and-hooks.md](docs/project/ci-and-hooks.md) |
+| Known limits | [docs/known-limits.md](docs/known-limits.md) |
+| Contributing rules | [AGENTS.md](AGENTS.md) |
 
-```bash
-./gradlew build                        # compile + spotlessCheck + lint + test
-./gradlew clean build check spotlessCheck   # the full gate — what pre-push and CI both run
-./gradlew :app:run                     # launch the app (opens 1024x700, minimum 960x640)
-```
+## Status and limits
 
-**New here? Read [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).** It covers prerequisites, the module map, running and
-debugging the app, the IDE run configuration, the test tiers, packaging, and the traps that cost the most time.
+The application is feature complete for the workflow above; the last change, `redesign-translation-pipeline`, was archived on 2026-11-12. Its quality is good enough to read and edit, not
+proven better than the previous pipeline, and some limits are accepted: narrator gender slips, source-language words
+left in Russian to Ukrainian output, and names stored in more than one form. They are listed with their evidence in
+[docs/known-limits.md](docs/known-limits.md).
 
-### Git hooks
+## License
 
-Hooks are managed by [Lefthook](https://lefthook.dev) and are **not active until you install them once per
-clone**. They also need `gitleaks` on the `PATH` for the secret scan:
-
-```bash
-brew install lefthook gitleaks   # macOS; see the tool docs for Linux/Windows
-lefthook install                 # writes .git/hooks — run once after cloning
-lefthook validate                # optional: check lefthook.yml parses
-```
-
-What each stage does, and why (`docs/specification/04_Build_and_Release/02_QUALITY_GATES.md#lefthook-stages`):
-
-| Stage | Runs | Budget |
-|---|---|---|
-| `pre-commit` | Spotless on staged Java (auto-fixes and re-stages), gitleaks on the staged diff, a 4 MB file-size guard | < 10 s, no tests |
-| `commit-msg` | Conventional Commits validation | instant |
-| `pre-push` | `./gradlew clean build check spotlessCheck`, then the agent-file sync check (`python3 scripts/sync-agent-files.py --check`) | slow — the full gate |
-
-Pre-push runs **exactly** the command the CI quality job runs, deliberately — no faster hook-only subset — so a
-green push implies a green CI quality job for the same tree. CI adds one gate (the license report); it never
-runs a weaker variant of a shared one.
-
-Every stage can be bypassed, and doing so is a legitimate decision rather than a trick to rediscover:
-
-```bash
-git commit --no-verify   # skip pre-commit + commit-msg
-git push --no-verify     # skip pre-push; CI becomes the gate instead
-LEFTHOOK=0 git <cmd>     # skip every lefthook hook for one command
-```
-
-## Provider keys
-
-A provider that needs a key (LM Studio with a key, OpenAI, a company gateway) stores only the **name** of an
-environment variable in Settings › Providers › Key variable; the key itself is never typed into BookLoom or saved.
-BookLoom reads the variable when it sends a request: first from its own environment, then from the place your
-operating system keeps your user account's variables. An app opened from the Dock, the Start menu, a file manager or
-an IDE does **not** see `export` lines in `~/.zshrc` or `~/.bashrc`, so set the variable in one of the places below.
-BookLoom picks a new value up within two seconds — no restart is needed. The form shows the variable as "set" once
-BookLoom can read it.
-
-**macOS** — for the current login session:
-
-```bash
-launchctl setenv LMS_KEY your-key-value
-```
-
-To keep it after a reboot, create `~/Library/LaunchAgents/ua.bookloom.envvars.plist`:
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key>
-  <string>ua.bookloom.envvars</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>launchctl</string>
-    <string>setenv</string>
-    <string>LMS_KEY</string>
-    <string>your-key-value</string>
-  </array>
-  <key>RunAtLoad</key>
-  <true/>
-</dict>
-</plist>
-```
-
-and load it once with `launchctl load ~/Library/LaunchAgents/ua.bookloom.envvars.plist`. (`launchctl unsetenv
-LMS_KEY` removes the session value.)
-
-**Windows** — for your user account (System Properties › Advanced › Environment Variables › User variables is the
-same place):
-
-```bat
-setx LMS_KEY your-key-value
-```
-
-BookLoom also reads the machine-wide variables an administrator set.
-
-**Linux** — create `~/.config/environment.d/50-bookloom.conf` (a later file in that folder wins) holding
-
-```
-LMS_KEY=your-key-value
-```
-
-or add the same line to `/etc/environment` for every user. Quotes around the value are allowed.
-
-A key variable written as `$LMS_KEY` or `${env:LMS_KEY}` is refused with a hint: the field takes the bare name. In a
-custom header value, `${env:LMS_KEY}` is the form that names a variable.
-
-## Status
-
-**A book can be translated from the window.** `:api`, `:util`, `:document`, `:llm`, `:persistence`, `:pipeline`, `:ui`
-and `:app` carry real code. `./gradlew :app:run` opens the desktop window: open an EPUB, FB2, Markdown or TXT book,
-choose a target language and destination, verify an Ollama or LM Studio provider, pick a model, then start, pause,
-resume or stop the run and show the written file in your file manager. The same pipeline runs from the command line
-(`./gradlew :app:translate`, see `docs/DEVELOPMENT.md`). Every segment is masked to `⟦gN⟧` placeholders and restored
-behind a placeholder hard gate that checks the multiset and the order of paired placeholders — verified canonical-equal
-on a 235-book local corpus. The interface is English or Ukrainian, chosen from the operating system's language.
-`:persistence` binds every storage port to an in-memory adapter (ADR-0034), so nothing survives a restart: a run
-cannot be resumed after a restart, and settings are not remembered. Within a run the whole pipeline is live: book
-brief, glossary and recurring terms, chunked drafts, deterministic checks, the reviewer, directed repair, the review
-desk and a checked export with a consistency pass (`openspec/changes/archive/2026-10-19-complete-translation-workflow`).
-Next: the translation-pipeline redesign (`docs/proposals/2026-10-16-translation-pipeline-redesign.md`), then SQLite
-persistence.
+MIT. See [LICENSE](LICENSE).

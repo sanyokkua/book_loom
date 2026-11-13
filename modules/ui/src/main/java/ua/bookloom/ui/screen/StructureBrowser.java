@@ -1,5 +1,7 @@
 package ua.bookloom.ui.screen;
 
+import static ua.bookloom.ui.theme.StyleClasses.CARD_TITLE;
+
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Objects;
@@ -97,7 +99,7 @@ final class StructureBrowser {
                 projectId,
                 listing.roots().size());
         final Label heading = new Label(messages.get(MessageKey.STRUCTURE_READING_ORDER));
-        heading.getStyleClass().add("card-title");
+        heading.getStyleClass().add(CARD_TITLE);
         Tips.install(messages, heading, MessageKey.STRUCTURE_READING_ORDER_TIP);
         final VBox card = new VBox(CARD_SPACING, heading, tree(listing.roots(), projectId));
         card.setId("structure-card");
@@ -114,7 +116,7 @@ final class StructureBrowser {
     Node segmentsCard() {
         log.debug("building the segments card");
         final Label heading = new Label(messages.get(MessageKey.STRUCTURE_SEGMENTS_TITLE));
-        heading.getStyleClass().add("card-title");
+        heading.getStyleClass().add(CARD_TITLE);
         Tips.install(messages, heading, MessageKey.STRUCTURE_SEGMENTS_TITLE_TIP);
         final VBox card =
                 new VBox(CARD_SPACING, heading, new StructureSegmentsPane(segments, messages, reading, technical));
@@ -132,7 +134,7 @@ final class StructureBrowser {
     Node textCard() {
         log.debug("building the text card");
         final Label heading = new Label(messages.get(MessageKey.IMPORT_BROWSER_TEXT));
-        heading.getStyleClass().add("card-title");
+        heading.getStyleClass().add(CARD_TITLE);
         Tips.install(messages, heading, MessageKey.STRUCTURE_PREVIEW_HINT);
         final VBox card = new VBox(CARD_SPACING, heading, reading);
         VBox.setVgrow(reading, Priority.ALWAYS);

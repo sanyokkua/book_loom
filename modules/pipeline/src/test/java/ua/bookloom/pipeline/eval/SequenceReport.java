@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.eval;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +27,110 @@ record SequenceReport(SequenceMetrics metrics) {
         }
     }
 
+    /** The metrics with the target of every segment by id, so a baseline keeps the text of the invented book. */
+    String json(final SequenceRun run) {
+        try {
+            final ObjectMapper mapper = new ObjectMapper();
+            final ObjectNode root = (ObjectNode) mapper.readTree(json());
+            final ObjectNode outputs = root.putObject("outputs");
+            run.segments().forEach(segment -> outputs.put(segment.id(), segment.target()));
+            return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(root);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * The first repeat's report with every repeat's own figures beside it, so a K-repeat arm decides on all of them:
+     * {@code ltcr1PerRepeat} and a {@code perRepeat} entry per repeat (its seed, LTCR-1, first-round hard-gate failures,
+     * flagged, batch fallbacks, calls, seconds per segment, prompt and cached tokens, what the chapter-summary gate kept
+     * and dropped, and the repeat's stored targets by segment id, so every repeat can be read by hand).
+     *
+     * @param runs every repeat's run, in repeat order; the first one's targets are the report's {@code outputs}
+     * @param seeds the repeats' seeds, in repeat order
+     * @param repeats every repeat's metrics, in repeat order, the first being this report's
+     */
+    String json(final List<SequenceRun> runs, final List<Integer> seeds, final List<SequenceMetrics> repeats) {
+        try {
+            final ObjectMapper mapper = new ObjectMapper();
+            final ObjectNode root = (ObjectNode) mapper.readTree(json(runs.getFirst()));
+            repeats.forEach(repeat -> root.withArray("ltcr1PerRepeat").add(repeat.ltcr1()));
+            for (int k = 0; k < repeats.size(); k++) {
+                final ObjectNode node = repeatNode(mapper, k, seeds.get(k), repeats.get(k));
+                final ObjectNode outputs = node.putObject("outputs");
+                runs.get(k).segments().forEach(segment -> outputs.put(segment.id(), segment.target()));
+                proofread(node, runs.get(k));
+                root.withArray("perRepeat").add(node);
+            }
+            return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(root);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    // Every segment a Proofread window read, with its round and, for a kept rewrite, the text it replaced (arm 7b).
+    private static void proofread(final ObjectNode node, final SequenceRun run) {
+        final var read = node.putArray("proofread");
+        run.segments().stream().filter(segment -> segment.proofread() != null).forEach(segment -> {
+            final SequenceRun.Proofread verdict = Objects.requireNonNull(segment.proofread());
+            read.addObject()
+                    .put("id", segment.id())
+                    .put("outcome", verdict.outcome())
+                    .put("round", verdict.round())
+                    .put("before", verdict.before())
+                    .put("after", segment.target());
+        });
+    }
+
+    private static ObjectNode repeatNode(
+            final ObjectMapper mapper, final int repeat, final int seed, final SequenceMetrics m) {
+        final ObjectNode node = mapper.createObjectNode()
+                .put("repeat", repeat)
+                .put("seed", seed)
+                .put("ltcr1", m.ltcr1())
+                .put("hardGateFailuresRound0", m.hardGateFailuresRound0())
+                .put("flagged", m.flagged())
+                .put("segments", m.segments())
+                .put("batchFallbacks", m.batchFallbacks())
+                .put("batchedItems", m.batchedItems())
+                .put("calls", m.calls())
+                .put("callsPerSegment", m.callsPerSegment())
+                .put("secondsPerSegment", m.secondsPerSegment())
+                .put("promptTokens", m.promptTokens())
+                .put("cachedPromptTokens", m.cachedPromptTokens());
+        node.set("hardGateKinds", mapper.valueToTree(m.hardGateKinds()));
+        node.set("summaryGate", mapper.valueToTree(m.summaryGate()));
+        return node;
+    }
+
+    /** One line per repeat with the figures a K-repeat arm compares. */
+    static String repeatLines(final List<SequenceMetrics> repeats) {
+        final List<String> lines = new ArrayList<>();
+        for (int k = 0; k < repeats.size(); k++) {
+            final SequenceMetrics m = repeats.get(k);
+            lines.add(row(
+                    "repeat",
+                    k,
+                    "LTCR-1",
+                    ltcr(m.ltcr1()),
+                    "hardGateRound0",
+                    m.hardGateFailuresRound0(),
+                    "flagged",
+                    m.flagged(),
+                    "fallbacks",
+                    m.batchFallbacks(),
+                    "calls",
+                    m.calls(),
+                    "sec/seg",
+                    f2(m.secondsPerSegment()),
+                    "summaries",
+                    m.summaryGate().chaptersKept(),
+                    "summaryDropped",
+                    gateDrops(m.summaryGate())));
+        }
+        return String.join("\n", lines);
+    }
+
     String table() {
         final List<String> lines = new ArrayList<>();
         lines.add("promptEval sequence model=" + metrics.model() + " dial=" + metrics.dial() + " narrator="
@@ -34,6 +139,7 @@ record SequenceReport(SequenceMetrics metrics) {
         lines.addAll(defects(metrics));
         lines.addAll(realRun(metrics));
         lines.addAll(cost(metrics));
+        lines.add(summaries(metrics.summaryGate()));
         lines.add("terms (segments naming it; renderings seen):");
         metrics.terms().forEach(t -> lines.add(term(t)));
         lines.add("names (segments naming it; spellings seen):");
@@ -89,8 +195,8 @@ record SequenceReport(SequenceMetrics metrics) {
                         m.hardGateKinds(),
                         "leakedProtocol",
                         m.leakedProtocol(),
-                        "reviewerTruncated",
-                        m.reviewerTruncated()),
+                        "proofreadTruncated",
+                        m.proofreadTruncated()),
                 row(
                         "termClaimedWrong",
                         m.termClaimedWrong(),
@@ -112,6 +218,13 @@ record SequenceReport(SequenceMetrics metrics) {
                         "elapsedSec",
                         f2(m.elapsedSeconds())),
                 row(
+                        "promptRead sec/seg",
+                        f2(m.promptReadSecondsPerSegment()),
+                        "promptTokens",
+                        m.promptTokens(),
+                        "cached",
+                        m.cachedPromptTokens()),
+                row(
                         "batchFallbacks",
                         m.batchFallbacks() + "/" + m.batchedItems(),
                         "rate",
@@ -119,6 +232,23 @@ record SequenceReport(SequenceMetrics metrics) {
                         "reasons",
                         m.fallbackReasons()),
                 row("editsApplied", m.editsApplied(), "editsRefused", m.editsRefused(), "calls", m.callsByKind()));
+    }
+
+    private static String summaries(final SummaryGateTally gate) {
+        return row(
+                "chapterSummaries",
+                gate.chaptersKept(),
+                "notKept",
+                gate.notKept(),
+                "gateDropped",
+                gateDrops(gate),
+                "decisions",
+                gate.decisions());
+    }
+
+    // The sentences the chapter-summary gate dropped of those it read, with the share.
+    private static String gateDrops(final SummaryGateTally gate) {
+        return gate.dropped() + "/" + gate.sentences() + " (" + ltcr(gate.dropShare()) + ")";
     }
 
     private static String term(final TermStat t) {

@@ -73,7 +73,7 @@ final class ProjectDisposal {
             return all == null
                     ? null
                     : all.stream().map(summary -> summary.project().id()).collect(Collectors.toSet());
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             // Even an Error: the import that follows must still answer, or no later book could be opened.
             log.warn("the stored projects could not be listed before an import", thrown);
             return null;
@@ -116,7 +116,7 @@ final class ProjectDisposal {
             } else {
                 log.info("project {} removed by an import", projectId);
             }
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             log.error("the project service threw while removing project {}", projectId, thrown);
         }
     }
@@ -133,7 +133,7 @@ final class ProjectDisposal {
                 log.info("released project {}", projectId);
                 log.debug("released project {}; it was open: {}", projectId, released.data());
             }
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             log.error("the project service threw while releasing project {}", projectId, thrown);
         }
     }

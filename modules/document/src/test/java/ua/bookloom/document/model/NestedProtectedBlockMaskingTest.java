@@ -23,18 +23,19 @@ class NestedProtectedBlockMaskingTest {
     /**
      * An FB2 document whose text-owning block nests a listing beginning with two line feeds.
      *
-     * <p>Deliberately not a text block: Java's incidental-whitespace stripping would collapse the two blank lines
-     * this fixture's whole point is to preserve exactly (mirrors {@code EpubFixtures#preTwoLeadingLineFeeds}).
+     * <p>The two line feeds inside the {@code <pre>} are written as escapes so no editor can trim them (mirrors
+     * {@code EpubFixtures#preTwoLeadingLineFeeds}).
      */
-    @SuppressWarnings("StringConcatToTextBlock")
-    private static final String NESTED_PRE_BOOK = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-            + "<FictionBook xmlns=\"http://www.gribuser.ru/xml/fictionbook/2.0\">\n"
-            + "  <body>\n"
-            + "    <section>\n"
-            + "      <p>Note: <pre>\n\ncode();</pre> ends it.</p>\n"
-            + "    </section>\n"
-            + "  </body>\n"
-            + "</FictionBook>\n";
+    private static final String NESTED_PRE_BOOK = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
+              <body>
+                <section>
+                  <p>Note: <pre>\n\ncode();</pre> ends it.</p>
+                </section>
+              </body>
+            </FictionBook>
+            """;
 
     private static final Namespace FB2_NAMESPACE = Namespace.getNamespace("http://www.gribuser.ru/xml/fictionbook/2.0");
 
@@ -83,7 +84,7 @@ class NestedProtectedBlockMaskingTest {
         final Segment segment = onlyEpubSegment("<div>Note: <pre>\n\ncode();</pre> ends it.</div>");
 
         assertThat(segment.masked()).isEqualTo("Note: ⟦g0⟧ ends it.");
-        assertThat(segment.placeholders().get("g0")).isEqualTo("<pre>\n\ncode();</pre>");
+        assertThat(segment.placeholders()).containsEntry("g0", "<pre>\n\ncode();</pre>");
     }
 
     // WHEN a non-translatable block occurs inside a translatable run, the system
@@ -107,8 +108,8 @@ class NestedProtectedBlockMaskingTest {
         // The exact fragment, not a shape plus a line-feed count: before the adapter pinned LineSeparator.NL the
         // count was already right — JDOM2 emitted \r\n for each of the two — so only comparing the fragment itself
         // distinguishes "kept the source's line feeds" from "kept the source's number of line breaks".
-        assertThat(segments.get(0).placeholders().get("g0"))
-                .isEqualTo("<pre xmlns=\"http://www.gribuser.ru/xml/fictionbook/2.0\">\n\ncode();</pre>");
+        assertThat(segments.get(0).placeholders())
+                .containsEntry("g0", "<pre xmlns=\"http://www.gribuser.ru/xml/fictionbook/2.0\">\n\ncode();</pre>");
     }
 
     private static Element fb2Body(String book) {

@@ -10,18 +10,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.glossary.IdentityRule.Kept;
 import ua.bookloom.pipeline.index.Case;
 import ua.bookloom.pipeline.index.Mention;
@@ -29,7 +29,6 @@ import ua.bookloom.pipeline.index.Window;
 import ua.bookloom.pipeline.index.WindowPlan;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
@@ -43,7 +42,6 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
  * and leave what cannot be read undecided. Nothing is written here.
  */
 @Slf4j
-@RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class LexiconReading {
 
     /** What the code decided for one term. */
@@ -91,9 +89,23 @@ public final class LexiconReading {
     // Twice the expected reply: a full answer is never cut, a reply that loops is.
     private static final int CAP_FACTOR = 2;
 
-    private final PromptTemplates templates;
+    private final ContextBuilder builder;
     private final ObjectMapper mapper;
     private final TermChoice termChoice;
+
+    /**
+     * Builds its requests on the ANALYSIS frame (design D8) from the catalogue's task templates.
+     *
+     * @param templates the non-null prompt catalogue
+     * @param mapper the non-null object mapper
+     * @param termChoice the non-null term choice
+     */
+    @Inject
+    public LexiconReading(final PromptTemplates templates, final ObjectMapper mapper, final TermChoice termChoice) {
+        this.builder = new ContextBuilder(Objects.requireNonNull(templates, "templates"));
+        this.mapper = Objects.requireNonNull(mapper, "mapper");
+        this.termChoice = Objects.requireNonNull(termChoice, "termChoice");
+    }
 
     /**
      * How many of a model scan's most frequent candidates the dial reads one by one before the batch choice narrows the
@@ -141,7 +153,22 @@ public final class LexiconReading {
             final QualityDial dial,
             final CallFrame frame,
             final ModelCalls calls) {
+        return read(terms, Map.of(), story, dial, frame, calls);
+    }
+
+    /**
+     * As {@link #read(List, BookSlice, QualityDial, CallFrame, ModelCalls)}, a term's windows drawn from any of the
+     * other forms {@code forms} holds for it under {@code LexiconEntry.keyOf(term)}, so one call reads one word.
+     */
+    public Result<Map<String, Decision>> read(
+            final List<String> terms,
+            final Map<String, List<String>> forms,
+            final BookSlice story,
+            final QualityDial dial,
+            final CallFrame frame,
+            final ModelCalls calls) {
         Objects.requireNonNull(terms, "terms");
+        Objects.requireNonNull(forms, "forms");
         Objects.requireNonNull(story, "story");
         Objects.requireNonNull(dial, "dial");
         Objects.requireNonNull(frame, "frame");
@@ -149,7 +176,7 @@ public final class LexiconReading {
         log.info("Lexicon reading started dial={} terms={}", dial, terms.size());
         final Result<Map<String, Decision>> result = dial == QualityDial.FAST
                 ? readByChoice(terms, story, frame, calls)
-                : readInWindows(terms, story, planOf(dial), frame, calls);
+                : readInWindows(terms, forms, story, planOf(dial), frame, calls);
         log.info(
                 "Lexicon reading finished decided={}",
                 result.isOk() ? Objects.requireNonNull(result.data()).size() : 0);
@@ -178,10 +205,25 @@ public final class LexiconReading {
             final QualityDial dial,
             final CallFrame frame,
             final ModelCalls calls) {
+        return scan(terms, Map.of(), story, dial, frame, calls);
+    }
+
+    /**
+     * As {@link #scan(List, BookSlice, QualityDial, CallFrame, ModelCalls)}, a candidate's windows drawn from any of
+     * the other forms {@code forms} holds for it under {@code LexiconEntry.keyOf(term)}.
+     */
+    public Result<Map<String, Decision>> scan(
+            final List<String> terms,
+            final Map<String, List<String>> forms,
+            final BookSlice story,
+            final QualityDial dial,
+            final CallFrame frame,
+            final ModelCalls calls) {
         Objects.requireNonNull(terms, "terms");
+        Objects.requireNonNull(forms, "forms");
         Objects.requireNonNull(dial, "dial");
         if (dial == QualityDial.FAST) {
-            return read(terms, story, dial, frame, calls);
+            return read(terms, forms, story, dial, frame, calls);
         }
         log.info("Lexicon scan reading started dial={} candidates={}", dial, terms.size());
         final List<String> first = terms.subList(0, Math.min(terms.size(), readFirst(dial)));
@@ -196,7 +238,7 @@ public final class LexiconReading {
                     first.size(),
                     chosen.size() - first.size(),
                     rest.size());
-            return readInWindows(chosen, story, planOf(dial), frame, calls)
+            return readInWindows(chosen, forms, story, planOf(dial), frame, calls)
                     .map(read -> decisionsOf(terms, read, choice));
         });
     }
@@ -223,9 +265,7 @@ public final class LexiconReading {
             final Map<String, Decision> decisions = new LinkedHashMap<>();
             for (final String term : terms) {
                 final String key = LexiconEntry.keyOf(term);
-                final Verdict verdict = choice.kept().contains(key)
-                        ? Verdict.KEEP
-                        : choice.dropped().contains(key) ? Verdict.DROP : Verdict.UNDECIDED;
+                final Verdict verdict = choice.verdictOf(key);
                 decisions.put(key, new Decision(verdict, null));
             }
             return decisions;
@@ -234,6 +274,7 @@ public final class LexiconReading {
 
     private Result<Map<String, Decision>> readInWindows(
             final List<String> terms,
+            final Map<String, List<String>> forms,
             final BookSlice story,
             final WindowPlan plan,
             final CallFrame frame,
@@ -244,7 +285,8 @@ public final class LexiconReading {
             if (!seen.add(LexiconEntry.keyOf(term))) {
                 continue;
             }
-            final Result<Decision> decided = readOne(term, story, plan, frame, calls);
+            final Result<Decision> decided =
+                    readOne(term, forms.getOrDefault(LexiconEntry.keyOf(term), List.of()), story, plan, frame, calls);
             if (decided.isErr()) {
                 log.warn("Lexicon reading stopped: a call failed");
                 return Result.err(Objects.requireNonNull(decided.error(), "error"));
@@ -256,13 +298,18 @@ public final class LexiconReading {
 
     private Result<Decision> readOne(
             final String term,
+            final List<String> forms,
             final BookSlice story,
             final WindowPlan plan,
             final CallFrame frame,
             final ModelCalls calls) {
-        final List<Mention> mentions = mentionsOf(term, story);
+        final List<Mention> mentions = mentionsOf(term, forms, story);
         final List<Window> windows = story.index().windows(mentions, plan);
-        log.debug("Lexicon reading term: {} mentions, {} windows", mentions.size(), windows.size());
+        log.debug(
+                "Lexicon reading term: {} forms, {} mentions, {} windows",
+                forms.size() + 1,
+                mentions.size(),
+                windows.size());
         if (windows.isEmpty()) {
             log.debug("Lexicon reading term has no window: no call, undecided");
             return Result.ok(Decision.undecided());
@@ -271,24 +318,35 @@ public final class LexiconReading {
                 CallKind.TERM_READING,
                 List.of(),
                 request(term, mentions.size(), windows, frame),
-                CallDescriptor.whole(PromptName.LEXICON_READING));
+                CallDescriptor.asking(PromptName.LEXICON_READING, List.of(term)));
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
-            log.warn("Lexicon reading of a term failed code={}", error.code());
+            log.warn(
+                    "Lexicon reading of a term failed code={} reason={}",
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return Result.err(error);
         }
-        return Result.ok(decisionOf(term, Objects.requireNonNull(reply.data(), "reply"), windows, frame));
+        return Result.ok(decisionOf(term, Objects.requireNonNull(reply.data(), "reply"), windows, frame, calls));
     }
 
-    private static List<Mention> mentionsOf(final String term, final BookSlice story) {
+    // Every form's mentions, so the windows of a word may come from any form the book writes it in.
+    private static List<Mention> mentionsOf(final String term, final List<String> forms, final BookSlice story) {
         final Set<Integer> slice = new LinkedHashSet<>(story.ordinals());
-        return story.index().mentions(List.of(term), Case.INSENSITIVE).stream()
+        final List<String> all = new ArrayList<>();
+        all.add(term);
+        all.addAll(forms);
+        return story.index().mentions(all, Case.INSENSITIVE).stream()
                 .filter(mention -> slice.contains(mention.ordinal()))
                 .toList();
     }
 
     private Decision decisionOf(
-            final String term, final ChatResponse reply, final List<Window> windows, final CallFrame frame) {
+            final String term,
+            final ChatResponse reply,
+            final List<Window> windows,
+            final CallFrame frame,
+            final ModelCalls calls) {
         log.trace("Lexicon reading of {} reply {}", term, reply.content());
         final LexiconReadingReplies.Counts counts = LexiconReadingReplies.read(mapper, reply.content(), term, windows);
         if (counts == null) {
@@ -306,6 +364,7 @@ public final class LexiconReading {
                 counts.senses(),
                 !counts.rendering().isEmpty(),
                 rendering != null);
+        calls.answered(Map.of(term, CallItem.words(verdict) + (rendering == null ? "" : ": " + rendering)));
         return new Decision(verdict, rendering);
     }
 
@@ -324,30 +383,13 @@ public final class LexiconReading {
 
     private ChatRequest request(
             final String term, final int mentions, final List<Window> windows, final CallFrame frame) {
-        final List<ChatMessage> messages = List.of(
-                new ChatMessage(
-                        ChatRole.SYSTEM,
-                        templates
-                                .renderSystem(PromptName.LEXICON_READING, frame)
-                                .strip()),
-                new ChatMessage(
-                        ChatRole.USER,
-                        templates
-                                .renderUser(
-                                        PromptName.LEXICON_READING,
-                                        Map.of(
-                                                "term",
-                                                term + " — " + mentions + " mentions",
-                                                "windows",
-                                                TermReading.numbered(windows)))
-                                .strip()));
-        log.trace("Lexicon reading messages {}", messages);
         final int expected = BASE_TOKENS + TOKENS_PER_WINDOW * windows.size();
-        return ChatRequests.build(
+        final ChatRequest request = builder.analysisRequest(
                 PromptName.LEXICON_READING,
-                messages,
-                new OutputLimit(expected, expected * CAP_FACTOR),
-                false,
-                frame.requestDefaults());
+                frame,
+                Map.of("term", term + " — " + mentions + " mentions", "windows", TermReading.numbered(windows)),
+                new OutputLimit(expected, expected * CAP_FACTOR));
+        log.trace("Lexicon reading messages {}", request.messages());
+        return request;
     }
 }

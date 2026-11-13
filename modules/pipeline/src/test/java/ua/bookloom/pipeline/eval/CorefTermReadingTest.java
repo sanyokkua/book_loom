@@ -18,7 +18,6 @@ import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariables;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
@@ -26,6 +25,7 @@ import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.eval.CorefReport.Outcome;
 import ua.bookloom.pipeline.glossary.TermReading;
@@ -66,7 +66,7 @@ class CorefTermReadingTest {
     private static String user(final ChatRequest request) {
         return request.messages().stream()
                 .filter(message -> message.role() == ChatRole.USER)
-                .map(ChatMessage::content)
+                .map(message -> AnalysisData.of(message.content()))
                 .findFirst()
                 .orElseThrow();
     }
@@ -131,7 +131,9 @@ class CorefTermReadingTest {
         final DisabledIfEnvironmentVariable aside =
                 PromptEvalTest.class.getAnnotation(DisabledIfEnvironmentVariable.class);
 
-        assertThat("coref").matches(Objects.requireNonNull(aside).matches());
+        final String suite = "coref";
+
+        assertThat(suite).matches(Objects.requireNonNull(aside).matches());
     }
 
     // The coref suite runs in its own promptEval class, gated on BOOKLOOM_EVAL_SUITE=coref and a model URL.

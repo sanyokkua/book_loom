@@ -97,7 +97,9 @@ class RestartContinueE2eTest {
         assertThat(finished.flaggedSegments()).isEqualTo(oracle.flaggedSegments());
     }
 
-    // A kill loses the decisions held for the unfinished chunk; they must come back as pending, not as skipped.
+    // A kill loses the decisions held for the unfinished chunk (the whole short book is one chunk: only the token
+    // budget
+    // closes a chunk); they must come back as pending, not as skipped.
     @Test
     void run_killedMidChunk_reopenedProjectStillContinuesAtTheFirstPendingSegment() {
         final Path source = TestBooks.markdown(dir.resolve("Book.md"), book(), "en");
@@ -115,10 +117,10 @@ class RestartContinueE2eTest {
             final Continued continued = continueAfterKill(id);
             assertThat(continued.opened().interrupted()).isTrue();
             assertThat(continued.runState()).isEqualTo("CANCELLED");
-            assertThat(continued.reopened()).isEqualTo(new SegmentCounts(4, 7, 0, 1, 0));
-            assertThat(continued.pendingIds()).containsExactly("Book.md:8", "Book.md:9", "Book.md:10", "Book.md:11");
+            assertThat(continued.reopened()).isEqualTo(new SegmentCounts(PARAGRAPHS, 0, 0, 0, 0));
+            assertThat(continued.pendingIds()).hasSize(PARAGRAPHS).first().isEqualTo("Book.md:0");
             assertThat(continued.finished().end()).isEqualTo(JobState.COMPLETED);
-            assertThat(items(continued.recording().prompts().getFirst())).contains(">Para 8.<");
+            assertThat(items(continued.recording().prompts().getFirst())).contains(">Para 0.<");
             assertThat(continued.end()).isEqualTo(new SegmentCounts(0, oracle.accepted(), 0, oracle.flagged(), 0));
             assertThat(continued.finished().flaggedSegments()).isEqualTo(oracle.flaggedSegments());
         } finally {

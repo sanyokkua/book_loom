@@ -176,9 +176,9 @@ final class MarkdownReplacements {
     static ByteSpanAnchor spanOf(SkeletonAnchor anchor) {
         return switch (anchor) {
             case ByteSpanAnchor span -> span;
-            case ua.bookloom.api.document.NodeAnchor ignored ->
+            case ua.bookloom.api.document.NodeAnchor _ ->
                 throw new IllegalArgumentException("A buffer skeleton cannot be addressed by a node path");
-            case ua.bookloom.api.document.AttributeAnchor ignored ->
+            case ua.bookloom.api.document.AttributeAnchor _ ->
                 throw new IllegalArgumentException("A buffer skeleton cannot be addressed by an attribute");
         };
     }

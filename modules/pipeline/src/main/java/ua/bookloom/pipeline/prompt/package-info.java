@@ -1,4 +1,4 @@
-/** Builds the single-segment draft prompt and reads its tolerant response contract. */
+/** The prompt templates, the language and name rules, the style sheet and the draft reply's contract. */
 @NullMarked
 package ua.bookloom.pipeline.prompt;
 

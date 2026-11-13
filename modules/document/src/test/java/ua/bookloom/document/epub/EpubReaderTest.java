@@ -103,8 +103,8 @@ class EpubReaderTest {
     void read_missingFile_isACorruptContainerFailure() {
         final EpubReader reader = newReader();
 
-        assertThatThrownBy(() -> reader.read(tempDir.resolve("missing.epub")))
-                .isInstanceOf(CorruptContainerException.class);
+        final var arg = tempDir.resolve("missing.epub");
+        assertThatThrownBy(() -> reader.read(arg)).isInstanceOf(CorruptContainerException.class);
     }
 
     @Test
@@ -203,7 +203,8 @@ class EpubReaderTest {
                 .entry("OEBPS/content.opf", opfWithSpine("c01", "c02"))
                 .writeTo(epub);
 
-        assertThatThrownBy(() -> newReader().read(epub)).isInstanceOf(CorruptContainerException.class);
+        final var target = newReader();
+        assertThatThrownBy(() -> target.read(epub)).isInstanceOf(CorruptContainerException.class);
     }
 
     private static String opfWithSpine(String... ids) {
@@ -211,8 +212,8 @@ class EpubReaderTest {
         final StringBuilder spine = new StringBuilder();
         for (final String id : ids) {
             manifest.append(
-                    "<item id=\"%s\" href=\"%s.xhtml\" media-type=\"application/xhtml+xml\"/>\n".formatted(id, id));
-            spine.append("<itemref idref=\"%s\"/>\n".formatted(id));
+                    "<item id=\"%s\" href=\"%s.xhtml\" media-type=\"application/xhtml+xml\"/>%n".formatted(id, id));
+            spine.append("<itemref idref=\"%s\"/>%n".formatted(id));
         }
         return """
                 <?xml version="1.0" encoding="UTF-8"?>

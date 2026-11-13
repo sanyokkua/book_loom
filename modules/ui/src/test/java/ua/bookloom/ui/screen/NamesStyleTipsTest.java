@@ -7,7 +7,6 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
-import org.controlsfx.control.ToggleSwitch;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -30,7 +29,7 @@ class NamesStyleTipsTest extends TranslatingScreenTestBase {
         openBook(BOOK);
         chooseTarget();
         final GlossaryEntry entry =
-                new GlossaryEntry("e1", "p1", "Frankenstein", null, TermType.CHARACTER, Gender.UNKNOWN, false);
+                GlossaryEntry.of("e1", "p1", "Frankenstein", null, TermType.CHARACTER, Gender.UNKNOWN, false);
         glossary.willAnswer(Result.ok(List.of(entry)));
         glossary.willAnswer(Result.ok(List.of(entry)));
         onFx(() -> shell.activate(ViewNames.IMPORT));
@@ -64,14 +63,15 @@ class NamesStyleTipsTest extends TranslatingScreenTestBase {
         assertThat(TooltipProbe.tipText(required(id))).isEqualTo(expected(tip));
     }
 
-    // IF a column header had no explanation, THEN Type, Gender and Locked would stay jargon.
+    // IF a column header had no explanation, THEN Kind, Forms, State and Gender would stay jargon.
     @ParameterizedTest
     @CsvSource({
         "0,NAMES_STYLE_COLUMN_SOURCE_TIP",
         "1,NAMES_STYLE_COLUMN_TYPE_TIP",
-        "2,NAMES_STYLE_COLUMN_TARGET_TIP",
-        "3,NAMES_STYLE_COLUMN_GENDER_TIP",
-        "4,NAMES_STYLE_COLUMN_LOCKED_TIP"
+        "2,NAMES_STYLE_COLUMN_FORMS_TIP",
+        "3,NAMES_STYLE_COLUMN_TARGET_TIP",
+        "4,NAMES_STYLE_COLUMN_STATE_TIP",
+        "5,NAMES_STYLE_COLUMN_GENDER_TIP"
     })
     void table_columnHeader_explainsItsColumn(final int column, final String tip) throws Exception {
         showWithOneTerm();
@@ -84,23 +84,25 @@ class NamesStyleTipsTest extends TranslatingScreenTestBase {
     @Test
     void row_controls_eachExplainsItself() throws Exception {
         showWithOneTerm();
+        // Wide enough that every column, the remove cross included, is in view.
+        showAtSceneSize(1400, 800);
         final Node root = required("names-style-table");
 
         final List<Node> choices = List.copyOf(root.lookupAll(".glossary-choice"));
         assertThat(TooltipProbe.tipText(root.lookup(".glossary-remove"))).isEqualTo(expected("NAMES_STYLE_REMOVE_TIP"));
         assertThat(TooltipProbe.tipText(root.lookup(".text-field")))
                 .isEqualTo(expected("NAMES_STYLE_COLUMN_TARGET_TIP"));
-        assertThat(choices).hasSize(2).allMatch(node -> node instanceof Label);
+        assertThat(choices).hasSize(3).allMatch(Label.class::isInstance);
         // A value a narrow column cuts short is named whole before the column's explanation.
         assertThat(TooltipProbe.tipText(choices.get(0)))
                 .startsWith(((Label) choices.get(0)).getText() + " — ")
                 .endsWith(expected("NAMES_STYLE_COLUMN_TYPE_TIP"));
         assertThat(TooltipProbe.tipText(choices.get(1)))
                 .startsWith(((Label) choices.get(1)).getText() + " — ")
+                .endsWith(expected("NAMES_STYLE_COLUMN_STATE_TIP"));
+        assertThat(TooltipProbe.tipText(choices.get(2)))
+                .startsWith(((Label) choices.get(2)).getText() + " — ")
                 .endsWith(expected("NAMES_STYLE_COLUMN_GENDER_TIP"));
-        assertThat(root.lookup(".toggle-switch")).isInstanceOf(ToggleSwitch.class);
-        assertThat(TooltipProbe.tipText(root.lookup(".toggle-switch")))
-                .isEqualTo(expected("NAMES_STYLE_COLUMN_LOCKED_TIP"));
         assertThat(root.lookup(".text-field")).isInstanceOf(TextField.class);
     }
 }

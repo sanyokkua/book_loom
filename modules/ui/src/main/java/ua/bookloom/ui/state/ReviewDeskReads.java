@@ -65,6 +65,7 @@ final class ReviewDeskReads {
                 projectId);
         live.publishSourceKept(data.sourceKept());
         live.publishSuspicious(data.suspicious());
+        live.publishProofreadLists(data.changedByProofread(), data.waitingOnGender());
     }
 
     private void readQueue(final long ticket) {

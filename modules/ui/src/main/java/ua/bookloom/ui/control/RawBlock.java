@@ -17,16 +17,23 @@ final class RawBlock extends TextBodyPane {
     private final Supplier<String> text;
     private final BooleanSupplier hostOpen;
 
+    /**
+     * The words of a block.
+     *
+     * @param tip the hover explanation of the block
+     * @param copyLabel the label of its Copy button
+     * @param copyTip the hover explanation of the Copy button
+     */
+    record Keys(MessageKey tip, MessageKey copyLabel, MessageKey copyTip) {}
+
     RawBlock(
             final String id,
             final Messages messages,
             final TextClipboard clipboard,
             final Supplier<String> text,
             final BooleanSupplier hostOpen,
-            final MessageKey tip,
-            final MessageKey copyLabel,
-            final MessageKey copyTip) {
-        super(id, messages, clipboard, tip, copyLabel, copyTip);
+            final Keys keys) {
+        super(id, messages, clipboard, keys.tip(), keys.copyLabel(), keys.copyTip());
         this.text = Objects.requireNonNull(text, "text");
         this.hostOpen = Objects.requireNonNull(hostOpen, "hostOpen");
         hideSection();

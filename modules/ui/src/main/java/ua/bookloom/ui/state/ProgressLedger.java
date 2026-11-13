@@ -19,9 +19,8 @@ import ua.bookloom.ui.state.ProgressFigures.KindFigures;
  * the measured time per kind of step.
  *
  * <p>The share is steps done over steps planned. A translation announces its steps per chunk, so the ledger is told
- * the book's segment count ({@link #seed}) and plans the drafts of the whole book from it, and forecasts the checks of
- * chunks not entered yet from the checks per draft announced so far; otherwise the bar would be full at the end of
- * every chunk. The share is a high-water mark of the shares read, so work added on the way holds the bar until the
+ * the book's segment count ({@link #seed}) and plans the drafts of the whole book from it; otherwise the bar
+ * would be full at the end of every chunk. The share is a high-water mark of the shares read, so work added on the way holds the bar until the
  * work catches up; read it only once the book's size is known, or a chunk's own total would set the mark.
  *
  * <p>The time left is, over every kind, the steps left times that kind's measured seconds per step, shown once the
@@ -39,9 +38,6 @@ final class ProgressLedger {
     /** Share of the steps the operation must finish before a time left is shown, when it comes before the steps. */
     static final double MIN_SHARE = 0.03;
 
-    /** What a check costs against a draft, until checks have been timed. */
-    private static final double CHECK_WEIGHT = 0.6;
-
     private static final double MILLIS_PER_SECOND = 1000.0;
 
     /**
@@ -51,6 +47,26 @@ final class ProgressLedger {
      * @param decided how many of them are decided
      */
     record ChunkState(int segments, int decided) {}
+
+    /**
+     * One chapter of a stored project while chapter summaries are on, for rebuilding the ledger of a reopened one.
+     *
+     * @param finished whether every segment of the chapter is decided
+     * @param stored whether its summary is stored
+     */
+    record ChapterState(boolean finished, boolean stored) {}
+
+    /**
+     * Where a stored project's Proofread stage stands, for rebuilding the ledger of a reopened one.
+     *
+     * @param planned the windows of the round with work left
+     * @param done how many of them the stored fingerprints say were read
+     */
+    record ProofreadState(int planned, int done) {
+
+        /** Nothing left to proofread, or nothing known. */
+        static final ProofreadState NONE = new ProofreadState(0, 0);
+    }
 
     private static final class Tally {
         private int basePlanned;
@@ -69,11 +85,9 @@ final class ProgressLedger {
     private final RunClock clock;
     private final Map<StepKind, Tally> tallies = new EnumMap<>(StepKind.class);
     private final TimeLeftShaper shaper = new TimeLeftShaper();
+    private final ProofreadPlan proofread = new ProofreadPlan();
     private int bookSegments;
     private int decided;
-    private int baselineDecided;
-    private boolean seeded;
-    private boolean rebuilt;
     private int finished;
     private double reached;
     private Duration markedAt = Duration.ZERO;
@@ -82,42 +96,65 @@ final class ProgressLedger {
         this.clock = Objects.requireNonNull(clock, "clock");
         // Both exist from the start, so reading the ratio between them never changes the map while it is walked.
         tally(StepKind.DRAFT);
-        tally(StepKind.CHECK);
     }
 
     /**
-     * Makes the ledger of a reopened project from what is stored: every decided segment is a finished draft, and
-     * every chunk whose segments are all decided has its checks finished.
+     * Makes the ledger of a reopened project from what is stored: every decided segment is a finished draft, and each chapter is one summary step, done when its
+     * summary is stored or, for the book's last chapter, which gets no summary, when it is finished.
      *
      * @param clock the clock the new run is measured by
      * @param chunks the project's chunks in order
-     * @param checksPerChunk the checks one chunk gets at the project's quality
+     * @param chapters the project's chapters in order; empty when chapter summaries are off
+     * @param windows where the Proofread stage stands, each window of the round with work left one step, done when the
+     *     stored fingerprints say it was read; {@link ProofreadState#NONE} when it has nothing left
      * @return a ledger that starts where the work stands and shows no time left until it has timed its own steps
      */
-    static ProgressLedger rebuilt(final RunClock clock, final List<ChunkState> chunks, final int checksPerChunk) {
+    static ProgressLedger rebuilt(
+            final RunClock clock,
+            final List<ChunkState> chunks,
+            final List<ChapterState> chapters,
+            final ProofreadState windows) {
         Objects.requireNonNull(chunks, "chunks");
+        Objects.requireNonNull(chapters, "chapters");
         final ProgressLedger ledger = new ProgressLedger(clock);
         final Tally drafts = ledger.tally(StepKind.DRAFT);
-        final Tally checks = ledger.tally(StepKind.CHECK);
         for (final ChunkState chunk : chunks) {
             drafts.basePlanned += chunk.segments();
             drafts.baseDone += chunk.decided();
-            checks.basePlanned += checksPerChunk;
-            checks.baseDone += chunk.decided() >= chunk.segments() ? checksPerChunk : 0;
         }
+        ledger.rebuiltSummaries(chapters);
+        ledger.rebuiltWindows(Objects.requireNonNull(windows, "windows"));
         ledger.bookSegments = drafts.basePlanned;
         ledger.decided = drafts.baseDone;
-        ledger.baselineDecided = drafts.baseDone;
-        ledger.seeded = true;
-        ledger.rebuilt = true;
         log.debug(
-                "progress ledger rebuilt from {} chunks: {} of {} drafts, {} of {} checks",
+                "progress ledger rebuilt from {} chunks: {} of {} drafts",
                 chunks.size(),
                 drafts.baseDone,
-                drafts.basePlanned,
-                checks.baseDone,
-                checks.basePlanned);
+                drafts.basePlanned);
         return ledger;
+    }
+
+    private void rebuiltWindows(final ProofreadState windows) {
+        if (windows.planned() > 0) {
+            final Tally windowTally = tally(StepKind.PROOFREAD);
+            windowTally.basePlanned = windows.planned();
+            windowTally.baseDone = windows.done();
+            log.debug("progress ledger rebuilt: {} of {} proofread windows", windows.done(), windows.planned());
+        }
+    }
+
+    private void rebuiltSummaries(final List<ChapterState> chapters) {
+        if (chapters.isEmpty()) {
+            return;
+        }
+        final Tally summaries = tally(StepKind.SUMMARY);
+        summaries.basePlanned = chapters.size();
+        for (int index = 0; index < chapters.size(); index++) {
+            final ChapterState chapter = chapters.get(index);
+            final boolean last = index == chapters.size() - 1;
+            summaries.baseDone += chapter.stored() || (last && chapter.finished()) ? 1 : 0;
+        }
+        log.debug("progress ledger rebuilt: {} of {} summary steps", summaries.baseDone, summaries.basePlanned);
     }
 
     /**
@@ -129,10 +166,6 @@ final class ProgressLedger {
      */
     void seed(final int bookSegments, final int decided) {
         log.trace("progress ledger seeded: {} of {} segments decided", decided, bookSegments);
-        if (!seeded) {
-            baselineDecided = decided;
-            seeded = true;
-        }
         this.bookSegments = bookSegments;
         this.decided = decided;
     }
@@ -147,6 +180,12 @@ final class ProgressLedger {
         Objects.requireNonNull(kind, "kind");
         log.debug("progress ledger: {} {} steps planned", added, kind);
         tally(kind).planned += added;
+    }
+
+    /** {@return the Proofread steps forecast before the stage plans them, fed by the run's events} */
+    ProofreadPlan proofread() {
+        tally(StepKind.PROOFREAD);
+        return proofread;
     }
 
     /**
@@ -172,6 +211,13 @@ final class ProgressLedger {
         Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(result, "result");
         final Tally tally = tally(kind);
+        // A summary already stored, or the last chapter's, is work done before this run, not a step it finished: it
+        // must not open the time left before any step was timed.
+        if (kind == StepKind.SUMMARY && result == StepResult.NO_CALL) {
+            tally.baseDone += count;
+            log.debug("progress ledger: {} SUMMARY step(s) done with no call", count);
+            return;
+        }
         tally.done += count;
         finished += count;
         if (result != StepResult.NO_CALL) {
@@ -231,7 +277,12 @@ final class ProgressLedger {
             final int done = doneOf(kind, tally);
             final int planned = plannedOf(kind, tally, done);
             if (planned > 0) {
-                kinds.add(new KindFigures(kind, planned, done, tally.secondsPerStep()));
+                kinds.add(new KindFigures(
+                        kind,
+                        planned,
+                        done,
+                        tally.secondsPerStep(),
+                        kind == StepKind.PROOFREAD && proofread.steps() > 0));
             }
         });
         return kinds;
@@ -242,7 +293,7 @@ final class ProgressLedger {
         final int wanted =
                 switch (kind) {
                     case DRAFT -> Math.max(announced, bookSegments);
-                    case CHECK -> Math.max(announced, forecastChecks());
+                    case PROOFREAD -> announced + proofread.steps();
                     default -> announced;
                 };
         return Math.max(wanted, done);
@@ -252,28 +303,8 @@ final class ProgressLedger {
         final int done = tally.baseDone + tally.done;
         return switch (kind) {
             case DRAFT -> Math.max(done, decided);
-            case CHECK -> done + assumedChecks();
             default -> done;
         };
-    }
-
-    private double checksPerDraft() {
-        final Tally drafts = tally(StepKind.DRAFT);
-        final Tally checks = tally(StepKind.CHECK);
-        final int announced = drafts.basePlanned + drafts.planned;
-        return announced == 0 ? 0 : (checks.basePlanned + checks.planned) / (double) announced;
-    }
-
-    private int forecastChecks() {
-        final Tally drafts = tally(StepKind.DRAFT);
-        final int book = Math.max(bookSegments, drafts.basePlanned + drafts.planned);
-        return (int) Math.ceil(checksPerDraft() * book);
-    }
-
-    // A continued run announces only the chunks it enters, so the checks of the segments decided before it started are
-    // taken as done at the rate the run announces them; a rebuilt ledger knows them exactly.
-    private int assumedChecks() {
-        return rebuilt ? 0 : (int) Math.floor(checksPerDraft() * baselineDecided);
     }
 
     private @Nullable Duration timeLeft(final List<KindFigures> kinds, final int total, final Instant now) {
@@ -309,6 +340,6 @@ final class ProgressLedger {
         if (draftSeconds == null) {
             return null;
         }
-        return kind.kind() == StepKind.CHECK ? draftSeconds * CHECK_WEIGHT : draftSeconds;
+        return draftSeconds;
     }
 }

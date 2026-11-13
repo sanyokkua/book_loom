@@ -1,5 +1,9 @@
 package ua.bookloom.pipeline.heal;
 
+import static ua.bookloom.util.contract.ArgNames.LOCKED_RENDERINGS;
+import static ua.bookloom.util.contract.ArgNames.MASKED_SOURCE;
+import static ua.bookloom.util.contract.ArgNames.SEGMENT;
+
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
@@ -23,13 +27,17 @@ public sealed interface DraftOutcome {
 
     /**
      * The text the draft was shown — the segment's masked source with its protected spans behind tokens — which every
-     * self-heal rewrite shows under {@code [Source]}, because the span gate needs each token back exactly once. The
-     * reviewer reads this text too, and quotes the draft's {@link Drafted#maskedReply()}, because its edits are applied to that.
+     * self-heal rewrite shows under {@code [Source]}, because the span gate needs each token back exactly once.
      */
     String maskedSource();
 
     /** The locked glossary terms present in this segment; empty when none is protected. */
     List<LockedRendering> lockedRenderings();
+
+    /** The segment, its masked source and its locked terms, as a candidate for it is judged. */
+    default DraftSubject subject() {
+        return new DraftSubject(segment(), maskedSource(), lockedRenderings());
+    }
 
     /**
      * A drafted reply ready for the quality loop.
@@ -43,7 +51,7 @@ public sealed interface DraftOutcome {
      *     as the gate answered it — what is evaluated and recorded as the masked target; {@code null} exactly when
      *     {@code restoredTarget} is
      * @param restoredTarget the reply restored through the placeholder gate, or {@code null} when the draft still
-     *     failed that gate after its own placeholder repair
+     *     failed that gate after the code repairs
      * @param gateFinding the high {@code markup} finding raised by {@code placeholder} when {@code restoredTarget}
      *     is {@code null}; {@code null} when the gate passed
      * @param pieceRedraft how to draft the segment's pieces again, or {@code null} when it was drafted whole
@@ -53,6 +61,8 @@ public sealed interface DraftOutcome {
      *     words when no target passed; {@code null} when the gate passed or no such form exists
      * @param normalised the low {@code normalised} finding saying the typography pass changed the reply, or
      *     {@code null} when it left it as it was or the reply did not restore
+     * @param repairCall how the one repair of a segment drafted whole is sent, or {@code null} when the draft came
+     *     with none — a segment drafted in pieces is repaired through {@code pieceRedraft} instead
      */
     record Drafted(
             Segment segment,
@@ -65,8 +75,37 @@ public sealed interface DraftOutcome {
             @Nullable PieceRedraft pieceRedraft,
             @Nullable QaFinding autoRepair,
             @Nullable String rejectedForm,
-            @Nullable QaFinding normalised)
+            @Nullable QaFinding normalised,
+            @Nullable RepairCall repairCall)
             implements DraftOutcome {
+
+        /** A reply with no repair call of its own. */
+        public Drafted(
+                final Segment segment,
+                final String maskedSource,
+                final List<LockedRendering> lockedRenderings,
+                final String maskedReply,
+                @Nullable final String maskedForm,
+                @Nullable final String restoredTarget,
+                @Nullable final QaFinding gateFinding,
+                @Nullable final PieceRedraft pieceRedraft,
+                @Nullable final QaFinding autoRepair,
+                @Nullable final String rejectedForm,
+                @Nullable final QaFinding normalised) {
+            this(
+                    segment,
+                    maskedSource,
+                    lockedRenderings,
+                    maskedReply,
+                    maskedForm,
+                    restoredTarget,
+                    gateFinding,
+                    pieceRedraft,
+                    autoRepair,
+                    rejectedForm,
+                    normalised,
+                    null);
+        }
 
         /** A reply whose typography was left as written. */
         public Drafted(
@@ -137,9 +176,9 @@ public sealed interface DraftOutcome {
          * come from the one successful gate call.
          */
         public Drafted {
-            Objects.requireNonNull(segment, "segment");
-            Objects.requireNonNull(maskedSource, "maskedSource");
-            Objects.requireNonNull(lockedRenderings, "lockedRenderings");
+            Objects.requireNonNull(segment, SEGMENT);
+            Objects.requireNonNull(maskedSource, MASKED_SOURCE);
+            Objects.requireNonNull(lockedRenderings, LOCKED_RENDERINGS);
             Objects.requireNonNull(maskedReply, "maskedReply");
             if ((restoredTarget == null) != (gateFinding != null)) {
                 throw new IllegalArgumentException(
@@ -153,9 +192,31 @@ public sealed interface DraftOutcome {
             lockedRenderings = List.copyOf(lockedRenderings);
         }
 
-        /** Whether the segment was drafted in pieces, so a repair round drafts them again. */
+        /** Whether the segment was drafted in pieces, so its repair drafts them again. */
         public boolean inPieces() {
             return pieceRedraft != null;
+        }
+
+        /**
+         * This draft repaired, when it needs it, through {@code call}.
+         *
+         * @param call the non-null repair call built with the draft's own context and mask
+         * @return this draft carrying the call
+         */
+        public Drafted withRepair(final RepairCall call) {
+            return new Drafted(
+                    segment,
+                    maskedSource,
+                    lockedRenderings,
+                    maskedReply,
+                    maskedForm,
+                    restoredTarget,
+                    gateFinding,
+                    pieceRedraft,
+                    autoRepair,
+                    rejectedForm,
+                    normalised,
+                    Objects.requireNonNull(call, "call"));
         }
     }
 
@@ -172,9 +233,9 @@ public sealed interface DraftOutcome {
 
         /** Validates the invariants a caller is entitled to assume and defensively copies the list component. */
         public FlaggedAtOnce {
-            Objects.requireNonNull(segment, "segment");
-            Objects.requireNonNull(maskedSource, "maskedSource");
-            Objects.requireNonNull(lockedRenderings, "lockedRenderings");
+            Objects.requireNonNull(segment, SEGMENT);
+            Objects.requireNonNull(maskedSource, MASKED_SOURCE);
+            Objects.requireNonNull(lockedRenderings, LOCKED_RENDERINGS);
             Objects.requireNonNull(error, "error");
             lockedRenderings = List.copyOf(lockedRenderings);
         }
@@ -183,7 +244,7 @@ public sealed interface DraftOutcome {
     /**
      * A translation-memory target reused because the segment's source and both neighbours match the entry's; it
      * already passed its hard gates and checks when the run found it, so it is accepted in its turn with no call
-     * ({@code specs/quality-gates/spec.md} "Accept a context-matched memory reuse without the reviewer").
+     * ({@code specs/quality-gates/spec.md} "Accept a context-matched memory reuse when its checks pass").
      *
      * @param segment the segment this outcome is about
      * @param maskedSource the text a draft would have been shown, protected spans behind tokens
@@ -203,9 +264,9 @@ public sealed interface DraftOutcome {
 
         /** Rejects a missing component and copies the list. */
         public Reused {
-            Objects.requireNonNull(segment, "segment");
-            Objects.requireNonNull(maskedSource, "maskedSource");
-            Objects.requireNonNull(lockedRenderings, "lockedRenderings");
+            Objects.requireNonNull(segment, SEGMENT);
+            Objects.requireNonNull(maskedSource, MASKED_SOURCE);
+            Objects.requireNonNull(lockedRenderings, LOCKED_RENDERINGS);
             Objects.requireNonNull(maskedTarget, "maskedTarget");
             Objects.requireNonNull(restoredTarget, "restoredTarget");
             Objects.requireNonNull(qa, "qa");
@@ -214,7 +275,7 @@ public sealed interface DraftOutcome {
     }
 
     /**
-     * A segment with nothing to translate, kept as its own source with no model call and no reviewer
+     * A segment with nothing to translate, kept as its own source with no model call and no check
      * ({@code specs/translation-pipeline/spec.md} "Keep a segment with nothing to translate as it is").
      *
      * @param segment the segment this outcome is about
@@ -236,9 +297,9 @@ public sealed interface DraftOutcome {
 
         /** Rejects a missing component and copies the list. */
         public Verbatim {
-            Objects.requireNonNull(segment, "segment");
-            Objects.requireNonNull(maskedSource, "maskedSource");
-            Objects.requireNonNull(lockedRenderings, "lockedRenderings");
+            Objects.requireNonNull(segment, SEGMENT);
+            Objects.requireNonNull(maskedSource, MASKED_SOURCE);
+            Objects.requireNonNull(lockedRenderings, LOCKED_RENDERINGS);
             Objects.requireNonNull(maskedTarget, "maskedTarget");
             Objects.requireNonNull(restoredTarget, "restoredTarget");
             Objects.requireNonNull(rule, "rule");

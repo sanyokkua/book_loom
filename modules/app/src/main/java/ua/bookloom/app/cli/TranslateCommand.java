@@ -18,6 +18,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelCapabilities;
@@ -71,6 +72,7 @@ public final class TranslateCommand {
     private final Clock clock;
     private final ModelCapabilities capabilities;
     private final LexiconService lexicon;
+    private final CallLedger ledger;
 
     /** Runs one parsed command and reports only its user-facing result to the supplied stream. */
     public int run(List<String> args, PrintStream out) {
@@ -81,7 +83,7 @@ public final class TranslateCommand {
         try {
             final Result<TranslateArguments> parsed = TranslateArguments.parse(args);
             exit = parsed.isErr() ? usageFailure(errorOf(parsed), out) : execute(dataOf(parsed), out);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             exit = unexpectedFailure(out, cause);
         } finally {
             shutdown.finished();
@@ -181,8 +183,8 @@ public final class TranslateCommand {
     private int runAndExport(
             TranslationJob job, ModelSelection selection, Target target, RunReport report, PrintStream out) {
         final RunOptions options = target.arguments().options();
-        final UnattendedRun watch =
-                UnattendedRun.attach(job, providers.probeFor(selection), options.maxOutage(), options.stopAfter(), out);
+        final UnattendedRun watch = UnattendedRun.attach(
+                job, providers.probeFor(selection), options.maxOutage(), options.stopAfter(), out, ledger, clock);
         shutdown.hold(job::cancel);
         final Result<JobReport> result = timed(report, "translate", job::run);
         report.run(result, watch);
@@ -247,8 +249,8 @@ public final class TranslateCommand {
     // After Ctrl+C the export of what the stopped run translated is not cancelled by the same stop; the stop waits
     // for it a while longer instead.
     private Result<ExportReport> export(String projectId, Path destination, TranslateArguments arguments) {
-        final Result<ExportJob> job = exports.newExport(
-                new ExportRequest(projectId, destination, arguments.overwrite(), Set.of(), false), null);
+        final Result<ExportJob> job =
+                exports.newExport(new ExportRequest(projectId, destination, arguments.overwrite(), Set.of()));
         if (job.isErr()) {
             return Result.err(errorOf(job));
         }

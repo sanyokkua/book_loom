@@ -98,7 +98,7 @@ public final class DestinationChecks {
                 return rejected("normalized-path", sameFileError());
             }
             return checkExistingIdentity(source, destination);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(identityError("path-identity", cause));
         }
     }
@@ -120,10 +120,10 @@ public final class DestinationChecks {
             Files.readAttributes(source, BasicFileAttributes.class);
             log.debug("Translation request check=source-identity-probe outcome=present");
             return Result.ok(Boolean.TRUE);
-        } catch (NoSuchFileException cause) {
+        } catch (NoSuchFileException _) {
             log.debug("Translation request check=source-identity-probe outcome=deferred reason=source-missing");
             return Result.ok(Boolean.FALSE);
-        } catch (AccessDeniedException cause) {
+        } catch (AccessDeniedException _) {
             log.debug("Translation request check=source-identity-probe outcome=deferred reason=source-unreadable");
             return Result.ok(Boolean.FALSE);
         } catch (IOException cause) {
@@ -136,7 +136,7 @@ public final class DestinationChecks {
             Files.readAttributes(destination, BasicFileAttributes.class);
             log.debug("Translation request check=destination-identity-probe outcome=present");
             return Result.ok(Boolean.TRUE);
-        } catch (NoSuchFileException cause) {
+        } catch (NoSuchFileException _) {
             log.debug(
                     "Translation request check=destination-identity-probe outcome=deferred reason=destination-missing");
             return Result.ok(Boolean.FALSE);
@@ -150,7 +150,7 @@ public final class DestinationChecks {
             final boolean sameFile = Files.isSameFile(source, destination);
             log.debug("Translation request check=same-file outcome={}", outcome(!sameFile));
             return sameFile ? rejected("same-file", sameFileError()) : Result.ok(Boolean.TRUE);
-        } catch (NoSuchFileException cause) {
+        } catch (NoSuchFileException _) {
             log.debug("Translation request check=same-file outcome=deferred reason=entry-disappeared");
             return Result.ok(Boolean.FALSE);
         } catch (IOException cause) {

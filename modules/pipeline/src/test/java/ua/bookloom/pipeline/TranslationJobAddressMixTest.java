@@ -2,10 +2,12 @@ package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
-import static ua.bookloom.pipeline.ChunkRunFixtures.FIX;
+import static ua.bookloom.pipeline.ChunkRunFixtures.PROOFREAD;
+import static ua.bookloom.pipeline.ChunkRunFixtures.REPAIR;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
 import static ua.bookloom.pipeline.ChunkRunFixtures.userMessage;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
+import static ua.bookloom.pipeline.TranslationJobTestSupport.draftThenRepair;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.project;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
@@ -36,19 +38,19 @@ class TranslationJobAddressMixTest {
     @TempDir
     private Path tempDir;
 
-    private TestProject newProject() {
-        return project(TestBooks.txt(tempDir.resolve("Book.txt"), SOURCE), brief("en", "uk", QualityDial.FAST));
+    private TestProject newProject(final QualityDial dial) {
+        return project(TestBooks.txt(tempDir.resolve("Book.txt"), SOURCE), brief("en", "uk", dial));
     }
 
     @Test
     void run_mixedAddressThenFix_repairsTheSegmentWithOneDirectedFixNamingBothForms() {
-        final ScriptedChatModel model = replies(MIXED, RIGHT);
-        final TestProject project = newProject();
+        final ScriptedChatModel model = draftThenRepair(MIXED, RIGHT);
+        final TestProject project = newProject(QualityDial.BALANCED);
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, FIX);
-        assertThat(userMessage(model.requests().get(1))).contains("Вам").contains("Ти");
+        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
+        assertThat(userMessage(model.requests().getLast())).contains("Вам").contains("Ти");
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, RIGHT);
@@ -59,12 +61,12 @@ class TranslationJobAddressMixTest {
 
     @Test
     void run_fixKeepsTheMix_keepsTheDraftAcceptedWithTheNoteAndSpendsNoSecondFix() {
-        final ScriptedChatModel model = replies(MIXED, MIXED);
-        final TestProject project = newProject();
+        final ScriptedChatModel model = draftThenRepair(MIXED, MIXED);
+        final TestProject project = newProject(QualityDial.BALANCED);
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, FIX);
+        assertThat(formats(model)).containsExactly(DRAFT, REPAIR, PROOFREAD);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::path)
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.DRAFT);
@@ -76,7 +78,7 @@ class TranslationJobAddressMixTest {
     @Test
     void run_speechAddressedOneWay_spendsNoFix() {
         final ScriptedChatModel model = replies(RIGHT);
-        final TestProject project = newProject();
+        final TestProject project = newProject(QualityDial.FAST);
 
         report(job(project, model).run());
 

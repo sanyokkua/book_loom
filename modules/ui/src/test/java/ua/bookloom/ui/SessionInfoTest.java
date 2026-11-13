@@ -35,7 +35,7 @@ class SessionInfoTest {
 
         session.update(Map.of("genre", "x".repeat(130)));
 
-        assertThat(session.snapshot().get("genre")).isEqualTo("x".repeat(120) + "…");
+        assertThat(session.snapshot()).containsEntry("genre", "x".repeat(120) + "…");
     }
 
     @Test

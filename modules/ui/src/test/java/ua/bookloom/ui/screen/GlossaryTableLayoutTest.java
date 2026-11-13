@@ -8,6 +8,7 @@ import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
@@ -26,7 +27,7 @@ class GlossaryTableLayoutTest extends TranslatingScreenTestBase {
     private static final double ROW_CENTRE = 23;
     private static final double ONE_PIXEL = 1;
     private static final GlossaryEntry VICTOR =
-            new GlossaryEntry("e1", "p1", "Victor", "Віктор", TermType.CHARACTER, Gender.MALE, true);
+            GlossaryEntry.of("e1", "p1", "Victor", "Віктор", TermType.CHARACTER, Gender.MALE, true);
 
     private void showGlossary(final List<GlossaryEntry> entries) throws Exception {
         projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
@@ -76,6 +77,25 @@ class GlossaryTableLayoutTest extends TranslatingScreenTestBase {
                 .allSatisfy(offset -> assertThat(offset).isCloseTo(ROW_CENTRE, within(ONE_PIXEL)));
     }
 
+    // IF a column could be dragged narrower than its header and a typical value, THEN its content would vanish.
+    @Test
+    void glossaryColumns_minimumWidths_holdTheHeaderAndAValue() throws Exception {
+        showGlossary(List.of(VICTOR));
+
+        assertThat(ThemeTestSupport.onFx(() -> table().getColumns().stream()
+                        .map(TableColumnBase::getMinWidth)
+                        .toList()))
+                .satisfiesExactly(
+                        term -> assertThat(term).isGreaterThanOrEqualTo(96),
+                        kind -> assertThat(kind).isGreaterThanOrEqualTo(104),
+                        forms -> assertThat(forms).isGreaterThanOrEqualTo(76),
+                        target -> assertThat(target).isGreaterThanOrEqualTo(170),
+                        state -> assertThat(state).isGreaterThanOrEqualTo(80),
+                        gender -> assertThat(gender).isGreaterThanOrEqualTo(84),
+                        remove -> assertThat(remove).isGreaterThanOrEqualTo(36));
+        assertThat(ThemeTestSupport.onFx(() -> table().getFixedCellSize())).isEqualTo(46);
+    }
+
     // IF an empty table drew nothing, THEN a person would not know whether the scan is pending or found nothing.
     @Test
     void table_withNoNames_saysSoAndHowToAddSome() throws Exception {
@@ -99,5 +119,9 @@ class GlossaryTableLayoutTest extends TranslatingScreenTestBase {
 
         awaitFx(() -> table().lookupAll(".glossary-empty").stream()
                 .anyMatch(node -> node.isVisible() && "No name matches the search.".equals(((Label) node).getText())));
+        assertThat(table().lookupAll(".glossary-empty").stream()
+                        .filter(Node::isVisible)
+                        .map(node -> ((Label) node).getText()))
+                .contains("No name matches the search.");
     }
 }

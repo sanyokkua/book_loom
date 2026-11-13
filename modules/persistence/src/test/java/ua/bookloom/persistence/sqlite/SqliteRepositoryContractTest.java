@@ -1,6 +1,7 @@
 package ua.bookloom.persistence.sqlite;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.nio.file.Path;
 import java.time.Clock;
@@ -22,16 +23,21 @@ import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.PromptFrameRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.persistence.TmRepository;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.ProofreadSummary;
+import ua.bookloom.api.project.ChapterSummary;
 import ua.bookloom.api.project.ChunkCommit;
+import ua.bookloom.api.project.Deferral;
+import ua.bookloom.api.project.DeferralReason;
+import ua.bookloom.api.project.ExportRecord;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
-import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.api.project.TmEntry;
@@ -62,7 +68,8 @@ class SqliteRepositoryContractTest extends ProjectStorageContractTest {
             SqliteDeferralRepository deferrals,
             SqliteRunRepository runs,
             SqliteLexiconRepository lexicon,
-            SqliteCheckpoint checkpoint) {
+            SqliteCheckpoint checkpoint,
+            SqlitePromptFrameRepository frames) {
 
         static Adapters over(final SqliteDatabase db, final JsonCodec codec) {
             return new Adapters(
@@ -74,7 +81,8 @@ class SqliteRepositoryContractTest extends ProjectStorageContractTest {
                     new SqliteDeferralRepository(db, codec),
                     new SqliteRunRepository(db, codec),
                     new SqliteLexiconRepository(db, codec),
-                    new SqliteCheckpoint(db, codec));
+                    new SqliteCheckpoint(db, codec),
+                    new SqlitePromptFrameRepository(db, codec));
         }
     }
 
@@ -155,6 +163,11 @@ class SqliteRepositoryContractTest extends ProjectStorageContractTest {
         return adapters.lexicon();
     }
 
+    @Override
+    protected PromptFrameRepository promptFrameRepository() {
+        return adapters.frames();
+    }
+
     @Test
     void delete_lastProjectOfABook_removesTheStoredBookRow() {
         projectRepository().save(project("a", "h1", "One", "en", "uk"));
@@ -217,6 +230,29 @@ class SqliteRepositoryContractTest extends ProjectStorageContractTest {
                 .hasValueSatisfying(r -> assertThat(r.status()).isEqualTo(SegmentStatus.PENDING));
     }
 
+    // A settled deferral the database refuses to delete rolls the window's new text and verdict back too.
+    @Test
+    void commitWindow_failureMidWrite_nothingStored() {
+        givenProjects("p1");
+        segmentRepository().saveAll("p1", List.of(decidedBeforeProofread("ch06.xhtml:20")));
+        final Deferral gender =
+                new Deferral("d1", "p1", "ch06.xhtml:20", DeferralReason.GENDER_CHANGED, "Тарн", null, null, null);
+        deferralRepository().add(gender);
+        db.write(
+                "test inject",
+                h -> h.execute("CREATE TRIGGER refuse_resolve BEFORE DELETE ON deferrals "
+                        + "BEGIN SELECT RAISE(ABORT, 'refused'); END"));
+
+        final Result<Integer> result = checkpointPort().commit(windowCommit(gender));
+
+        assertThat(result.isErr()).isTrue();
+        assertThat(segmentRepository().find("p1", "ch06.xhtml:20").data()).hasValueSatisfying(r -> {
+            assertThat(r.machineTarget()).isEqualTo("Тарн прийшов завтра.");
+            assertThat(r.proofread()).isNull();
+        });
+        assertThat(deferralRepository().open("p1").data()).containsExactly(gender);
+    }
+
     // The run a failed chunk carried must not replace the run stored before it.
     @Test
     void commit_failingPartWay_leavesTheStoredRunUntouched() {
@@ -257,9 +293,8 @@ class SqliteRepositoryContractTest extends ProjectStorageContractTest {
         segmentRepository().saveAll("p1", List.of(pending("p1", "ch1:0", "ch1", 0, SegmentKind.PARAGRAPH)));
         segmentRepository().update("p1", "ch1:0", r -> r.withStatus(SegmentStatus.ACCEPTED));
         tmRepository().put(new TmEntry("t1", "p1", "h1", "c1", "Hello", "Привіт"));
-        summaryRepository().save(new RollingSummary("p1", null, "src", "tgt", 3, null, 0));
-        glossaryRepository().add(new GlossaryEntry("e1", "p1", "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
-        glossaryRepository().add(new GlossaryEntry("e2", "p1", "Milton", null, TermType.PLACE, Gender.NEUTER, false));
+        glossaryRepository().add(GlossaryEntry.of("e1", "p1", "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
+        glossaryRepository().add(GlossaryEntry.of("e2", "p1", "Milton", null, TermType.PLACE, Gender.NEUTER, false));
         glossaryRepository().remove("p1", "e2");
         lexiconRepository().record("p1", "warden", "наглядач");
         lexiconRepository().put(LexiconEntry.of("p1", "master"));
@@ -273,8 +308,6 @@ class SqliteRepositoryContractTest extends ProjectStorageContractTest {
                         .accepted())
                 .isEqualTo(1);
         assertThat(tmRepository().context("p1", "h1", "c1").data()).isPresent();
-        assertThat(summaryRepository().latest("p1").data())
-                .hasValueSatisfying(s -> assertThat(s.version()).isEqualTo(3));
         assertThat(glossaryRepository().all("p1").data())
                 .extracting(GlossaryEntry::term)
                 .containsExactly("Hale");
@@ -283,5 +316,43 @@ class SqliteRepositoryContractTest extends ProjectStorageContractTest {
                 .extracting(LexiconEntry::term)
                 .containsExactly("warden");
         assertThat(lexiconRepository().wasRemoved("p1", "Master").data()).isTrue();
+    }
+
+    @Test
+    void chapterSummary_survivesReopen() {
+        givenProjects("p1");
+        summaryRepository().save(new ChapterSummary("p1", "ch2.xhtml:0", "ch2.xhtml", 0, 7, "Вони втекли.", "h2"));
+        summaryRepository().save(new ChapterSummary("p1", "ch1.xhtml:0", "ch1.xhtml", 0, 5, "Вони зустрілися.", "h1"));
+
+        restart();
+
+        assertThat(summaryRepository().list("p1").data())
+                .extracting(ChapterSummary::chapterKey, ChapterSummary::segmentCount, ChapterSummary::text)
+                .containsExactly(tuple("ch2.xhtml:0", 7, "Вони втекли."), tuple("ch1.xhtml:0", 5, "Вони зустрілися."));
+    }
+
+    @Test
+    void lastExport_proofreadSummary_survivesReopen() {
+        projectRepository().save(project("a", "h1", "One", "en", "uk"));
+        final ProofreadSummary summary = new ProofreadSummary(12, 3);
+        projectRepository()
+                .recordExport(
+                        "a",
+                        new ExportRecord(
+                                Instant.parse("2026-10-20T10:00:00Z"),
+                                Path.of("one.epub"),
+                                74,
+                                2,
+                                0,
+                                1,
+                                50,
+                                6,
+                                summary,
+                                List.of()));
+
+        restart();
+
+        assertThat(projectRepository().lastExport("a").data())
+                .hasValueSatisfying(last -> assertThat(last.proofread()).isEqualTo(summary));
     }
 }

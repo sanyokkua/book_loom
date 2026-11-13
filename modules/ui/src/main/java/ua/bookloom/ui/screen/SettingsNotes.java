@@ -1,5 +1,6 @@
 package ua.bookloom.ui.screen;
 
+import java.util.Objects;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.value.ObservableValue;
@@ -37,6 +38,6 @@ final class SettingsNotes {
                             return name == null ? "" : messages.get(wording, name);
                         },
                         source));
-        Visibility.bind(note, source.map(name -> name != null));
+        Visibility.bind(note, source.map(Objects::nonNull));
     }
 }

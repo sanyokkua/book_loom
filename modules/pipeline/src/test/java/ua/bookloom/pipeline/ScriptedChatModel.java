@@ -9,12 +9,17 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.llm.ModelProfile;
+import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.pipeline.prompt.BatchSchema;
 
 /**
  * A deterministic chat model that records requests and consumes scripted outcomes in order, safe to use from the job
@@ -22,11 +27,22 @@ import ua.bookloom.api.llm.ChatResponse;
  * {@link ua.bookloom.pipeline.prompt.ModelCalls} seam with it too.
  *
  * <p>An outcome added with {@link #answerTo(String, Result)} answers only a request whose response format has that
- * name; every other request takes the next outcome added with {@link #answer(Result)}.
+ * name — a translate-family call is also found under {@code draft}, {@code repair} or {@code structural-repair} by its
+ * kind — and every other request takes the next outcome added with {@link #answer(Result)}. A chapter-summary
+ * request never takes from that general queue: a test that scripts none under {@code chapter_summary} gets a
+ * {@code validation} error for it, so a multi-chapter run's summary call never eats a draft's reply and the run, which
+ * only warns about a summary it could not keep, goes on. A proofread request no test scripted under {@code proofread}
+ * is answered {@code {"unchanged":true}}, so a Balanced or Max run's Proofread windows never eat a draft's reply.
  */
 public final class ScriptedChatModel implements ChatModel {
 
     private static final long WAIT_SECONDS = 5;
+    private static final String DRAFT = "draft";
+    private static final String REPAIR = "repair";
+    private static final String REASK = "structural-repair";
+    private static final Pattern ITEM = Pattern.compile("<s id=\"[^\"]+\">");
+    private static final String CHAPTER_SUMMARY = "chapter_summary";
+    private static final String PROOFREAD = "proofread";
 
     private final ConcurrentLinkedDeque<Supplier<Result<ChatResponse>>> outcomes = new ConcurrentLinkedDeque<>();
     private final ConcurrentHashMap<String, ConcurrentLinkedDeque<Supplier<Result<ChatResponse>>>> named =
@@ -36,6 +52,29 @@ public final class ScriptedChatModel implements ChatModel {
     private final AtomicInteger seen = new AtomicInteger();
     private final AtomicInteger blockedOrdinal = new AtomicInteger();
     private final CountDownLatch released = new CountDownLatch(1);
+    private volatile ModelProfile profile = ModelProfile.defaults();
+
+    /** Makes this model declare a profile whose batch is {@code batchSize} items, as a profiled real model would. */
+    public ScriptedChatModel withBatchSize(final int batchSize) {
+        final ModelProfile base = ModelProfile.defaults();
+        profile = new ModelProfile(
+                base.reasoning(),
+                base.markupFilters(),
+                base.systemRole(),
+                base.quirks(),
+                base.sampling(),
+                base.thinking(),
+                base.context(),
+                base.templateOverhead(),
+                batchSize,
+                base.tier());
+        return this;
+    }
+
+    @Override
+    public ModelProfile profile() {
+        return profile;
+    }
 
     public ScriptedChatModel answer(final Result<ChatResponse> result) {
         Objects.requireNonNull(result, "result");
@@ -101,10 +140,62 @@ public final class ScriptedChatModel implements ChatModel {
     }
 
     private Supplier<Result<ChatResponse>> nextOutcome(final ChatRequest request) {
+        for (final String name : namesOf(request)) {
+            final var forName = named.get(name);
+            final var byName = forName == null ? null : forName.pollFirst();
+            if (byName != null) {
+                return byName;
+            }
+            if (PROOFREAD.equals(name)) {
+                return () -> Result.ok(new ChatResponse("{\"unchanged\":true}", FinishReason.STOP));
+            }
+            if (CHAPTER_SUMMARY.equals(name)) {
+                return () -> Result.err(
+                        AppError.of(ErrorCode.validation, "Not scripted", "No chapter summary was scripted."));
+            }
+        }
+        return outcomes.removeFirst();
+    }
+
+    /**
+     * The name an answer is scripted under: every translate-family call asks for the batch schema, so a repair is
+     * found under {@value #REPAIR}, a format re-ask under {@value #REASK}, a batch of one under {@value #DRAFT} and only
+     * a batch of two or more under the schema's own name.
+     */
+    private static List<String> namesOf(final ChatRequest request) {
         final var format = request.responseFormat();
-        final var forName = format == null ? null : named.get(format.name());
-        final var byName = forName == null ? null : forName.pollFirst();
-        return byName != null ? byName : outcomes.removeFirst();
+        if (format == null) {
+            return List.of();
+        }
+        if (!BatchSchema.FORMAT_NAME.equals(format.name())) {
+            return List.of(format.name());
+        }
+        if (request.callKind() == CallKind.REPAIR) {
+            return List.of(REPAIR);
+        }
+        if (request.callKind() == CallKind.STRUCTURAL_REPAIR) {
+            return List.of(REASK);
+        }
+        return items(request) == 1 ? List.of(DRAFT) : List.of(format.name());
+    }
+
+    /**
+     * The name a call is scripted and told apart by: its answer schema's name, a translate-family call named by its
+     * kind ({@value #DRAFT} for a batch of one, {@value #REPAIR}, {@value #REASK}) since they all ask for the batch
+     * schema.
+     *
+     * @param request the non-null request
+     * @return the name; never null
+     */
+    public static String callName(final ChatRequest request) {
+        final List<String> names = namesOf(request);
+        return names.isEmpty() ? "" : names.getFirst();
+    }
+
+    private static long items(final ChatRequest request) {
+        final String user = request.messages().getLast().content();
+        final int block = user.lastIndexOf("<Items>");
+        return block < 0 ? 0 : ITEM.matcher(user.substring(block)).results().count();
     }
 
     private void openLatchesReached() {
@@ -122,7 +213,7 @@ public final class ScriptedChatModel implements ChatModel {
                 throw new AssertionError("a blocked request was never released");
             }
             return true;
-        } catch (InterruptedException interrupted) {
+        } catch (InterruptedException _) {
             return false;
         }
     }

@@ -23,9 +23,9 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
@@ -75,8 +75,7 @@ class NameClustersReviewTest {
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
                 .containsExactly(
-                        tuple("Dax", Gender.FEMALE, GenderOrigin.VERIFIED),
-                        tuple("Dax Orlo", Gender.FEMALE, GenderOrigin.VERIFIED));
+                        tuple("Dax", Gender.FEMALE, Origin.BOOK), tuple("Dax Orlo", Gender.FEMALE, Origin.BOOK));
     }
 
     // The short name has one "he", the full name three: alone the short name's tally is too thin to veto the model's
@@ -100,8 +99,7 @@ class NameClustersReviewTest {
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
                 .containsExactly(
-                        tuple("Dax", Gender.MALE, GenderOrigin.SUGGESTED),
-                        tuple("Dax Orlo", Gender.MALE, GenderOrigin.SUGGESTED));
+                        tuple("Dax", Gender.MALE, Origin.LIKELY), tuple("Dax Orlo", Gender.MALE, Origin.LIKELY));
     }
 
     // A gender the person set on any member fixes it for the others, as the person's, whatever the book or the model
@@ -119,9 +117,7 @@ class NameClustersReviewTest {
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(
-                        tuple("Dax", Gender.MALE, GenderOrigin.PERSON),
-                        tuple("Dax Orlo", Gender.MALE, GenderOrigin.PERSON));
+                .containsExactly(tuple("Dax", Gender.MALE, Origin.USER), tuple("Dax Orlo", Gender.MALE, Origin.USER));
     }
 
     // Nothing the person set is overwritten, so two members the person gave different genders stay as they are.
@@ -135,9 +131,7 @@ class NameClustersReviewTest {
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(
-                        tuple("Dax", Gender.MALE, GenderOrigin.PERSON),
-                        tuple("Dax Orlo", Gender.FEMALE, GenderOrigin.PERSON));
+                .containsExactly(tuple("Dax", Gender.MALE, Origin.USER), tuple("Dax Orlo", Gender.FEMALE, Origin.USER));
     }
 
     // A surname two people share joins neither: the bare surname keeps the gender nobody gave it.
@@ -155,12 +149,12 @@ class NameClustersReviewTest {
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
                 .containsExactly(
                         tuple("Venn", Gender.UNKNOWN, null),
-                        tuple("Arlo Venn", Gender.MALE, GenderOrigin.PERSON),
-                        tuple("Mira Venn", Gender.FEMALE, GenderOrigin.PERSON));
+                        tuple("Arlo Venn", Gender.MALE, Origin.USER),
+                        tuple("Mira Venn", Gender.FEMALE, Origin.USER));
     }
 
     private static GlossaryEntry character(final String term) {
-        return new GlossaryEntry("p1:" + term, PROJECT, term, null, TermType.CHARACTER, Gender.UNKNOWN, false);
+        return GlossaryEntry.of("p1:" + term, PROJECT, term, null, TermType.CHARACTER, Gender.UNKNOWN, false);
     }
 
     private static List<String> repeated(final String line, final int times) {

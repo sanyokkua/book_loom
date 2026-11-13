@@ -24,16 +24,16 @@ import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateFunction;
+import ua.bookloom.pipeline.heal.RepairReply;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.ProtectedSpans;
-import ua.bookloom.pipeline.prompt.DraftContext;
 import ua.bookloom.pipeline.qa.LockedRendering;
 
 /** A draft over the text with its protected spans hidden: what the model is shown, repaired with and accepted as. */
 class SegmentTranslatorProtectedSpansTest {
 
     private static final GlossaryEntry HALE =
-            new GlossaryEntry("p1:hale", "p1", "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true);
+            GlossaryEntry.of("p1:hale", "p1", "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true);
 
     @TempDir
     private Path tempDir;
@@ -52,35 +52,44 @@ class SegmentTranslatorProtectedSpansTest {
         final ScriptedChatModel model = TranslationJobTestSupport.replies("⟦g2⟧ відчинив ⟦g0⟧старі⟦g1⟧ двері.");
 
         final Result<DraftOutcome> result =
-                translator(segment, mask, model, BookFormat.MARKDOWN).translate(segment, DraftContext.empty(), mask);
+                translator(segment, mask, model, BookFormat.MARKDOWN).translate(segment, null, mask);
 
         assertThat(model.requests().getFirst().messages().get(1).content())
-                .contains("Copy this exact ordered sequence unchanged: ⟦g2⟧ ⟦g0⟧ ⟦g1⟧")
-                .contains("<Text>\n⟦g2⟧ opened the ⟦g0⟧old⟦g1⟧ door.\n</Text>")
+                .contains("<s id=\"1\">⟦g2⟧ opened the ⟦g0⟧old⟦g1⟧ door.</s>")
+                .endsWith("Keep every ⟦…⟧ mark exactly once.")
                 .doesNotContain("Hale opened");
         assertThat(DraftStepFixtures.drafted(result))
                 .extracting(DraftOutcome.Drafted::restoredTarget, DraftOutcome.Drafted::lockedRenderings)
                 .containsExactly("Гейл відчинив *старі* двері.", List.of(new LockedRendering("Hale", "Гейл")));
     }
 
+    // The draft step makes no call for the lost name token; the one repair it hands on shows the same hidden text,
+    // names every token and asks for the same output allowance as the draft.
     @Test
-    void translate_replyDropsTheNamesToken_repairsWithTheSameHiddenTextAndAllowance() {
+    void repairCall_replyDroppedTheNamesToken_repairsWithTheSameHiddenTextAndAllowance() {
         final Segment segment = markdownSegment("Hale opened the *old* door.");
         final ProtectedMask mask = ProtectedSpans.mask(segment, "en", ForeignPassagePolicy.KEEP, List.of(HALE));
         final ScriptedChatModel model = TranslationJobTestSupport.replies(
                 "Він відчинив ⟦g0⟧старі⟦g1⟧ двері.", "⟦g2⟧ відчинив ⟦g0⟧старі⟦g1⟧ двері.");
+        final SegmentTranslator translator = translator(segment, mask, model, BookFormat.MARKDOWN);
 
-        final Result<DraftOutcome> result =
-                translator(segment, mask, model, BookFormat.MARKDOWN).translate(segment, DraftContext.empty(), mask);
+        final DraftOutcome.Drafted draft = DraftStepFixtures.drafted(translator.translate(segment, null, mask));
+        final Result<RepairReply> repaired = translator
+                .repairCall(segment, null, mask)
+                .send(
+                        draft.maskedReply(),
+                        List.of(Objects.requireNonNull(draft.gateFinding())),
+                        (kind, segmentId, request) -> model.chat(request));
 
+        assertThat(draft.restoredTarget()).isNull();
         assertThat(model.requests()).hasSize(2);
         assertThat(model.requests().get(1).messages().get(1).content())
-                .contains("<Text>\n⟦g2⟧ opened the ⟦g0⟧old⟦g1⟧ door.\n</Text>")
-                .contains("Copy this exact ordered sequence unchanged: ⟦g2⟧ ⟦g0⟧ ⟦g1⟧")
-                .contains("came back 0 times");
+                .contains("<s id=\"1\">⟦g2⟧ opened the ⟦g0⟧old⟦g1⟧ door.</s>")
+                .contains("The protected token ⟦g2⟧ came back 0 times")
+                .contains("<PreviousAttempt>\nВін відчинив ⟦g0⟧старі⟦g1⟧ двері.\n</PreviousAttempt>");
         assertThat(model.requests().get(1).expectedOutputTokens())
                 .isEqualTo(model.requests().getFirst().expectedOutputTokens());
-        assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isEqualTo("Гейл відчинив *старі* двері.");
+        assertThat(repaired.data()).isEqualTo(new RepairReply.Rewritten("⟦g2⟧ відчинив ⟦g0⟧старі⟦g1⟧ двері."));
     }
 
     @Test
@@ -94,10 +103,10 @@ class SegmentTranslatorProtectedSpansTest {
                         FinishReason.STOP)));
 
         final Result<DraftOutcome> result =
-                translator(segment, mask, model, BookFormat.MARKDOWN).translate(segment, DraftContext.empty(), mask);
+                translator(segment, mask, model, BookFormat.MARKDOWN).translate(segment, null, mask);
 
         assertThat(model.requests().get(1).messages().get(1).content())
-                .contains("<Text>\n⟦g2⟧ opened the ⟦g0⟧old⟦g1⟧ door.\n</Text>")
+                .contains("<s id=\"1\">⟦g2⟧ opened the ⟦g0⟧old⟦g1⟧ door.</s>")
                 .doesNotContain("Hale opened");
         assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isNotNull();
     }
@@ -114,10 +123,10 @@ class SegmentTranslatorProtectedSpansTest {
         final ScriptedChatModel model = TranslationJobTestSupport.replies("Вона прошепотіла ⟦g2⟧ і пішла.");
 
         final Result<DraftOutcome> result =
-                translator(segment, mask, model, BookFormat.EPUB).translate(segment, DraftContext.empty(), mask);
+                translator(segment, mask, model, BookFormat.EPUB).translate(segment, null, mask);
 
         assertThat(model.requests().getFirst().messages().get(1).content())
-                .contains("<Text>\nShe whispered ⟦g2⟧ and left.\n</Text>")
+                .contains("<s id=\"1\">She whispered ⟦g2⟧ and left.</s>")
                 .doesNotContain("au revoir");
         assertThat(DraftStepFixtures.drafted(result).restoredTarget())
                 .isEqualTo("Вона прошепотіла <i xml:lang=\"fr\">au revoir</i> і пішла.");

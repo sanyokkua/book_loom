@@ -1,6 +1,7 @@
 package ua.bookloom.ui;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -146,7 +147,7 @@ public abstract class FxTestBase extends FxRobot implements ApplicationFixture {
         final List<Scene> scenes = onFxThread(() -> Window.getWindows().stream()
                 .filter(Window::isShowing)
                 .map(Window::getScene)
-                .filter(scene -> scene != null)
+                .filter(Objects::nonNull)
                 .toList());
         if (scenes.isEmpty()) {
             return;

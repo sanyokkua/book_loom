@@ -40,8 +40,8 @@ class StructuredReplySegmentTranslatorTest {
     void translate_malformedPrefixWithCompleteEnvelope_repairsWithoutUnmaskingWrapperText() {
         final Segment segment = segment();
         final ScriptedChatModel model = response(
-                "Here is {\"target\":\"Він відчинив ⟦g0⟧старі⟦g1⟧ двері.\"}",
-                "{\"target\":\"Він відчинив ⟦g0⟧старі⟦g1⟧ двері.\"}");
+                "Here is {\"items\":[{\"id\":\"1\",\"target\":\"Він відчинив ⟦g0⟧старі⟦g1⟧ двері.\"}]}",
+                "{\"items\":[{\"id\":\"1\",\"target\":\"Він відчинив ⟦g0⟧старі⟦g1⟧ двері.\"}]}");
 
         final Result<DraftOutcome> result = translator(documents, model).translate(segment);
 
@@ -56,8 +56,9 @@ class StructuredReplySegmentTranslatorTest {
         final Segment segment = segment();
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(Result.ok(new ChatResponse("{\"segments\":", FinishReason.STOP)))
-                .answer(Result.ok(
-                        new ChatResponse("{\"target\":\"Він відчинив ⟦g0⟧старі⟦g1⟧ двері.\"}", FinishReason.STOP)));
+                .answer(Result.ok(new ChatResponse(
+                        "{\"items\":[{\"id\":\"1\",\"target\":\"Він відчинив ⟦g0⟧старі⟦g1⟧ двері.\"}]}",
+                        FinishReason.STOP)));
 
         final Result<DraftOutcome> result = translator(documents, model).translate(segment);
 
@@ -66,9 +67,8 @@ class StructuredReplySegmentTranslatorTest {
         assertThat(model.requests().get(1).messages().get(1).content())
                 .contains("<RejectedReply>")
                 .contains("{\"segments\":")
-                .contains("was not valid JSON")
-                .contains("starts with {\"target\":\" and ends with \"}")
-                .contains("Never reproduce a rejected prefix");
+                .contains("The rejected reply was not valid JSON")
+                .contains("Answer again with only the one JSON object the task names");
     }
 
     // A second malformed envelope is flagged before the document placeholder hard gate can see it.
@@ -94,7 +94,7 @@ class StructuredReplySegmentTranslatorTest {
     void translate_jsonReplyWithoutTarget_repairsThenFlagsValidation() {
         final Segment segment = segment();
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(Result.ok(new ChatResponse("{\"target\":\"\"}", FinishReason.STOP)))
+                .answer(Result.ok(new ChatResponse("{\"items\":[{\"id\":\"1\",\"target\":\"\"}]}", FinishReason.STOP)))
                 .answer(Result.ok(new ChatResponse("{\"target\":", FinishReason.STOP)));
 
         final Result<DraftOutcome> result = translator(documents, model).translate(segment);

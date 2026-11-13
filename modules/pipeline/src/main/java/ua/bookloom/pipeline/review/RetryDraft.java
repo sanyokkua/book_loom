@@ -6,68 +6,74 @@ import com.google.inject.Provider;
 import java.time.Clock;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
-import java.util.function.UnaryOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.llm.ModelProfile;
+import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.PromptFrameRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.api.project.ContextSnapshot;
-import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.pipeline.SegmentTranslator;
-import ua.bookloom.pipeline.context.ContextBudget;
-import ua.bookloom.pipeline.context.ContextPackageAssembler;
+import ua.bookloom.pipeline.batch.BatchDrafter;
+import ua.bookloom.pipeline.batch.BatchPromptBuilder;
+import ua.bookloom.pipeline.batch.BatchReplyParser;
+import ua.bookloom.pipeline.checks.WordValidator;
+import ua.bookloom.pipeline.chunk.Chunk;
+import ua.bookloom.pipeline.context.BookRules;
+import ua.bookloom.pipeline.context.ContextBuilder;
+import ua.bookloom.pipeline.context.ModelWindows;
+import ua.bookloom.pipeline.context.RunFrame;
+import ua.bookloom.pipeline.context.RunFrames;
+import ua.bookloom.pipeline.context.TranslatePlanner;
 import ua.bookloom.pipeline.dial.DialParameters;
-import ua.bookloom.pipeline.heal.ChunkDecider;
-import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateFunction;
-import ua.bookloom.pipeline.heal.LoopSettings;
 import ua.bookloom.pipeline.heal.QualityLoop;
-import ua.bookloom.pipeline.heal.SegmentOutcome;
-import ua.bookloom.pipeline.memory.ProtectedMask;
-import ua.bookloom.pipeline.memory.ProtectedSpans;
+import ua.bookloom.pipeline.index.BookIndex;
+import ua.bookloom.pipeline.project.ChapterBoundaries;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.DraftContext;
-import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
-import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
-import ua.bookloom.pipeline.run.ChunkBudget;
-import ua.bookloom.pipeline.run.OutcomeRecords;
-import ua.bookloom.pipeline.typography.TypographyGate;
+import ua.bookloom.pipeline.prompt.StyleSheet;
+import ua.bookloom.pipeline.review.RetryRequests.Note;
+import ua.bookloom.pipeline.review.RetryRequests.Retried;
+import ua.bookloom.pipeline.run.PromptRequests;
+import ua.bookloom.pipeline.run.RunSettings;
 
 /**
- * Retry and Retry with note: one fair second attempt at a FLAGGED or ACCEPTED segment. It replays the context its first
- * draft saw, from the stored snapshot's texts alone, adds the next paragraph's target when the book holds one by then
- * (the run's batch showed the model what came next), shows the reviewer the snapshot's character sheet, and is decided
- * by the run's own draft step, checks, reviewer and acceptance rule — the quality loop with no repair round. A segment
- * the run drafted in pieces is drafted in the same pieces, each carrying the note. It never queues behind a running
- * book: while the latest run is RUNNING it answers {@code busy} before any call. A failure never downgrades an ACCEPTED
- * segment. The consistency pass reuses the draft and decision alone ({@link #candidate}) and stores by its own rule.
+ * Retry and Retry with note: one fair second attempt at a FLAGGED or ACCEPTED segment (design D8). It builds the draft's
+ * context the moment it is asked, the way a run builds one: the run frame over the current glossary, recurring terms
+ * and brief, stored once per project; the window of the stored targets the person and the run kept before the segment
+ * and the next source; and the map as it stands — never replaying the first draft's snapshot. The draft is a batch of
+ * one through the run's own prompts, in the same pieces when the segment is alone above the budget, each carrying the
+ * note, and it is decided by the run's draft step, deterministic checks and acceptance rule — the quality loop with
+ * no repair. The record keeps the sections the retry sent, marked as a retry's. It never queues behind a running book:
+ * while the latest run is RUNNING it answers {@code busy} before any call. A failure never downgrades an ACCEPTED
+ * segment.
  */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
@@ -77,14 +83,17 @@ public final class RetryDraft {
     private final OpenProjects openProjects;
     private final ProjectRepository projects;
     private final SegmentRepository segments;
+    private final GlossaryRepository glossary;
+    private final LexiconRepository lexicon;
+    private final PromptFrameRepository frames;
     private final RunRepository runs;
+    private final SummaryRepository summaries;
     private final PromptTemplates templates;
     private final ObjectMapper mapper;
     private final QualityLoop qualityLoop;
     private final SentenceSplitter splitter;
     private final Provider<ReviewMode> mode;
     private final Clock clock;
-    private final RequestDefaultsSource requestDefaultsSource;
 
     /**
      * Drafts one segment again.
@@ -94,11 +103,10 @@ public final class RetryDraft {
      * @param note the person's instruction shown under {@code [Extra instruction]}, or null for none
      * @param lowerTemperature whether the draft call asks for the draft's lower temperature
      * @param model the non-null bound model, called directly since no run is using it
-     * @return the stored record after the retry — ACCEPTED and reviewed on a pass, FLAGGED with the new findings on a
+     * @return the stored record after the retry — ACCEPTED on a pass, FLAGGED with the new findings on a
      *     failing FLAGGED segment — or, for a failing ACCEPTED segment, its unchanged stored record carrying the new
      *     findings; {@code busy} while a run of the project is RUNNING; {@code validation} for an unknown id, another
-     *     status, a record with no snapshot to replay, or a project with no open book; or the error a model call
-     *     answered
+     *     status, or a project with no open book; or the error a store or a model call answered
      */
     public Result<SegmentRecord> retry(
             final String projectId,
@@ -126,57 +134,38 @@ public final class RetryDraft {
         Objects.requireNonNull(segmentId, "segmentId");
         Objects.requireNonNull(model, "model");
         Objects.requireNonNull(progress, "progress");
-        final String instruction = note == null ? "" : note.strip();
+        final Note asked = new Note(note == null ? "" : note.strip(), lowerTemperature);
+        log.debug(
+                "retry requested project={} segment={} note={} lowerTemperature={}",
+                projectId,
+                segmentId,
+                !asked.text().isEmpty(),
+                lowerTemperature);
         if (log.isTraceEnabled()) {
-            log.trace("retry segment={} note={}", segmentId, instruction);
+            log.trace("retry segment={} note={}", segmentId, asked.text());
         }
+        final Target target = new Target(model.profile(), ModelWindows.of(model, null));
         return load(projectId, segmentId)
                 .flatMap(this::retryable)
                 .flatMap(this::notRunning)
-                .flatMap(this::plan)
+                .flatMap(record -> plan(record, target))
                 .flatMap(plan -> drafted(
                                 plan,
-                                instruction,
-                                lowerTemperature,
+                                asked,
                                 RetryCalls.over(
-                                        model, progress, clock, plan.frame().targetLanguage(), plan.document()))
-                        .flatMap(outcome -> store(plan, outcome)));
-    }
-
-    /**
-     * Drafts one segment again and decides the draft as {@link #retry} does, but stores nothing and does not check for
-     * a running book: the caller owns both choices.
-     *
-     * @param record the non-null stored record to draft again, FLAGGED or ACCEPTED with a snapshot
-     * @param calls the non-null seam every model call is sent through
-     * @return the decided candidate; {@code validation} for another status, a record with no snapshot to replay or a
-     *     project with no open book; or the error a model call answered
-     */
-    public Result<RetryCandidate> candidate(final SegmentRecord record, final ModelCalls calls) {
-        Objects.requireNonNull(record, "record");
-        Objects.requireNonNull(calls, "calls");
-        log.debug("retry candidate requested segment={} status={}", record.segmentId(), record.status());
-        return retryable(record)
-                .flatMap(this::plan)
-                .flatMap(plan -> drafted(plan, "", false, calls)
-                        .map(outcome -> new RetryCandidate(plan.segment(), outcome, plan.snapshot())));
+                                        model, progress, clock, plan.callFrame().targetLanguage(), plan.document()))
+                        .flatMap(retried -> new RetryStore(segments).store(plan.record(), retried)));
     }
 
     private Result<SegmentRecord> retryable(final SegmentRecord record) {
         final SegmentStatus status = record.status();
-        log.debug("retry: segment={} status={} hasSnapshot={}", record.segmentId(), status, record.context() != null);
+        log.debug("retry: segment={} status={}", record.segmentId(), status);
         if (status != SegmentStatus.FLAGGED && status != SegmentStatus.ACCEPTED) {
             return refuse(
                     ErrorCode.validation,
                     record.segmentId(),
                     "This segment is " + status.name().toLowerCase(Locale.ROOT)
                             + "; only a flagged or accepted segment can be retried.");
-        }
-        if (record.context() == null) {
-            return refuse(
-                    ErrorCode.validation,
-                    record.segmentId(),
-                    "Nothing is recorded of what this segment's first draft saw, so there is nothing to replay.");
         }
         return Result.ok(record);
     }
@@ -198,154 +187,123 @@ public final class RetryDraft {
         return Result.ok(record);
     }
 
-    private Result<RetryPlan> plan(final SegmentRecord record) {
+    private Result<RetryPlan> plan(final SegmentRecord record, final Target target) {
         final Result<Optional<Project>> found = projects.find(record.projectId());
         if (found.isErr()) {
             return Result.err(Objects.requireNonNull(found.error()));
         }
         return Objects.requireNonNull(found.data())
-                .map(project -> planFor(record, project.brief()))
+                .map(project -> planFor(record, project.brief(), target))
                 .orElseGet(() -> refuse(ErrorCode.validation, record.segmentId(), "This project is not stored."));
     }
 
-    private Result<RetryPlan> planFor(final SegmentRecord record, final BookBrief brief) {
+    private Result<RetryPlan> planFor(final SegmentRecord record, final BookBrief brief, final Target target) {
         final Document document = openProjects.get(record.projectId());
         final Optional<Segment> segment = document == null ? Optional.empty() : sourceOf(document, record.segmentId());
-        final String target = brief.targetLanguage();
         log.debug(
                 "retry: segment={} bookOpen={} segmentFound={} targetLanguage={}",
                 record.segmentId(),
                 document != null,
                 segment.isPresent(),
-                target);
+                brief.targetLanguage());
         if (document == null || segment.isEmpty()) {
             return refuse(
                     ErrorCode.validation,
                     record.segmentId(),
                     "The book of this project is not open, so the segment cannot be retried.");
         }
-        if (target == null) {
+        if (brief.targetLanguage() == null) {
             return refuse(ErrorCode.validation, record.segmentId(), "The brief names no language to translate into.");
         }
-        final ContextSnapshot snapshot = Objects.requireNonNull(record.context(), "checked snapshot");
-        final CallFrame frame = RetryFrames.of(
-                brief, snapshot, document, openProjects.index(record.projectId()), requestDefaultsSource.current());
-        return FollowingTarget.of(segments, record)
-                .map(next -> new RetryPlan(record, snapshot, brief, frame, document, segment.get(), next.orElse(null)));
+        final BookIndex index = Objects.requireNonNull(openProjects.index(record.projectId()), "index of an open book");
+        final CallFrame callFrame = CallFrame.forRun(
+                brief, StyleSheet.from(brief), document, CallFrame.scriptOf(index), WordValidator.none());
+        return runFrameOf(record.projectId(), brief, document, index, target.profile())
+                .map(runFrame -> new RetryPlan(record, brief, document, segment.get(), callFrame, runFrame, target));
     }
 
-    private Result<SegmentOutcome> drafted(
-            final RetryPlan plan, final String instruction, final boolean lowerTemperature, final ModelCalls calls) {
-        final Segment segment = plan.segment();
-        final ContextSnapshot snapshot = plan.snapshot();
-        final List<GlossaryEntry> terms =
-                SnapshotTerms.entriesOf(snapshot, plan.record().projectId());
-        final ProtectedMask mask = ProtectedSpans.mask(segment, plan.frame(), terms);
-        final DraftContext context =
-                ContextPackageAssembler.replay(snapshot, mask, segment).withFollowingTarget(plan.followingTarget());
-        logReplayed(segment.id(), snapshot);
-        final GateFunction gate = TypographyGate.around(
-                ProtectedSpans.gate(
-                        Map.of(segment.id(), mask),
-                        GateFunction.of(documents, plan.document().format())),
-                plan.frame().targetLanguage());
-        final SegmentTranslator translator = new SegmentTranslator(
-                gate,
-                calls,
-                plan.document().format(),
-                new DraftPromptBuilder(templates, plan.frame()),
-                new DraftReplyParser(mapper));
-        return translator
-                .translateSplit(segment, context, mask, splitter, budgetOf(plan), instruction, lowerTemperature)
-                .flatMap(drafted -> decide(plan, drafted, gate, calls, mode.get()));
+    // The frame a run would start with now, over today's glossary, recurring terms and brief, stored like a run's; the
+    // chapters are found by the run's own rule, so the retry's card reads the same chapter as the run's did.
+    private Result<RunFrame> runFrameOf(
+            final String projectId,
+            final BookBrief brief,
+            final Document document,
+            final BookIndex index,
+            final ModelProfile profile) {
+        final ChapterBoundaries chapters =
+                Objects.requireNonNull(openProjects.chapters(projectId, brief), "chapters of an open book");
+        return new RunFrames(templates, new BookRules(templates.languageRules()))
+                .buildStored(
+                        new RunFrames.FrameStores(glossary, lexicon, frames),
+                        projectId,
+                        brief,
+                        document,
+                        index,
+                        chapters,
+                        profile);
     }
 
-    // The run drafts a segment alone above its chunk budget in sentence-aligned pieces; a retry computes that budget
-    // the same way, so the longest paragraphs still fit.
-    private static int budgetOf(final RetryPlan plan) {
-        final Segment segment = plan.segment();
-        final ContextBudget window = ChunkBudget.budget(plan.frame(), ContextBudget.DEFAULT_WINDOW);
-        final int budget = window.chunkTokens();
-        log.debug("retry: segment={} budget={} {}", segment.id(), budget, window.describe());
-        return budget;
-    }
-
-    // The run's own quality loop with no repair round: the same evaluation, the same one-pair reviewer (labelled s1)
-    // when the brief's dial enables it, and the same acceptance rule. The mode is asked once per retry, so a change in
+    // The run's own prompts over a chunk of the one segment: the masks and the gate from today's glossary, the window
+    // and map the run's planner gives. The mode is asked once per retry, so a change in
     // Settings reaches the next retry and one retry never mixes two.
-    private Result<SegmentOutcome> decide(
-            final RetryPlan plan,
-            final DraftOutcome drafted,
-            final GateFunction gate,
-            final ModelCalls calls,
-            final ReviewMode current) {
-        final BookBrief brief = plan.brief();
-        final LoopSettings settings = new LoopSettings(
-                current,
-                DialParameters.of(brief.dial()).withoutRepairRounds(),
-                plan.frame(),
-                brief.names(),
-                plan.snapshot().glossary().stream().map(SnapshotTerm::term).toList(),
-                plan.snapshot().glossary().stream()
-                        .filter(term -> term.target() != null && !term.locked())
-                        .map(term -> term.term() + " → " + term.target())
-                        .toList(),
-                // Uncut lists (LoopSettings' fixed sheets): a retry reviews one pair, so there is nothing to cut them
-                // to.
-                plan.snapshot().characters());
+    private Result<Retried> drafted(final RetryPlan plan, final Note note, final ModelCalls calls) {
+        final TranslatePlanner planner = plannerOf(plan);
+        final RunSettings settings = settingsOf(plan);
+        final BookFormat format = plan.document().format();
+        final GateFunction documentGate = GateFunction.of(documents, format);
         log.debug(
-                "retry: deciding segment={} dial={} reviewPasses={}",
+                "retry: drafting segment={} window={} dial={} mode={} frame={}",
                 plan.segment().id(),
-                brief.dial(),
-                settings.dial().reviewPasses());
-        return qualityLoop.start(List.of(drafted), settings, gate, calls).flatMap(ChunkDecider::nextDecision);
+                settings.window(),
+                plan.brief().dial(),
+                settings.mode(),
+                plan.runFrame().frameHash());
+        return PromptRequests.read(
+                        glossary,
+                        lexicon,
+                        settings,
+                        new Chunk(plan.record().unitId(), List.of(plan.segment()), false),
+                        documentGate,
+                        new PromptRequests.Steps(
+                                new SegmentTranslator(documentGate, calls, format, planner, mapper),
+                                drafterOf(planner, plan.callFrame(), calls),
+                                planner))
+                .flatMap(requests -> new RetryRequests(requests, segments, splitter, qualityLoop)
+                        .draft(plan.segment(), plan.runFrame().frameHash(), note, settings, calls));
     }
 
-    private Result<SegmentRecord> store(final RetryPlan plan, final SegmentOutcome outcome) {
-        final SegmentRecord before = plan.record();
-        final ContextSnapshot snapshot = plan.snapshot();
-        if (log.isTraceEnabled()) {
-            log.trace("retry segment={} target={}", before.segmentId(), outcome.machineTarget());
-        }
-        if (outcome.status() == SegmentStatus.ACCEPTED) {
-            return write(
-                    before,
-                    current ->
-                            OutcomeRecords.decided(current, outcome, snapshot).withReviewed(true));
-        }
-        if (before.status() == SegmentStatus.ACCEPTED) {
-            final SegmentRecord answer = before.withFindings(
-                    OutcomeRecords.decided(before, outcome, snapshot).findings());
-            log.debug(
-                    "retry failed on an accepted segment={}; stored record kept unchanged findings={}",
-                    before.segmentId(),
-                    answer.findings().size());
-            logOutcome(answer);
-            return Result.ok(answer);
-        }
-        return write(before, current -> keepingMachineTarget(current, outcome, snapshot));
+    private TranslatePlanner plannerOf(final RetryPlan plan) {
+        final int window = plan.target().window();
+        return new TranslatePlanner(
+                new ContextBuilder(templates),
+                plan.runFrame(),
+                plan.target().profile(),
+                () -> window,
+                plan.document().units(),
+                () -> summaries.list(plan.record().projectId()),
+                () -> plan.brief().summariesOn());
     }
 
-    // A retry whose reply never passed the hard gates has no target of its own; the earlier one is kept rather than
-    // lost, so the person can still accept it.
-    private static SegmentRecord keepingMachineTarget(
-            final SegmentRecord current, final SegmentOutcome outcome, final ContextSnapshot snapshot) {
-        final SegmentRecord decided =
-                OutcomeRecords.decided(current, outcome, snapshot).withReviewed(false);
-        log.debug(
-                "retry: flagged segment={} newMachineTarget={}", current.segmentId(), outcome.machineTarget() != null);
-        return outcome.machineTarget() == null
-                ? decided.withMachineTarget(current.machineTarget(), current.maskedMachineTarget())
-                : decided;
+    private RunSettings settingsOf(final RetryPlan plan) {
+        final BookBrief brief = plan.brief();
+        return new RunSettings(
+                plan.record().projectId(),
+                mode.get(),
+                DialParameters.of(brief.dial()),
+                plan.callFrame(),
+                brief.names(),
+                plan.target().window());
     }
 
-    private Result<SegmentRecord> write(final SegmentRecord before, final UnaryOperator<SegmentRecord> change) {
-        final Result<SegmentRecord> updated = segments.update(before.projectId(), before.segmentId(), change);
-        final SegmentRecord after = updated.data();
-        if (after != null) {
-            logOutcome(after);
-        }
-        return updated;
+    // The drafter is what the run's prompts are read with; a retry of one segment never batches.
+    private BatchDrafter drafterOf(final TranslatePlanner planner, final CallFrame frame, final ModelCalls calls) {
+        return new BatchDrafter(
+                new BatchPromptBuilder(planner),
+                new BatchReplyParser(mapper),
+                calls,
+                frame.sourceLanguage(),
+                frame.targetLanguage(),
+                BatchDrafter.NO_BATCHING);
     }
 
     private Result<SegmentRecord> load(final String projectId, final String segmentId) {
@@ -366,35 +324,29 @@ public final class RetryDraft {
                 .findFirst();
     }
 
-    private static void logReplayed(final String segmentId, final ContextSnapshot snapshot) {
-        log.debug(
-                "retry context segment={} preceding={} terms={} memoryHits={} summary={}",
-                segmentId,
-                snapshot.precedingTargets().size(),
-                snapshot.glossary().size(),
-                snapshot.tmHits().size(),
-                snapshot.summary() != null);
-    }
-
-    private static void logOutcome(final SegmentRecord record) {
-        log.info("retry segment={} status={} reviewed={}", record.segmentId(), record.status(), record.reviewed());
-    }
-
     private static <T> Result<T> refuse(final ErrorCode code, final String segmentId, final String message) {
         log.warn("retry refused segment={} code={}", segmentId, code);
         return Result.err(AppError.of(code, "Cannot retry", message));
     }
 
     /**
-     * What one retry replays: the stored record, its snapshot, the brief, the call frame, the opened segment and the
-     * next segment's target as plain text, or null when it has none.
+     * The model a retry's calls go to, as far as its prompts are sized for it.
+     *
+     * @param profile the model's profile, which chooses the frame's examples and the window's previous pairs
+     * @param window the context window in tokens every call of the retry is sized for; positive
+     */
+    private record Target(ModelProfile profile, int window) {}
+
+    /**
+     * What one retry is built from: the stored record, the brief, the opened book and segment, the call frame of the
+     * checks, the run frame the prompts are planned with, and the model they are sized for.
      */
     private record RetryPlan(
             SegmentRecord record,
-            ContextSnapshot snapshot,
             BookBrief brief,
-            CallFrame frame,
             Document document,
             Segment segment,
-            @Nullable String followingTarget) {}
+            CallFrame callFrame,
+            RunFrame runFrame,
+            Target target) {}
 }

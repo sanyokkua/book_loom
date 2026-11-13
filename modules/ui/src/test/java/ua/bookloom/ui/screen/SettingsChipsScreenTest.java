@@ -59,19 +59,29 @@ class SettingsChipsScreenTest extends SettingsScreenTestBase {
     // IF the stages after a failed first one were drawn as passed or left out, THEN the report would misstate what was
     // attempted.
     @Test
-    void chips_unreachableFirstStage_threeChipsInOrderLaterOnesNotAttempted() throws TimeoutException {
+    void chips_unreachableFirstStage_chipsInOrderLaterOnesNotAttempted() throws TimeoutException {
         openSettings();
 
         checkWithReport(firstStageOnly(StageStatus.FAILED));
 
         assertThat(checksGrid().lookupAll(".check-result"))
                 .extracting(Node::getId)
-                .containsExactly("check-result-CONNECTION", "check-result-MODELS", "check-result-INFERENCE");
+                .containsExactly(
+                        "check-result-CONNECTION",
+                        "check-result-MODELS",
+                        "check-result-INFERENCE",
+                        "check-result-ADVANCED");
+        // The optional stage was not part of this test, so it still says what it is rather than "not attempted".
         assertThat(ThemeTestSupport.onFx(() -> List.of(
                         result("CONNECTION").getText(),
                         result("MODELS").getText(),
-                        result("INFERENCE").getText())))
-                .containsExactly("✕ Ollama does not answer", "– Models: not attempted", "– Inference: not attempted");
+                        result("INFERENCE").getText(),
+                        result("ADVANCED").getText())))
+                .containsExactly(
+                        "✕ Ollama does not answer",
+                        "– Models: not attempted",
+                        "– Inference: not attempted",
+                        "Advanced features (optional, uses the model)");
     }
 
     // IF a passed stage said only "passed", THEN a 1.2-second model and a 40-second one would look the same; each

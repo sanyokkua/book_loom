@@ -25,12 +25,14 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SettingsRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.UuidIdSource;
+import ua.bookloom.pipeline.run.BriefKeyRecheck;
 
 /** An import that fails after the book was opened leaves no open book and no open document behind. */
 class ProjectServiceImportFailureTest {
@@ -97,6 +99,19 @@ class ProjectServiceImportFailureTest {
                 });
     }
 
+    private static ProjectCopies copies(final Injector injector) {
+        return new ProjectCopies(
+                injector.getInstance(GlossaryRepository.class),
+                injector.getInstance(LexiconRepository.class),
+                injector.getInstance(SegmentRepository.class),
+                new UuidIdSource());
+    }
+
+    private static BriefKeyRecheck rechecks(final Injector injector) {
+        return new BriefKeyRecheck(
+                injector.getInstance(SegmentRepository.class), injector.getInstance(OpenProjects.class));
+    }
+
     private static ProjectServiceImpl service(final Injector injector, final SegmentRepository segments) {
         return new ProjectServiceImpl(
                 injector.getInstance(BookInspector.class),
@@ -107,12 +122,10 @@ class ProjectServiceImportFailureTest {
                 Clock.systemUTC(),
                 new UuidIdSource(),
                 injector.getInstance(RunRepository.class),
-                new ProjectCopies(
-                        injector.getInstance(GlossaryRepository.class),
-                        injector.getInstance(LexiconRepository.class),
-                        injector.getInstance(SegmentRepository.class),
-                        new UuidIdSource()),
-                injector.getInstance(SettingsRepository.class));
+                copies(injector),
+                injector.getInstance(SettingsRepository.class),
+                rechecks(injector),
+                injector.getInstance(SummaryRepository.class));
     }
 
     // Records each closed document and each saved project id; the segment store throws when asked to save.
@@ -139,12 +152,10 @@ class ProjectServiceImportFailureTest {
                 Clock.systemUTC(),
                 new UuidIdSource(),
                 injector.getInstance(RunRepository.class),
-                new ProjectCopies(
-                        injector.getInstance(GlossaryRepository.class),
-                        injector.getInstance(LexiconRepository.class),
-                        injector.getInstance(SegmentRepository.class),
-                        new UuidIdSource()),
-                injector.getInstance(SettingsRepository.class));
+                copies(injector),
+                injector.getInstance(SettingsRepository.class),
+                rechecks(injector),
+                injector.getInstance(SummaryRepository.class));
     }
 
     private interface Spy {

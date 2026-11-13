@@ -7,19 +7,17 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.SegmentKind;
-import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.ExportProgressListener;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
-import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -27,55 +25,44 @@ import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.audit.FinalAudit;
 import ua.bookloom.pipeline.checks.WordValidator;
-import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.revision.ConsistencyReport;
-import ua.bookloom.pipeline.revision.PassOptions;
 
 /**
  * Writes what a project stores: each segment record's effective target laid over a fresh read of the source by
  * {@link BookExporter}, so the file holds the best text every segment has today, then the chosen side files beside it.
- * An occupied path, or a side file that would land on the source or the book, is refused before anything slow; the
- * consistency pass, when asked, runs before the records are read. A cancel is honoured at each step — before the pass,
- * inside its model calls, before the book is written and before each side file — so a cancel never leaves a partial
- * file, and its message says how far the export got. The export never reads or changes a run's control state: it is the only writer, allowed at any time.
+ * An occupied path, or a side file that would land on the source or the book, is refused before anything slow. No
+ * model is called and no record is changed: the proofread summary is counted from the stored verdicts, findings and
+ * deferrals before the book is written. A cancel is honoured at each step — before the stores are read, before the
+ * book is written and before each side file — so a cancel never leaves a partial file, and its message says how far
+ * the export got. The export never reads or changes a run's control state: it is the only writer, allowed at any time.
  */
 @Slf4j
 final class ExportJobImpl implements ExportJob {
 
     private final ExportRequest request;
     private final ExportParts parts;
-    private final @Nullable ExportCalls calls;
     private final ExportProgressListener progress;
     private final AtomicBoolean cancelled = new AtomicBoolean();
-    private final AtomicBoolean stopEarly = new AtomicBoolean();
-    private final AtomicBoolean writing = new AtomicBoolean();
 
-    ExportJobImpl(
-            final ExportRequest request,
-            final ExportParts parts,
-            @Nullable final ModelCalls calls,
-            final ExportProgressListener progress) {
+    ExportJobImpl(final ExportRequest request, final ExportParts parts, final ExportProgressListener progress) {
         this.request = Objects.requireNonNull(request, "request");
         this.parts = Objects.requireNonNull(parts, "parts");
         this.progress = Objects.requireNonNull(progress, "progress");
-        this.calls = calls == null ? null : new ExportCalls(calls, cancelled, stopEarly, progress);
     }
 
     @Override
     public Result<ExportReport> run() {
         try {
             log.info(
-                    "export starting project={} destination={} overwrite={} sideFiles={} consistencyPass={}",
+                    "export starting project={} destination={} overwrite={} sideFiles={}",
                     request.projectId(),
                     request.destination(),
                     request.overwrite(),
-                    chosenSideFiles(),
-                    request.consistencyPass());
+                    chosenSideFiles());
             final Result<ExportReport> result =
                     isCancelledBefore("start") ? Result.err(BookExporter.cancelledBeforeWriting()) : write();
             logOutcome(result);
             return result;
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError("run the export", cause));
         }
     }
@@ -84,26 +71,6 @@ final class ExportJobImpl implements ExportJob {
     public void cancel() {
         log.debug("export cancel requested project={}", request.projectId());
         cancelled.set(true);
-        final ExportCalls inFlight = calls;
-        if (inFlight != null) {
-            inFlight.interrupt();
-        }
-    }
-
-    @Override
-    public void writeNow() {
-        final ExportCalls inFlight = calls;
-        if (inFlight == null || writing.get()) {
-            log.warn(
-                    "export write-now ignored project={} pass={} writing={}",
-                    request.projectId(),
-                    inFlight != null,
-                    writing.get());
-            return;
-        }
-        log.info("export write now requested project={}", request.projectId());
-        stopEarly.set(true);
-        inFlight.interrupt();
     }
 
     private Result<ExportReport> write() {
@@ -119,35 +86,10 @@ final class ExportJobImpl implements ExportJob {
             return Result.err(refusal);
         }
         final Document book = Objects.requireNonNull(opened, "open book");
-        if (isCancelledBefore("consistency-pass")) {
+        if (isCancelledBefore("read-stores")) {
             return Result.err(BookExporter.cancelledBeforeWriting());
         }
-        return consistencyPass(project)
-                .flatMap(pass -> summaryOf(project, pass.orElse(null))
-                        .flatMap(summary -> writeStored(project, book, pass.orElse(null), summary)));
-    }
-
-    private Result<Optional<ConsistencyReport>> consistencyPass(final Project project) {
-        final boolean everySegment =
-                switch (request.consistencyScope()) {
-                    case BY_DIAL -> project.brief().dial() == QualityDial.MAX;
-                    case DOUBTED -> false;
-                    case EVERY_SEGMENT -> true;
-                };
-        log.debug(
-                "export step=consistency-pass project={} requested={} withModel={} scope={} dial={} everySegment={}",
-                project.id(),
-                request.consistencyPass(),
-                calls != null,
-                request.consistencyScope(),
-                project.brief().dial(),
-                everySegment);
-        if (!request.consistencyPass()) {
-            return Result.ok(Optional.empty());
-        }
-        return parts.consistencyPass()
-                .run(project.id(), calls, new PassOptions(true, everySegment))
-                .map(Optional::of);
+        return ProofreadInputs.read(parts, project, book).flatMap(inputs -> writeStored(project, book, inputs));
     }
 
     private boolean isCancelledBefore(final String step) {
@@ -157,17 +99,11 @@ final class ExportJobImpl implements ExportJob {
     }
 
     private Result<ExportReport> writeStored(
-            final Project project,
-            final Document opened,
-            @Nullable final ConsistencyReport pass,
-            final ConsistencySummary summary) {
+            final Project project, final Document opened, final ProofreadInputs inputs) {
         final Set<SegmentKind> kept = project.brief().alsoTranslate().keptKinds();
         log.debug("export step=read-records project={} keptKinds={}", project.id(), kept);
-        final Result<List<SegmentRecord>> records = parts.segments().all(project.id());
-        if (records.isErr()) {
-            return Result.err(errorOf(records));
-        }
-        final List<SegmentRecord> stored = Objects.requireNonNull(records.data(), "records");
+        final List<SegmentRecord> stored = inputs.records();
+        final ProofreadSummary summary = ProofreadSummaries.of(inputs.book(), stored, inputs.open());
         final EffectiveTargets targets = EffectiveTargets.apply(
                 opened,
                 stored,
@@ -180,33 +116,17 @@ final class ExportJobImpl implements ExportJob {
                 stored,
                 ExportCounts.of(stored, kept, opened)
                         .withRefusedReplies(targets.candidates().size()));
-        return glossaryEntries(project.id())
-                .flatMap(glossary -> publish(project, targets, fallbacks, glossary, new Passed(pass, summary)));
+        return publish(project, targets, fallbacks, inputs.book().glossary(), summary);
     }
 
-    private Result<ConsistencySummary> summaryOf(final Project project, @Nullable final ConsistencyReport pass) {
-        if (pass != null) {
-            return Result.ok(ExportSummaries.ran(pass, calls != null));
-        }
-        return parts.consistencyPass().waiting(project.id()).map(ExportSummaries::notRun);
-    }
-
-    private Result<List<GlossaryEntry>> glossaryEntries(final String projectId) {
-        log.debug("export step=read-glossary project={}", projectId);
-        return parts.glossary().all(projectId);
-    }
-
-    /** The pass's own report, or null when it was off, and what the export says of it. */
-    private record Passed(@Nullable ConsistencyReport report, ConsistencySummary summary) {}
-
-    // The side files are built once the book is written, so the quality report counts the segments the check had to
-    // write in their source.
+    // The side files are built once the book is written, so the quality report counts the segments that had to be
+    // written in their source.
     private Result<ExportReport> publish(
             final Project project,
             final EffectiveTargets targets,
             final Fallbacks fallbacks,
             final List<GlossaryEntry> glossary,
-            final Passed passed) {
+            final ProofreadSummary summary) {
         final ExportPlan plan = new ExportPlan(
                 project.source(),
                 request.destination(),
@@ -216,7 +136,6 @@ final class ExportJobImpl implements ExportJob {
         if (isCancelledBefore("write")) {
             return Result.err(BookExporter.cancelledBeforeWriting());
         }
-        writing.set(true);
         progress.onProgress(new ExportProgress(ExportProgress.Step.WRITING, 0, 1));
         final Result<BookExporter.Exported> written =
                 new BookExporter(parts.documents(), parts.moves()).exportReporting(plan, targets, cancelled::get);
@@ -225,16 +144,12 @@ final class ExportJobImpl implements ExportJob {
         }
         return withSideFiles(
                 project,
-                new ExportFinish.Written(targets, fallbacks, glossary, passed.report(), parts.lastRun(project.id())),
-                Objects.requireNonNull(written.data(), "written book"),
-                passed.summary());
+                new ExportFinish.Written(targets, fallbacks, glossary, summary, parts.lastRun(project.id())),
+                Objects.requireNonNull(written.data(), "written book"));
     }
 
     private Result<ExportReport> withSideFiles(
-            final Project project,
-            final ExportFinish.Written book,
-            final BookExporter.Exported exported,
-            final ConsistencySummary summary) {
+            final Project project, final ExportFinish.Written book, final BookExporter.Exported exported) {
         final Fallbacks.Fallen fallen = book.fallbacks()
                 .of(
                         book.targets().sourceFallbacks(),
@@ -253,7 +168,7 @@ final class ExportJobImpl implements ExportJob {
                             .report(
                                     exported.path(),
                                     paths,
-                                    summary,
+                                    book.summary(),
                                     fallen.listed(),
                                     suspicious,
                                     built.policy().unresolvedLocators());
@@ -297,10 +212,11 @@ final class ExportJobImpl implements ExportJob {
             return;
         }
         final ExportReport report = Objects.requireNonNull(result.data(), "report");
+        final ProofreadSummary summary = report.proofread();
         log.info(
                 "export finished project={} destination={} written={} pending={} sourceKept={} keptVerbatim={}"
                         + " flaggedWritten={} autoAccepted={} reviewed={} verifiedSegments={} sideFiles={}"
-                        + " consistency={} sourceFallbacks={}",
+                        + " proofreadReRead={} proofreadWaiting={} sourceFallbacks={}",
                 request.projectId(),
                 report.destination(),
                 report.written(),
@@ -312,7 +228,8 @@ final class ExportJobImpl implements ExportJob {
                 report.reviewed(),
                 report.verifiedSegments(),
                 report.sideFiles(),
-                report.consistency(),
+                summary.reRead(),
+                summary.waiting(),
                 report.sourceFallbacks());
     }
 

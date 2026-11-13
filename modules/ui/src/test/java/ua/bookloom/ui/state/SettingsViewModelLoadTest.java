@@ -17,6 +17,7 @@ import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.ScriptedProviderVerifier;
+import ua.bookloom.ui.notify.Voice;
 
 /** The registry is read on the background executor, never in the constructor on the FX thread. */
 class SettingsViewModelLoadTest extends SettingsViewModelTestBase {
@@ -29,16 +30,15 @@ class SettingsViewModelLoadTest extends SettingsViewModelTestBase {
         final CountingPool pool = useCountingPool();
 
         final SettingsViewModel viewModel = onFx(() -> new SettingsViewModel(
-                configs,
-                ScriptedProviderVerifier.idle(),
-                newModelListing(),
-                errors,
+                new ProviderStore(configs, new MemorySettings()),
+                new ProviderChecks(ScriptedProviderVerifier.idle(), newModelListing(), QuantChipsFixture.idle()),
+                new Voice(EnglishMessages.create(), errors),
                 executor,
                 activities,
-                new MemorySettings(),
-                EnglishMessages.create(),
-                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
-                new StructuredAnswers()));
+                new InferenceMemory(
+                        new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
+                        new StructuredAnswers()),
+                java.time.Clock.systemUTC()));
         pool.awaitFinished(1);
         WaitForAsyncUtils.waitForFxEvents();
 

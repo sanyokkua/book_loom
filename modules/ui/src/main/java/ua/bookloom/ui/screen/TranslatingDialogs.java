@@ -10,7 +10,9 @@ import ua.bookloom.ui.dialog.NarratorDialog;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.CallHistory;
+import ua.bookloom.ui.state.ProgressDialogModel;
 import ua.bookloom.ui.state.RunStateSource;
+import ua.bookloom.ui.state.TechnicalDetails;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
@@ -22,6 +24,7 @@ import ua.bookloom.ui.state.TranslatingViewModel;
  * @param modals where "All calls…" opens
  * @param messages the catalogue the calls dialog is worded from
  * @param activities whose clock the calls dialog reads
+ * @param technical whether the calls dialog opens in Detailed
  */
 @Slf4j
 record TranslatingDialogs(
@@ -29,7 +32,8 @@ record TranslatingDialogs(
         ConfirmPrompt confirm,
         ModalHost modals,
         Messages messages,
-        ActivityTracker activities) {
+        ActivityTracker activities,
+        TechnicalDetails technical) {
 
     /**
      * Opens the progress dialog's Calls view on the calls the live card kept, newest first, closed with Close.
@@ -40,8 +44,14 @@ record TranslatingDialogs(
         log.info("all calls opened on {} kept calls", oldestFirst.size());
         modals.show(
                 ProgressDialog.calls(
-                        CallHistory.modelOf(oldestFirst, activities.now(), messages), messages, modals::hide),
+                        CallHistory.modelOf(oldestFirst, activities.now(), messages, initialMode()),
+                        messages,
+                        modals::hide),
                 false);
+    }
+
+    private ProgressDialogModel.Mode initialMode() {
+        return technical.isOn() ? ProgressDialogModel.Mode.DETAILED : ProgressDialogModel.Mode.SIMPLE;
     }
 
     /**
@@ -51,12 +61,13 @@ record TranslatingDialogs(
      */
     void askToStop(final TranslatingViewModel viewModel, final RunStateSource.StopFigures figures) {
         log.debug(
-                "stop pressed at {} of {} with {} in flight: asking first",
+                "stop pressed at {} of {} with {} in flight, proofreading {}: asking first",
                 figures.decided(),
                 figures.total(),
-                figures.inFlight());
+                figures.inFlight(),
+                figures.proofreading());
         confirm.ask(
-                ConfirmPrompt.Question.STOP_RUN,
+                figures.proofreading() ? ConfirmPrompt.Question.STOP_PROOFREAD : ConfirmPrompt.Question.STOP_RUN,
                 List.of(figures.decided(), figures.total(), figures.inFlight()),
                 viewModel::stop);
     }

@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
@@ -173,7 +174,7 @@ class ReviewQueriesTest {
 
         assertThat(desk.queries().segment(desk.projectId(), "ch99.xhtml:0").error())
                 .isNotNull()
-                .extracting(error -> error.code())
+                .extracting(AppError::code)
                 .isEqualTo(ErrorCode.validation);
     }
 
@@ -185,7 +186,7 @@ class ReviewQueriesTest {
         final Result<List<SegmentView>> result =
                 desk.queriesWithoutOpenBook().queue(desk.projectId(), ReviewFilter.ALL_FLAGGED);
 
-        assertThat(result.error()).isNotNull().extracting(error -> error.code()).isEqualTo(ErrorCode.validation);
+        assertThat(result.error()).isNotNull().extracting(AppError::code).isEqualTo(ErrorCode.validation);
     }
 
     private Desk flaggedThree() {
@@ -215,7 +216,6 @@ class ReviewQueriesTest {
                 score,
                 record.findings(),
                 record.path(),
-                record.repairRounds(),
                 record.reviewed(),
                 record.context());
     }

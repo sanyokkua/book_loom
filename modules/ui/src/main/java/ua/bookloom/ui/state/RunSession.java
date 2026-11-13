@@ -14,6 +14,7 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.BriefSampleRead;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
+import ua.bookloom.api.pipeline.ChapterSummaryKept;
 import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -24,10 +25,12 @@ import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.ProofreadForecast;
+import ua.bookloom.api.pipeline.ProofreadRoundStarted;
+import ua.bookloom.api.pipeline.ProofreadWindowRead;
 import ua.bookloom.api.pipeline.RecoveryWaiting;
 import ua.bookloom.api.pipeline.Resumed;
 import ua.bookloom.api.pipeline.ReviewDesk;
-import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDrafted;
 import ua.bookloom.api.pipeline.SegmentStarted;
@@ -56,6 +59,7 @@ final class RunSession implements JobListener {
     private final ActivityLogFeed feed = new ActivityLogFeed();
     private final ReviewDeskReads deskReads;
     private final CallTracker calls;
+    private final StageTracker stages;
     private final AtomicReference<@Nullable JobProgress> latest = new AtomicReference<>();
     private final AtomicReference<@Nullable JobProgress> lastSeen = new AtomicReference<>();
     // Guarded by publishLock like the flags below.
@@ -84,6 +88,7 @@ final class RunSession implements JobListener {
         this.calls = new CallTracker(mirror, clock, feed);
         this.runClock = new RunClock(clock.instant());
         this.progress = new RunLedger(runClock);
+        this.stages = new StageTracker(mirror.live(), progress, liveCalls, feed);
         this.deskReads = new ReviewDeskReads(desk, executor, mirror.live(), context.projectId());
     }
 
@@ -214,6 +219,7 @@ final class RunSession implements JobListener {
             runClock.ended(clock.instant());
             calls.clearWait("the run ended");
             calls.clearRecovery();
+            stages.ended();
             if (outcome.state() == RunState.COMPLETED) {
                 queue(feed.finished());
             }
@@ -242,7 +248,7 @@ final class RunSession implements JobListener {
             case StageStarted started -> onStage(started);
             case Paused paused -> onPaused(paused);
             case Resumed resumed -> onResumed(resumed);
-            case ModelCallStarted started -> onModelCall(started);
+            case ModelCallStarted started -> locked(() -> calls.started(started));
             case SegmentStarted started ->
                 locked(() -> {
                     feed.segmentStarted(started);
@@ -250,28 +256,20 @@ final class RunSession implements JobListener {
                 });
             case SegmentDrafted drafted -> locked(() -> liveCalls.drafted(drafted));
             case ModelCallFinished finished -> onModelCallFinished(finished);
-            case MemoryUpdated updated -> onMemory(updated);
-            case ContextAssembled assembled ->
-                log.trace("context of segment {} is shown with its call", assembled.segmentId());
-            case RoundStarted round -> onRound(round);
+            case MemoryUpdated updated -> locked(() -> queue(feed.memory(updated)));
             case RecoveryWaiting waiting -> locked(() -> queue(calls.recovery(waiting)));
-            case Finished finished -> log.debug("ignoring the Finished event; the returned result decides the outcome");
-            case BatchStarted batch -> log.debug("ignoring a {} batch event: a run sends none", batch.kind());
-            case CallSnapshotUpdated updated -> locked(() -> liveCalls.snapshot(updated.snapshot()));
+            // A context is shown with its call, a run sends no batch or brief event, and the returned result decides
+            // the outcome rather than Finished.
+            case ContextAssembled _, Finished _, BatchStarted _, BriefSampleRead _ ->
+                log.trace("{} not shown by the run session", event.getClass().getSimpleName());
+            case CallSnapshotUpdated(var snapshot) -> locked(() -> liveCalls.snapshot(snapshot));
             case StepsPlanned planned -> locked(() -> progress.planned(planned));
             case StepChanged changed -> onStep(changed);
-            case BriefSampleRead read -> log.trace("brief window {} of {} read", read.sample(), read.samples());
+            case ChapterSummaryKept kept -> onSummaryKept(kept);
+            case ProofreadForecast forecast -> locked(() -> stages.forecast(forecast));
+            case ProofreadRoundStarted round -> locked(() -> stages.round(round).ifPresent(this::queue));
+            case ProofreadWindowRead read -> locked(() -> queue(stages.windowRead(read)));
         }
-    }
-
-    private void onModelCall(final ModelCallStarted started) {
-        log.trace("model call {} attempt {} started for {}", started.kind(), started.attempt(), started.segmentIds());
-        locked(() -> calls.started(started));
-    }
-
-    private void onRound(final RoundStarted round) {
-        log.debug("segment {} entered round {} of {}", round.segmentId(), round.round(), round.rounds());
-        locked(() -> queue(feed.roundStarted(round)));
     }
 
     // Stamped here, under the lock, so the lines of one tick read in the order they were queued.
@@ -285,6 +283,7 @@ final class RunSession implements JobListener {
             calls.clearWait("a segment was decided");
             feed.decided(decided).ifPresent(this::queue);
             liveCalls.decided(decided);
+            stages.decided(decided);
         });
         if (decided.status() == SegmentStatus.FLAGGED) {
             deskReads.refreshFlaggedQueue();
@@ -303,17 +302,19 @@ final class RunSession implements JobListener {
         });
     }
 
-    private void onMemory(final MemoryUpdated updated) {
-        log.debug("memory updated: {}", updated.kind());
+    private void onSummaryKept(final ChapterSummaryKept kept) {
         locked(() -> {
-            liveCalls.memory(updated);
-            queue(feed.memory(updated));
+            liveCalls.summaryKept(kept);
+            queue(feed.summaryKept(kept));
         });
     }
 
     private void onStage(final StageStarted started) {
         record(started.progress());
-        locked(() -> queue(feed.stageStarted()));
+        locked(() -> {
+            stages.started(started.stage());
+            queue(feed.stageStarted(started.stage(), 0));
+        });
         log.debug("stage {} started", started.stage());
     }
 
@@ -377,10 +378,10 @@ final class RunSession implements JobListener {
     }
 
     private void publishLiveLocked() {
-        final LiveCalls calls = liveCalls.view(clock.instant());
-        if (!calls.equals(shownCalls)) {
-            shownCalls = calls;
-            mirror.live().publishCalls(calls);
+        final LiveCalls viewed = liveCalls.view(clock.instant());
+        if (!viewed.equals(shownCalls)) {
+            shownCalls = viewed;
+            mirror.live().publishCalls(viewed);
         }
         final JobProgress seen = lastSeen.get();
         final ProgressFigures.Figures steps = progress.read(seen, clock.instant());

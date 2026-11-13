@@ -1,5 +1,6 @@
 package ua.bookloom.ui.theme;
 
+import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.persistence.SettingsRepository;
@@ -18,7 +19,6 @@ public final class TestThemes {
      * @return the controller
      */
     public static ThemeController over(final SettingsRepository settings) {
-        return new ThemeController(
-                () -> java.util.Optional.empty(), new SettingWriter(settings, Runnable::run, Runnable::run));
+        return new ThemeController(Optional::empty, new SettingWriter(settings, Runnable::run, Runnable::run));
     }
 }

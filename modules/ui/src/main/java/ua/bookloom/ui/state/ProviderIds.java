@@ -5,6 +5,7 @@ import java.util.Locale;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import ua.bookloom.util.text.Edges;
 
 /** The registry id a new provider gets: a readable slug of its name, never one already in use. */
 // Checkstyle parses source before Lombok runs, so it cannot see the private constructor generated below
@@ -25,8 +26,7 @@ public final class ProviderIds {
     public static String newId(final String name, final Collection<String> taken) {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(taken, "taken");
-        final String slug =
-                name.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-").replaceAll("^-+|-+$", "");
+        final String slug = Edges.strip(name.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-"), "-");
         final String base = slug.isEmpty() ? FALLBACK : slug;
         String candidate = base;
         int next = 2;

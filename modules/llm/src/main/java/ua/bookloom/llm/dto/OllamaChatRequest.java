@@ -17,6 +17,9 @@ import org.jspecify.annotations.Nullable;
  * @param format optional structured-output format, omitted when absent
  * @param think optional native reasoning-output control, omitted when unsupported or unspecified: a boolean, or a
  *     level string such as {@code low} for a model that cannot turn reasoning off
+ * @param keepAlive how long the model stays loaded after the call, such as {@code 30m}; omitted outside a run
+ * @param truncate {@code false} beside a context size, so a prompt longer than the window is refused instead of cut
+ *     from the front; omitted when no size is sent
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record OllamaChatRequest(
@@ -25,7 +28,9 @@ public record OllamaChatRequest(
         @JsonProperty("stream") boolean stream,
         @JsonProperty("options") @Nullable Options options,
         @JsonProperty("format") @Nullable JsonNode format,
-        @JsonProperty("think") @Nullable Object think) {
+        @JsonProperty("think") @Nullable Object think,
+        @JsonProperty("keep_alive") @Nullable String keepAlive,
+        @JsonProperty("truncate") @Nullable Boolean truncate) {
 
     /** Rejects incomplete requests, omits empty options, and protects message order from caller mutation. */
     public OllamaChatRequest {
@@ -43,6 +48,17 @@ public record OllamaChatRequest(
                 && options.repeatPenalty() == null) {
             options = null;
         }
+    }
+
+    /** A request with no keep-alive and no truncation choice. */
+    public OllamaChatRequest(
+            String model,
+            List<Message> messages,
+            boolean stream,
+            @Nullable Options options,
+            @Nullable JsonNode format,
+            @Nullable Object think) {
+        this(model, messages, stream, options, format, think, null, null);
     }
 
     /**

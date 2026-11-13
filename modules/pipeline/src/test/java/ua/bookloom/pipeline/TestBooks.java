@@ -8,6 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.zip.CRC32;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -188,6 +190,14 @@ public final class TestBooks {
             names.add(String.format("ch%02d.xhtml", index + 1));
             spine.add(chapters.get(index));
         }
+        return writeAtRoot(destination, names, spine, navigation(labels));
+    }
+
+    private static Path writeAtRoot(
+            final Path destination,
+            final List<String> names,
+            final List<List<String>> spine,
+            final String navigationDocument) {
         try (OutputStream output = Files.newOutputStream(destination);
                 ZipOutputStream zip = new ZipOutputStream(output)) {
             put(zip, "mimetype", "application/epub+zip", ZipEntry.STORED);
@@ -198,11 +208,23 @@ public final class TestBooks {
             for (int index = 0; index < names.size(); index++) {
                 put(zip, names.get(index), xhtml(spine.get(index), null, DEFAULT_PAGE_TITLE), ZipEntry.DEFLATED);
             }
-            put(zip, "nav.xhtml", navigation(labels), ZipEntry.DEFLATED);
+            put(zip, "nav.xhtml", navigationDocument, ZipEntry.DEFLATED);
             return destination;
         } catch (IOException cause) {
             throw new UncheckedIOException(cause);
         }
+    }
+
+    /** A root-level EPUB of {@code ch01.xhtml}…, its navigation listing one label per chapter, each linking its own. */
+    public static Path epubWithChapterLinks(
+            final Path destination, final List<List<String>> chapters, final List<String> labels) {
+        final List<String> names = IntStream.rangeClosed(1, chapters.size())
+                .mapToObj(number -> String.format("ch%02d.xhtml", number))
+                .toList();
+        final String items = IntStream.range(0, names.size())
+                .mapToObj(index -> "<li><a href=\"" + names.get(index) + "\">" + labels.get(index) + "</a></li>")
+                .collect(Collectors.joining());
+        return writeAtRoot(destination, names, chapters, navigation(items));
     }
 
     private static String rootOpf(final List<String> chapterNames) {
@@ -224,9 +246,12 @@ public final class TestBooks {
     }
 
     private static String navigation(final List<String> labels) {
-        final String items = labels.stream()
+        return navigation(labels.stream()
                 .map(label -> "<li><a href=\"ch0.xhtml\">" + label + "</a></li>")
-                .reduce("", String::concat);
+                .reduce("", String::concat));
+    }
+
+    private static String navigation(final String items) {
         return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
                 + "<html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:epub=\"http://www.idpf.org/2007/ops\">"
                 + "<head><title>Contents</title></head><body><nav epub:type=\"toc\"><ol>"

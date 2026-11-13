@@ -31,16 +31,14 @@ import ua.bookloom.pipeline.run.JobModelCalls;
 /**
  * The prompt eval: the fixed case set through the production prompt builders against a real local Ollama model,
  * measured before any repair a run would make. Local-only — {@code ./gradlew :pipeline:promptEval} with
- * {@code BOOKLOOM_EVAL_URL} (for example {@code http://localhost:11434}; with {@code BOOKLOOM_EVAL_PROVIDER=lmstudio} the OpenAI-compatible {@code http://localhost:1234/v1}), {@code BOOKLOOM_EVAL_STABILITY} (review each corpus case this many times) and optionally
- * {@code BOOKLOOM_EVAL_MODEL} (default {@code gemma4:e4b-mlx}) and {@code BOOKLOOM_EVAL_SKIP_REVIEW=1} (draft, fix and suggest cases only, for a model whose reviewer call stalls) and {@code BOOKLOOM_EVAL_QUICK=1} (the ten cases of {@link QuickEval#PROMPT_CASES}, no defects corpus) and {@code BOOKLOOM_EVAL_ONLY} (a case-name prefix, such
+ * {@code BOOKLOOM_EVAL_URL} (for example {@code http://localhost:11434}; with {@code BOOKLOOM_EVAL_PROVIDER=lmstudio} the OpenAI-compatible {@code http://localhost:1234/v1}), and optionally
+ * {@code BOOKLOOM_EVAL_MODEL} (default {@code gemma4:e4b-mlx}) and {@code BOOKLOOM_EVAL_QUICK=1} (the nine cases of {@link QuickEval#PROMPT_CASES}) and {@code BOOKLOOM_EVAL_ONLY} (a case-name prefix, such
  * as {@code suggest}, to run only those cases); skipped when the URL is unset. The table is written to
  * {@code build/reports/promptEval/<model>.txt}.
  *
  * <p>{@code BOOKLOOM_EVAL_LANGS} (a comma list of tags, or {@code all}) runs the per-language mini-corpora under
- * {@code eval/languages/} instead; {@code BOOKLOOM_EVAL_RULES=generic} forces every prompt to the generic language
- * rules, and the reports then end in {@code -generic}, so the two can be compared. With
- * {@code BOOKLOOM_EVAL_SUITE=batch} this test is skipped and {@link BatchEvalTest} runs instead, with
- * {@code BOOKLOOM_EVAL_SUITE=words} {@link WordsEvalTest} does, and with {@code BOOKLOOM_EVAL_SUITE=realrun}
+ * {@code eval/languages/} instead. With
+ * {@code BOOKLOOM_EVAL_SUITE=batch} this test is skipped and {@link BatchEvalTest} runs instead, with {@code BOOKLOOM_EVAL_SUITE=realrun}
  * {@link RealRunTest} does, and with {@code BOOKLOOM_EVAL_SUITE=sequence} {@link SequenceEvalTest} does, and with {@code prescan}, {@code terms}, {@code setup}, {@code consistency} or {@code retry} {@link StageEvalTest} does, and with {@code stability} or {@code gold} {@link JudgementEvalTest} does, and with {@code names} {@link NamesEvalTest} does, and with {@code coref} {@link CorefEvalTest} does, and with {@code mini} {@link MiniEvalTest} does.
  *
  * <p>The requests are the app's: {@link PromptEvalRunner} and {@link BatchEvalRunner} build them with the run's own
@@ -63,18 +61,17 @@ class PromptEvalTest {
             List.of("en", "ru", "uk", "fr", "hr", "pl", "cs", "sl", "sk", "es", "pt", "de");
 
     @Test
-    void promptEval_realModel_meetsTheParseGateAndReviewerFloors() throws IOException {
+    void promptEval_realModel_meetsTheParseAndGateFloors() throws IOException {
         final String model = System.getenv().getOrDefault("BOOKLOOM_EVAL_MODEL", DEFAULT_MODEL);
         final ModelCalls calls = calls(model);
-        final int repeats = Integer.parseInt(System.getenv().getOrDefault("BOOKLOOM_EVAL_STABILITY", "1"));
         final String languages = System.getenv().getOrDefault("BOOKLOOM_EVAL_LANGS", "");
         final List<EvalReport> reports = languages.isBlank()
-                ? List.of(englishToUkrainian(calls, model, repeats))
+                ? List.of(englishToUkrainian(calls, model))
                 : Arrays.stream(languages.split(","))
                         .map(String::strip)
                         .flatMap(tag -> tag.equals("all") ? LANGUAGES.stream() : Stream.of(tag))
                         .distinct()
-                        .map(tag -> languageReport(calls, model, tag, repeats))
+                        .map(tag -> languageReport(calls, model, tag))
                         .toList();
 
         writeAll(reports);
@@ -83,38 +80,28 @@ class PromptEvalTest {
                         assertThat(report.meetsThresholds()).as(report.table()).isTrue());
     }
 
-    private static EvalReport englishToUkrainian(final ModelCalls calls, final String model, final int repeats) {
+    private static EvalReport englishToUkrainian(final ModelCalls calls, final String model) {
         final PromptEvalRunner runner = new PromptEvalRunner(calls);
         final String only = System.getenv().getOrDefault("BOOKLOOM_EVAL_ONLY", "");
-        final boolean skipReview = "1".equals(System.getenv("BOOKLOOM_EVAL_SKIP_REVIEW"));
-        final boolean corpusOnly = "corpus".equals(only);
         final boolean quick = QuickEval.isOn(System.getenv());
         return new EvalReport(
                 model,
-                corpusOnly
-                        ? List.of()
-                        : runner.runAll(PromptEvalCases.ALL.stream()
-                                .filter(evalCase -> evalCase.name().startsWith(only))
-                                .filter(evalCase -> !quick || QuickEval.PROMPT_CASES.contains(evalCase.name()))
-                                .filter(evalCase -> !skipReview || !(evalCase instanceof EvalCase.Review))
-                                .toList()),
-                skipReview || quick ? List.of() : runner.runDefects(EvalCorpus.defects(), repeats),
+                runner.runAll(PromptEvalCases.ALL.stream()
+                        .filter(evalCase -> evalCase.name().startsWith(only))
+                        .filter(evalCase -> !quick || QuickEval.PROMPT_CASES.contains(evalCase.name()))
+                        .toList()),
                 rulesLabel());
     }
 
-    private static EvalReport languageReport(
-            final ModelCalls calls, final String model, final String tag, final int repeats) {
+    private static EvalReport languageReport(final ModelCalls calls, final String model, final String tag) {
         final LanguageCorpus corpus = EvalCorpus.language(tag);
-        final PromptEvalRunner.LanguageRun run = new PromptEvalRunner(
-                        calls, corpus.sourceLanguage(), corpus.targetLanguage())
-                .runLanguage(corpus, repeats);
-        return new EvalReport(model + " [" + tag + "]", run.rows(), run.defectRows(), rulesLabel());
+        final List<EvalRow> rows =
+                new PromptEvalRunner(calls, corpus.sourceLanguage(), corpus.targetLanguage()).runLanguage(corpus);
+        return new EvalReport(model + " [" + tag + "]", rows, rulesLabel());
     }
 
-    /** {@code generic} when the run is forced to the generic rules, as {@code LanguageRules} reads the switch. */
     private static String rulesLabel() {
-        final String asked = System.getProperty("bookloom.eval.rules", System.getenv("BOOKLOOM_EVAL_RULES"));
-        return "generic".equalsIgnoreCase(asked) ? "generic" : "language";
+        return "language";
     }
 
     private static void writeAll(final List<EvalReport> reports) throws IOException {
@@ -136,14 +123,15 @@ class PromptEvalTest {
 
     static ModelCalls calls(final String modelId) {
         final ChatModel chatModel = chatModel(modelId);
-        // The run's own seam, so a request is sized to the window and capped exactly as the app sends it; the guard
-        // lets everything through and nothing is announced.
+        // The run's own seam, so a request is sized to the window, capped and kept loaded exactly as the app sends
+        // it; the guard lets everything through and nothing is announced.
         return new JobModelCalls(
-                onSent -> chatModel,
-                event -> {},
-                Clock.systemUTC(),
-                PromptEvalCases.TARGET_LANGUAGE,
-                EvalProject.window());
+                        onSent -> chatModel,
+                        event -> {},
+                        Clock.systemUTC(),
+                        PromptEvalCases.TARGET_LANGUAGE,
+                        EvalProject.window())
+                .inRun();
     }
 
     /** An injector whose provider registry holds the eval's one provider, built from the environment. */

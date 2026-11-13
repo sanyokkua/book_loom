@@ -24,6 +24,7 @@ import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.notify.ToastOccasion;
 import ua.bookloom.ui.notify.Toasts;
+import ua.bookloom.util.contract.ArgNames;
 
 /**
  * What the import screen shows, and the gateway through which a book becomes {@link CurrentProject}.
@@ -104,7 +105,7 @@ public final class ImportViewModel {
      * @param source the file to import
      */
     public void open(final Path source) {
-        Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(source, ArgNames.SOURCE);
         begin(source, null);
     }
 
@@ -117,7 +118,7 @@ public final class ImportViewModel {
      * @param projectId the stored project the new book replaces; it is no longer the open book when this returns
      */
     public void openReplacing(final Path source, final String projectId) {
-        Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(source, ArgNames.SOURCE);
         Objects.requireNonNull(projectId, "projectId");
         begin(source, projectId);
     }
@@ -212,7 +213,7 @@ public final class ImportViewModel {
                 disposal.removeReplaced(replacedId, createdId);
             }
             return ImportAnswers.answerOf(source, created);
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             log.error("the project service threw instead of returning a result while importing", thrown);
             return Result.err(ImportAnswers.internalError(thrown));
         }
@@ -334,7 +335,7 @@ public final class ImportViewModel {
      * @param imported what opening the stored project answered; it must carry a project id and a brief
      */
     void adopt(final Path source, final ImportedBook imported) {
-        Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(source, ArgNames.SOURCE);
         Objects.requireNonNull(imported, "imported");
         final OpenedBook opened = openedOf(source, imported);
         final OpenedBook previous = current.book().get();
@@ -360,9 +361,8 @@ public final class ImportViewModel {
             log.debug("showEmpty ignored: a book is still being opened");
             return;
         }
-        log.debug(
-                "showing the empty import screen, a project is open: {}",
-                current.book().get() != null);
+        final boolean projectOpen = current.book().get() != null;
+        log.debug("showing the empty import screen, a project is open: {}", projectOpen);
         state.set(new ImportState.Idle());
     }
 

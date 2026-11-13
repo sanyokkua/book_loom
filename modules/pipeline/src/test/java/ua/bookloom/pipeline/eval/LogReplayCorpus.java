@@ -132,6 +132,11 @@ record LogReplayCorpus(List<LoggedCall> calls, Map<String, Decision> decisions) 
     }
 
     /** The state of one read: the call each thread is in the middle of, the calls done and the decisions so far. */
+    private static final String OLD_SUMMARY = "SUMMARY";
+
+    private static final String OLD_REVISION = "REVISION";
+    private static final String OLD_REVIEW = "REVIEW";
+
     private static final class Reading {
 
         private final Map<String, Pending> open = new HashMap<>();
@@ -149,7 +154,7 @@ record LogReplayCorpus(List<LoggedCall> calls, Map<String, Decision> decisions) 
             final Matcher decided = DECIDED.matcher(message);
             if (out.matches()) {
                 close(thread);
-                open.put(thread, new Pending(CallKind.valueOf(out.group(1)), ids(out.group(2))));
+                open.put(thread, new Pending(kindOf(out.group(1)), ids(out.group(2))));
             } else if (decided.matches()) {
                 decisions.put(decided.group(1), new Decision(decided.group(2), decided.group(3)));
             } else if (message.startsWith(REQUEST)) {
@@ -164,6 +169,17 @@ record LogReplayCorpus(List<LoggedCall> calls, Map<String, Decision> decisions) 
                     close(thread);
                 }
             }
+        }
+
+        // A log written before task 12.4 names the rolling summary's call SUMMARY; it reads as the chapter summary.
+        // One written before task 13.2 names the backward revision's call REVISION; it reads as PROOFREAD.
+        // One written before task 14.7a names the per-chunk reviewer's call REVIEW; it reads as PROOFREAD.
+        private static CallKind kindOf(final String name) {
+            return switch (name) {
+                case OLD_SUMMARY -> CallKind.CHAPTER_SUMMARY;
+                case OLD_REVISION, OLD_REVIEW -> CallKind.PROOFREAD;
+                default -> CallKind.valueOf(name);
+            };
         }
 
         LogReplayCorpus finish() {

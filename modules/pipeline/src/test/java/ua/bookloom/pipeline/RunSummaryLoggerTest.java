@@ -6,19 +6,23 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.CallRecord;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ChunkPosition;
@@ -29,10 +33,9 @@ import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.SegmentDecided;
-import ua.bookloom.api.pipeline.SegmentDetail;
 import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.pipeline.StageStarted;
-import ua.bookloom.api.project.SegmentPath;
+import ua.bookloom.llm.CallLedgerImpl;
 
 /**
  * The run summary: one INFO line a minute while a job runs and one when it ends, with the counts, call times and
@@ -45,6 +48,7 @@ class RunSummaryLoggerTest {
 
     private final ListAppender<ILoggingEvent> appender = new ListAppender<>();
     private final SettableClock clock = new SettableClock();
+    private final CallLedgerImpl ledger = new CallLedgerImpl();
     private Logger logger;
 
     @BeforeEach
@@ -86,36 +90,8 @@ class RunSummaryLoggerTest {
         summary.onEvent(new SegmentStarted("ch12.xhtml:5", "ch12 · p06", "Source", new ChunkPosition(1, 3, 1, 4)));
 
         assertThat(summaries())
-                .containsExactly(
-                        "run summary periodic accepted=5 flagged=1 verbatim=2 pending=10 calls=2"
-                                + " avgCallMs=2000 p95CallMs=3000 tokensPerSecond=25.0 timeouts=1 ignoredEdits=0 current=ch12 · p06");
-    }
-
-    @Test
-    void onEvent_decisionsCarryingIgnoredEditNotes_finalLineCountsThem() {
-        final RunSummaryLogger summary = new RunSummaryLogger(clock);
-
-        summary.onEvent(new StageStarted(JobStage.TRANSLATE, START));
-        summary.onEvent(decidedWith("ch12.xhtml:4", List.of("ignored-edit", "meaning", "ignored-edit")));
-        summary.onEvent(decidedWith("ch12.xhtml:5", List.of("ignored-edit")));
-        summary.onEvent(
-                new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
-
-        assertThat(summaries()).singleElement().asString().contains(" ignoredEdits=3 ");
-    }
-
-    // IF a segment decided twice (a repair, a review-desk retry) were counted twice, THEN the count overstates.
-    @Test
-    void onEvent_segmentDecidedTwice_countsItsLatestDecisionOnly() {
-        final RunSummaryLogger summary = new RunSummaryLogger(clock);
-
-        summary.onEvent(new StageStarted(JobStage.TRANSLATE, START));
-        summary.onEvent(decidedWith("ch12.xhtml:4", List.of("ignored-edit", "ignored-edit")));
-        summary.onEvent(decidedWith("ch12.xhtml:4", List.of("ignored-edit")));
-        summary.onEvent(
-                new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
-
-        assertThat(summaries()).singleElement().asString().contains(" ignoredEdits=1 ");
+                .containsExactly("run summary periodic accepted=5 flagged=1 verbatim=2 pending=10 calls=2"
+                        + " avgCallMs=2000 p95CallMs=3000 tokensPerSecond=25.0 timeouts=1 current=ch12 · p06");
     }
 
     @Test
@@ -145,17 +121,19 @@ class RunSummaryLoggerTest {
 
         assertThat(summaries())
                 .containsExactly("run summary final accepted=5 flagged=1 verbatim=2 pending=10 calls=0 avgCallMs=0"
-                        + " p95CallMs=0 tokensPerSecond=- timeouts=0 ignoredEdits=0 current=-");
+                        + " p95CallMs=0 tokensPerSecond=- timeouts=0 current=- cost=-");
     }
 
-    // The final line says per kind what the calls cost, so a shared log shows where the time went.
+    // The final line says per kind what the calls cost, so a shared log shows where the time went; the ledger, which
+    // every stage's calls reach, is what it counts.
     @Test
     void onEvent_finishedAfterCalls_finalLineCarriesTheTotalsOfEachKind() {
-        final RunSummaryLogger summary = new RunSummaryLogger(clock);
+        final RunSummaryLogger summary = new RunSummaryLogger(clock, ledger);
+        final TokenUsage usage = new TokenUsage(800, 90, Duration.ofMillis(2500), Duration.ofMillis(400), 600);
 
         summary.onEvent(new StageStarted(JobStage.TRANSLATE, START));
-        summary.onEvent(answered(
-                Duration.ofSeconds(3), new TokenUsage(800, 90, Duration.ofMillis(2500), Duration.ofMillis(400), 600)));
+        ledger.record(new CallRecord(CallKind.DRAFT, usage, Duration.ofSeconds(3), null, null));
+        summary.onEvent(answered(Duration.ofSeconds(3), usage));
         summary.onEvent(
                 new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
 
@@ -166,17 +144,108 @@ class RunSummaryLoggerTest {
                         " byKind[DRAFT=1/0 in:800 out:90 promptEvalMs:400 generationMs:2500 cached:600 ttftMs:400 prefill:13.3%]");
     }
 
-    // 15h.C5: a provider that reports no prompt-evaluation time leaves the first-token figures unknown, never zero.
+    // The Proofread stage's calls are counted by kind like every other; 10 of the 55 reported no cache figure, so the
+    // cached share is taken over the prompt tokens of the 45 that did (13,500 of 45,000), never over all 55.
     @Test
-    void onEvent_noPromptEvalReported_firstTokenFiguresAreDashes() {
-        final RunSummaryLogger summary = new RunSummaryLogger(clock);
+    void onEvent_finishedAfter55ProofreadCalls_countsThemAndTheCachedShareOverThe45ThatReportedIt() {
+        final RunSummaryLogger summary = new RunSummaryLogger(clock, ledger);
+        final TokenUsage cached = new TokenUsage(1000, 50, Duration.ofMillis(900), Duration.ofMillis(100), 300);
+        final TokenUsage uncounted = new TokenUsage(1000, 50, Duration.ofMillis(900), Duration.ofMillis(100), null);
+        java.util.stream.IntStream.range(0, 45)
+                .forEach(ignored ->
+                        ledger.record(new CallRecord(CallKind.PROOFREAD, cached, Duration.ofSeconds(1), null, null)));
+        java.util.stream.IntStream.range(0, 10)
+                .forEach(ignored -> ledger.record(
+                        new CallRecord(CallKind.PROOFREAD, uncounted, Duration.ofSeconds(1), null, null)));
 
-        summary.onEvent(new StageStarted(JobStage.TRANSLATE, START));
-        summary.onEvent(answered(Duration.ofSeconds(3), new TokenUsage(800, 90, Duration.ofMillis(2500))));
         summary.onEvent(
                 new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
 
-        assertThat(summaries()).singleElement().asString().endsWith(" cached:0 ttftMs:- prefill:-]");
+        assertThat(summaries())
+                .singleElement()
+                .asString()
+                .contains("PROOFREAD=55/0 ")
+                .contains(" cached:13500 ");
+        assertThat(CallKindTotals.of(ledger.since(0)).totals())
+                .hasEntrySatisfying(
+                        CallKind.PROOFREAD,
+                        totals -> assertThat(totals.cachedShare()).hasValue(0.3));
+    }
+
+    // The final line says the seconds per answered call of each kind the run stores on its model; DRAFT is per segment
+    // and left out, a failed call too.
+    @Test
+    void onEvent_finishedAfterProofreadCalls_finalLineCarriesTheSecondsPerCall() {
+        final RunSummaryLogger summary = new RunSummaryLogger(clock, ledger);
+
+        ledger.record(new CallRecord(CallKind.DRAFT, null, Duration.ofSeconds(3), null, null));
+        ledger.record(new CallRecord(CallKind.PROOFREAD, null, Duration.ofSeconds(5), null, null));
+        ledger.record(new CallRecord(CallKind.PROOFREAD, null, Duration.ofSeconds(7), null, null));
+        ledger.record(
+                new CallRecord(CallKind.PROOFREAD, null, Duration.ofSeconds(60), null, FailureReason.UNCLASSIFIED));
+        summary.onEvent(
+                new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
+
+        assertThat(summaries()).singleElement().asString().endsWith(" secondsPerCall[PROOFREAD=6.0]");
+    }
+
+    // The cost is the sum of what the calls reported; a run whose calls reported none prints a dash, never 0.
+    @Test
+    void summary_withCosts_totalsThemAndWithoutPrintsDash() {
+        final RunSummaryLogger paid = new RunSummaryLogger(clock, ledger);
+        ledger.record(costed(new BigDecimal("0.00042")));
+        ledger.record(costed(new BigDecimal("0.00008")));
+        ledger.record(costed(null));
+        paid.onEvent(new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 3, 3, 0, List.of(), null)));
+        final String withCost = summaries().getFirst();
+        appender.list.clear();
+        final CallLedgerImpl otherLedger = new CallLedgerImpl();
+        final RunSummaryLogger unpaid = new RunSummaryLogger(clock, otherLedger);
+        otherLedger.record(costed(null));
+        unpaid.onEvent(new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 3, 3, 0, List.of(), null)));
+
+        assertThat(withCost).contains(" cost=0.00050 ");
+        assertThat(summaries().getFirst()).contains(" cost=- ");
+    }
+
+    private static CallRecord costed(final @Nullable BigDecimal cost) {
+        return new CallRecord(CallKind.DRAFT, null, Duration.ofSeconds(1), null, null, cost);
+    }
+
+    // 15h.C5: a provider that reports no prompt-evaluation time leaves the first-token figures unknown, never zero.
+    @Test
+    void onEvent_noPromptEvalReported_firstTokenFiguresAreDashes() {
+        final RunSummaryLogger summary = new RunSummaryLogger(clock, ledger);
+        final TokenUsage usage = new TokenUsage(800, 90, Duration.ofMillis(2500));
+
+        summary.onEvent(new StageStarted(JobStage.TRANSLATE, START));
+        ledger.record(new CallRecord(CallKind.DRAFT, usage, Duration.ofSeconds(3), null, null));
+        summary.onEvent(answered(Duration.ofSeconds(3), usage));
+        summary.onEvent(
+                new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
+
+        assertThat(summaries()).singleElement().asString().endsWith(" cached:– ttftMs:– prefill:–]");
+    }
+
+    // A call that reported no time before its first token prints a dash, never 0; a call made before the job was
+    // built is not the run's.
+    @Test
+    void finalLine_noCallReportedTtft_printsADash() {
+        ledger.record(new CallRecord(CallKind.PROOFREAD, null, Duration.ofSeconds(9), null, null));
+        final RunSummaryLogger summary = new RunSummaryLogger(clock, ledger);
+
+        ledger.record(new CallRecord(
+                CallKind.DRAFT, new TokenUsage(800, 90, Duration.ofMillis(2500)), Duration.ofSeconds(3), null, null));
+        summary.onEvent(
+                new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
+
+        assertThat(summaries())
+                .singleElement()
+                .asString()
+                .contains(" byKind[DRAFT=1/0 ")
+                .doesNotContain("PROOFREAD")
+                .contains("ttftMs:–")
+                .contains("prefill:–");
     }
 
     // A night's run makes tens of thousands of calls; the line counts them all but keeps only the newest
@@ -209,11 +278,6 @@ class RunSummaryLoggerTest {
                 .toList();
     }
 
-    private static SegmentDecided decidedWith(final String segmentId, final List<String> kinds) {
-        return new SegmentDecided(
-                segmentId, SegmentStatus.ACCEPTED, null, DECIDED, new SegmentDetail(null, SegmentPath.DRAFT, kinds));
-    }
-
     private static SegmentDecided decided() {
         return new SegmentDecided("ch12.xhtml:4", SegmentStatus.ACCEPTED, null, DECIDED);
     }
@@ -225,7 +289,7 @@ class RunSummaryLoggerTest {
     private static ModelCallFinished timedOut(final Duration elapsed) {
         return new ModelCallFinished(
                 "ch12.xhtml:4",
-                CallKind.REVIEW,
+                CallKind.PROOFREAD,
                 elapsed,
                 null,
                 0,

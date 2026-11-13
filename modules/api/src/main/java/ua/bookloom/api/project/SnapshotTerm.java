@@ -23,7 +23,7 @@ public record SnapshotTerm(
         Gender gender,
         boolean locked,
         boolean suggested,
-        @Nullable GenderOrigin genderOrigin) {
+        @Nullable Origin genderOrigin) {
 
     /**
      * Validates the invariants a caller is entitled to assume.
@@ -35,7 +35,7 @@ public record SnapshotTerm(
         if (gender == Gender.UNKNOWN) {
             genderOrigin = null;
         } else if (genderOrigin == null) {
-            genderOrigin = GenderOrigin.PERSON;
+            genderOrigin = Origin.USER;
         }
     }
 }

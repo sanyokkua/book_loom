@@ -35,15 +35,23 @@ final class ReviewQueries {
     }
 
     /**
-     * The flagged count, or {@code shown} when it could not be read; the suspicious count read with it is published, so
-     * the Review button's second number follows what the person does at the desk.
+     * The flagged count, or {@code shown} when it could not be read; the counts of the desk's own lists read with it are
+     * published, so the Review button's second number and the filters follow the stored project — a reopened project
+     * included, which has no ended run to publish them.
      */
-    int refreshed(final String projectId, final int shown, final LiveSection live) {
+    int flagged(final String projectId, final int shown, final LiveSection live) {
         final ReviewCounts counts = desk.counts(projectId).data();
         if (counts == null) {
             return shown;
         }
+        log.debug(
+                "desk counts project={} flagged={} suspicious={} changedByProofread={}",
+                projectId,
+                counts.flagged(),
+                counts.suspicious(),
+                counts.changedByProofread());
         live.publishSuspicious(counts.suspicious());
+        live.publishProofreadLists(counts.changedByProofread(), counts.waitingOnGender());
         return counts.flagged();
     }
 
@@ -94,9 +102,8 @@ final class ReviewQueries {
                 return new Opened(ReviewFilter.ALL_SEGMENTS, all, segment(projectId, segmentId));
             }
         }
-        final String chosen = segmentId != null && holds(views, segmentId)
-                ? segmentId
-                : views.isEmpty() ? null : views.getFirst().segmentId();
+        final String firstListed = views.isEmpty() ? null : views.getFirst().segmentId();
+        final String chosen = segmentId != null && holds(views, segmentId) ? segmentId : firstListed;
         log.debug("the desk opens on {} of {} listed under {}", chosen, views.size(), filter);
         return new Opened(filter, views, chosen == null ? null : segment(projectId, chosen));
     }

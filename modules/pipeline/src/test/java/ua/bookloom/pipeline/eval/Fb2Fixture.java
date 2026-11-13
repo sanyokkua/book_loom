@@ -89,7 +89,7 @@ final class Fb2Fixture {
             return "";
         }
         final String[] parts = author.split(" ", 2);
-        return "<author><first-name>%s</first-name><last-name>%s</last-name></author>\n"
+        return "<author><first-name>%s</first-name><last-name>%s</last-name></author>%n"
                 .formatted(escaped(parts[0]), escaped(parts.length > 1 ? parts[1] : ""));
     }
 

@@ -2,10 +2,13 @@ package ua.bookloom.api.pipeline;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.MeaningChoice;
 
 /**
  * Reads and edits a project's glossary and runs the deterministic and model-assisted scans that propose new terms,
@@ -74,6 +77,62 @@ public interface GlossaryService {
      *     unless every call answered
      */
     Result<EntryChanges<GlossaryEntry>> translate(String projectId, ChatModel model, Consumer<JobEvent> progress);
+
+    /**
+     * Accepts every suggested target that passes the target language's checks: an inflecting target is pinned, a
+     * target that never inflects (an identifier, a kept original, a checked name where names are not declined) is
+     * locked. A suggestion that fails a check or carries a review flag stays suggested; an entry with no target, a
+     * pinned one and a locked one are never touched.
+     *
+     * @param projectId the non-null project id
+     * @return the accepted entries and the rejected ones with their reasons
+     */
+    Result<AcceptReport> acceptSuggested(String projectId);
+
+    /**
+     * The review flags of the targets the glossary holds (an oblique-looking target, a word count unlike the term's),
+     * computed on each call from the target language's file and never stored, so a changed target or file changes them
+     * at once.
+     *
+     * @param projectId the non-null project id
+     * @return the flags per entry id, only for the entries that carry one; never null, empty when none is flagged or no
+     *     target language is chosen
+     */
+    Result<Map<String, List<TargetIssue>>> reviewFlags(String projectId);
+
+    /**
+     * The names the names pass marked for the once-per-name question about a meaning the book plays on, still
+     * unanswered ({@link MeaningChoice#PENDING}); the question at Start translation lists them.
+     *
+     * @param projectId the non-null project id
+     * @return the entries in glossary order; never null, empty when none waits
+     */
+    Result<List<GlossaryEntry>> meaningQuestions(String projectId);
+
+    /**
+     * Stores the person's answers to the once-per-name question about names whose meaning the book plays on (design
+     * D5). Every answer keeps the target, so a run that starts at once still renders the name; translate leaves an
+     * earlier suggestion for the next suggestion call to replace by asking for the name by its meaning;
+     * {@link MeaningChoice#PENDING}, the question closed unanswered, is
+     * stored as transcribe. No model is called.
+     *
+     * @param projectId the non-null project id
+     * @param answers the non-null answer per entry id; an id the glossary no longer holds is skipped
+     * @return the entries the answers changed, as stored
+     */
+    Result<List<GlossaryEntry>> answerMeaning(String projectId, Map<String, MeaningChoice> answers);
+
+    /**
+     * Stores the genders the person confirmed or changed in the Start question about characters nobody settled
+     * (glossary "Ask at Start for the genders nobody has settled"): each answer becomes the person's value, even one
+     * that only confirms the offered rule's or likely value. A row the person left alone is not in the map and stays a
+     * hint. No model is called.
+     *
+     * @param projectId the non-null project id
+     * @param answers the non-null gender per entry id; an id the glossary no longer holds is skipped
+     * @return the entries the answers changed, as stored
+     */
+    Result<List<GlossaryEntry>> answerGenders(String projectId, Map<String, Gender> answers);
 
     /**
      * Adds a glossary entry.

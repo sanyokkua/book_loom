@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -52,7 +53,7 @@ class DtoSerializationTest {
                 null,
                 null));
 
-        assertThat(body.path("options").toString()).isEqualTo("{\"temperature\":0.2}");
+        assertThat(body.path("options")).hasToString("{\"temperature\":0.2}");
     }
 
     // A supplied context size serializes as num_ctx and omits a null temperature.
@@ -66,7 +67,7 @@ class DtoSerializationTest {
                 null,
                 null));
 
-        assertThat(body.path("options").toString()).isEqualTo("{\"num_ctx\":8192}");
+        assertThat(body.path("options")).hasToString("{\"num_ctx\":8192}");
     }
 
     // The output cap serializes as num_predict beside num_ctx, and alone it still keeps the options object.
@@ -82,7 +83,7 @@ class DtoSerializationTest {
                 null,
                 null));
 
-        assertThat(body.path("options").toString()).isEqualTo(expectedOptions);
+        assertThat(body.path("options")).hasToString(expectedOptions);
     }
 
     // The OpenAI-compatible body carries max_tokens only when a cap is set.
@@ -119,6 +120,34 @@ class DtoSerializationTest {
                 effort));
 
         assertThat(body.has("reasoning_effort")).isEqualTo(expectedPresent);
+    }
+
+    // An engine's every-call fields sit at the top level of the body, never under a field of their own.
+    @Test
+    void openAiChatRequest_alwaysSend_writesTheFieldsAtTheTopLevel() {
+        final JsonNode body = mapper().valueToTree(new OpenAiChatRequest(
+                "mara-7b",
+                List.of(new OpenAiChatRequest.Message("user", "hello")),
+                false,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Map.of("enable_tools", false)));
+
+        assertThat(body.path("enable_tools").isBoolean()).isTrue();
+        assertThat(body.path("enable_tools").asBoolean(true)).isFalse();
+        assertThat(body.has("alwaysSend")).isFalse();
+        assertThat(body.has("chat_template_kwargs")).isFalse();
     }
 
     // The native thinking control is top-level and remains absent unless a caller explicitly requests it.

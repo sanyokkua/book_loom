@@ -21,6 +21,8 @@ import ua.bookloom.ui.state.StructureStatistics;
  */
 final class StructureStatsRows {
 
+    private static final String STATS_VALUE = "stats-value";
+
     private static final double GAP = 8;
     private static final double LABEL_GAP = 24;
 
@@ -39,21 +41,17 @@ final class StructureStatsRows {
         Objects.requireNonNull(stats, "stats");
         final StructureStatistics figures = new StructureStatistics(stats);
         row("segments", MessageKey.STRUCTURE_STAT_SEGMENTS, numbers.format(stats.segments()), "stats-value-strong");
-        row("images", MessageKey.STRUCTURE_STAT_IMAGES, numbers.format(stats.images()), "stats-value");
-        row("code", MessageKey.STRUCTURE_STAT_CODE, numbers.format(stats.codeBlocks()), "stats-value");
+        row("images", MessageKey.STRUCTURE_STAT_IMAGES, numbers.format(stats.images()), STATS_VALUE);
+        row("code", MessageKey.STRUCTURE_STAT_CODE, numbers.format(stats.codeBlocks()), STATS_VALUE);
         codeNote();
-        row("fonts", MessageKey.STRUCTURE_STAT_FONTS, numbers.format(stats.fonts()), "stats-value");
-        row("verse", MessageKey.STRUCTURE_STAT_VERSE, verse(stats.verseLines()), "stats-value");
+        row("fonts", MessageKey.STRUCTURE_STAT_FONTS, numbers.format(stats.fonts()), STATS_VALUE);
+        row("verse", MessageKey.STRUCTURE_STAT_VERSE, verse(stats.verseLines()), STATS_VALUE);
         row(
                 "notes",
                 MessageKey.STRUCTURE_STAT_NOTES,
                 numbers.format(stats.footnotes()) + " · " + numbers.format(stats.tables()),
-                "stats-value");
-        row(
-                "formatting",
-                MessageKey.STRUCTURE_STAT_FORMATTING,
-                formatting(figures.protectedFormatting()),
-                "stats-value");
+                STATS_VALUE);
+        row("formatting", MessageKey.STRUCTURE_STAT_FORMATTING, formatting(figures.protectedFormatting()), STATS_VALUE);
         return grid;
     }
 

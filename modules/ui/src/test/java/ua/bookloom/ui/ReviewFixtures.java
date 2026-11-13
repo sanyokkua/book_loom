@@ -4,15 +4,15 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.api.project.AppliedEdit;
 import ua.bookloom.api.project.ContextSnapshot;
-import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.ProofreadOutcome;
+import ua.bookloom.api.project.ProofreadVerdict;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.Severity;
-import ua.bookloom.api.project.SnapshotTerm;
-import ua.bookloom.api.project.TermType;
 
 /** The segments the review panel tests list, as the desk would describe them. */
 public final class ReviewFixtures {
@@ -46,16 +46,46 @@ public final class ReviewFixtures {
                 null);
     }
 
-    /** Every part of the context a draft can see: brief, two names, a preceding target and a summary. */
+    /** The run's fixed frame a draft was sent with, as the desk joins it from the stored copy. */
+    public static final List<PromptSection> FRAME = List.of(
+            new PromptSection("role", "", PromptSection.Origin.SYSTEM, List.of("You translate a book.")),
+            new PromptSection("styleSheet", "[Style]", PromptSection.Origin.SYSTEM, List.of("Formal, past tense.")));
+
+    /** The sections of one draft's own call: a name of the map and a previous pair. */
     public static ContextSnapshot fullContext() {
         return new ContextSnapshot(
-                List.of("Раніше в тексті."),
+                "f00d",
                 List.of(
-                        new SnapshotTerm("Gale", "Гейл", TermType.CHARACTER, Gender.MALE, true, false, null),
-                        new SnapshotTerm("Baker Street", null, TermType.PLACE, Gender.NEUTER, false, false, null)),
+                        new PromptSection("mapItems", "[Names]", PromptSection.Origin.USER, List.of("Gale → Гейл")),
+                        new PromptSection(
+                                "previousPairs",
+                                "[Previous]",
+                                PromptSection.Origin.USER,
+                                List.of("Earlier in the text. → Раніше в тексті."))),
                 List.of(),
-                "Gale returns home.",
-                "Formal, past tense.");
+                false);
+    }
+
+    /** {@code view} with the stored frame its snapshot names joined to it. */
+    public static SegmentView withFrame(final SegmentView view, final List<PromptSection> frame) {
+        return new SegmentView(
+                view.segmentId(),
+                view.locator(),
+                view.kind(),
+                view.status(),
+                view.maskedSource(),
+                view.displaySource(),
+                view.maskedMachineTarget(),
+                view.userTarget(),
+                view.maskedUserTarget(),
+                view.findings(),
+                view.judgeScore(),
+                view.path(),
+                view.reviewed(),
+                view.context(),
+                view.proposal(),
+                view.rejectedTarget(),
+                frame);
     }
 
     public static SegmentView lowScore() {
@@ -165,6 +195,74 @@ public final class ReviewFixtures {
                 base.reviewed(),
                 null,
                 null);
+    }
+
+    /**
+     * {@code ch4 · p07}, REVISED by a kept proofread rewrite {@code Ліна сказала} of {@code Ліна сказав}, made while
+     * it was accepted.
+     */
+    public static SegmentView keptRewrite() {
+        final SegmentView base = view("ch04.xhtml:7", "ch4 · p07", SegmentStatus.REVISED, List.of(), null, null);
+        return new SegmentView(
+                base.segmentId(),
+                base.locator(),
+                base.kind(),
+                base.status(),
+                base.maskedSource(),
+                base.displaySource(),
+                "Ліна сказала.",
+                null,
+                null,
+                List.of(),
+                null,
+                base.path(),
+                false,
+                null,
+                null,
+                null,
+                List.of(),
+                new ProofreadVerdict(
+                        "r1:fp",
+                        ProofreadOutcome.KEPT,
+                        "gender now known: Ліна — female",
+                        "Ліна сказав.",
+                        SegmentStatus.ACCEPTED,
+                        "Ліна сказав.",
+                        List.of()));
+    }
+
+    /**
+     * {@code ch4 · p08}, REVISED by a kept proofread rewrite of an emphasised name: the stored texts hold the marks
+     * {@code ⟦g0⟧…⟦g1⟧}, and the plain text before keeps the book's own emphasis markup.
+     */
+    public static SegmentView keptRewriteWithMarks() {
+        final SegmentView base = keptRewrite();
+        return new SegmentView(
+                "ch04.xhtml:8",
+                "ch4 · p08",
+                base.kind(),
+                base.status(),
+                base.maskedSource(),
+                base.displaySource(),
+                "⟦g0⟧Ліна⟦g1⟧ сказала.",
+                null,
+                null,
+                List.of(),
+                null,
+                base.path(),
+                false,
+                null,
+                null,
+                null,
+                List.of(),
+                new ProofreadVerdict(
+                        "r1:fp",
+                        ProofreadOutcome.KEPT,
+                        "gender now known: Ліна — female",
+                        "*Ліна* сказав.",
+                        SegmentStatus.ACCEPTED,
+                        "⟦g0⟧Ліна⟦g1⟧ сказав.",
+                        List.of()));
     }
 
     public static SegmentView accepted() {

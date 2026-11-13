@@ -64,11 +64,14 @@ final class ConformancePreparations {
         this.glossary = glossary;
     }
 
+    private static void nothingToPrepare() {
+        // NONE: the view is read as it opens
+    }
+
+    // Everything not listed is a Settings case, which SettingsPreparations refuses when it is not one.
     void prepare(final ConformanceCases.Preparation preparation) throws TimeoutException {
         switch (preparation) {
-            case NONE -> {
-                // nothing to do before the view is read
-            }
+            case NONE -> nothingToPrepare();
             case BOOK_OPENED -> openABook();
             case BOOK_CHECKED -> checkABook();
             case BOOK_REFUSED -> refuseABook();
@@ -88,9 +91,11 @@ final class ConformancePreparations {
             case GLOSSARY_WHILE_HIDDEN -> listAGlossaryAndHideThePass();
             case BOOK_WITHOUT_LANGUAGE -> openABookWithoutLanguage();
             case BRIEF_SUGGESTED -> suggestTheBrief();
+            case BRIEF_UKRAINIAN_TARGET -> new ImportPreparations(injector, projects).openIntoUkrainian();
             case PROJECTS_LISTED -> listProjects();
             case PROJECTS_EMPTY -> awaitNode("projects-empty-card");
-            // Everything else is a Settings case; SettingsPreparations refuses a preparation that is not one.
+            case READY_QUANT_CHIP -> new ImportPreparations(injector, projects).chooseAModelWithAGoodQuant();
+            case READY_LANGUAGE_WARNING -> new ImportPreparations(injector, projects).chooseAModelWithALanguageGap();
             default -> new SettingsPreparations(injector).prepare(preparation);
         }
     }
@@ -176,11 +181,8 @@ final class ConformancePreparations {
 
     // The names screen loads the stored glossary as the book opens; one row is enough to show a term cell.
     private void listAGlossary() throws TimeoutException {
-        glossary.willAnswer(Result.ok(List.of(
-                AutoNamesFixture.character("e1", "Frankenstein", Gender.UNKNOWN).withSuggestedGender(Gender.MALE),
-                AutoNamesFixture.character("e2", "Victor", Gender.MALE).withSuggestedTarget("Віктор"),
-                AutoNamesFixture.character("e3", "Justine", Gender.UNKNOWN).withSuggestedGender(Gender.FEMALE),
-                AutoNamesFixture.character("e4", "Clerval", Gender.UNKNOWN).withNoGenderEvidence())));
+        glossary.willAnswer(Result.ok(AutoNamesFixture.conformanceGlossary()));
+        glossary.willFlag(AutoNamesFixture.CONFORMANCE_FLAGS);
         openABook();
     }
 
@@ -352,10 +354,10 @@ final class ConformancePreparations {
         final StateMirror mirror = injector.getInstance(StateMirror.class);
         mirror.publishRunStarted("Frankenstein.epub", null);
         final List<PromptSection> prompt = LiveCallFixtures.smallPrompt();
-        mirror.live()
-                .publishCalls(LiveRowFixtures.calls(
-                        LiveCallFixtures.waiting(2, 2, "You will rejoice to hear.", prompt),
-                        LiveRowFixtures.rows(2, LiveRow.Stage.IN_CALL)));
+        LiveRowFixtures.publishRunning(
+                mirror.live(),
+                LiveCallFixtures.waiting(2, 2, "You will rejoice to hear.", prompt),
+                LiveRowFixtures.rows(2, LiveRow.Stage.IN_CALL));
         WaitForAsyncUtils.waitForFxEvents();
     }
 

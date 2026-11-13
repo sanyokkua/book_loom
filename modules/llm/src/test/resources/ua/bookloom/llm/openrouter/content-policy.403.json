@@ -1,0 +1,1 @@
+{"error":{"code":403,"message":"Your chosen model requires moderation and your input was flagged: content_policy_violation","metadata":{"reasons":["example-category"],"provider_name":"Example Host","model_slug":"vendor/some-model"}}}

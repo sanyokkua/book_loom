@@ -22,7 +22,7 @@ public sealed interface GateResult {
      * @param normalised the low {@code normalised} finding saying the typography pass changed the candidate, or
      *     {@code null} when it left it as it was
      * @param maskedCandidate the candidate after the typography pass with its protected-span tokens still in it —
-     *     the text the checks and the reviewer read, so they see what is stored; {@code null} when no typography
+     *     the text the checks read, so they see what is stored; {@code null} when no typography
      *     pass ran, and the candidate the caller sent stands
      */
     record Restored(

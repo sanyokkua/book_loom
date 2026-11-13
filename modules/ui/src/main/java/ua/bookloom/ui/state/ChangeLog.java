@@ -71,6 +71,32 @@ final class ChangeLog {
     }
 
     /**
+     * Publishes what Accept all did: the rows it accepted, each to be put back, then the rows it left suggested with
+     * their reasons, which have nothing to put back.
+     *
+     * @param accepted the accepted rows as changes from their suggested state
+     * @param left the rows left suggested, with the reason worded for the person
+     */
+    void acceptance(final EntryChanges<GlossaryEntry> accepted, final List<Left> left) {
+        final ChangeRows rows = new ChangeRows(messages);
+        final List<ChangeResults.Item> items = new ArrayList<>();
+        accepted.changed().forEach(change -> {
+            items.add(new ChangeResults.Item(rows.accepted(change), reverts.setNameBack(change)));
+            marks.glossary().mark(change.after().id());
+        });
+        left.forEach(each -> items.add(new ChangeResults.Item(rows.left(each.entry(), each.reason()), done -> {})));
+        publish(ChangeOperation.ACCEPT_TARGETS, items);
+    }
+
+    /**
+     * A row an operation left as it was.
+     *
+     * @param entry the row as it stays
+     * @param reason why, in the display language
+     */
+    record Left(GlossaryEntry entry, String reason) {}
+
+    /**
      * Publishes the changes of a recurring-terms operation.
      *
      * @param operation the operation
@@ -91,18 +117,18 @@ final class ChangeLog {
      * @param operation the operation
      * @param names what it did to the glossary
      * @param terms what it did to the recurring terms
-     * @param untargeted the glossary terms it left without a target, for the dialog to list
+     * @param untargeted the glossary rows it left without a target, listed for the person to give one
      */
     void both(
             final ChangeOperation operation,
             final EntryChanges<GlossaryEntry> names,
             final EntryChanges<LexiconEntry> terms,
-            final List<String> untargeted) {
+            final List<GlossaryEntry> untargeted) {
         final ChangeRows rows = new ChangeRows(messages);
         final List<ChangeResults.Item> items = new ArrayList<>();
         nameItems(rows, items, names);
         termItems(rows, items, List.of(), terms);
-        publish(operation, items, untargeted);
+        publish(operation, items, untargeted.stream().map(rows::untargeted).toList());
     }
 
     private void nameItems(
@@ -147,25 +173,20 @@ final class ChangeLog {
     }
 
     private void publish(
-            final ChangeOperation operation, final List<ChangeResults.Item> items, final List<String> untargeted) {
+            final ChangeOperation operation, final List<ChangeResults.Item> items, final List<ChangeRow> untargeted) {
         log.info("{} changed {} rows, left {} names without a target", operation, items.size(), untargeted.size());
         final LiveCalls last = activities.lastCalls().get();
         final ChangeResults published = new ChangeResults(
-                operation,
-                false,
-                items,
-                last.equals(callsBefore) ? LiveCalls.EMPTY : last,
-                untargeted,
-                end.steps(),
-                end.elapsed(),
-                end.hidden());
+                operation, false, items, last.equals(callsBefore) ? LiveCalls.EMPTY : last, untargeted, end);
         followUndo(published);
         results.set(published);
     }
 
     // The line that announced the operation is no longer true once every row it changed is put back, so it says so.
     private void followUndo(final ChangeResults published) {
-        final int changed = published.rows().size();
+        final int changed = (int) published.rows().stream()
+                .filter(row -> row.kind().isRevertible())
+                .count();
         if (changed == 0) {
             return;
         }

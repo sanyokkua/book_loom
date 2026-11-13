@@ -64,6 +64,9 @@ import ua.bookloom.util.files.FileFailures;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class DocumentService implements DocumentPort {
 
+    private static final String UNMASK_OUTCOME = "Unmasked segment format={} segmentId={} outcome={}";
+    private static final String WRITE_OUTCOME = "Wrote document id={} format={} outcome={}";
+
     private final EpubReader epubReader;
     private final EpubWriter epubWriter;
     private final Fb2Reader fb2Reader;
@@ -93,7 +96,7 @@ public final class DocumentService implements DocumentPort {
             final AppError error = refusalError(e);
             logOpenFailure(source, resolvedFormat, error);
             return Result.err(error);
-        } catch (Throwable t) {
+        } catch (Exception t) {
             final AppError error = internalError(t);
             logOpenFailure(source, resolvedFormat, error);
             return Result.err(error);
@@ -136,19 +139,19 @@ public final class DocumentService implements DocumentPort {
             return Result.ok(written);
         } catch (DocumentNotOpenException e) {
             final AppError error = notOpenError(e);
-            log.debug("Wrote document id={} format={} outcome={}", document.id(), document.format(), error.code());
+            log.debug(WRITE_OUTCOME, document.id(), document.format(), error.code());
             return Result.err(error);
         } catch (CorruptContainerException e) {
             final AppError error = refusalError(e);
-            log.debug("Wrote document id={} format={} outcome={}", document.id(), document.format(), error.code());
+            log.debug(WRITE_OUTCOME, document.id(), document.format(), error.code());
             return Result.err(error);
         } catch (MalformedFragmentException e) {
             final AppError error = malformedFragmentError(e);
-            log.debug("Wrote document id={} format={} outcome={}", document.id(), document.format(), error.code());
+            log.debug(WRITE_OUTCOME, document.id(), document.format(), error.code());
             return Result.err(error);
-        } catch (Throwable t) {
+        } catch (Exception t) {
             final AppError error = writeFailure(t, destination);
-            log.debug("Wrote document id={} format={} outcome={}", document.id(), document.format(), error.code());
+            log.debug(WRITE_OUTCOME, document.id(), document.format(), error.code());
             return Result.err(error);
         }
     }
@@ -180,7 +183,7 @@ public final class DocumentService implements DocumentPort {
             final boolean wasOpen = closeAs(document);
             log.debug("Closed document id={} format={} wasOpen={}", document.id(), document.format(), wasOpen);
             return Result.ok(wasOpen);
-        } catch (Throwable t) {
+        } catch (Exception t) {
             final AppError error = internalError(t);
             log.debug("Closed document id={} format={} outcome={}", document.id(), document.format(), error.code());
             return Result.err(error);
@@ -218,15 +221,15 @@ public final class DocumentService implements DocumentPort {
                     PlaceholderGate.compare(segment.masked(), spaced, segment.pairs(), segment.lineBreakTokens());
             if (!outcome.matches()) {
                 final AppError error = GateErrors.of(outcome);
-                log.debug("Unmasked segment format={} segmentId={} outcome={}", format, segment.id(), error.code());
+                log.debug(UNMASK_OUTCOME, format, segment.id(), error.code());
                 return Result.err(error);
             }
             final Result<String> result = restore(format, segment, spaced);
             logUnmaskOutcome(format, segment.id(), result);
             return result;
-        } catch (Throwable t) {
+        } catch (Exception t) {
             final AppError error = internalError(t);
-            log.debug("Unmasked segment format={} segmentId={} outcome={}", format, segment.id(), error.code());
+            log.debug(UNMASK_OUTCOME, format, segment.id(), error.code());
             return Result.err(error);
         }
     }
@@ -243,7 +246,7 @@ public final class DocumentService implements DocumentPort {
             log.debug(
                     "Repaired placeholders segmentId={} mode={} repaired={}", segment.id(), mode, repaired.isPresent());
             return repaired.map(Result::ok).orElseGet(() -> Result.err(GateErrors.unrepairable()));
-        } catch (Throwable t) {
+        } catch (Exception t) {
             final AppError error = internalError(t);
             log.debug("Repaired placeholders segmentId={} mode={} outcome={}", segment.id(), mode, error.code());
             return Result.err(error);
@@ -286,7 +289,7 @@ public final class DocumentService implements DocumentPort {
             return;
         }
         log.debug(
-                "Unmasked segment format={} segmentId={} outcome={}",
+                UNMASK_OUTCOME,
                 format,
                 segmentId,
                 Objects.requireNonNull(result.error(), "error").code());

@@ -24,6 +24,7 @@ import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
+import ua.bookloom.ui.ScriptedProviderVerifier.DraftCall;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.state.ProviderTest;
 
@@ -49,8 +50,8 @@ class SettingsScreenTest extends SettingsScreenTestBase {
                         tuple("settings-tab-automation", "Automation", false),
                         tuple("settings-tab-storage", "Storage & logs", false));
         assertThat(label("settings-subtitle").getText())
-                .isEqualTo("Your books stay on this computer. BookLoom sends your text only to the AI model you choose "
-                        + "here.");
+                .isEqualTo("Your books stay private when you use a local model. BookLoom sends your text only to the AI"
+                        + " model you choose here.");
     }
 
     // IF Add or Delete were disabled, THEN a person could not manage providers; IF an Edit button were left, THEN there
@@ -148,12 +149,12 @@ class SettingsScreenTest extends SettingsScreenTestBase {
 
     // IF the subtitle were missing, THEN the screen would not state the promise the application keeps.
     @Test
-    void subtitle_settingsScreen_statesEverythingIsLocal() {
+    void subtitle_settingsScreen_statesTheLocalModelPromise() {
         openSettings();
 
         assertThat(label("settings-subtitle").getText())
-                .isEqualTo("Your books stay on this computer. BookLoom sends your text only to the AI model you choose "
-                        + "here.");
+                .isEqualTo("Your books stay private when you use a local model. BookLoom sends your text only to the AI"
+                        + " model you choose here.");
     }
 
     // IF the selected tab were not marked by an underline of the primary role, or another tab were, THEN the tab
@@ -238,7 +239,7 @@ class SettingsScreenTest extends SettingsScreenTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(verifier.drafts())
-                .extracting(call -> call.config().id(), call -> call.modelId(), call -> call.policy())
+                .extracting(call -> call.config().id(), DraftCall::modelId, DraftCall::policy)
                 .containsExactly(tuple("ollama", "", VerificationPolicy.CONNECTION));
         assertThat(verifier.connectionCalls()).isEmpty();
     }

@@ -163,7 +163,7 @@ public final class Fb2Writer {
         try {
             encoder.encode(CharBuffer.wrap(xml));
             return true;
-        } catch (CharacterCodingException unrepresentable) {
+        } catch (CharacterCodingException _) {
             return false;
         }
     }

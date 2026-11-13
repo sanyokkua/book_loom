@@ -2,11 +2,11 @@ package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -146,9 +146,8 @@ class JobControlModelCallTest {
         control.enterModelCall();
         inCall.countDown();
         try {
-            Thread.sleep(Duration.ofSeconds(10));
-            return false;
-        } catch (InterruptedException expected) {
+            return new CountDownLatch(1).await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException _) {
             return true;
         } finally {
             control.exitModelCall();

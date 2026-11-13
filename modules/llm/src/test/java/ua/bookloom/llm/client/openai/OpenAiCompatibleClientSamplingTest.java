@@ -62,7 +62,11 @@ class OpenAiCompatibleClientSamplingTest {
                 null,
                 null,
                 null,
-                new SamplingParams(0.9, 40, 0.05, 1.0));
+                new SamplingParams(0.9, 40, 0.05, 1.0),
+                null,
+                null,
+                null,
+                false);
 
         send(request);
 
@@ -100,7 +104,11 @@ class OpenAiCompatibleClientSamplingTest {
                 null,
                 null,
                 null,
-                sampling);
+                sampling,
+                null,
+                null,
+                null,
+                false);
     }
 
     private void send(ChatRequest request) {

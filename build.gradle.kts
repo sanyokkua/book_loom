@@ -3,7 +3,7 @@
 // Deliberately thin: it carries no `allprojects { }` / `subprojects { }` configuration. Every shared
 // concern (toolchain, JPMS args, formatting, lint, tests) is a convention plugin in `build-logic`
 // applied explicitly by each subproject, so configuration is visible where it takes effect
-// (docs/specification/04_Build_and_Release/01_BUILD_AND_TOOLING.md#convention-plugins).
+// (docs/spec_baseline/specification/04_Build_and_Release/01_BUILD_AND_TOOLING.md#convention-plugins).
 
 import com.github.jk1.license.filter.LicenseBundleNormalizer
 import com.github.jk1.license.render.InventoryHtmlReportRenderer
@@ -13,6 +13,30 @@ import com.github.jk1.license.render.TextReportRenderer
 plugins {
     base
     alias(libs.plugins.license.report)
+    alias(libs.plugins.sonarqube)
+}
+
+apply(from = "gradle/sonar-coverage.gradle.kts")
+
+sonar {
+    properties {
+        property("sonar.projectKey", "local:bookloom")
+        property("sonar.projectName", "BookLoom")
+        property("sonar.coverage.jacoco.xmlReportPaths", layout.buildDirectory.file("reports/jacoco/sonar/sonar.xml").get().asFile.absolutePath)
+    }
+}
+
+subprojects {
+    extensions.configure<org.sonarqube.gradle.SonarExtension> {
+        properties {
+            property("sonar.coverage.jacoco.xmlReportPaths", rootProject.layout.buildDirectory.file("reports/jacoco/sonar/sonar.xml").get().asFile.absolutePath)
+        }
+    }
+}
+
+tasks.named("sonar") {
+    dependsOn("sonarCoverageReport")
+    dependsOn(":app:compileArchTestJava")
 }
 
 // The git tag is the single source of truth for the app version; local and CI snapshot builds get `dev`
@@ -21,9 +45,9 @@ plugins {
 version = providers.gradleProperty("appVersion").orElse("dev").get()
 
 // The root project applies no `bookloom.*` convention plugin (it is not a Java project), so it opts into
-// dependency locking on its own. It declares no dependencies today, so no `gradle.lockfile` is written here —
-// the declaration exists so that anything added at root level later is locked from its first resolution rather
-// than from whenever someone remembers (01_BUILD_AND_TOOLING.md#dependency-locking).
+// dependency locking on its own. The only thing it resolves is the JaCoCo agent the Sonar coverage report needs, and
+// its `gradle.lockfile` is written the first time that runs; it is committed like every module's lockfile
+// (01_BUILD_AND_TOOLING.md#dependency-locking).
 dependencyLocking {
     lockAllConfigurations()
 }

@@ -14,11 +14,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.CallAttemptListener;
 import ua.bookloom.api.llm.ChatModel;
-import ua.bookloom.api.llm.ChatRequest;
-import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.pipeline.eval.JudgementRunner.Judgement;
 
 /**
@@ -97,7 +93,7 @@ final class JudgementSuites {
         return seeds.stream()
                 .map(seed -> {
                     log.info("Judgement eval book={} seed={}", id, seed);
-                    return new JudgementRunner(new Seeded(model, seed)).judge(id, file, gold);
+                    return new JudgementRunner(new SeededModel(model, seed)).judge(id, file, gold);
                 })
                 .toList();
     }
@@ -138,27 +134,6 @@ final class JudgementSuites {
                     .toList();
         } catch (IOException e) {
             throw new UncheckedIOException("cannot list " + dir, e);
-        }
-    }
-
-    /**
-     * Sends every call with one sampling seed, so the same book asked again under another seed shows how much of the
-     * model's answer is chance. A request that already carries a seed (a retry after a timeout) keeps its own.
-     */
-    private record Seeded(ChatModel model, int seed) implements ChatModel {
-
-        @Override
-        public Result<ChatResponse> chat(final ChatRequest request) {
-            return model.chat(seeded(request));
-        }
-
-        @Override
-        public Result<ChatResponse> chat(final ChatRequest request, final CallAttemptListener attempts) {
-            return model.chat(seeded(request), attempts);
-        }
-
-        private ChatRequest seeded(final ChatRequest request) {
-            return request.seed() == null ? request.withSeed(seed) : request;
         }
     }
 }

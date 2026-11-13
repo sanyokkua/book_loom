@@ -1,7 +1,7 @@
 # Git hooks for BookLoom, managed by Lefthook.
 #
-# Spec: docs/specification/04_Build_and_Release/02_QUALITY_GATES.md#lefthook-stages
-# Design: openspec/changes/bootstrap-gradle-and-quality-toolchain/design.md#d8 (DD-25)
+# Spec: docs/spec_baseline/specification/04_Build_and_Release/02_QUALITY_GATES.md#lefthook-stages
+# Design: openspec/changes/archive/2026-08-03-bootstrap-gradle-and-quality-toolchain/design.md#d8 (DD-25)
 #
 # Setup after a fresh clone — hooks are NOT active until you run this once:
 #
@@ -49,7 +49,7 @@ pre-commit:
       # A committed secret is unrecoverable — rewriting history does not un-publish a pushed blob, and the
       # credential must be rotated regardless. Catching it before the commit object exists is the only cheap
       # moment. Scans the staged diff only, so it is fast and cannot be tripped by unrelated working-tree junk.
-      # Also runs in CI over full history, per #what-fails-where.
+      # Runs only here, on the staged diff; CI has no secret-scan step.
       run: gitleaks git --pre-commit --staged --redact --no-banner
 
     - name: file-size

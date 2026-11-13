@@ -125,7 +125,7 @@ final class TermsEvalRunner {
     }
 
     private static GlossaryEntry entry(final HeldTerm held) {
-        return new GlossaryEntry(
+        return GlossaryEntry.of(
                 GlossaryIds.of(PROJECT, held.term()), PROJECT, held.term(), null, held.type(), Gender.UNKNOWN, false);
     }
 

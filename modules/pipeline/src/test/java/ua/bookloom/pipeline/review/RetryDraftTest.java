@@ -11,17 +11,9 @@ import static ua.bookloom.pipeline.review.ReviewFixtures.stored;
 import static ua.bookloom.pipeline.review.ReviewFixtures.update;
 import static ua.bookloom.pipeline.review.ReviewFixtures.withContext;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -30,45 +22,47 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
-import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.PromptSection;
+import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
-import ua.bookloom.api.project.SnapshotTerm;
-import ua.bookloom.api.project.SnapshotTmHit;
-import ua.bookloom.api.project.SnapshotTmHit.TmHitKind;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.ScriptedChatModel;
+import ua.bookloom.pipeline.SequenceJobs;
+import ua.bookloom.pipeline.TestBooks;
+import ua.bookloom.pipeline.TestReplies;
 import ua.bookloom.pipeline.review.ReviewFixtures.Desk;
 
 /**
- * A retry is one fair second attempt: it replays the context the first draft saw, is decided by the same checks, reviewer
+ * A retry is one fair second attempt: it builds its context from the project as it stands now, is decided by the same checks, reviewer
  * and acceptance rule with no repair round, never downgrades an accepted segment and never queues behind a running book.
  */
 class RetryDraftTest {
 
     static final ContextSnapshot SNAPSHOT = new ContextSnapshot(
-            List.of("Ніч була тиха й темна."),
-            List.of(new SnapshotTerm("Hale", "Хейл", TermType.CHARACTER, Gender.MALE, false, false, null)),
-            List.of(
-                    new SnapshotTmHit(TmHitKind.EXACT, "The night was quiet.", "Ніч була тиха."),
-                    new SnapshotTmHit(TmHitKind.CONTEXT, "The monster came.", "Чудовисько прийшло.")),
-            "Хейл повернувся до замку.",
-            "Keep the narrator's voice formal.");
+            "f00d",
+            List.of(new PromptSection(
+                    "items", "[Items]", PromptSection.Origin.USER, List.of("monster → потвора (term)"))),
+            List.of(),
+            false);
     static final String NOTE = "keep it more formal";
+    static final String DRAFT = "draft";
     static final String TOO_SHORT = "Чудовисько тут";
     private static final String ACCEPTED_ID = "ch02.xhtml:3";
     private static final String ACCEPTED_TARGET = "Дощ ущух лише надвечір.";
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final String LIGHTHOUSE_ID = "Book.md:1";
+    private static final String LIGHTHOUSE_TARGET = "Маяк стояв на скелі.";
 
     @TempDir
     private Path tempDir;
@@ -86,62 +80,80 @@ class RetryDraftTest {
         assertThat(record.reviewed()).isTrue();
         assertThat(record.machineTarget()).isEqualTo(MONSTER_TARGET);
         assertThat(record.maskedMachineTarget()).isEqualTo(MONSTER_TARGET);
-        assertThat(record.context()).isEqualTo(SNAPSHOT);
+        assertThat(Objects.requireNonNull(record.context(), "snapshot").retry()).isTrue();
         assertThat(stored(desk, FLAGGED_ID)).isEqualTo(record);
     }
 
     @Test
-    void retry_noteAndLowerTemperature_makesOneDraftAtTheLowerTemperatureThenOneReviewerOverThePair() {
-        // one draft call at 0.1 carrying the note as its extra instruction, then the reviewer over that one pair as s1
+    void retry_noteAndLowerTemperature_makesOneDraftAtTheLowerTemperature() {
+        // one draft call at 0.1 carrying the note as its extra instruction
         final Desk desk = flaggedWithSnapshot(JobState.PAUSED);
         final ScriptedChatModel model = passing();
 
         ok(retry(desk, model));
 
         assertThat(model.requests())
-                .extracting(request -> formatOf(request), ChatRequest::temperature)
-                .containsExactly(tuple("draft", 0.1), tuple("reviewer", 0.0));
+                .extracting(RetryDraftTest::formatOf, ChatRequest::temperature)
+                .containsExactly(tuple(DRAFT, 0.1));
         assertThat(userMessage(model.requests().getFirst())).contains("[Extra instruction]\n" + NOTE);
-        assertThat(userMessage(model.requests().get(1)))
-                .contains(
-                        "<Pair id=\"s1\"><Source>The monster met me at midnight.</Source><Candidate>" + MONSTER_TARGET);
     }
 
     @Test
-    void retry_glossaryChangedSinceTheDraft_replaysTheSnapshotsTextsOfTheTermsTheSegmentNames() {
-        // monster → потвора, not today's чудовисько; Hale, whom the segment does not name, is dropped
+    void retry_glossaryTargetChanged_usesNewTarget() {
+        // the first draft's stored sections said monster → потвора; the retry builds from today's glossary, sends
+        // чудовисько and stores the sections it sent, marked as a retry's
         final Desk desk = flaggedWithSnapshot(JobState.PAUSED);
-        withContext(desk, FLAGGED_ID, overWideSnapshot());
         Objects.requireNonNull(desk.glossary()
-                .add(new GlossaryEntry(
+                .add(GlossaryEntry.of(
                         "g1", desk.projectId(), "monster", "чудовисько", TermType.TERM, Gender.NEUTER, false))
+                .data());
+        Objects.requireNonNull(desk.glossary()
+                .add(GlossaryEntry.of("g2", desk.projectId(), "Hale", "Хейл", TermType.CHARACTER, Gender.MALE, false))
                 .data());
         final ScriptedChatModel model = passing();
 
-        ok(retry(desk, model));
+        final SegmentRecord record = ok(retry(desk, model));
 
-        final ChatRequest draft = model.requests().getFirst();
-        assertThat(userMessage(draft))
-                .contains(
-                        "Хейл повернувся до замку.",
-                        "monster → потвора (term)",
-                        "The night was quiet. → Ніч була тиха.",
-                        "<PreviousTranslations>\nНіч була тиха й темна.\n</PreviousTranslations>")
-                .doesNotContain("→ чудовисько", "Hale →", "The monster came.");
-        assertThat(draft.messages().getFirst().content()).contains("Keep the narrator's voice formal.");
+        assertThat(userMessage(model.requests().getFirst()))
+                .contains("monster → чудовисько")
+                .doesNotContain("потвора", "Hale →");
+        final ContextSnapshot stored = Objects.requireNonNull(record.context(), "snapshot");
+        assertThat(stored.retry()).isTrue();
+        assertThat(stored.sections())
+                .flatExtracting(PromptSection::lines)
+                .anySatisfy(line -> assertThat(line).contains("monster → чудовисько"))
+                .noneSatisfy(line -> assertThat(line).contains("потвора"));
     }
 
-    private static ContextSnapshot overWideSnapshot() {
-        return new ContextSnapshot(
-                SNAPSHOT.precedingTargets(),
-                List.of(
-                        SNAPSHOT.glossary().getFirst(),
-                        new SnapshotTerm("monster", "потвора", TermType.TERM, Gender.NEUTER, false, false, null)),
-                SNAPSHOT.tmHits(),
-                SNAPSHOT.summary(),
-                SNAPSHOT.styleSheet(),
-                List.of(),
-                List.of());
+    @Test
+    void retry_nothingChanged_sameContext() {
+        // a run drafts each paragraph alone; Try again with nothing changed sends the very messages that draft was sent
+        // and stores the same frame and sections, now marked as the retry's
+        final Path book = TestBooks.markdown(tempDir.resolve("Book.md"), """
+                The old man walked to the harbour.
+
+                The lighthouse stood on the cliff.
+
+                The boats came back at dusk.
+                """);
+        final SequenceJobs.Prepared prepared =
+                SequenceJobs.importBook(book, SequenceJobs.brief("en", "uk", QualityDial.FAST, Narrator.unspecified()));
+        final ScriptedChatModel run = new ScriptedChatModel()
+                .answer(reply("Старий пішов до гавані."))
+                .answer(reply(LIGHTHOUSE_TARGET))
+                .answer(reply("Човни повернулися надвечір."));
+        Objects.requireNonNull(SequenceJobs.runAlone(prepared, run).data(), "job report");
+        final ContextSnapshot drafted =
+                Objects.requireNonNull(storedIn(prepared, LIGHTHOUSE_ID).context(), "drafted snapshot");
+        final ScriptedChatModel again = new ScriptedChatModel().answer(reply(LIGHTHOUSE_TARGET));
+
+        final SegmentRecord retried =
+                ok(SequenceJobs.retryDraft(prepared).retry(prepared.projectId(), LIGHTHOUSE_ID, null, false, again));
+
+        assertThat(again.requests().getFirst().messages())
+                .isEqualTo(run.requests().get(1).messages());
+        assertThat(retried.context())
+                .isEqualTo(new ContextSnapshot(drafted.frameHash(), drafted.sections(), List.of(), true));
     }
 
     @Test
@@ -167,7 +179,7 @@ class RetryDraftTest {
 
         ok(retry(desk, model));
 
-        assertThat(formatOf(model.requests().getFirst())).isEqualTo("draft");
+        assertThat(formatOf(model.requests().getFirst())).isEqualTo(DRAFT);
     }
 
     @Test
@@ -180,7 +192,7 @@ class RetryDraftTest {
 
         ok(retry(desk, model));
 
-        assertThat(formatOf(model.requests().getFirst())).isEqualTo("draft");
+        assertThat(formatOf(model.requests().getFirst())).isEqualTo(DRAFT);
     }
 
     @Test
@@ -211,7 +223,7 @@ class RetryDraftTest {
         assertThat(record.findings())
                 .extracting(QaFinding::kind, QaFinding::severity, QaFinding::raisedBy)
                 .contains(tuple("omission", Severity.MEDIUM, "length"));
-        assertThat(model.requests()).extracting(RetryDraftTest::formatOf).containsExactly("draft");
+        assertThat(model.requests()).extracting(RetryDraftTest::formatOf).containsExactly(DRAFT);
         assertThat(stored(desk, FLAGGED_ID)).isEqualTo(record);
     }
 
@@ -270,16 +282,17 @@ class RetryDraftTest {
     }
 
     @Test
-    void retry_recordWithoutSnapshot_isValidationWithNoRequest() {
-        // with nothing recorded of the first draft's context there is nothing to replay
+    void retry_recordWithoutSnapshot_draftsFromTheProjectAsItIsNow() {
+        // the retry never reads the first draft's snapshot, so a record that holds none is drafted again all the same
         final Desk desk = ReviewFixtures.epub(tempDir);
         flag(desk, FLAGGED_ID, "Чудовисько зустріло мене.");
         final ScriptedChatModel model = passing();
 
-        final Result<SegmentRecord> result = retry(desk, model);
+        final SegmentRecord record = ok(retry(desk, model));
 
-        assertThat(error(result).code()).isEqualTo(ErrorCode.validation);
-        assertThat(model.requests()).isEmpty();
+        assertThat(formatOf(model.requests().getFirst())).isEqualTo(DRAFT);
+        assertThat(record.status()).isEqualTo(SegmentStatus.ACCEPTED);
+        assertThat(Objects.requireNonNull(record.context(), "snapshot").retry()).isTrue();
     }
 
     @Test
@@ -291,38 +304,6 @@ class RetryDraftTest {
                 desk.retryDraft(ReviewMode.ASSISTED).retry(desk.projectId(), "ch99.xhtml:0", null, false, passing());
 
         assertThat(error(result).code()).isEqualTo(ErrorCode.validation);
-    }
-
-    @Test
-    void retry_segmentTheRunDraftsInPieces_draftsEachPieceWithTheNoteAndJoinsThem() {
-        // 400 sentences are above the run.s 2,000-token chunk budget: two piece drafts,
-        // each at the lower temperature with the note, joined into one target that the reviewer then lets stand
-        final String source = IntStream.range(100, 500)
-                .mapToObj(number -> "The night number " + number + " was calm.")
-                .collect(Collectors.joining(" "));
-        final Desk desk = ReviewFixtures.markdown(tempDir, source + "\n");
-        latestRun(desk, JobState.PAUSED);
-        flag(desk, "Book.md:0", "Ніч.");
-        withContext(desk, "Book.md:0", SNAPSHOT);
-        final PieceTranslatingModel model = new PieceTranslatingModel();
-
-        final SegmentRecord record =
-                ok(desk.retryDraft(ReviewMode.ASSISTED).retry(desk.projectId(), "Book.md:0", NOTE, true, model));
-
-        assertThat(model.requests)
-                .extracting(RetryDraftTest::formatOf, ChatRequest::temperature)
-                .containsExactly(tuple("draft", 0.1), tuple("draft", 0.1), tuple("reviewer", 0.0));
-        assertThat(model.requests.subList(0, 2))
-                .allSatisfy(draft -> assertThat(userMessage(draft)).contains("[Extra instruction]\n" + NOTE));
-        assertThat(userMessage(model.requests.getFirst())).contains("The night number 100 was calm.");
-        assertThat(userMessage(model.requests.get(1))).contains("The night number 499 was calm.");
-        assertThat(record)
-                .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::reviewed)
-                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.DRAFT, true);
-        assertThat(record.machineTarget())
-                .isEqualTo(IntStream.range(100, 500)
-                        .mapToObj(number -> "Ніч номер " + number + " була дуже тихою.")
-                        .collect(Collectors.joining(" ")));
     }
 
     private Desk flaggedWithSnapshot(final JobState run) {
@@ -343,48 +324,38 @@ class RetryDraftTest {
 
     static ScriptedChatModel answering(final String target) {
         return new ScriptedChatModel()
-                .answerTo("draft", reply(target))
+                .answerTo(DRAFT, reply(target))
                 .answerTo("reviewer", Result.ok(new ChatResponse("{\"results\":[]}", FinishReason.STOP)));
     }
 
-    private static Result<ChatResponse> reply(final String target) {
-        try {
-            return Result.ok(new ChatResponse(MAPPER.writeValueAsString(Map.of("target", target)), FinishReason.STOP));
-        } catch (JsonProcessingException cause) {
-            throw new AssertionError("could not encode scripted target", cause);
-        }
+    static Result<ChatResponse> reply(final String target) {
+        return Result.ok(new ChatResponse(TestReplies.targetReply(target), FinishReason.STOP));
     }
 
-    private static String formatOf(final ChatRequest request) {
-        return Objects.requireNonNull(request.responseFormat(), "format").name();
+    private static SegmentRecord storedIn(final SequenceJobs.Prepared prepared, final String id) {
+        return Objects.requireNonNull(
+                        prepared.stores()
+                                .segments()
+                                .find(prepared.projectId(), id)
+                                .data(),
+                        "find " + id)
+                .orElseThrow();
     }
 
-    private static String userMessage(final ChatRequest request) {
+    // A translate-family call is told apart by its kind, since every one asks for the batch schema.
+    static String formatOf(final ChatRequest request) {
+        return ScriptedChatModel.callName(request);
+    }
+
+    static String userMessage(final ChatRequest request) {
         return request.messages().get(1).content();
     }
 
-    private static SegmentRecord ok(final Result<SegmentRecord> result) {
+    static SegmentRecord ok(final Result<SegmentRecord> result) {
         return Objects.requireNonNull(result.data(), () -> "expected success but got " + result.error());
     }
 
     private static AppError error(final Result<?> result) {
         return Objects.requireNonNull(result.error(), () -> "expected an error but got " + result.data());
-    }
-
-    /** Translates each night sentence of whatever text a draft shows it, and accepts whatever the reviewer is shown. */
-    private static final class PieceTranslatingModel implements ChatModel {
-
-        private static final Pattern TEXT = Pattern.compile("<Text>\n(.*)\n</Text>", Pattern.DOTALL);
-        private static final Pattern NIGHT = Pattern.compile("The night number (\\d+) was calm\\.");
-        private final List<ChatRequest> requests = new CopyOnWriteArrayList<>();
-
-        @Override
-        public Result<ChatResponse> chat(final ChatRequest request) {
-            requests.add(request);
-            final Matcher body = TEXT.matcher(userMessage(request));
-            return "reviewer".equals(formatOf(request)) || !body.find()
-                    ? Result.ok(new ChatResponse("{\"results\":[]}", FinishReason.STOP))
-                    : reply(NIGHT.matcher(body.group(1)).replaceAll("Ніч номер $1 була дуже тихою."));
-        }
     }
 }

@@ -14,6 +14,7 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SettingsRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.ProjectOpening;
 import ua.bookloom.api.pipeline.ProjectService;
@@ -21,6 +22,7 @@ import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.ProjectCopies;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
+import ua.bookloom.pipeline.run.BriefKeyRecheck;
 
 /** Test shortcuts over {@link ProjectService}: what {@code list} and {@code open} say about one file's project. */
 public final class ProjectServices {
@@ -85,6 +87,8 @@ public final class ProjectServices {
                         injector.getInstance(LexiconRepository.class),
                         segments,
                         new UuidIdSource()),
-                settings);
+                settings,
+                new BriefKeyRecheck(segments, openProjects),
+                injector.getInstance(SummaryRepository.class));
     }
 }

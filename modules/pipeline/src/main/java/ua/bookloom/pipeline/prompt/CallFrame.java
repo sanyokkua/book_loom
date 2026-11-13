@@ -11,6 +11,7 @@ import ua.bookloom.api.project.Narrator;
 import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.index.BookIndex;
+import ua.bookloom.pipeline.typography.TypographyChoices;
 
 /**
  * What every model call of a run carries: its language pair, derived style sheet and foreign-passage policy, built once
@@ -32,7 +33,6 @@ import ua.bookloom.pipeline.index.BookIndex;
  *     decides which marked runs are foreign. Null when unknown, then the segment's own text decides
  * @param analysisLanguage the language the code reads the book in, from {@link SourceLanguage#forAnalysis}: the chosen
  *     tag, else a recognised declared tag, else null for the generic rules; never put into a prompt
- * @param requestDefaults the reasoning plan and sampling mode every request of the run is built with
  */
 public record CallFrame(
         @Nullable String sourceLanguage,
@@ -44,7 +44,7 @@ public record CallFrame(
         WordValidator wordValidator,
         @Nullable UnicodeScript bookScript,
         @Nullable String analysisLanguage,
-        RequestDefaults requestDefaults) {
+        TypographyChoices typography) {
 
     /** Validates the invariants a caller is entitled to assume. */
     public CallFrame {
@@ -53,10 +53,10 @@ public record CallFrame(
         Objects.requireNonNull(foreignPassagePolicy, "foreignPassagePolicy");
         Objects.requireNonNull(narrator, "narrator");
         Objects.requireNonNull(wordValidator, "wordValidator");
-        Objects.requireNonNull(requestDefaults, "requestDefaults");
+        Objects.requireNonNull(typography, "typography");
     }
 
-    /** A frame whose requests use the defaults the environment alone gives. */
+    /** A frame whose Brief keys for apostrophe and quotes are the language's own defaults. */
     public CallFrame(
             @Nullable String sourceLanguage,
             String targetLanguage,
@@ -77,7 +77,7 @@ public record CallFrame(
                 wordValidator,
                 bookScript,
                 analysisLanguage,
-                RequestDefaults.fromEnvironment());
+                TypographyChoices.DEFAULTS);
     }
 
     /**
@@ -138,27 +138,6 @@ public record CallFrame(
             final Document document,
             final @Nullable UnicodeScript bookScript,
             final WordValidator words) {
-        return forRun(brief, styleSheet, document, bookScript, words, RequestDefaults.fromEnvironment());
-    }
-
-    /**
-     * The frame of one run with the request defaults the run resolved at its start.
-     *
-     * @param brief the run's brief
-     * @param styleSheet the run's derived style sheet
-     * @param document the book being translated
-     * @param bookScript the script most of the story is written in, or null when unknown
-     * @param words the run's word validator
-     * @param requestDefaults the reasoning plan and sampling mode of the run
-     * @return the frame every call of the run carries
-     */
-    public static CallFrame forRun(
-            final BookBrief brief,
-            final StyleSheet styleSheet,
-            final Document document,
-            final @Nullable UnicodeScript bookScript,
-            final WordValidator words,
-            final RequestDefaults requestDefaults) {
         Objects.requireNonNull(brief, "brief");
         Objects.requireNonNull(document, "document");
         return new CallFrame(
@@ -171,12 +150,12 @@ public record CallFrame(
                 words,
                 bookScript,
                 SourceLanguage.forAnalysis(brief, document),
-                requestDefaults);
+                TypographyChoices.of(brief));
     }
 
     /**
-     * The frame of a call made on an opened book outside a translation run — the setup assistant, a glossary scan, the
-     * consistency pass — with the brief's own style sheet and no word validator.
+     * The frame of a call made on an opened book outside a translation run — the setup assistant, a glossary scan —
+     * with the brief's own style sheet and no word validator.
      *
      * @param brief the project's brief, whose target language the caller has already checked
      * @param document the opened book
@@ -184,24 +163,7 @@ public record CallFrame(
      * @return the frame the call carries
      */
     public static CallFrame forBook(final BookBrief brief, final Document document, final @Nullable BookIndex index) {
-        return forBook(brief, document, index, RequestDefaults.fromEnvironment());
-    }
-
-    /**
-     * The frame of a call made on an opened book outside a run, with the request defaults resolved for it.
-     *
-     * @param brief the project's brief
-     * @param document the opened book
-     * @param index the book's index, or null when it is not built
-     * @param requestDefaults the reasoning plan and sampling mode of the call
-     * @return the frame the call carries
-     */
-    public static CallFrame forBook(
-            final BookBrief brief,
-            final Document document,
-            final @Nullable BookIndex index,
-            final RequestDefaults requestDefaults) {
-        return forRun(brief, StyleSheet.from(brief), document, scriptOf(index), WordValidator.none(), requestDefaults);
+        return forRun(brief, StyleSheet.from(brief), document, scriptOf(index), WordValidator.none());
     }
 
     /**

@@ -3,9 +3,8 @@ package ua.bookloom.pipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.groups.Tuple.tuple;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
-import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
+import static ua.bookloom.pipeline.ChunkRunFixtures.PROOFREAD;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
-import static ua.bookloom.pipeline.ChunkRunFixtures.reviewed;
 import static ua.bookloom.pipeline.ChunkRunFixtures.target;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
@@ -34,7 +33,7 @@ import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.Narrator.GenderOrigin;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
-import ua.bookloom.pipeline.revision.DeferralRegister;
+import ua.bookloom.pipeline.proofread.DeferralRegister;
 
 /**
  * A first-person narrator whose gender nobody stated, seen through a whole Max run on the scripted model (15i.T5,
@@ -44,9 +43,6 @@ import ua.bookloom.pipeline.revision.DeferralRegister;
  */
 class TranslationJobNarratorInferenceTest {
 
-    private static final String SUMMARY = "summary";
-    private static final String REVISION = "revision";
-    private static final int GENEROUS = 60;
     private static final Narrator UNKNOWN_FIRST = new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN);
 
     @TempDir
@@ -62,16 +58,10 @@ class TranslationJobNarratorInferenceTest {
         return TranslationJobTestSupport.project(book, brief("en", "uk", dial).withNarrator(narrator));
     }
 
-    // Drafts in book order, a reviewer that finds nothing and a summary for as many calls as the run may make, then
-    // the revisions a Max run asks for.
-    private static ScriptedChatModel model(final List<String> drafts, final List<String> revisions) {
+    // Drafts in book order.
+    private static ScriptedChatModel model(final List<String> drafts) {
         final ScriptedChatModel model = new ScriptedChatModel();
         drafts.forEach(draft -> model.answerTo(DRAFT, target(draft)));
-        IntStream.range(0, GENEROUS).forEach(index -> {
-            model.answerTo(REVIEW, reviewed());
-            model.answerTo(SUMMARY, summaryReply());
-        });
-        revisions.forEach(revision -> model.answerTo(REVISION, target(revision)));
         return model;
     }
 
@@ -84,10 +74,13 @@ class TranslationJobNarratorInferenceTest {
                 .toList();
     }
 
-    private static Result<ChatResponse> summaryReply() {
-        return Result.ok(new ChatResponse(
-                "{\"summary\":{\"source\":\"The night went on.\",\"target\":\"Ніч тривала.\"},\"facts\":[]}",
-                FinishReason.STOP));
+    // The proofread window of one slip answers it in the narrator's gender; the windows are read in book order.
+    private static void proofreadAs(final ScriptedChatModel model, final int index, final String target) {
+        model.answerTo(
+                PROOFREAD,
+                Result.ok(new ChatResponse(
+                        "{\"items\":[{\"id\":\"" + id(index) + "\",\"target\":\"" + target + "\"}]}",
+                        FinishReason.STOP)));
     }
 
     private static Narrator narratorOf(final TestProject project) {
@@ -112,7 +105,7 @@ class TranslationJobNarratorInferenceTest {
     void run_twentyFourMasculineFirstPersonDrafts_areAcceptedAsWrittenWithNoRevision() {
         final int count = 24;
         final TestProject project = book(NarratorInferenceBooks.firstSources(count), QualityDial.MAX, UNKNOWN_FIRST);
-        final ScriptedChatModel model = model(NarratorInferenceBooks.firstTargets(count, Set.of()), List.of());
+        final ScriptedChatModel model = model(NarratorInferenceBooks.firstTargets(count, Set.of()));
 
         report(job(project, model).run());
 
@@ -120,27 +113,26 @@ class TranslationJobNarratorInferenceTest {
             assertThat(stored(project, id(index)).status()).isEqualTo(SegmentStatus.ACCEPTED);
             assertThat(stored(project, id(index)).machineTarget()).isEqualTo(NarratorInferenceBooks.masculine(index));
         });
-        assertThat(formats(model)).doesNotContain(REVISION);
     }
 
     // IF the majority were never counted, THEN a man's book with two feminine slips would stay unknown and keep them
-    // (the Oct 9 runs: 26 of 41 wrong paragraphs came from one mistyped gender).
+    // (the Oct 9 runs: 26 of 41 wrong paragraphs came from one mistyped gender). The Proofread stage's code part leaves
+    // each slip an open deferral on the narrator, and its window re-renders it with no deferral left.
     @Test
-    void run_maleFirstPersonBookWithTwoFeminineSlips_endsMaleInferredAndReRendersTheSlips() {
+    void run_maleFirstPersonBookWithTwoFeminineSlips_endsMaleInferredAndItsWindowsReRenderTheSlips() {
         final int count = 24;
         final TestProject project = book(NarratorInferenceBooks.firstSources(count), QualityDial.MAX, UNKNOWN_FIRST);
-        final ScriptedChatModel model = model(
-                NarratorInferenceBooks.firstTargets(count, Set.of(3, 12)),
-                List.of(NarratorInferenceBooks.masculine(3), NarratorInferenceBooks.masculine(12)));
+        final ScriptedChatModel model = model(NarratorInferenceBooks.firstTargets(count, Set.of(3, 12)));
+        proofreadAs(model, 3, NarratorInferenceBooks.masculine(3));
+        proofreadAs(model, 12, NarratorInferenceBooks.masculine(12));
 
         assertThat(report(job(project, model).run()).end()).isEqualTo(JobState.COMPLETED);
         assertThat(narratorOf(project))
                 .isEqualTo(new Narrator(NarratorPerson.FIRST, Gender.MALE, GenderOrigin.INFERRED, List.of()));
-        assertThat(formats(model)).filteredOn(REVISION::equals).hasSize(2);
+        assertThat(formats(model)).contains(PROOFREAD);
         assertThat(stored(project, id(3)).machineTarget()).isEqualTo(NarratorInferenceBooks.masculine(3));
         assertThat(stored(project, id(3)).status()).isEqualTo(SegmentStatus.REVISED);
         assertThat(stored(project, id(12)).machineTarget()).isEqualTo(NarratorInferenceBooks.masculine(12));
-        assertThat(stored(project, id(12)).status()).isEqualTo(SegmentStatus.REVISED);
         assertThat(stored(project, id(0)).machineTarget()).isEqualTo(NarratorInferenceBooks.masculine(0));
         assertThat(open(project)).isEmpty();
     }
@@ -152,9 +144,7 @@ class TranslationJobNarratorInferenceTest {
         final int count = 24;
         final TestProject project =
                 book(NarratorInferenceBooks.firstSources(count), QualityDial.MAX, Narrator.unspecified());
-        final ScriptedChatModel model = model(
-                NarratorInferenceBooks.firstTargets(count, Set.of(3, 12)),
-                List.of(NarratorInferenceBooks.masculine(3), NarratorInferenceBooks.masculine(12)));
+        final ScriptedChatModel model = model(NarratorInferenceBooks.firstTargets(count, Set.of(3, 12)));
 
         report(job(project, model).run());
 
@@ -162,13 +152,13 @@ class TranslationJobNarratorInferenceTest {
                 .isEqualTo(new Narrator(NarratorPerson.FIRST, Gender.MALE, GenderOrigin.INFERRED, List.of()));
     }
 
-    // Without the backwards stage (Balanced) the slips wait as gender deferrals on the narrator, for a later pass.
+    // At Balanced too the slips wait as gender deferrals on the narrator, which the Proofread stage lists as marks.
     @Test
     void run_balancedDial_leavesOneNarratorGenderDeferralPerSlipSegment() {
         final int count = 24;
         final TestProject project =
                 book(NarratorInferenceBooks.firstSources(count), QualityDial.BALANCED, UNKNOWN_FIRST);
-        final ScriptedChatModel model = model(NarratorInferenceBooks.firstTargets(count, Set.of(3, 12)), List.of());
+        final ScriptedChatModel model = model(NarratorInferenceBooks.firstTargets(count, Set.of(3, 12)));
 
         report(job(project, model).run());
 
@@ -182,12 +172,13 @@ class TranslationJobNarratorInferenceTest {
     }
 
     @Test
-    void run_femaleFirstPersonBookWithTwoMasculineSlips_endsFemaleInferredAndReRendersTheSlips() {
+    void run_femaleFirstPersonBookWithTwoMasculineSlips_endsFemaleInferredAndItsWindowsReRenderTheSlips() {
         final int count = 24;
         final List<String> targets = mostlyFeminine(count, Set.of(5, 17));
         final TestProject project = book(NarratorInferenceBooks.firstSources(count), QualityDial.MAX, UNKNOWN_FIRST);
-        final ScriptedChatModel model =
-                model(targets, List.of(NarratorInferenceBooks.feminine(5), NarratorInferenceBooks.feminine(17)));
+        final ScriptedChatModel model = model(targets);
+        proofreadAs(model, 5, NarratorInferenceBooks.feminine(5));
+        proofreadAs(model, 17, NarratorInferenceBooks.feminine(17));
 
         report(job(project, model).run());
 
@@ -195,6 +186,7 @@ class TranslationJobNarratorInferenceTest {
                 .isEqualTo(new Narrator(NarratorPerson.FIRST, Gender.FEMALE, GenderOrigin.INFERRED, List.of()));
         assertThat(stored(project, id(5)).machineTarget()).isEqualTo(NarratorInferenceBooks.feminine(5));
         assertThat(stored(project, id(17)).machineTarget()).isEqualTo(NarratorInferenceBooks.feminine(17));
+        assertThat(open(project)).isEmpty();
     }
 
     // IF a bar below 80 % passed, THEN a woman's book with a third of its forms masculine could end with a male
@@ -204,13 +196,12 @@ class TranslationJobNarratorInferenceTest {
         final int count = 24;
         final List<String> targets = mostlyFeminine(count, Set.of(1, 4, 7, 10, 13, 16));
         final TestProject project = book(NarratorInferenceBooks.firstSources(count), QualityDial.MAX, UNKNOWN_FIRST);
-        final ScriptedChatModel model = model(targets, List.of());
+        final ScriptedChatModel model = model(targets);
 
         report(job(project, model).run());
 
         assertThat(narratorOf(project).gender()).isNotEqualTo(Gender.MALE);
         assertThat(narratorOf(project)).isEqualTo(UNKNOWN_FIRST);
-        assertThat(formats(model)).doesNotContain(REVISION);
         assertThat(open(project)).isEmpty();
     }
 
@@ -227,7 +218,7 @@ class TranslationJobNarratorInferenceTest {
             targets.add(NarratorInferenceBooks.THIRD.get(index).get(1));
         });
         final TestProject project = book(sources, QualityDial.MAX, UNKNOWN_FIRST);
-        final ScriptedChatModel model = model(targets, List.of());
+        final ScriptedChatModel model = model(targets);
 
         report(job(project, model).run());
 
@@ -246,7 +237,7 @@ class TranslationJobNarratorInferenceTest {
         });
         final TestProject project = book(sources, QualityDial.MAX, UNKNOWN_FIRST);
 
-        report(job(project, model(targets, List.of())).run());
+        report(job(project, model(targets)).run());
 
         assertThat(narratorOf(project)).isEqualTo(UNKNOWN_FIRST);
     }
@@ -258,12 +249,11 @@ class TranslationJobNarratorInferenceTest {
         final Narrator verified =
                 new Narrator(NarratorPerson.FIRST, Gender.MALE, GenderOrigin.VERIFIED, List.of("Thank you, sir"));
         final TestProject project = book(NarratorInferenceBooks.firstSources(count), QualityDial.MAX, verified);
-        final ScriptedChatModel model = model(NarratorInferenceBooks.firstTargets(count, Set.of()), List.of());
+        final ScriptedChatModel model = model(NarratorInferenceBooks.firstTargets(count, Set.of()));
 
         report(job(project, model).run());
 
         assertThat(narratorOf(project)).isEqualTo(verified);
-        assertThat(formats(model)).doesNotContain(REVISION);
     }
 
     // A suggestion is a guess nobody confirmed; twenty-two decided feminine forms are stronger evidence (the
@@ -274,7 +264,7 @@ class TranslationJobNarratorInferenceTest {
         final int count = 24;
         final Narrator suggested = new Narrator(NarratorPerson.FIRST, Gender.MALE, GenderOrigin.SUGGESTED, List.of());
         final TestProject project = book(NarratorInferenceBooks.firstSources(count), QualityDial.BALANCED, suggested);
-        final ScriptedChatModel model = model(mostlyFeminine(count, Set.of(5, 17)), List.of());
+        final ScriptedChatModel model = model(mostlyFeminine(count, Set.of(5, 17)));
 
         report(job(project, model).run());
 
@@ -291,7 +281,7 @@ class TranslationJobNarratorInferenceTest {
         final List<String> targets = mostlyFeminine(count, Set.of(1, 4, 7, 10, 13, 16));
         final TestProject project = book(NarratorInferenceBooks.firstSources(count), QualityDial.BALANCED, suggested);
 
-        report(job(project, model(targets, List.of())).run());
+        report(job(project, model(targets)).run());
 
         assertThat(narratorOf(project)).isEqualTo(suggested);
     }
@@ -301,7 +291,7 @@ class TranslationJobNarratorInferenceTest {
         final int count = 24;
         final Narrator third = new Narrator(NarratorPerson.THIRD, Gender.UNKNOWN);
         final TestProject project = book(NarratorInferenceBooks.firstSources(count), QualityDial.MAX, third);
-        final ScriptedChatModel model = model(NarratorInferenceBooks.firstTargets(count, Set.of()), List.of());
+        final ScriptedChatModel model = model(NarratorInferenceBooks.firstTargets(count, Set.of()));
 
         report(job(project, model).run());
 

@@ -49,11 +49,6 @@
             <ToggleSwitch fx:id="openDesk" id="automation-open-desk" text="%settings.automation.openDesk"/>
         </VBox>
         <VBox spacing="5">
-            <ToggleSwitch fx:id="lastCheck" id="automation-last-check" text="%settings.automation.lastCheck"/>
-            <Label fx:id="lastCheckHint" id="automation-last-check-hint" styleClass="hint" wrapText="true"
-                   text="%settings.automation.lastCheck.unset"/>
-        </VBox>
-        <VBox spacing="5">
             <ToggleSwitch fx:id="keepAwake" id="automation-keep-awake" text="%settings.automation.keepAwake"/>
             <Label id="automation-keep-awake-hint" styleClass="hint" wrapText="true"
                    text="%settings.automation.keepAwake.hint"/>

@@ -34,17 +34,22 @@ public final class CallHistory {
      * @param oldestFirst the calls, oldest first; never more than the history keeps
      * @param now the moment the dialog opens
      * @param messages the catalogue each row is worded from
+     * @param initial the view the dialog opens in, as "Show technical details" decides for every progress dialog
      * @return a model with one step per call, named by its kind in words, in the order given
      */
     public static ProgressDialogModel modelOf(
-            final List<CallSnapshot> oldestFirst, final Instant now, final Messages messages) {
+            final List<CallSnapshot> oldestFirst,
+            final Instant now,
+            final Messages messages,
+            final ProgressDialogModel.Mode initial) {
         Objects.requireNonNull(oldestFirst, "oldestFirst");
         Objects.requireNonNull(now, "now");
         Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(initial, "initial");
         log.debug("all calls: building the dialog's model over {} calls", oldestFirst.size());
         StepLog steps = StepLog.EMPTY.apply(new StepsPlanned(StepKind.REQUEST, oldestFirst.size(), false));
-        final ProgressDialogModel model = new ProgressDialogModel(
-                activity(steps, null, now), new LedgerFigures(), ProgressDialogModel.Mode.SIMPLE, () -> now);
+        final ProgressDialogModel model =
+                new ProgressDialogModel(activity(steps, null, now), new LedgerFigures(), initial, () -> now);
         for (int index = 0; index < oldestFirst.size(); index++) {
             final CallSnapshot call = oldestFirst.get(index);
             final String name = rowName(call, messages);
@@ -64,7 +69,8 @@ public final class CallHistory {
                 switch (call.state()) {
                     case WAITING -> null;
                     case ANSWERED -> StepResult.DONE;
-                    case FAILED, CANCELLED -> StepResult.FAILED;
+                    case FAILED -> StepResult.FAILED;
+                    case CANCELLED -> StepResult.STOPPED;
                 };
         if (result == null) {
             log.debug("all calls: call {} is still waiting, its row stays at work", call.callId());

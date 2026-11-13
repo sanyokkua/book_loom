@@ -7,44 +7,16 @@ package ua.bookloom.api.pipeline;
 public interface DialProfile {
 
     /**
-     * How many accepted preceding targets accompany a draft.
+     * What a segment whose draft fails a check is given.
      *
-     * @return the count, zero or more
+     * @return the dial's repair mode
      */
-    int precedingTargets();
+    RepairMode repair();
 
     /**
-     * How many directed-fix rounds a flagged segment gets.
+     * Which decided segments the Proofread stage reads.
      *
-     * @return the count, zero or more
+     * @return the coverage; {@code NONE} means no model call in the stage
      */
-    int repairRounds();
-
-    /**
-     * How many times the reviewer reads each chunk.
-     *
-     * @return the count; zero means no reviewer
-     */
-    int reviewPasses();
-
-    /**
-     * Whether the backward-revision pass runs after the last segment.
-     *
-     * @return {@code true} when it runs
-     */
-    boolean backwardRevision();
-
-    /**
-     * Whether the model writes the rolling summary.
-     *
-     * @return {@code true} when it does
-     */
-    boolean llmSummary();
-
-    /**
-     * The most segments in one request.
-     *
-     * @return the cap, at least one
-     */
-    int chunkCap();
+    ProofreadCoverage proofreadCoverage();
 }

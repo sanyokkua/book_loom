@@ -55,13 +55,17 @@ class ProjectIndexReadsTest {
                                 "Ember came in. Ember sat. Ember’s coat. Ember left. Ember ran. Dane spoke.",
                                 "Dane spoke. Dane spoke. Dane spoke. Dane spoke. Dane spoke. Dane spoke."),
                         "Title"));
-        service.add(new GlossaryEntry("p1:ember", PROJECT, "Ember", null, TermType.CHARACTER, Gender.UNKNOWN, false));
-        service.add(new GlossaryEntry("p1:dane", PROJECT, "Dane", null, TermType.CHARACTER, Gender.UNKNOWN, false));
+        service.add(GlossaryEntry.of("p1:ember", PROJECT, "Ember", null, TermType.CHARACTER, Gender.UNKNOWN, false));
+        service.add(GlossaryEntry.of("p1:dane", PROJECT, "Dane", null, TermType.CHARACTER, Gender.UNKNOWN, false));
         assertThat(openProjects.hasIndex(PROJECT)).isFalse();
 
         final List<UnknownGender> asked = service.unknownGenders(PROJECT, 5).data();
 
-        assertThat(asked).containsExactly(new UnknownGender("Dane", 7), new UnknownGender("Ember", 5));
+        assertThat(asked)
+                .extracting(UnknownGender::term, UnknownGender::mentions)
+                .containsExactly(
+                        org.assertj.core.api.Assertions.tuple("Dane", 7),
+                        org.assertj.core.api.Assertions.tuple("Ember", 5));
         assertThat(openProjects.hasIndex(PROJECT)).isTrue();
     }
 

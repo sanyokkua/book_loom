@@ -8,25 +8,22 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.project.ContextSnapshot;
-import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
-import ua.bookloom.api.project.SnapshotTerm;
-import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.heal.SegmentOutcome;
 
 /** What a segment's outcome becomes in storage, and what a stored flag reads back as. */
 class OutcomeRecordsTest {
 
     private static final ContextSnapshot SNAPSHOT = new ContextSnapshot(
-            List.of("Він пішов."),
-            List.of(new SnapshotTerm("Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true, false, null)),
+            "f00d",
+            List.of(new PromptSection("previousPairs", "[Previous]", PromptSection.Origin.USER, List.of("Ранок."))),
             List.of(),
-            null,
-            "Neutral, faithful literary prose.");
+            false);
 
     // A retry replays what the draft saw, so the record keeps the snapshot of the draft that decided it.
     @Test
@@ -50,7 +47,6 @@ class OutcomeRecordsTest {
                 null,
                 List.of(),
                 SegmentPath.DRAFT,
-                0,
                 null);
 
         final SegmentRecord record = OutcomeRecords.decided(pending(), outcome, SNAPSHOT);
@@ -72,7 +68,8 @@ class OutcomeRecordsTest {
                         List.of());
     }
 
-    // A flagged draft has no target to keep, and its reason must survive as the finding the review desk shows.
+    // A flagged draft has no target to keep, and its reason must survive as the finding the review desk shows, worded
+    // for the person rather than as the provider's heading.
     @Test
     void decided_flaggedAtOnce_storesItsReasonAsAHighReplyFinding() {
         final AppError reason = AppError.of(ErrorCode.contextWindow, "Too long", "The segment exceeds the window.");
@@ -82,8 +79,11 @@ class OutcomeRecordsTest {
         assertThat(record.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(record.machineTarget()).isNull();
         assertThat(record.findings())
-                .containsExactly(
-                        new QaFinding("contextWindow", Severity.HIGH, "The segment exceeds the window.", "reply"));
+                .containsExactly(new QaFinding(
+                        "contextWindow",
+                        Severity.HIGH,
+                        "This passage did not fit the model's window. It was flagged.",
+                        "reply"));
     }
 
     // Reading a different code back would report a flagged segment under a reason the model never gave.
@@ -119,38 +119,27 @@ class OutcomeRecordsTest {
                         SegmentRecord::maskedMachineTarget,
                         SegmentRecord::confidence,
                         SegmentRecord::judgeScore,
-                        SegmentRecord::path,
-                        SegmentRecord::repairRounds)
+                        SegmentRecord::path)
                 .containsExactly(
                         SegmentStatus.ACCEPTED,
                         "HE *OLD* DOOR.",
                         "HE ⟦g0⟧OLD⟦g1⟧ DOOR.",
                         0.8,
                         0.9,
-                        SegmentPath.REPAIRED,
-                        1);
+                        SegmentPath.REPAIRED);
     }
 
     // A quality flag has no error code of its own, so the report names it validation.
     @Test
-    void reportCode_outcomeFlaggedAfterTwoRounds_readsBackValidation() {
+    void reportCode_outcomeFlaggedAfterItsRepair_readsBackValidation() {
         final QaFinding markup = new QaFinding("markup", Severity.HIGH, "A token is missing.", "placeholder");
         final SegmentOutcome outcome = new SegmentOutcome(
-                "Book.md:0",
-                SegmentStatus.FLAGGED,
-                null,
-                null,
-                0.3,
-                null,
-                List.of(markup),
-                SegmentPath.REPAIRED,
-                2,
-                null);
+                "Book.md:0", SegmentStatus.FLAGGED, null, null, 0.3, null, List.of(markup), SegmentPath.REPAIRED, null);
 
         final SegmentRecord record = OutcomeRecords.decided(pending(), outcome, SNAPSHOT);
 
         assertThat(record.findings()).containsExactly(markup);
-        assertThat(record.repairRounds()).isEqualTo(2);
+        assertThat(record.path()).isEqualTo(SegmentPath.REPAIRED);
         assertThat(OutcomeRecords.reportCode(record)).isEqualTo(ErrorCode.validation);
     }
 
@@ -159,7 +148,7 @@ class OutcomeRecordsTest {
     void decided_outcomeFlaggedAtOnce_storesItsReplyFinding() {
         final AppError reason = AppError.of(ErrorCode.emptyCompletion, "Empty", "The model returned no text.");
         final SegmentOutcome outcome = new SegmentOutcome(
-                "Book.md:0", SegmentStatus.FLAGGED, null, null, 0.0, null, List.of(), SegmentPath.DRAFT, 0, reason);
+                "Book.md:0", SegmentStatus.FLAGGED, null, null, 0.0, null, List.of(), SegmentPath.DRAFT, reason);
 
         final SegmentRecord record = OutcomeRecords.decided(pending(), outcome, SNAPSHOT);
 
@@ -171,7 +160,7 @@ class OutcomeRecordsTest {
 
     private static SegmentOutcome flaggedAtOnce(final AppError reason) {
         return new SegmentOutcome(
-                "Book.md:0", SegmentStatus.FLAGGED, null, null, 0.0, null, List.of(), SegmentPath.DRAFT, 0, reason);
+                "Book.md:0", SegmentStatus.FLAGGED, null, null, 0.0, null, List.of(), SegmentPath.DRAFT, reason);
     }
 
     private static SegmentOutcome acceptedAfterOneRepair() {
@@ -184,7 +173,6 @@ class OutcomeRecordsTest {
                 0.9,
                 List.of(),
                 SegmentPath.REPAIRED,
-                1,
                 null);
     }
 
@@ -204,7 +192,6 @@ class OutcomeRecordsTest {
                 null,
                 List.of(),
                 SegmentPath.DRAFT,
-                0,
                 false,
                 null);
     }

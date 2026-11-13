@@ -14,8 +14,8 @@ import javafx.scene.input.MouseEvent;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
@@ -26,12 +26,12 @@ import ua.bookloom.ui.ViewNames;
  */
 class GlossaryGenderSuggestedTest extends TranslatingScreenTestBase {
 
-    private static final GlossaryEntry SUGGESTED = new GlossaryEntry(
+    private static final GlossaryEntry SUGGESTED = GlossaryEntry.of(
                     "e1", "p1", "John", null, TermType.CHARACTER, Gender.UNKNOWN, false)
             .withSuggestedGender(Gender.MALE);
     private static final GlossaryEntry CONFIRMED =
-            new GlossaryEntry("e2", "p1", "Rosalind", null, TermType.CHARACTER, Gender.FEMALE, false);
-    private static final GlossaryEntry VERIFIED = new GlossaryEntry(
+            GlossaryEntry.of("e2", "p1", "Rosalind", null, TermType.CHARACTER, Gender.FEMALE, false);
+    private static final GlossaryEntry VERIFIED = GlossaryEntry.of(
                     "e3", "p1", "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false)
             .withInferredGender(Gender.MALE);
 
@@ -47,7 +47,7 @@ class GlossaryGenderSuggestedTest extends TranslatingScreenTestBase {
 
     @Test
     void table_suggestedAndConfirmedGenders_markOnlyTheSuggestedOne() throws Exception {
-        assertThat(genderLabels()).contains("male (suggested)", "female").doesNotContain("female (suggested)");
+        assertThat(genderLabels()).contains("male · likely", "female · person").doesNotContain("female · likely");
     }
 
     // IF a verified gender were drawn like a guess, THEN the table would ask the person to confirm what the book
@@ -57,26 +57,26 @@ class GlossaryGenderSuggestedTest extends TranslatingScreenTestBase {
     void table_personsVerifiedAndSuggestedGenders_markExactlyTheSuggestedOne() throws Exception {
         final List<String> labels = genderLabels();
 
-        assertThat(labels).filteredOn(label -> label.contains("(suggested)")).containsExactly("male (suggested)");
-        assertThat(labels).contains("male", "female");
+        assertThat(labels).filteredOn(label -> label.endsWith("· likely")).containsExactly("male · likely");
+        assertThat(labels).contains("male · book", "female · person");
     }
 
     // IF choosing the shown value did nothing, THEN "choose a value to confirm it" would be false for the value the
     // person agrees with; the suggestion is stored as the person's.
     @Test
     void suggestedGender_theSameValueChosenAgain_isStoredAsConfirmed() throws Exception {
-        choose("male (suggested)", "male");
+        choose("male · likely", "male");
 
         assertThat(glossary.updated())
                 .singleElement()
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(Gender.MALE, GenderOrigin.PERSON);
+                .containsExactly(Gender.MALE, Origin.USER);
     }
 
     // IF a person's correction of a verified gender stayed "verified", THEN the next review could overwrite it.
     @Test
     void verifiedGender_anotherValueChosen_isStoredAsThePersons() throws Exception {
-        final ComboBox<Gender> combo = openEditor("male");
+        final ComboBox<Gender> combo = openEditor("male · book");
 
         // A popup click only reports the value already held; a different value arrives as the combo's own selection.
         onFx(() -> combo.setValue(Gender.FEMALE));
@@ -85,7 +85,7 @@ class GlossaryGenderSuggestedTest extends TranslatingScreenTestBase {
         assertThat(glossary.updated())
                 .singleElement()
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly("Hale", Gender.FEMALE, GenderOrigin.PERSON);
+                .containsExactly("Hale", Gender.FEMALE, Origin.USER);
     }
 
     private void choose(final String shownText, final String optionText) throws Exception {
@@ -106,7 +106,7 @@ class GlossaryGenderSuggestedTest extends TranslatingScreenTestBase {
         genderLabels();
         final Label shown =
                 ThemeTestSupport.onFx(() -> required("names-style-table").lookupAll(".glossary-choice").stream()
-                        .map(label -> (Label) label)
+                        .map(Label.class::cast)
                         .filter(label -> label.getText().equals(shownText))
                         .findFirst()
                         .orElseThrow());

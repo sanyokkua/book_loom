@@ -21,8 +21,6 @@ import org.jspecify.annotations.Nullable;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class FrontmatterScalars {
 
-    private static final Pattern KEY_VALUE = Pattern.compile("([^:]+?)[ \\t]*:(?:[ \\t]+(.*?))?[ \\t]*");
-
     private static final Pattern TRAILING_COMMENT = Pattern.compile("[ \\t]#");
 
     /** A value opening with one of these is a collection, block scalar, anchor, alias or tag, never a scalar. */
@@ -82,16 +80,52 @@ final class FrontmatterScalars {
         if (line.isEmpty() || Character.isWhitespace(line.charAt(0)) || isNonKeyLine(line)) {
             return;
         }
-        final Matcher matcher = KEY_VALUE.matcher(line);
-        if (!matcher.matches()) {
+        final KeyValue pair = KeyValue.of(line);
+        if (pair == null) {
             return;
         }
-        final String key = matcher.group(1);
-        final String value = matcher.group(2);
+        final String key = pair.key();
+        final String value = pair.value();
         final Scalar scalar =
-                value == null ? rejected(key, "empty") : classify(key, value, lineStart + matcher.start(2));
+                value == null ? rejected(key, "empty") : classify(key, value, lineStart + pair.valueStart());
         log.debug("frontmatter key {}: {}", key, scalar.isText() ? "text" : "not text (" + scalar.rejection() + ")");
         found.add(scalar);
+    }
+
+    /**
+     * A {@code key: value} line split at its first colon: the key without its trailing blanks, then either nothing
+     * ({@code value} null) or blanks followed by the value without its trailing blanks. A colon glued to the text after
+     * it makes the line no pair. Scanned by hand because the equivalent lazy regular expression backtracks.
+     */
+    private record KeyValue(String key, @Nullable String value, int valueStart) {
+
+        static @Nullable KeyValue of(final String line) {
+            final int colon = line.indexOf(':');
+            if (colon < 1) {
+                return null;
+            }
+            final String key = line.substring(0, colon).stripTrailing();
+            final int afterColon = colon + 1;
+            if (afterColon == line.length()) {
+                return new KeyValue(key, null, afterColon);
+            }
+            if (!isBlank(line.charAt(afterColon))) {
+                return null;
+            }
+            int start = afterColon;
+            while (start < line.length() && isBlank(line.charAt(start))) {
+                start++;
+            }
+            int end = line.length();
+            while (end > start && isBlank(line.charAt(end - 1))) {
+                end--;
+            }
+            return new KeyValue(key, line.substring(start, end), start);
+        }
+
+        private static boolean isBlank(final char c) {
+            return c == ' ' || c == '\t';
+        }
     }
 
     private static boolean isNonKeyLine(String line) {
@@ -143,17 +177,20 @@ final class FrontmatterScalars {
 
     private static int closingQuote(String value, YamlQuote quote) {
         final char mark = quote == YamlQuote.DOUBLE ? '"' : '\'';
-        for (int i = 1; i < value.length(); i++) {
+        int i = 1;
+        while (i < value.length()) {
             final char c = value.charAt(i);
             if (quote == YamlQuote.DOUBLE && c == '\\') {
-                i++;
+                i += 2;
             } else if (c == mark
                     && quote == YamlQuote.SINGLE
                     && i + 1 < value.length()
                     && value.charAt(i + 1) == mark) {
-                i++;
+                i += 2;
             } else if (c == mark) {
                 return i;
+            } else {
+                i++;
             }
         }
         return -1;

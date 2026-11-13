@@ -36,7 +36,7 @@ class NamesStyleActionStepsScreenTest extends TranslatingScreenTestBase {
     }
 
     private String textOf(final String id, final String styleClass) {
-        return ThemeTestSupport.onFx(() -> ((Label) required(id).lookup(styleClass)).getText());
+        return ThemeTestSupport.onFx(((Label) required(id).lookup(styleClass))::getText);
     }
 
     // IF the action showed no steps, THEN a long scan would be a bar with nothing to read beside it.

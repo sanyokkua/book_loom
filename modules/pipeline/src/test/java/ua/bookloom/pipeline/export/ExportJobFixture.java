@@ -10,7 +10,6 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Clock;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -27,6 +26,7 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.PromptFrameRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.ExportJob;
@@ -44,7 +44,7 @@ import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.project.OpenProjects;
-import ua.bookloom.pipeline.revision.ConsistencyPass;
+import ua.bookloom.pipeline.run.RunStores;
 
 /**
  * A real book imported through the project service over the in-memory stores, with the real export service built
@@ -81,6 +81,10 @@ final class ExportJobFixture {
         return injector.getInstance(DeferralRepository.class);
     }
 
+    PromptFrameRepository frames() {
+        return injector.getInstance(PromptFrameRepository.class);
+    }
+
     RunRepository runs() {
         return injector.getInstance(RunRepository.class);
     }
@@ -98,15 +102,7 @@ final class ExportJobFixture {
     }
 
     ExportServiceImpl serviceOver(final DocumentPort port) {
-        return new ExportServiceImpl(
-                projects(),
-                segments(),
-                openProjects(),
-                port,
-                injector.getInstance(ConsistencyPass.class),
-                glossary(),
-                runs(),
-                Clock.systemUTC());
+        return new ExportServiceImpl(injector.getInstance(RunStores.class), port, deferrals());
     }
 
     /** Imports {@code source} and briefs it from {@code sourceLanguage} to Ukrainian with the default switches. */
@@ -170,16 +166,16 @@ final class ExportJobFixture {
     }
 
     static Result<ExportReport> export(final ExportServiceImpl service, final ExportRequest request) {
-        return service.newExport(request, null).flatMap(ExportJob::run);
+        return service.newExport(request).flatMap(ExportJob::run);
     }
 
     static ExportRequest request(final String projectId, final Path destination, final boolean overwrite) {
-        return new ExportRequest(projectId, destination, overwrite, Set.of(), false);
+        return new ExportRequest(projectId, destination, overwrite, Set.of());
     }
 
     static ExportRequest request(
             final String projectId, final Path destination, final boolean overwrite, final Set<SideFile> sideFiles) {
-        return new ExportRequest(projectId, destination, overwrite, sideFiles, false);
+        return new ExportRequest(projectId, destination, overwrite, sideFiles);
     }
 
     static BookBrief brief(final String sourceLanguage, final AlsoTranslate alsoTranslate) {

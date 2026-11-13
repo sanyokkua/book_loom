@@ -29,6 +29,7 @@ import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
 import ua.bookloom.pipeline.glossary.StopWords;
+import ua.bookloom.pipeline.glossary.TargetText;
 import ua.bookloom.pipeline.lexicon.CooccurrenceLearner;
 import ua.bookloom.pipeline.lexicon.TermMatch;
 import ua.bookloom.pipeline.prompt.LanguageRules;
@@ -54,11 +55,12 @@ final class TermLearning {
 
     private final CooccurrenceLearner learner;
     private final @Nullable String analysisLanguage;
+    private final @Nullable String targetLanguage;
     private final SegmentRepository segments;
     private final LexiconRepository lexicon;
     private final GlossaryRepository glossary;
     private final String projectId;
-    private final Set<String> functionWords;
+    private final Set<String> stopWords;
     private final List<Pair> held = new ArrayList<>();
 
     TermLearning(final RunStores stores, final String projectId) {
@@ -76,6 +78,7 @@ final class TermLearning {
             final @Nullable String targetLanguage) {
         Objects.requireNonNull(stores, "stores");
         this.analysisLanguage = analysisLanguage;
+        this.targetLanguage = targetLanguage;
         this.learner = new CooccurrenceLearner(
                 targetLanguage == null ? List.of() : LanguageRules.bundled().obliqueEndings(targetLanguage),
                 analysisLanguage,
@@ -84,7 +87,7 @@ final class TermLearning {
         this.lexicon = stores.lexicon();
         this.glossary = stores.glossary();
         this.projectId = Objects.requireNonNull(projectId, "projectId");
-        this.functionWords = StopWords.bundled(targetLanguage).orElse(Set.of());
+        this.stopWords = StopWords.bundled(targetLanguage).orElse(Set.of());
     }
 
     /**
@@ -158,9 +161,9 @@ final class TermLearning {
         unnamed.forEach(entry -> learner.trackName(entry.term()));
         pairs.forEach(pair -> learner.observe(pair.source(), pair.target()));
         final Set<String> excluded = new HashSet<>(wordsOf(names.data()));
-        excluded.addAll(functionWords);
+        excluded.addAll(stopWords);
         final List<LexiconEntry> affected = tracked.stream()
-                .filter(entry -> everyTerm || named(entry.term(), pairs))
+                .filter(entry -> everyTerm || named(formsOf(entry), pairs))
                 .toList();
         final Map<String, LexiconEntry.Learned> decided = unclaimed(terms.data(), affected, excluded);
         final long changed = affected.stream()
@@ -174,7 +177,7 @@ final class TermLearning {
         if (KeyTermScan.isTitle(entry.term(), analysisLanguage)) {
             learner.trackTitle(entry.term());
         } else {
-            learner.track(entry.term(), true);
+            learner.track(entry.term(), true, entry.forms());
         }
     }
 
@@ -195,7 +198,7 @@ final class TermLearning {
     private void learnSpellings(
             final List<GlossaryEntry> unnamed, final Set<String> excluded, final @Nullable List<Pair> pairs) {
         for (final GlossaryEntry entry : unnamed) {
-            if (pairs == null || named(entry.term(), pairs)) {
+            if (pairs == null || named(List.of(entry.term()), pairs)) {
                 learner.established(entry.term(), excluded).ifPresent(found -> suggest(entry, found));
             }
         }
@@ -203,16 +206,30 @@ final class TermLearning {
 
     // One atomic step against the entry as it is now: a person's edit made on another thread meanwhile is never lost.
     private void suggest(final GlossaryEntry entry, final CooccurrenceLearner.Learned found) {
+        final String spelling = Objects.requireNonNull(TargetText.clean(found.rendering(), targetLanguage), "spelling");
         final Result<Optional<GlossaryEntry>> stored = glossary.update(
                 projectId,
                 entry.term(),
-                current -> lacksSpelling(current) ? current.withSuggestedTarget(found.rendering()) : current);
+                current -> lacksSpelling(current) && !spelling.isBlank()
+                        ? current.withSuggestedTarget(spelling)
+                        : current);
         if (stored.isErr()) {
             log.warn("A learned spelling could not be stored project={}", projectId);
             return;
         }
         log.debug("Learned spelling of a name set project={} support={}", projectId, found.support());
         log.trace("Learned spelling of {} is {}", entry.term(), found.rendering());
+    }
+
+    // A learned rendering is stored without the stress marks its language asks to remove, as every other inflow is.
+    private LexiconEntry.@Nullable Learned cleaned(final LexiconEntry.@Nullable Learned learned) {
+        if (learned == null) {
+            return null;
+        }
+        final String text = TargetText.clean(learned.text(), targetLanguage);
+        return text == null || text.equals(learned.text()) || text.isBlank()
+                ? learned
+                : new LexiconEntry.Learned(text, learned.support(), learned.occurrences());
     }
 
     private static boolean lacksSpelling(final GlossaryEntry entry) {
@@ -251,7 +268,7 @@ final class TermLearning {
     // whose model keeps using a second word is not left with a hint that comes and goes.
     private Optional<CooccurrenceLearner.Learned> retained(final LexiconEntry entry, final Set<String> excluded) {
         return Optional.ofNullable(entry.learned())
-                .flatMap(held -> learner.retained(entry.term(), held.text(), excluded));
+                .flatMap(learned -> learner.retained(entry.term(), learned.text(), excluded));
     }
 
     private void keepIfUnclaimed(
@@ -286,11 +303,19 @@ final class TermLearning {
         return stripped.codePointCount(0, stripped.length()) >= MIN_FAMILY_LETTERS ? stripped : key;
     }
 
-    private static boolean named(final String term, final List<Pair> pairs) {
-        return pairs.stream().anyMatch(pair -> TermMatch.occursIn(term, pair.source()));
+    private static boolean named(final List<String> forms, final List<Pair> pairs) {
+        return pairs.stream().anyMatch(pair -> TermMatch.occursIn(forms, pair.source()));
     }
 
-    private boolean publish(final LexiconEntry entry, final LexiconEntry.@Nullable Learned found) {
+    private static List<String> formsOf(final LexiconEntry entry) {
+        final List<String> forms = new ArrayList<>();
+        forms.add(entry.term());
+        forms.addAll(entry.forms());
+        return forms;
+    }
+
+    private boolean publish(final LexiconEntry entry, final LexiconEntry.@Nullable Learned learned) {
+        final LexiconEntry.Learned found = cleaned(learned);
         if (Objects.equals(entry.learned(), found)) {
             return false;
         }

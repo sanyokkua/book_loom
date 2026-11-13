@@ -14,7 +14,7 @@ class NameRulesTest {
     @CsvSource({
         "uk,Ukrainian orthography's practical transcription",
         "uk-UA,Гарроу",
-        "de,spell them in German by their sound; never translate what they mean. Spell the name the way an educated"
+        "de,'put that meaning in \"meaning\" instead. Spell the name the way an educated native translator would print it,'"
     })
     void rule_transliterate_namesTheTargetsOwnConventionOrTheNeutralOne(final String target, final String phrase) {
         assertThat(NameRules.bundled().rule(NamePolicy.TRANSLITERATE, target))
@@ -23,9 +23,10 @@ class NameRulesTest {
     }
 
     @Test
-    void rule_translate_asksForTheNaturalEquivalentAndAddsTheTermsLine() {
+    void rule_translate_asksToTranslateOrAdaptAndAddsTheTermsLine() {
         assertThat(NameRules.bundled().rule(NamePolicy.TRANSLATE, "uk"))
-                .contains("natural Ukrainian equivalent", "\n- A name made of ordinary words");
+                .contains("Names (translate or adapt names)", "\n- A name made of ordinary words")
+                .doesNotContain("published translation");
     }
 
     @Test

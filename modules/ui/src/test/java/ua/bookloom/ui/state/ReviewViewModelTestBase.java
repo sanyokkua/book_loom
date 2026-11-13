@@ -15,6 +15,7 @@ import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.notify.Reporting;
 
 /** What the review view model tests share: an open book, the recording desk and the segments the desk holds. */
 // The view model is built by each test after it has scripted its fakes, which NullAway cannot see.
@@ -142,7 +143,13 @@ abstract class ReviewViewModelTestBase extends TranslatingViewModelTestBase {
     protected ReviewViewModel newReviewViewModel(final ExecutorService deskExecutor) {
         final ReviewRetry retry = new ReviewRetry(desk, models, mirror, settings, messages, activities);
         return new ReviewViewModel(
-                desk, mirror, current, () -> reviewMode, toasts, errors, retry, deskExecutor, messages);
+                new ReviewServices(desk, retry),
+                mirror,
+                current,
+                () -> reviewMode,
+                new Reporting(toasts, errors),
+                deskExecutor,
+                messages);
     }
 
     protected void open() {

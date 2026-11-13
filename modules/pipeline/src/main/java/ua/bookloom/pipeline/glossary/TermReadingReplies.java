@@ -54,7 +54,8 @@ final class TermReadingReplies {
             @Nullable final String analysisLanguage) {
         final JsonNode root = tree(mapper, reply);
         if (root == null || !root.path("windows").isArray()) {
-            log.warn("Term reading reply for {} could not be read; it reads nothing", term);
+            log.warn("Term reading reply could not be read; it reads nothing");
+            log.trace("Term reading reply of {} could not be read", term);
             return Reading.none(term);
         }
         final QuoteVote votes = QuoteVote.of(analysisLanguage);
@@ -63,11 +64,7 @@ final class TermReadingReplies {
         for (final JsonNode node : root.path("windows")) {
             final int number = node.path("window").asInt(0);
             if (number < 1 || number > windows.size() || !answered.add(number)) {
-                log.debug(
-                        "Term reading of {}: window {} dropped (shown 1..{} or answered twice)",
-                        term,
-                        number,
-                        windows.size());
+                log.debug("Term reading: window {} dropped (shown 1..{} or answered twice)", number, windows.size());
                 continue;
             }
             read.add(windowReading(node, number, windows.get(number - 1), votes));
@@ -76,7 +73,8 @@ final class TermReadingReplies {
                 term,
                 read,
                 root.path("speaking").asBoolean(false),
-                root.path("brand").asBoolean(false));
+                root.path("brand").asBoolean(false),
+                explanationOf(root, windows));
         log.trace("Term reading of {} read as {}", term, reading);
         return reading;
     }
@@ -100,6 +98,20 @@ final class TermReadingReplies {
                 kindOf(node.path("kind").asText("")),
                 claimed,
                 vote);
+    }
+
+    // The window the reply says explains or plays on the name, by its number: only a window the call showed counts, and
+    // 0, a missing field or anything else is none.
+    private static String explanationOf(final JsonNode root, final List<Window> windows) {
+        final int number = root.path("explainsName").asInt(0);
+        if (number < 1 || number > windows.size()) {
+            if (number != 0) {
+                log.debug("Term reading: explaining window {} dropped (shown 1..{})", number, windows.size());
+            }
+            return "";
+        }
+        log.debug("Term reading: window {} explains the name", number);
+        return windows.get(number - 1).text();
     }
 
     // The marks the prompt puts round the term are no part of the book; "none" is no quote.

@@ -9,8 +9,7 @@ import ua.bookloom.api.project.ContextSnapshot;
  * <p>The texts are display text: the document's placeholders are already rendered as a person reads them.
  *
  * @param segmentId the segment the draft is for
- * @param context what the draft sees besides its own source: preceding translations, the rolling summary, the
- *     glossary names and the translation-memory hits
+ * @param context the key to the run's fixed frame and the sections the draft's call was sent with, in display text
  */
 public record ContextAssembled(String segmentId, ContextSnapshot context) implements JobEvent {
 

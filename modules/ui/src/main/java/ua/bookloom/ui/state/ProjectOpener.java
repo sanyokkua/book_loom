@@ -67,9 +67,8 @@ public final class ProjectOpener implements RowOpener {
      * Receives the collaborators the injector owns.
      *
      * @param projects the service a stored project is opened through
-     * @param importer what makes the opened book the window's open one
-     * @param navigator where the step is shown
-     * @param locks which steps are still locked once the book is open
+     * @param targets what makes the opened book the window's open one, where the step is shown, and which steps are
+     *     still locked
      * @param actions where a missing or changed book file is handed
      * @param errors where a failure to open is shown
      * @param runs what opening another project does to the window's run
@@ -78,17 +77,15 @@ public final class ProjectOpener implements RowOpener {
     @Inject
     public ProjectOpener(
             final ProjectService projects,
-            final ImportViewModel importer,
-            final Navigator navigator,
-            final StepLocks locks,
+            final OpenTargets targets,
             final ProjectActions actions,
             final ErrorPresenter errors,
             final RunSwitch runs,
             @BackgroundExecutor final ExecutorService executor) {
         this.projects = Objects.requireNonNull(projects, "projects");
-        this.importer = Objects.requireNonNull(importer, "importer");
-        this.navigator = Objects.requireNonNull(navigator, "navigator");
-        this.locks = Objects.requireNonNull(locks, "locks");
+        this.importer = Objects.requireNonNull(targets, "targets").importer();
+        this.navigator = targets.navigator();
+        this.locks = targets.locks();
         this.actions = Objects.requireNonNull(actions, "actions");
         this.errors = Objects.requireNonNull(errors, "errors");
         this.runs = Objects.requireNonNull(runs, "runs");

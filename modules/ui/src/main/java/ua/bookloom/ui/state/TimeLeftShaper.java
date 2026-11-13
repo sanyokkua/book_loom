@@ -45,7 +45,11 @@ final class TimeLeftShaper {
             final Duration low = last.minusMillis(reach).minus(passed).compareTo(Duration.ZERO) < 0
                     ? Duration.ZERO
                     : last.minusMillis(reach).minus(passed);
-            shown = estimate.compareTo(high) > 0 ? high : estimate.compareTo(low) < 0 ? low : estimate;
+            if (estimate.compareTo(high) > 0) {
+                shown = high;
+            } else {
+                shown = estimate.compareTo(low) < 0 ? low : estimate;
+            }
         }
         at = active;
         return round(shown);

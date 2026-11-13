@@ -46,13 +46,21 @@ public interface ProgressFigures {
      * @param planned the steps of the kind planned, at least {@code done}
      * @param done the steps of the kind finished
      * @param secondsPerStep the measured seconds a step of the kind takes, or {@code null} before one was timed
+     * @param forecast whether {@code planned} holds steps forecast before the work planned them, which the note on how
+     *     progress is counted calls an estimate while no step of the kind was timed
      */
     record KindFigures(
-            StepKind kind, int planned, int done, @Nullable Double secondsPerStep) {
+            StepKind kind, int planned, int done, @Nullable Double secondsPerStep, boolean forecast) {
 
         /** Rejects a missing kind. */
         public KindFigures {
             Objects.requireNonNull(kind, "kind");
+        }
+
+        /** The figures of a kind whose steps were all planned by the work itself. */
+        public KindFigures(
+                final StepKind kind, final int planned, final int done, final @Nullable Double secondsPerStep) {
+            this(kind, planned, done, secondsPerStep, false);
         }
     }
 

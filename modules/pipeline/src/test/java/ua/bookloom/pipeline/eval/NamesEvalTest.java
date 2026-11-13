@@ -18,7 +18,7 @@ import org.junit.jupiter.api.io.TempDir;
  * {@code BOOKLOOM_EVAL_BOOK} (a committed book id or {@code all}, the default) picks the invented failure books; when
  * {@code BOOKLOOM_CORPUS_DIR} is set every {@code *.gold.json} under it runs too. It measures and asserts no floor; the
  * report lands in {@code build/reports/promptEval/<model>-names.json} and {@code .txt}. See
- * {@code docs/DEVELOPMENT.md#names-suite}.
+ * {@code docs/evaluation/eval-suites.md}.
  */
 @Slf4j
 @Tag("promptEval")

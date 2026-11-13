@@ -53,38 +53,33 @@ public final class ReviewDeskLauncher {
     /**
      * Starts following review pauses and finished runs.
      *
-     * @param viewModels the desk's view model
+     * @param providers the desk's view model, the review pause which opens the desk on its segment, what the desk's
+     *     Pause pauses, and the shared technical-details switch
      * @param modals where the desk is shown
      * @param messages the catalogue the desk is worded from
      * @param current the open book, whose languages head the panes
      * @param names the names of those languages
-     * @param pauses the review pause, which opens the desk on its segment
-     * @param translating what the desk's Pause pauses
      * @param mirror the run's state, whose completion may open the desk
-     * @param technical the shared technical-details switch
      * @param ports the review desk port, the settings store and the executor the opening decision reads with
      */
     @Inject
     public ReviewDeskLauncher(
-            final Provider<ReviewViewModel> viewModels,
+            final DeskProviders providers,
             final ModalHost modals,
             final Messages messages,
             final CurrentProject current,
             final LanguageNames names,
-            final Provider<ReviewPauseFollower> pauses,
-            final Provider<TranslatingViewModel> translating,
             final StateMirror mirror,
-            final Provider<TechnicalDetails> technical,
             final Ports ports) {
-        this.viewModels = Objects.requireNonNull(viewModels, "viewModels");
+        this.viewModels = Objects.requireNonNull(providers, "providers").viewModels();
         this.modals = Objects.requireNonNull(modals, "modals");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.current = Objects.requireNonNull(current, "current");
         this.names = Objects.requireNonNull(names, "names");
-        this.pauses = Objects.requireNonNull(pauses, "pauses");
-        this.translating = Objects.requireNonNull(translating, "translating");
+        this.pauses = providers.pauses();
+        this.translating = providers.translating();
         this.mirror = Objects.requireNonNull(mirror, "mirror");
-        this.technical = Objects.requireNonNull(technical, "technical");
+        this.technical = providers.technical();
         Objects.requireNonNull(ports, "ports");
         new ReviewDeskTrigger(
                 mirror, current, ports.desk()::get, ports.settings(), ports.executor(), this::openByItself);
@@ -165,7 +160,7 @@ public final class ReviewDeskLauncher {
                 TranslatingView.languageName(
                         current, BookBrief::targetLanguage, MessageKey.LIVE_TARGET_FALLBACK, names, messages),
                 pauses.get().acceptContinues(),
-                mirror.live().suspicious(),
+                mirror.live(),
                 technical.get().property(),
                 () -> translating.get().pause());
         final ReviewDeskCard desk = new ReviewDeskCard(viewModels.get(), parts, messages, this::close);

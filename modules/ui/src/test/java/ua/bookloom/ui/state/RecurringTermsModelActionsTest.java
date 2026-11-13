@@ -42,11 +42,8 @@ class RecurringTermsModelActionsTest extends FxTestBase {
         final Injector injector = UiTestInjector.create(Locale.ENGLISH);
         settings = injector.getInstance(SettingsViewModel.class);
         vm = onFx(() -> new NamesStyleViewModel(
-                glossary,
-                lexicon,
-                new ScriptedNamesPass(),
-                ScriptedChatModelFactory.ok(),
-                settings,
+                new NamesServices(glossary, lexicon, new ScriptedNamesPass()),
+                new ModelAccess(ScriptedChatModelFactory.ok(), settings),
                 new DirectExecutor(),
                 injector.getInstance(Messages.class),
                 injector.getInstance(ActivityTracker.class),

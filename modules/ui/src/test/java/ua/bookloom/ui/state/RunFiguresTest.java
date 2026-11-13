@@ -51,7 +51,7 @@ class RunFiguresTest {
 
     // IF an empty snapshot divided by its zero total, THEN the dashboard would show NaN instead of no progress.
     @ParameterizedTest
-    @CsvSource({"PREP", "TRANSLATE", "REVISE"})
+    @CsvSource({"PREP", "TRANSLATE", "PROOFREAD"})
     void from_allZeroSnapshot_hasZeroProportionAndNoFailure(final JobStage stage) {
         final RunFigures figures = RunFigures.from(new JobProgress(stage, 0, 0, 0, 0, 0));
 

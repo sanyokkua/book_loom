@@ -21,7 +21,7 @@ import org.junit.jupiter.api.io.TempDir;
  * {@code BOOKLOOM_EVAL_PROVIDER} and {@code BOOKLOOM_EVAL_MODEL}, or {@code scripts/eval-matrix.sh --suite stability}
  * over every model in {@code scripts/eval-models.txt}. It measures and asserts no floor; the report lands in
  * {@code build/reports/promptEval/<model>-<suite>.json} and {@code .txt}. See
- * {@code docs/DEVELOPMENT.md#judgement-evals}.
+ * {@code docs/evaluation/eval-suites.md}.
  */
 @Slf4j
 @Tag("promptEval")

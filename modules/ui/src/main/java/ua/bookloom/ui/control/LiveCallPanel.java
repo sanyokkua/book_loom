@@ -6,7 +6,6 @@ import java.util.function.Consumer;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
-import javafx.beans.binding.Bindings;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -31,7 +30,6 @@ import org.controlsfx.control.SegmentedButton;
 import org.controlsfx.control.ToggleSwitch;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.CallSnapshot;
-import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.LiveCalls;
@@ -43,7 +41,7 @@ import ua.bookloom.ui.state.WaitingCall;
 
 /**
  * The live card of the Translating screen, as tall as the window leaves it: a Live tab with the chunk's rows beside
- * the selected row's detail and the scene summary under it, and an Activity log tab.
+ * the selected row's detail, and an Activity log tab.
  *
  * <p>The Live tab chooses Simple or Detailed (Detailed at first when technical details are on), follows each newly
  * translated segment unless the person picks one, and lists every kept call on "All calls…". Its call line reads as the
@@ -74,15 +72,13 @@ public final class LiveCallPanel extends VBox {
      * @param waiting the call that waits, or {@code null}
      * @param log the mirror's activity log
      * @param technical whether technical details are on
-     * @param summary the scene summary's text, holding {@code null} while there is none
      */
     public record Sources(
             ReadOnlyObjectProperty<LiveCalls> calls,
             ReadOnlyObjectProperty<RunStateView> runs,
             ReadOnlyObjectProperty<@Nullable WaitingCall> waiting,
             ObservableList<LogEntry> log,
-            ObservableBooleanValue technical,
-            ObservableValue<@Nullable String> summary) {}
+            ObservableBooleanValue technical) {}
 
     private final Sources sources;
     private final Messages messages;
@@ -112,11 +108,11 @@ public final class LiveCallPanel extends VBox {
             final SectionMemory memory,
             final Consumer<List<CallSnapshot>> allCalls,
             final Messages messages) {
+        Objects.requireNonNull(allCalls, "allCalls");
         super(SPACING);
         this.sources = Objects.requireNonNull(sources, "sources");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.memory = Objects.requireNonNull(memory, "memory");
-        Objects.requireNonNull(allCalls, "allCalls");
         list = new LiveRowList(messages);
         detail = new LiveRowDetail(names.get(0), names.get(1), memory, messages);
         detailed.set(
@@ -179,7 +175,7 @@ public final class LiveCallPanel extends VBox {
         list.setMinWidth(LIST_MIN);
         list.prefWidthProperty().bind(widthProperty().multiply(LIST_SHARE));
         list.maxWidthProperty().bind(widthProperty().multiply(LIST_SHARE));
-        final VBox side = new VBox(SPACING, detail, summaryLine());
+        final VBox side = new VBox(SPACING, detail);
         side.setMinWidth(0);
         HBox.setHgrow(side, Priority.ALWAYS);
         // The list and the detail stay side by side at every width the window allows; the list keeps its 240 pixels.
@@ -202,23 +198,24 @@ public final class LiveCallPanel extends VBox {
 
     private SegmentedButton modes() {
         final ToggleButton simple = modeButton("translating-live-mode-simple", MessageKey.PROGRESS_VIEW_SIMPLE);
-        final ToggleButton detail = modeButton("translating-live-mode-detailed", MessageKey.PROGRESS_VIEW_DETAILED);
-        final SegmentedButton mode = new SegmentedButton(simple, detail);
+        final ToggleButton detailButton =
+                modeButton("translating-live-mode-detailed", MessageKey.PROGRESS_VIEW_DETAILED);
+        final SegmentedButton mode = new SegmentedButton(simple, detailButton);
         mode.setMinWidth(Region.USE_PREF_SIZE);
         mode.setToggleGroup(new ToggleGroup());
-        mode.getToggleGroup().selectToggle(detailed.get() ? detail : simple);
+        mode.getToggleGroup().selectToggle(detailed.get() ? detailButton : simple);
         // The segmented button puts its buttons in the group only when its skin is made, which drops a choice made
         // before; it is made again then.
         mode.skinProperty()
-                .addListener(
-                        (observed, was, now) -> mode.getToggleGroup().selectToggle(detailed.get() ? detail : simple));
+                .addListener((observed, was, now) ->
+                        mode.getToggleGroup().selectToggle(detailed.get() ? detailButton : simple));
         mode.getToggleGroup().selectedToggleProperty().addListener((observed, was, now) -> {
             if (now == null) {
                 // A segmented control lets its chosen button be pressed off; the view always has one of the two.
                 mode.getToggleGroup().selectToggle(was);
                 return;
             }
-            final boolean choseDetailed = detail.isSelected();
+            final boolean choseDetailed = detailButton.isSelected();
             log.debug("live card: {} view chosen", choseDetailed ? "Detailed" : "Simple");
             memory.remember(MODE_CHOSEN, true);
             memory.remember(DETAILED_KEY, choseDetailed);
@@ -264,35 +261,6 @@ public final class LiveCallPanel extends VBox {
         button.getStyleClass().add("btn-ghost");
         button.setOnAction(event -> allCalls.accept(sources.calls().get().recent()));
         return button;
-    }
-
-    private HBox summaryLine() {
-        final Label icon = new Label("≡");
-        icon.getStyleClass().add("banner-icon");
-        final Label title = new Label(messages.get(MessageKey.LIVE_SUMMARY_TITLE));
-        title.getStyleClass().add("banner-title");
-        final Label text = new Label();
-        text.setId("translating-live-summary-text");
-        text.setWrapText(true);
-        text.getStyleClass().add("banner-text");
-        text.textProperty()
-                .bind(Bindings.createStringBinding(
-                        () -> {
-                            final String summary = sources.summary().getValue();
-                            return summary == null ? messages.get(MessageKey.LIVE_SUMMARY_NONE) : summary;
-                        },
-                        sources.summary()));
-        final Label source = new Label(messages.get(MessageKey.LIVE_SUMMARY_SOURCE, RollingSummary.REFRESH_EVERY));
-        source.setId("translating-live-summary-source");
-        source.setWrapText(true);
-        source.getStyleClass().add("muted");
-        final VBox words = new VBox(2, title, text, source);
-        HBox.setHgrow(words, Priority.ALWAYS);
-        final HBox box = new HBox(SPACING, icon, words);
-        box.setId("translating-live-summary");
-        box.getStyleClass().addAll("banner", "banner-info");
-        box.setMinHeight(Region.USE_PREF_SIZE);
-        return box;
     }
 
     private void show() {

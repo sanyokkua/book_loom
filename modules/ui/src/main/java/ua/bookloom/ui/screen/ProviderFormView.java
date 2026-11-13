@@ -5,8 +5,8 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.scene.control.ContentDisplay;
@@ -15,11 +15,15 @@ import javafx.scene.control.TitledPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.ui.MemorySource;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.dialog.ProviderTestDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ProviderDraft;
+import ua.bookloom.ui.state.ProviderEngine;
 import ua.bookloom.ui.state.ProviderForm;
 import ua.bookloom.ui.state.SettingsViewModel;
 
@@ -40,6 +44,8 @@ final class ProviderFormView {
     private final ProviderConnectionSection connection;
     private final ProviderExtrasSection extras;
     private final ModelField model;
+    // Held here: its draft listener is weak, so the lines live exactly as long as this view.
+    private final ProviderPrivacyLines privacy;
     private final ChangeListener<ProviderDraft> onDraft = (observed, was, now) -> showDraft(now);
     private final ChangeListener<Object> onFeedback = (observed, was, now) -> showFeedback();
     private final ChangeListener<Boolean> onFoldOpen = (observed, was, now) -> fold.setExpanded(now);
@@ -50,16 +56,20 @@ final class ProviderFormView {
     ProviderFormView(
             final SettingsViewModel viewModel,
             final ProviderForm form,
+            final ProviderEngine engine,
             final Messages messages,
-            final ProviderTestDialog dialog) {
+            final ProviderTestDialog dialog,
+            final MemorySource memory) {
         this.form = Objects.requireNonNull(form, "form");
         this.messages = Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(viewModel, "viewModel");
-        connection = new ProviderConnectionSection(form, messages);
-        extras = new ProviderExtrasSection(form, messages);
-        model = new ModelField(viewModel, form, messages);
-        buildFold(new ProviderChecks(viewModel, messages, dialog));
-        root.getChildren().addAll(new ProviderSummaryCard(viewModel, form, messages, dialog).node(), fold);
+        connection = new ProviderConnectionSection(form, engine, messages);
+        extras = new ProviderExtrasSection(viewModel, form, messages);
+        model = new ModelField(viewModel, form, messages, memory);
+        privacy = new ProviderPrivacyLines(form, messages);
+        buildFold(new ProviderChecks(viewModel, messages, dialog), variantLine(engine));
+        root.getChildren()
+                .addAll(new ProviderSummaryCard(viewModel, form, messages, dialog).node(), privacy.node(), fold);
         form.draft().addListener(new WeakChangeListener<>(onDraft));
         form.findings().addListener(new WeakChangeListener<>(onFeedback));
         form.errorsShown().addListener(new WeakChangeListener<>(onFeedback));
@@ -86,7 +96,23 @@ final class ProviderFormView {
         return model;
     }
 
-    private void buildFold(final ProviderChecks checks) {
+    // Said once under the model entry after LM Studio's list was read or the provider saved; typing again ends it.
+    private Label variantLine(final ProviderEngine engine) {
+        final Label line = Wrapped.label("", "hint-warn");
+        line.setId("settings-model-variant-removed");
+        line.textProperty()
+                .bind(Bindings.createStringBinding(
+                        () -> engine.removedVariant().get().isEmpty()
+                                ? ""
+                                : messages.get(
+                                        MessageKey.SETTINGS_LMSTUDIO_VARIANT_REMOVED,
+                                        engine.removedVariant().get()),
+                        engine.removedVariant()));
+        Visibility.bind(line, line.textProperty().isNotEmpty());
+        return line;
+    }
+
+    private void buildFold(final ProviderChecks checks, final Label variant) {
         fold.setId("settings-connection");
         fold.getStyleClass().addAll("import-fold", "settings-fold");
         fold.setText(messages.get(MessageKey.SETTINGS_CONNECTION));
@@ -103,7 +129,8 @@ final class ProviderFormView {
         errors.getStyleClass().add("form-errors");
         errorsText.setId("settings-form-errors-text");
         errorsText.setWrapText(true);
-        final VBox content = new VBox(14, errors, connection.node(), model.node(), extras.node(), checks.node());
+        final VBox content = new VBox(
+                14, errors, connection.node(), new VBox(4, model.node(), variant), extras.node(), checks.node());
         fold.setContent(content);
     }
 
@@ -121,13 +148,14 @@ final class ProviderFormView {
         connection.showCredential(form.credentialStatus().get());
         connection.showAdvice(form.findings().get());
         showFieldErrors();
-        final List<String> lines = form.errorsShown().get()
-                ? form.findings().get().stream()
-                        .filter(ProviderDraft.FormFinding::blocking)
-                        .map(finding ->
-                                messages.get(finding.key(), finding.args().toArray()))
-                        .collect(Collectors.toList())
-                : new ArrayList<>();
+        final List<String> lines = new ArrayList<>(
+                form.errorsShown().get()
+                        ? form.findings().get().stream()
+                                .filter(ProviderDraft.FormFinding::blocking)
+                                .map(finding -> messages.get(
+                                        finding.key(), finding.args().toArray()))
+                                .toList()
+                        : List.of());
         if (form.saveFailed().get()) {
             lines.add(messages.get(MessageKey.SETTINGS_ERROR_SAVE_FAILED));
         }

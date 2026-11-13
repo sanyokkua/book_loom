@@ -13,12 +13,17 @@ public sealed interface ProjectChange {
      * The change was stored.
      *
      * @param project the project as stored
+     * @param rechecked how many decided segments a changed Brief key left with a new finding to look at; 0 for a
+     *     change that re-checks nothing
      */
-    record Saved(Project project) implements ProjectChange {
+    record Saved(Project project, int rechecked) implements ProjectChange {
 
-        /** Validates the project. */
+        /** Validates the project and the count. */
         public Saved {
             Objects.requireNonNull(project, "project");
+            if (rechecked < 0) {
+                throw new IllegalArgumentException("rechecked must not be negative: " + rechecked);
+            }
         }
     }
 

@@ -24,8 +24,10 @@ import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.checks.CheckFinding;
 import ua.bookloom.pipeline.checks.FindingKind;
 import ua.bookloom.pipeline.checks.TextChecks;
+import ua.bookloom.pipeline.glossary.TargetText;
 import ua.bookloom.pipeline.typography.Normalisation;
 import ua.bookloom.pipeline.typography.TypographyNormalizer;
+import ua.bookloom.util.text.StressMarks;
 
 /**
  * A project's stored decisions laid over its opened book, so the writer sees, per segment, the text the file is to
@@ -194,8 +196,15 @@ record EffectiveTargets(
         if (record.userTarget() != null) {
             return decideEdited(segment, record, maskedTarget, target, decision);
         }
-        decision.masked().put(segment.id(), maskedTarget);
-        return segment.withDecision(record.status(), target);
+        decision.masked().put(segment.id(), stripped(maskedTarget, decision));
+        return segment.withDecision(record.status(), stripped(target, decision));
+    }
+
+    // The guard behind the run's own cleaning: a mark that slipped past it is not written. Only a translated text comes
+    // through here; a source fallback is written as it is.
+    private static String stripped(final String text, final Decision decision) {
+        final String language = decision.languages().target();
+        return TargetText.stripsStress(language) ? StressMarks.strip(text) : text;
     }
 
     private static Segment titled(
@@ -204,8 +213,8 @@ record EffectiveTargets(
             final TitleConsistency.Replacement title,
             final Decision decision) {
         log.debug("segment={} takes the book's one translated title or author", segment.id());
-        decision.masked().put(segment.id(), title.masked());
-        return segment.withDecision(record.status(), title.target());
+        decision.masked().put(segment.id(), stripped(title.masked(), decision));
+        return segment.withDecision(record.status(), stripped(title.target(), decision));
     }
 
     // The order for a segment with no target of its own: the model's refused reply when it passes every blocking check,

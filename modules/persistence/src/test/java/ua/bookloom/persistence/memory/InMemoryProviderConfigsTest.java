@@ -24,11 +24,12 @@ class InMemoryProviderConfigsTest {
                         ProviderConfig.DEFAULT_REQUEST_TIMEOUT));
         assertThat(configs.find("lmstudio"))
                 .contains(new ProviderConfig(
-                        "lmstudio",
-                        ProviderKind.OPENAI_COMPATIBLE,
-                        URI.create("http://localhost:1234/v1"),
-                        ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
-                        ProviderConfig.DEFAULT_REQUEST_TIMEOUT));
+                                "lmstudio",
+                                ProviderKind.OPENAI_COMPATIBLE,
+                                URI.create("http://localhost:1234/v1"),
+                                ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
+                                ProviderConfig.DEFAULT_REQUEST_TIMEOUT)
+                        .withEngine(ua.bookloom.api.llm.ServerEngine.LM_STUDIO));
         assertThat(configs.all()).hasSize(2);
     }
 

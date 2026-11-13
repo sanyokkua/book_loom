@@ -7,12 +7,15 @@ import java.util.List;
 import java.util.Locale;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.SegmentView;
+import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.api.project.Severity;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -295,8 +298,35 @@ class ReviewViewModelEditorTest extends ReviewViewModelTestBase {
         select("ch05.xhtml:11");
 
         assertThat(editor()).isEqualTo(DISPLAY_MACHINE);
-        assertThat(onFx(() -> review.editor().targetNote().get())).isEqualTo(MessageKey.REVIEW_TARGET_REJECTED);
+        assertThat(onFx(() -> review.editor().targetNote().get())).isEqualTo(MessageKey.REVIEW_TARGET_REJECTED_CHECKS);
         assertThat(onFx(() -> review.editor().savable().get())).isTrue();
+    }
+
+    // IF the note over a refused reply always said it broke the formatting, THEN a reply refused for its alphabet or
+    // language would be explained by a fault it does not have: the note follows what the checks found.
+    @ParameterizedTest
+    @CsvSource({
+        "markup, placeholder, REVIEW_TARGET_REJECTED",
+        "markup, reply-format, REVIEW_TARGET_REJECTED",
+        "language, alphabet, REVIEW_TARGET_REJECTED_SCRIPT",
+        "language, audit:latin-run, REVIEW_TARGET_REJECTED_SCRIPT",
+        "language, language-identity, REVIEW_TARGET_REJECTED_LANGUAGE",
+        "omission, sentence-count, REVIEW_TARGET_REJECTED_CHECKS"
+    })
+    void select_rejectedReplyWithFinding_noteFollowsTheFindingKind(
+            final String kind, final String raisedBy, final MessageKey expected) {
+        buildReview();
+        final SegmentView refused = view(
+                "ch05.xhtml:11",
+                "ch5 · p12",
+                SegmentStatus.FLAGGED,
+                List.of(new QaFinding(kind, Severity.HIGH, "invented note", raisedBy)),
+                null);
+        desk.willAnswerSegment(withRejected(refused, "Він відчинив ⟦g0⟧старі⟦g1⟧ двері."));
+
+        select("ch05.xhtml:11");
+
+        assertThat(onFx(() -> review.editor().targetNote().get())).isEqualTo(expected);
     }
 
     // With no reply kept either, the source is shown and labelled as the source, and Save waits for a change.

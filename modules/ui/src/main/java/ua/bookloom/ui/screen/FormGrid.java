@@ -134,7 +134,8 @@ final class FormGrid extends Region {
 
     // A control fills its column up to its own maximum, and never goes below its minimum.
     private static double controlWidth(final Node control, final double column) {
-        return Math.max(control.minWidth(-1), Math.min(column, control.maxWidth(-1)));
+        final double bounded = Math.min(column, control.maxWidth(-1));
+        return Math.max(control.minWidth(-1), bounded);
     }
 
     // Read by computePrefHeight and layoutChildren alike, without changing the held state.

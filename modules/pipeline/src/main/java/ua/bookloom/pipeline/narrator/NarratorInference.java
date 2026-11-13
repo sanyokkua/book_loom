@@ -4,14 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.pipeline.checks.QuotedSpans;
-import ua.bookloom.pipeline.prompt.LanguageRules;
+import ua.bookloom.pipeline.glossary.PastTenseReader;
 
 /**
  * Infers an unstated first-person narrator's gender from the decided targets (15i.T5, 15f.A4): after
@@ -36,8 +33,6 @@ public final class NarratorInference {
     public static final double AGREEMENT = 0.8;
 
     private static final long PERCENT = 100;
-    private static final String FEMALE_GROUP = "female";
-    private static final String MALE_GROUP = "male";
 
     /**
      * What the count found.
@@ -54,10 +49,11 @@ public final class NarratorInference {
      * Counts the narrator's own past-tense forms.
      *
      * @param firstPersonTargets the decided targets of the first-person segments, in book order
-     * @param targetLanguage the target language tag, whose {@code firstPersonPast} pattern reads the forms
+     * @param targetLanguage the target language tag, whose past endings and first-person pronouns read the forms
+     *     ({@link PastTenseReader})
      * @return the verdict, or empty when there are fewer than {@link #MIN_SEGMENTS} segments, fewer than
      *     {@link #MIN_FORMS} forms outside quotes, or no gender holds {@link #AGREEMENT} of them, and always when the
-     *     language has no pattern
+     *     language lists no gendered past forms
      */
     public static Optional<Verdict> infer(final List<String> firstPersonTargets, final String targetLanguage) {
         Objects.requireNonNull(firstPersonTargets, "firstPersonTargets");
@@ -70,26 +66,21 @@ public final class NarratorInference {
             log.debug("Narrator inference waits: fewer than {} first-person segments", MIN_SEGMENTS);
             return Optional.empty();
         }
-        final Optional<Pattern> pattern = LanguageRules.bundled().firstPersonPast(targetLanguage);
-        if (pattern.isEmpty()) {
-            log.debug("Narrator inference skipped: {} has no firstPersonPast pattern", targetLanguage);
+        final PastTenseReader reader = PastTenseReader.of(targetLanguage);
+        if (reader == null) {
+            log.debug("Narrator inference skipped: {} lists no gendered past forms", targetLanguage);
             return Optional.empty();
         }
-        return decided(firstPersonTargets, targetLanguage, pattern.get());
+        return decided(firstPersonTargets, reader);
     }
 
-    private static Optional<Verdict> decided(final List<String> targets, final String language, final Pattern pattern) {
+    private static Optional<Verdict> decided(final List<String> targets, final PastTenseReader reader) {
         final Tally feminine = new Tally();
         final Tally masculine = new Tally();
         for (int index = 0; index < targets.size(); index++) {
-            final Matcher forms = pattern.matcher(QuotedSpans.narration(targets.get(index), language));
-            while (forms.find()) {
-                if (forms.group(FEMALE_GROUP) != null) {
-                    feminine.add(index);
-                } else if (forms.group(MALE_GROUP) != null) {
-                    masculine.add(index);
-                }
-            }
+            final PastTenseReader.FirstPersonCount count = reader.firstPerson(List.of(targets.get(index)));
+            feminine.add(index, count.female());
+            masculine.add(index, count.male());
         }
         log.debug("Narrator inference counted {} feminine and {} masculine forms", feminine.forms, masculine.forms);
         final boolean isFemale = feminine.forms > masculine.forms;
@@ -109,9 +100,9 @@ public final class NarratorInference {
         private final List<Integer> segments = new ArrayList<>();
         private int forms;
 
-        void add(final int segment) {
-            forms++;
-            if (segments.isEmpty() || segments.getLast() != segment) {
+        void add(final int segment, final int found) {
+            forms += found;
+            if (found > 0) {
                 segments.add(segment);
             }
         }

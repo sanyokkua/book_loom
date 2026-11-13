@@ -25,8 +25,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.ReadingFixtures.Answer;
 import ua.bookloom.pipeline.glossary.ReadingVerdict.Decision;
@@ -123,14 +123,14 @@ class ReadingVerdictTest {
     @ParameterizedTest(name = "{0} male, {1} female, language {2} -> {3} {4}")
     @CsvSource(
             value = {
-                "2,0,en,MALE,SUGGESTED",
-                "0,2,en,FEMALE,SUGGESTED",
-                "3,1,en,MALE,SUGGESTED",
+                "2,0,en,MALE,LIKELY",
+                "0,2,en,FEMALE,LIKELY",
+                "3,1,en,MALE,LIKELY",
                 "1,0,en,UNKNOWN,NONE",
                 "2,1,en,UNKNOWN,NONE",
-                "3,0,,MALE,SUGGESTED",
-                "4,1,,MALE,SUGGESTED",
-                "2,0,,MALE,SUGGESTED",
+                "3,0,,MALE,LIKELY",
+                "4,1,,MALE,LIKELY",
+                "2,0,,MALE,LIKELY",
                 "3,1,,UNKNOWN,NONE"
             },
             nullValues = "NONE")
@@ -139,7 +139,7 @@ class ReadingVerdictTest {
             final int female,
             @Nullable final String language,
             final Gender gender,
-            @Nullable final GenderOrigin origin) {
+            @Nullable final Origin origin) {
         final List<Answer> answers = answers(
                 times(male, voting(Gender.MALE)),
                 times(female, voting(Gender.FEMALE)),
@@ -170,7 +170,7 @@ class ReadingVerdictTest {
         final Decision decision = ReadingVerdict.decide(facts);
 
         assertThat(decision.gender()).isEqualTo(Gender.MALE);
-        assertThat(decision.origin()).isEqualTo(GenderOrigin.SUGGESTED);
+        assertThat(decision.origin()).isEqualTo(Origin.LIKELY);
     }
 
     // IF the windows outvoted a book whose pronouns favour the other gender (three or more at 60 % or more, 15i.N1),
@@ -181,7 +181,7 @@ class ReadingVerdictTest {
                 decide(answers(times(3, voting(Gender.MALE)), List.of(name(TermReading.Kind.PERSON))), tally(3, 2));
 
         assertThat(decision.gender()).isEqualTo(Gender.FEMALE);
-        assertThat(decision.origin()).isEqualTo(GenderOrigin.SUGGESTED);
+        assertThat(decision.origin()).isEqualTo(Origin.LIKELY);
     }
 
     @Test
@@ -190,7 +190,7 @@ class ReadingVerdictTest {
                 decide(answers(times(2, voting(Gender.FEMALE)), List.of(name(TermReading.Kind.PERSON))), tally(4, 0));
 
         assertThat(decision.gender()).isEqualTo(Gender.FEMALE);
-        assertThat(decision.origin()).isEqualTo(GenderOrigin.VERIFIED);
+        assertThat(decision.origin()).isEqualTo(Origin.BOOK);
     }
 
     // IF a place's or a ship's "he" gave it a gender, THEN a city would be agreed with as a man; places,

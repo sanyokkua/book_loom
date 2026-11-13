@@ -1,0 +1,34 @@
+{
+  "data": [
+    {
+      "id": "example/text-chat",
+      "name": "Example: Text Chat",
+      "architecture": {"modality": "text->text", "input_modalities": ["text"], "output_modalities": ["text"]},
+      "supported_parameters": ["max_tokens", "temperature"]
+    },
+    {
+      "id": "example/vision-chat",
+      "name": "Example: Vision Chat",
+      "architecture": {"modality": "text+image->text", "input_modalities": ["text", "image"], "output_modalities": ["text"]},
+      "supported_parameters": ["max_tokens", "temperature"]
+    },
+    {
+      "id": "example/image-maker",
+      "name": "Example: Image Maker",
+      "architecture": {"modality": "text->image", "input_modalities": ["text"], "output_modalities": ["image"]},
+      "supported_parameters": ["max_tokens"]
+    },
+    {
+      "id": "example/embedder",
+      "name": "Example: Embedder",
+      "architecture": {"modality": "text->embeddings", "input_modalities": ["text"], "output_modalities": ["embeddings"]},
+      "supported_parameters": []
+    },
+    {
+      "id": "example/text-and-image",
+      "name": "Example: Text And Image",
+      "architecture": {"modality": "text->text+image", "input_modalities": ["text"], "output_modalities": ["text", "image"]},
+      "supported_parameters": ["max_tokens"]
+    }
+  ]
+}

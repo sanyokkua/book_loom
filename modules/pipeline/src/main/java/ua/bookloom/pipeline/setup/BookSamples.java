@@ -20,7 +20,7 @@ import ua.bookloom.pipeline.checks.Sentences;
 import ua.bookloom.pipeline.checks.StoryMeasure;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.context.ContextBudget;
-import ua.bookloom.pipeline.narrator.NarratorDetector;
+import ua.bookloom.pipeline.narrator.DialogueShare;
 import ua.bookloom.pipeline.project.SegmentLocators;
 
 /**
@@ -46,7 +46,6 @@ final class BookSamples {
     // Below this a window shows too little of the book to judge, whatever a tiny model window leaves.
     private static final int MIN_WINDOW_TOKENS = 200;
     private static final int MIN_FALLBACK_CHARS = 40;
-    private static final int PERCENT = 100;
     private static final String LOCATOR_SEPARATOR = " · ";
 
     private record Line(int paragraph, String text, String segmentId) {}
@@ -74,19 +73,12 @@ final class BookSamples {
      * leaves after the call's fixed part and the safety margin every setup call keeps.
      *
      * @param dial the quality dial; never null
-     * @param detectedContext the context length the provider reported, or null; limited as
-     *     {@code ContextBudget.windowFor(detectedContext, override)} limits it
-     * @param override the window the person set for the model, or null; replaces the detected one
+     * @param window the model's one window ({@code ModelWindow}); positive
      * @param fixedTokens the tokens the call's system message, its other user text and the reply's cap take; not
      *     negative
      * @return the window's budget in tokens; at least 200, so a window is never empty
      */
-    static int windowTokens(
-            final QualityDial dial,
-            @Nullable final Integer detectedContext,
-            @Nullable final Integer override,
-            final int fixedTokens) {
-        final int window = ContextBudget.windowFor(detectedContext, override);
+    static int windowTokens(final QualityDial dial, final int window, final int fixedTokens) {
         final int room = window - ContextBudget.SAFETY_MARGIN - fixedTokens;
         final int wanted =
                 switch (Objects.requireNonNull(dial, "dial")) {
@@ -94,21 +86,15 @@ final class BookSamples {
                     case BALANCED -> BALANCED_WINDOW_TOKENS;
                     case MAX -> MAX_WINDOW_TOKENS;
                 };
-        final int tokens = Math.max(MIN_WINDOW_TOKENS, Math.min(wanted, room));
+        final int tokens = Math.clamp(Math.min(wanted, room), MIN_WINDOW_TOKENS, Integer.MAX_VALUE);
         log.debug(
-                "Brief window budget: dial={} model window={} override={} fixed={} room={} -> {} tokens",
+                "Brief window budget: dial={} model window={} fixed={} room={} -> {} tokens",
                 dial,
                 window,
-                override,
                 fixedTokens,
                 room,
                 tokens);
         return tokens;
-    }
-
-    /** As the four-argument form for a model whose window the person did not set. */
-    static int windowTokens(final QualityDial dial, @Nullable final Integer detectedContext, final int fixedTokens) {
-        return windowTokens(dial, detectedContext, null, fixedTokens);
     }
 
     /**
@@ -131,7 +117,7 @@ final class BookSamples {
             return List.of();
         }
         final int storyTokens = TokenEstimator.estimate(passage(lines, new Window(0, lines.size())), languageTag);
-        final int count = Math.max(1, Math.min(windows, storyTokens / windowTokens));
+        final int count = Math.clamp(storyTokens / windowTokens, 1, Math.max(1, windows));
         log.debug(
                 "Book samples of {}: {} story sentences, {} tokens, {} of {} wanted windows of {} tokens",
                 document.id(),
@@ -333,24 +319,6 @@ final class BookSamples {
     }
 
     private static int dialoguePercent(final String passage, @Nullable final String languageTag) {
-        long letters = 0;
-        long spoken = 0;
-        for (final String paragraph : passage.lines().toList()) {
-            final String narration = NarratorDetector.narration(paragraph, languageTag);
-            letters += paragraph.chars().filter(Character::isLetter).count();
-            spoken += narration.length() == paragraph.length() ? spokenLetters(paragraph, narration) : 0;
-        }
-        return letters == 0 ? 0 : (int) Math.round((double) spoken * PERCENT / letters);
-    }
-
-    // The letters the narration blanked: what the characters say.
-    private static long spokenLetters(final String paragraph, final String narration) {
-        long count = 0;
-        for (int index = 0; index < paragraph.length(); index++) {
-            if (Character.isLetter(paragraph.charAt(index)) && narration.charAt(index) == ' ') {
-                count++;
-            }
-        }
-        return count;
+        return DialogueShare.of(passage.lines().toList(), languageTag).percent();
     }
 }

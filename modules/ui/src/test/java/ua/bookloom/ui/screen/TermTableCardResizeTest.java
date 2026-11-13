@@ -33,7 +33,7 @@ class TermTableCardResizeTest extends TermTableCardTestBase {
     @ParameterizedTest
     @CsvSource({"names-style", "recurring"})
     void table_eitherCard_flexesItsLastColumnAndKeepsFortySixPixelRows(final String card) throws Exception {
-        showScreen("en", 1024, 700, ROSALIND);
+        showScreen("en", 1280, 700, ROSALIND);
 
         assertThat(table(card).getColumnResizePolicy()).isSameAs(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         assertThat(table(card).getFixedCellSize()).isEqualTo(46.0);
@@ -44,7 +44,7 @@ class TermTableCardResizeTest extends TermTableCardTestBase {
     // IF a minimum were lower, THEN a column could be dragged until its content vanished. A header wider than the
     // minimum raises it (glossaryHeaders_smallWindow_areWhole), so the figure is a floor.
     @ParameterizedTest
-    @CsvSource({"0, 140", "1, 96", "2, 170", "3, 110", "4, 64", "5, 36"})
+    @CsvSource({"0, 96", "1, 104", "2, 76", "3, 170", "4, 80", "5, 84", "6, 36"})
     void glossaryColumns_eachOne_hasItsSpecifiedMinimumWidth(final int column, final double minimum) throws Exception {
         showScreen("en", 1024, 700, ROSALIND);
 
@@ -56,12 +56,12 @@ class TermTableCardResizeTest extends TermTableCardTestBase {
     // IF widening Term squeezed Translation below 170, THEN the target field a person types in would be cut.
     @Test
     void termColumn_draggedTo220_staysThereAndTranslationKeepsItsMinimum() throws Exception {
-        showScreen("en", 1280, 800, ROSALIND);
+        showScreen("en", 1500, 800, ROSALIND);
 
         drag("names-style", 0, 220);
 
         assertThat(width("names-style", 0)).isCloseTo(220, within(TOLERANCE));
-        assertThat(width("names-style", 2)).isGreaterThanOrEqualTo(170 - TOLERANCE);
+        assertThat(width("names-style", 3)).isGreaterThanOrEqualTo(170 - TOLERANCE);
     }
 
     // IF Locked could be dragged under 64, THEN its switch would be cut in half.

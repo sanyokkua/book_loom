@@ -17,7 +17,6 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatModel;
-import ua.bookloom.api.pipeline.ConsistencyChecks;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.Gender;
@@ -31,14 +30,10 @@ import ua.bookloom.pipeline.eval.StageCases.Filler;
 import ua.bookloom.pipeline.eval.StageCases.RetryBook;
 import ua.bookloom.pipeline.eval.StageCases.RetryCase;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
-import ua.bookloom.pipeline.revision.ConsistencyReport;
-import ua.bookloom.pipeline.revision.PassOptions;
 
 /**
  * Plants a book's defective drafts through the real job (see {@link PlantedDrafts}), then hands the stored, decided
- * book to the production repair stages: {@code consistency} runs the whole {@code ConsistencyPass} with the retry of
- * doubted segments ({@code RetryPass}, {@code RetryDraft}) and the check against the neighbours ({@code
- * NeighbourRevision}, {@code RevisionCall}); {@code retry} runs the review desk's {@code RetryDraft.retry} per case.
+ * book to the production repair stages: {@code retry} runs the review desk's {@code RetryDraft.retry} per case.
  * A case passes when the final text is usable (accepted or revised), no longer matches the case's defect pattern and
  * still matches its required one.
  */
@@ -65,19 +60,6 @@ final class RetryEvalRunner {
         return probe;
     }
 
-    List<StageRow> consistency(final List<RetryBook> books) {
-        final List<StageRow> rows = new ArrayList<>();
-        for (final RetryBook book : books) {
-            final Planted planted = plant(book, "consistency");
-            final int mark = probe.mark();
-            final Result<ConsistencyReport> result = SequenceJobs.consistencyPass(planted.prepared())
-                    .run(planted.prepared().projectId(), probe.calls(book.target()), new PassOptions(true, false));
-            rows.add(passRow(book, result, probe.since(mark)));
-            rows.addAll(caseRows(book, planted));
-        }
-        return rows;
-    }
-
     List<StageRow> retry(final List<RetryBook> books) {
         final List<StageRow> rows = new ArrayList<>();
         for (final RetryBook book : books) {
@@ -95,50 +77,6 @@ final class RetryEvalRunner {
             }
         }
         return rows;
-    }
-
-    private StageRow passRow(
-            final RetryBook book, final Result<ConsistencyReport> result, final StageProbe.Counts counts) {
-        final String id = book.id() + ":pass";
-        if (result.isErr()) {
-            return new StageRow(
-                    id,
-                    false,
-                    "error " + Objects.requireNonNull(result.error()).code(),
-                    counts.calls(),
-                    counts.failed(),
-                    counts.repeated(),
-                    0);
-        }
-        final ConsistencyReport report = Objects.requireNonNull(result.data(), "report");
-        final ConsistencyChecks checks = report.checks();
-        final String detail = "improved=%d kept=%d neighbourFixes=%d unchanged=%d skipped=%d refused=%s"
-                .formatted(
-                        checks.retriedImproved(),
-                        checks.retriedKept(),
-                        report.neighbourFixes(),
-                        checks.neighbourUnchanged(),
-                        checks.skipped(),
-                        checks.refused());
-        return new StageRow(
-                id, true, detail, counts.calls(), counts.failed(), counts.repeated(), checks.refusedTotal());
-    }
-
-    private List<StageRow> caseRows(final RetryBook book, final Planted planted) {
-        final Map<String, SegmentRecord> records = new LinkedHashMap<>();
-        Objects.requireNonNull(planted.prepared()
-                        .stores()
-                        .segments()
-                        .all(planted.prepared().projectId())
-                        .data())
-                .forEach(record -> records.put(record.segmentId(), record));
-        return book.cases().stream()
-                .map(retryCase -> verdict(
-                        book.id() + ":" + retryCase.id(),
-                        retryCase,
-                        records.get(planted.idByText().get(retryCase.text())),
-                        new StageProbe.Counts(0, 0, 0)))
-                .toList();
     }
 
     private static StageRow retryRow(
@@ -221,7 +159,7 @@ final class RetryEvalRunner {
         book.glossary()
                 .forEach(seed -> prepared.stores()
                         .glossary()
-                        .add(new GlossaryEntry(
+                        .add(GlossaryEntry.of(
                                 GlossaryIds.of(project, seed.term()),
                                 project,
                                 seed.term(),

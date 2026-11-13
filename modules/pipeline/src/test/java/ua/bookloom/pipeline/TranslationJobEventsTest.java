@@ -55,12 +55,20 @@ class TranslationJobEventsTest {
             "CallSnapshotUpdated",
             "ModelCallFinished",
             "CallSnapshotUpdated",
+            "CallSnapshotUpdated",
             "SegmentDrafted",
             "StepChanged",
             "SegmentDecided",
             "CallSnapshotUpdated");
 
-    private static final List<String> OPENING = List.of("StageStarted", "StageStarted", "StepsPlanned");
+    // The chapter-summary steps (one per chapter) are planned before the chunk's drafts.
+    private static final List<String> OPENING = List.of("StageStarted", "StageStarted", "StepsPlanned", "StepsPlanned");
+
+    // A one-chapter book's chapter is its last: its summary step starts and ends with no call once it is decided.
+    private static final List<String> LAST_CHAPTER = List.of("StepChanged", "StepChanged");
+
+    // Every run ends with its Proofread stage, announced before the run finishes.
+    private static final List<String> PROOFREAD = List.of("StageStarted");
 
     @TempDir
     private Path tempDir;
@@ -86,11 +94,18 @@ class TranslationJobEventsTest {
         assertThat(events)
                 .extracting(JobEventLabels::label)
                 .containsExactlyElementsOf(concat(List.of(
-                        List.of("StageStarted PREP", "StageStarted TRANSLATE", "StepsPlanned"),
+                        List.of("StageStarted PREP", "StageStarted TRANSLATE", "StepsPlanned", "StepsPlanned"),
                         acceptedOnFirstCall("Book.txt:0", 1, 2),
                         acceptedOnFirstCall("Book.txt:1", 2, 1),
                         acceptedOnFirstCall("Book.txt:2", 3, 0),
-                        List.of("Finished COMPLETED"))));
+                        LAST_CHAPTER,
+                        List.of("StageStarted PROOFREAD", "Finished COMPLETED"))));
+        assertStageSnapshots(events);
+    }
+
+    // Each stage starts with the counts of its moment: nothing decided at Prepare and Translate, all three at
+    // Proofread.
+    private static void assertStageSnapshots(final List<JobEvent> events) {
         assertThat(events)
                 .filteredOn(StageStarted.class::isInstance)
                 .extracting(
@@ -100,7 +115,10 @@ class TranslationJobEventsTest {
                         event -> ((StageStarted) event).progress().accepted(),
                         event -> ((StageStarted) event).progress().flagged(),
                         event -> ((StageStarted) event).progress().pending())
-                .containsExactly(tuple(JobStage.PREP, 1, 1, 0, 0, 3), tuple(JobStage.TRANSLATE, 1, 1, 0, 0, 3));
+                .containsExactly(
+                        tuple(JobStage.PREP, 1, 1, 0, 0, 3),
+                        tuple(JobStage.TRANSLATE, 1, 1, 0, 0, 3),
+                        tuple(JobStage.PROOFREAD, 1, 1, 3, 0, 0));
     }
 
     // Building the Finished event from other counts than the returned report would let a screen show one outcome while
@@ -162,7 +180,8 @@ class TranslationJobEventsTest {
 
         assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
         assertThat(selfCalls).hasValue(1);
-        assertThat(healthy).hasSize(2 + 1 + ACCEPTED_ON_FIRST_CALL.size() + 1);
+        assertThat(healthy)
+                .hasSize(OPENING.size() + ACCEPTED_ON_FIRST_CALL.size() + LAST_CHAPTER.size() + PROOFREAD.size() + 1);
     }
 
     // Equal listener instances still need independently removable subscription handles.
@@ -199,7 +218,8 @@ class TranslationJobEventsTest {
         assertThat(throwerCalls).hasValue(1);
         assertThat(healthy)
                 .extracting(event -> event.getClass().getSimpleName())
-                .containsExactlyElementsOf(concat(List.of(OPENING, ACCEPTED_ON_FIRST_CALL, List.of("Finished"))));
+                .containsExactlyElementsOf(
+                        concat(List.of(OPENING, ACCEPTED_ON_FIRST_CALL, LAST_CHAPTER, PROOFREAD, List.of("Finished"))));
     }
 
     // Moving work across this pause boundary would insert another decision between Paused and Resumed.
@@ -225,6 +245,8 @@ class TranslationJobEventsTest {
                         ACCEPTED_ON_FIRST_CALL,
                         List.of("Paused", "Resumed"),
                         ACCEPTED_ON_FIRST_CALL,
+                        LAST_CHAPTER,
+                        PROOFREAD,
                         List.of("Finished"))));
         shutdown(workers);
     }
@@ -264,7 +286,8 @@ class TranslationJobEventsTest {
         return job(TestBooks.markdown(tempDir.resolve("Book.md"), content), model);
     }
 
-    // The shown call waits, is answered, and is shown once more with the decision noted on it.
+    // The shown call waits, is answered, is shown with the item its reply was read as, and once more with the decision
+    // noted on it.
     private static List<String> acceptedOnFirstCall(final String segmentId, final long callId, final int pendingAfter) {
         return List.of(
                 "SegmentStarted " + segmentId,
@@ -273,6 +296,7 @@ class TranslationJobEventsTest {
                 "ModelCallStarted DRAFT " + segmentId,
                 "CallSnapshotUpdated " + callId + " WAITING outcomes=0",
                 "ModelCallFinished DRAFT " + segmentId,
+                "CallSnapshotUpdated " + callId + " ANSWERED outcomes=0",
                 "CallSnapshotUpdated " + callId + " ANSWERED outcomes=0",
                 "SegmentDrafted " + segmentId,
                 "StepChanged",

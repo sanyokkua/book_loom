@@ -7,7 +7,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 /** The deterministic text checks, in Ukrainian (Cyrillic) and Polish (Latin) to show nothing is script-specific. */
 class TextChecksTest {
@@ -107,7 +106,7 @@ class TextChecksTest {
 
     @Test
     void run_dashDialogueAndOtherPunctuation_isNeverReadAsAQuote() {
-        assertThat(uk("“Come here,” she said.", "— Іди сюди, — сказала вона. (Тихо!)"))
+        assertThat(uk("“Come here,” she said.", "— Іди сюди, — сказала вона. (Тихо.)"))
                 .isEmpty();
     }
 
@@ -124,10 +123,22 @@ class TextChecksTest {
     }
 
     @ParameterizedTest(name = "{0}")
-    @ValueSource(strings = {"uk", "ru", "be", "de", "cs", "sk", "sl", "hr", "bg"})
-    void run_balancedEnglishCurlyQuotes_isOnlyASoftNote(final String language) {
-        final List<CheckFinding> findings = TextChecks.run(
-                "“No, sir,” said the boy.", "“Ні, сер,” — відповів хлопчик.", "en", language, List.of(), List.of());
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "uk|“Ні, сер,” — відповів хлопчик.",
+                "ru|“Нет, сэр,” — ответил мальчик.",
+                "be|“Не, сэр,” — адказаў хлопчык.",
+                "bg|“Не, сър,” — отговори момчето.",
+                "de|“Nein, Herr,” — antwortete der Junge.",
+                "cs|“Ne, pane,” — odpověděl chlapec.",
+                "sk|“Nie, pane,” — odpovedal chlapec.",
+                "sl|“Ne, gospod,” — je odgovoril fant.",
+                "hr|“Ne, gospodine,” — odgovorio je dječak."
+            })
+    void run_balancedEnglishCurlyQuotes_isOnlyASoftNote(final String language, final String target) {
+        final List<CheckFinding> findings =
+                TextChecks.run("“No, sir,” said the boy.", target, "en", language, List.of(), List.of());
 
         assertThat(findings)
                 .extracting(CheckFinding::kind, CheckFinding::blocking)
@@ -171,7 +182,9 @@ class TextChecksTest {
 
     @Test
     void run_shortEnglishLine_isLeftToTheEchoCheck() {
-        assertThat(uk("The night was cold.", "The night was cold.")).isEmpty();
+        assertThat(uk("The night was cold.", "The night was cold."))
+                .extracting(CheckFinding::kind)
+                .containsExactly(FindingKind.FUNCTION_WORD_RESIDUE);
     }
 
     @Test
@@ -253,7 +266,7 @@ class TextChecksTest {
             value = {
                 "an ISBN|ISBN 978-3-16-148410-0|ISBN 978-3-16-148410-0",
                 "a web address|www.example.com/books/1|www.example.com/books/1",
-                "an e-mail address|write to editor@example.com|write to editor@example.com",
+                "an e-mail address|editor@example.com|editor@example.com",
                 "bare numbers|1984 2003 42|1984 2003 42",
             })
     void run_digitsAndLocatorsOnly_raiseNothing(final String name, final String source, final String target) {
@@ -280,7 +293,7 @@ class TextChecksTest {
             final String name, final String source, final String target, final String run) {
         assertThat(uk(source, target))
                 .filteredOn(CheckFinding::blocking)
-                .extracting(finding -> finding.kind(), finding -> finding.span().text())
+                .extracting(CheckFinding::kind, finding -> finding.span().text())
                 .containsExactly(tuple(FindingKind.LATIN_RUN, run));
     }
 
@@ -299,32 +312,6 @@ class TextChecksTest {
     void run_latinRunInALatinTarget_isNotAFinding() {
         assertThat(pl("He read the Daily Courier on the train.", "Czytał Daily Courier w pociągu."))
                 .isEmpty();
-    }
-
-    // IF a listed Russian word got no exact replacement, THEN the fix call has to guess the Ukrainian word.
-    @ParameterizedTest(name = "{0}")
-    @CsvSource(
-            delimiter = '|',
-            value = {
-                "lower case|He came too.|Він тоже прийшов.|тоже|теж",
-                "capitalised|Too late.|Тоже пізно.|Тоже|Теж",
-            })
-    void run_listedRussianWord_isSoftWithTheExactReplacement(
-            final String name, final String source, final String target, final String word, final String replacement) {
-        final List<CheckFinding> found = uk(source, target).stream()
-                .filter(finding -> finding.kind() == FindingKind.FOREIGN_WORD)
-                .toList();
-
-        assertThat(found).singleElement().satisfies(finding -> {
-            assertThat(finding.blocking()).isFalse();
-            assertThat(finding.span().text()).isEqualTo(word);
-            assertThat(finding.explanation()).contains("\"" + replacement + "\"");
-        });
-    }
-
-    @Test
-    void run_listedWordThatTheSourceAlsoHas_isLeftAlone() {
-        assertThat(uk("Он сказал тоже.", "Він сказав «тоже».")).noneMatch(f -> f.kind() == FindingKind.FOREIGN_WORD);
     }
 
     // IF the lost name were not reported at run time, THEN the draft keeps the sentence without the place.

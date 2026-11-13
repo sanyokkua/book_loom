@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
@@ -24,10 +25,10 @@ import ua.bookloom.document.fixture.BodyContentEpub;
  */
 class DropCapRoundTripTest {
 
-    private static final String BODY =
-            "<p class=\"tx\"><span class=\"calibre8\">“A</span>ll rules bend,” said his tutor,"
-                    + " “there is one rule.”</p>\n"
-                    + "<p class=\"tx1\">“Remember <i class=\"calibre3\">this,”</i> he said in a soft voice.</p>\n";
+    private static final String BODY = """
+            <p class="tx"><span class="calibre8">“A</span>ll rules bend,” said his tutor, “there is one rule.”</p>
+            <p class="tx1">“Remember <i class="calibre3">this,”</i> he said in a soft voice.</p>
+            """;
 
     private static final String WRAPPED_WHOLE =
             "⟦g0⟧«Усі правила гнуться», — сказав його наставник, — «є одне правило».⟦g1⟧";
@@ -57,7 +58,7 @@ class DropCapRoundTripTest {
 
         final Result<String> result = service.unmask(book.format(), firstBody(book), WRAPPED_WHOLE);
 
-        assertThat(result.error()).isNotNull().extracting(error -> error.code()).isEqualTo(ErrorCode.validation);
+        assertThat(result.error()).isNotNull().extracting(AppError::code).isEqualTo(ErrorCode.validation);
         assertThat(result.data()).isNull();
     }
 

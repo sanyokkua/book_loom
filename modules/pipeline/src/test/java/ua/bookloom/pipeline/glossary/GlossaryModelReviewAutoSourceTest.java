@@ -30,8 +30,8 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
@@ -85,8 +85,8 @@ class GlossaryModelReviewAutoSourceTest {
                         Stream.of("Ash lay in the road."))
                 .toList();
         injector.getInstance(OpenProjects.class).put(PROJECT, book(body, "Title"));
-        service.add(new GlossaryEntry("p1:wren", PROJECT, "Wren", null, TermType.CHARACTER, Gender.UNKNOWN, false));
-        service.add(new GlossaryEntry("p1:ash", PROJECT, "Ash", null, TermType.OTHER, Gender.UNKNOWN, false));
+        service.add(GlossaryEntry.of("p1:wren", PROJECT, "Wren", null, TermType.CHARACTER, Gender.UNKNOWN, false));
+        service.add(GlossaryEntry.of("p1:ash", PROJECT, "Ash", null, TermType.OTHER, Gender.UNKNOWN, false));
 
         final var report = service.review(PROJECT, recording(), event -> {});
 
@@ -94,7 +94,7 @@ class GlossaryModelReviewAutoSourceTest {
         assertThat(Objects.requireNonNull(service.entries(PROJECT).data()))
                 .filteredOn(entry -> entry.term().equals("Wren"))
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(tuple(Gender.FEMALE, GenderOrigin.VERIFIED));
+                .containsExactly(tuple(Gender.FEMALE, Origin.BOOK));
         assertThat(requests).extracting(ChatRequest::callKind).contains(CallKind.REVIEW_TERMS);
         assertThat(requests.stream()
                         .map(GlossaryModelReviewAutoSourceTest::textOf)

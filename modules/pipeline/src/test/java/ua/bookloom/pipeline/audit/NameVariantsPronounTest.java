@@ -18,7 +18,7 @@ class NameVariantsPronounTest {
     @Test
     void find_pronounThatFoldsToTheNameAndTheTargetsUseInLowerCase_isNotAVariant() {
         final GlossaryEntry wynn =
-                new GlossaryEntry("g-Wynn", "p", "Wynn", "Вінн", TermType.CHARACTER, Gender.MALE, false);
+                GlossaryEntry.of("g-Wynn", "p", "Wynn", "Вінн", TermType.CHARACTER, Gender.MALE, false);
         final Map<String, String> targets = new LinkedHashMap<>();
         targets.put("s1", "Вінн пішов додому.");
         targets.put("s2", "Він сказав, що він утомився.");

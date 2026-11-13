@@ -34,7 +34,7 @@ class NamesStyleRunBannerScreenTest extends TranslatingScreenTestBase {
 
     private static final String BANNER = "Translating is going on. Changes apply to the next segments translated.";
     private static final GlossaryEntry VELK =
-            new GlossaryEntry("e1", "p1", "Velk", null, TermType.CHARACTER, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e1", "p1", "Velk", null, TermType.CHARACTER, Gender.UNKNOWN, false);
 
     // Brings the run into one of the states in which a translation is at work, then opens the screen.
     private void atWork(final String state) throws Exception {
@@ -58,7 +58,7 @@ class NamesStyleRunBannerScreenTest extends TranslatingScreenTestBase {
     private void stuck() {
         mirror().live()
                 .publishWaitingCall(new WaitingCall(
-                        CallKind.REVIEW,
+                        CallKind.PROOFREAD,
                         "ch7 · p42",
                         0,
                         1,

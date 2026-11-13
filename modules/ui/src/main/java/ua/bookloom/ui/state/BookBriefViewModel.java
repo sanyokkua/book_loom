@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.function.UnaryOperator;
 import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -14,6 +15,7 @@ import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.AlsoTranslate;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.BriefField;
 import ua.bookloom.api.project.FootnotePolicy;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
@@ -41,6 +43,8 @@ import ua.bookloom.ui.BackgroundExecutor;
 @Singleton
 public final class BookBriefViewModel {
 
+    private static final String CLEARED = "cleared";
+
     private static final int MIN_BALANCE = 0;
     private static final int MAX_BALANCE = 100;
 
@@ -49,6 +53,8 @@ public final class BookBriefViewModel {
     private final BriefLanguageFlags flags;
     private final NarratorNotice narratorNotice;
     private final StyleSuggestion style;
+    private final BriefPolicyKeys policyKeys;
+    private final BriefSummaries summaries;
 
     /**
      * Follows the open book's brief.
@@ -75,8 +81,11 @@ public final class BookBriefViewModel {
                 Objects.requireNonNull(projects, "projects"),
                 Objects.requireNonNull(executor, "executor"),
                 Objects.requireNonNull(outcomes, "outcomes"));
-        project.brief().addListener((observed, was, now) -> flags.derive(now));
-        flags.derive(project.brief().get());
+        this.policyKeys = new BriefPolicyKeys(languages, this::change);
+        this.summaries = new BriefSummaries(project, projects, executor, this::change);
+        project.brief().addListener((observed, was, now) -> derive(now));
+        project.book().addListener((observed, was, now) -> saver.clearRechecked());
+        derive(project.brief().get());
         this.narratorNotice = new NarratorNotice(project, this::setNarratorPerson);
         log.debug(
                 "book brief created, a book is already open: {}", project.book().get() != null);
@@ -99,6 +108,15 @@ public final class BookBriefViewModel {
             final ExecutorService executor,
             final LanguageSupport languages) {
         this(project, projects, executor, languages, null);
+    }
+
+    /**
+     * How many decided segments the last saved Brief change left with a finding to look at.
+     *
+     * @return a read-only property; 0 until a save says otherwise, and again when another book is opened
+     */
+    public ReadOnlyIntegerProperty rechecked() {
+        return saver.rechecked();
     }
 
     /**
@@ -201,9 +219,9 @@ public final class BookBriefViewModel {
      * @param genre the English name of a predefined genre, or free text as typed; blank clears it
      */
     public void setGenre(final String genre) {
-        final String text = blankToNull(genre);
+        final String text = BriefRebuild.blankToNull(genre);
         log.trace("genre is now '{}'", text);
-        change("genre", text == null ? "cleared" : "set", brief -> brief.withGenre(text));
+        change("genre", text == null ? CLEARED : "set", BriefField.GENRE, brief -> brief.withGenre(text));
     }
 
     /**
@@ -212,9 +230,13 @@ public final class BookBriefViewModel {
      * @param voiceEra free text; blank clears it
      */
     public void setVoiceEra(final String voiceEra) {
-        final String text = blankToNull(voiceEra);
+        final String text = BriefRebuild.blankToNull(voiceEra);
         log.trace("voice and era are now '{}'", text);
-        change("voice and era", text == null ? "cleared" : "set", brief -> brief.withVoiceEra(text));
+        change(
+                "voice and era",
+                text == null ? CLEARED : "set",
+                BriefField.VOICE_ERA,
+                brief -> brief.withVoiceEra(text));
     }
 
     /**
@@ -223,9 +245,9 @@ public final class BookBriefViewModel {
      * @param audience free text; blank clears it
      */
     public void setAudience(final String audience) {
-        final String text = blankToNull(audience);
+        final String text = BriefRebuild.blankToNull(audience);
         log.trace("audience is now '{}'", text);
-        change("audience", text == null ? "cleared" : "set", brief -> brief.withAudience(text));
+        change("audience", text == null ? CLEARED : "set", BriefField.AUDIENCE, brief -> brief.withAudience(text));
     }
 
     /**
@@ -235,56 +257,31 @@ public final class BookBriefViewModel {
      */
     public void setRegister(final Register register) {
         Objects.requireNonNull(register, "register");
-        change(
-                "register",
-                register.name(),
-                brief -> BriefRebuild.of(brief, register, null, null, null, null, null, null));
+        change("register", register.name(), BriefField.REGISTER, brief -> BriefRebuild.of(brief, register));
     }
 
-    /**
-     * Sets how character and place names are rendered.
-     *
-     * @param names the name policy
-     */
+    /** Sets how character and place names are rendered. */
     public void setNames(final NamePolicy names) {
         Objects.requireNonNull(names, "names");
-        change("name policy", names.name(), brief -> BriefRebuild.of(brief, null, names, null, null, null, null, null));
+        change("name policy", names.name(), brief -> BriefRebuild.of(brief, names));
     }
 
-    /**
-     * Sets how foreign-language passages are handled.
-     *
-     * @param foreign the foreign-passage policy
-     */
+    /** Sets how foreign-language passages are handled. */
     public void setForeignPassages(final ForeignPassagePolicy foreign) {
         Objects.requireNonNull(foreign, "foreign");
-        change(
-                "foreign-passage policy",
-                foreign.name(),
-                brief -> BriefRebuild.of(brief, null, null, foreign, null, null, null, null));
+        change("foreign-passage policy", foreign.name(), brief -> BriefRebuild.of(brief, foreign));
     }
 
-    /**
-     * Sets how footnotes are handled.
-     *
-     * @param footnotes the footnote policy
-     */
+    /** Sets how footnotes are handled. */
     public void setFootnotes(final FootnotePolicy footnotes) {
         Objects.requireNonNull(footnotes, "footnotes");
-        change(
-                "footnote policy",
-                footnotes.name(),
-                brief -> BriefRebuild.of(brief, null, null, null, footnotes, null, null, null));
+        change("footnote policy", footnotes.name(), brief -> BriefRebuild.of(brief, footnotes));
     }
 
-    /**
-     * Sets how units of measurement are handled.
-     *
-     * @param units the unit policy
-     */
+    /** Sets how units of measurement are handled. */
     public void setUnits(final UnitPolicy units) {
         Objects.requireNonNull(units, "units");
-        change("unit policy", units.name(), brief -> BriefRebuild.of(brief, null, null, null, null, units, null, null));
+        change("unit policy", units.name(), brief -> BriefRebuild.of(brief, units));
     }
 
     /**
@@ -293,11 +290,8 @@ public final class BookBriefViewModel {
      * @param balance the balance; a value outside 0 to 100 is brought to the nearest end
      */
     public void setBalance(final int balance) {
-        final int clamped = Math.max(MIN_BALANCE, Math.min(MAX_BALANCE, balance));
-        change(
-                "balance",
-                Integer.toString(clamped),
-                brief -> BriefRebuild.of(brief, null, null, null, null, null, clamped, null));
+        final int clamped = Math.clamp(balance, MIN_BALANCE, MAX_BALANCE);
+        change("balance", Integer.toString(clamped), brief -> BriefRebuild.ofBalance(brief, clamped));
     }
 
     /**
@@ -307,10 +301,7 @@ public final class BookBriefViewModel {
      */
     public void setAlsoTranslate(final AlsoTranslate alsoTranslate) {
         Objects.requireNonNull(alsoTranslate, "alsoTranslate");
-        change(
-                "also translate",
-                alsoTranslate.toString(),
-                brief -> BriefRebuild.of(brief, null, null, null, null, null, null, alsoTranslate));
+        change("also translate", alsoTranslate.toString(), brief -> BriefRebuild.of(brief, alsoTranslate));
     }
 
     /**
@@ -320,10 +311,7 @@ public final class BookBriefViewModel {
      */
     public void setNarratorPerson(final NarratorPerson person) {
         Objects.requireNonNull(person, "person");
-        change(
-                "narrator person",
-                person.name(),
-                brief -> brief.withNarrator(brief.narrator().withPerson(person)));
+        changeNarrator("narrator person", person.name(), narrator -> narrator.withPerson(person));
     }
 
     /**
@@ -333,10 +321,7 @@ public final class BookBriefViewModel {
      */
     public void setNarratorGender(final Gender gender) {
         Objects.requireNonNull(gender, "gender");
-        change(
-                "narrator gender",
-                gender.name(),
-                brief -> brief.withNarrator(new Narrator(brief.narrator().person(), gender)));
+        changeNarrator("narrator gender", gender.name(), narrator -> new Narrator(narrator.person(), gender));
     }
 
     /**
@@ -346,10 +331,7 @@ public final class BookBriefViewModel {
      */
     public void setFirstPersonNarrator(final Gender gender) {
         Objects.requireNonNull(gender, "gender");
-        change(
-                "first-person narrator",
-                gender.name(),
-                brief -> brief.withNarrator(new Narrator(NarratorPerson.FIRST, gender)));
+        changeNarrator("first-person narrator", gender.name(), narrator -> new Narrator(NarratorPerson.FIRST, gender));
     }
 
     /**
@@ -362,31 +344,49 @@ public final class BookBriefViewModel {
         change("quality dial", dial.name(), brief -> brief.withDial(dial));
     }
 
-    private static @Nullable String blankToNull(final String text) {
-        Objects.requireNonNull(text, "text");
-        return text.isBlank() ? null : text;
+    private void change(final String field, final String value, final UnaryOperator<BookBrief> edit) {
+        change(field, value, null, edit);
     }
 
-    private void change(final String field, final String value, final UnaryOperator<BookBrief> edit) {
+    private void changeNarrator(final String field, final String value, final UnaryOperator<Narrator> edit) {
+        change(field, value, BriefField.NARRATOR, brief -> brief.withNarrator(edit.apply(brief.narrator())));
+    }
+
+    // A field the person edits is no longer a guess: it leaves the likely set whatever the edit made of it.
+    private void change(
+            final String field,
+            final String value,
+            final @Nullable BriefField edited,
+            final UnaryOperator<BookBrief> edit) {
         final OpenedBook book = project.book().get();
         final BookBrief current = project.brief().get();
         if (book == null || current == null) {
             log.debug("{} not changed: no book is open", field);
             return;
         }
-        final BookBrief changed = edit.apply(current);
+        final BookBrief changed = BriefRebuild.confirmed(edit.apply(current), edited);
         log.debug("{} is now {}", field, value);
         if (changed.equals(current)) {
             log.debug("{} was already so; nothing is saved", field);
             return;
         }
         project.replaceBrief(changed);
-        // A same-language pair is shown but never stored, so the project keeps its pair and name until they differ.
-        if (changed.targetLanguage() != null && Objects.equals(changed.sourceLanguage(), changed.targetLanguage())) {
-            log.debug("{} not saved: source and target are both {}", field, changed.targetLanguage());
-            return;
-        }
         saver.enqueue(book.projectId(), changed);
+    }
+
+    private void derive(final @Nullable BookBrief brief) {
+        flags.derive(brief);
+        policyKeys.derive(brief);
+    }
+
+    /** {@return the story shape and the Chapter summaries switch, with what turning the switch on costs} */
+    public BriefSummaries summaries() {
+        return summaries;
+    }
+
+    /** The apostrophe, quotation-mark, address and convention choices the target offers, and their setters. */
+    public BriefPolicyKeys policyKeys() {
+        return policyKeys;
     }
 
     /**

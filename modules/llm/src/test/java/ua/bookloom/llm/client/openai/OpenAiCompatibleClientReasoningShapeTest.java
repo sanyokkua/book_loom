@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -25,20 +26,23 @@ import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ReasoningLevel;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
 
 /**
- * Thinking per call (15i.X2) at the OpenAI-compatible HTTP seam (LM Studio): a call with thinking on states a
+ * Thinking per call (15i.X2) at the OpenAI-compatible HTTP seam (LM Studio, whose engine switches thinking by
+ * {@code reasoning_effort}): a call with thinking on states a
  * {@code reasoning_effort} and gets room in {@code max_tokens} for its reasoning, a call with it off sends today's
  * request unchanged.
  */
 class OpenAiCompatibleClientReasoningShapeTest {
 
     private static final String MODEL_ID = "google/gemma-4-e4b";
-    private static final String CHAT_PATH = "/v1/chat/completions";
+    // LM Studio's own route, where its chat goes first.
+    private static final String CHAT_PATH = "/api/v0/chat/completions";
     private static final String REPLY = """
             {"model":"google/gemma-4-e4b","choices":[{"message":{"content":"reply"},"finish_reason":"stop"}]}
             """;
@@ -76,23 +80,14 @@ class OpenAiCompatibleClientReasoningShapeTest {
                 .withRequestBody(matchingJsonPath("$.reasoning_effort", equalTo(effort))));
     }
 
-    // IF the level is Low, THEN max_tokens grows by the reasoning headroom as for On; Off keeps the cap as asked.
+    // The room for reasoning is already in the cap the profile's decision set, so the client sends it as given.
     @ParameterizedTest
-    @CsvSource({"OFF,300", "LOW,1324", "ON,1324"})
-    void chat_level_growsMaxTokensOnlyWhenTheModelReasons(final ReasoningLevel level, final String maxTokens) {
+    @CsvSource({"OFF", "LOW", "ON"})
+    void chat_level_sendsTheCapAsGiven(final ReasoningLevel level) {
         client().chat(MODEL_ID, request(300, level));
 
         server.verify(postRequestedFor(urlEqualTo(CHAT_PATH))
-                .withRequestBody(matchingJsonPath("$.max_tokens", equalTo(maxTokens))));
-    }
-
-    // IF a call has thinking on, THEN its max_tokens grows by 1,024 tokens for the reasoning.
-    @Test
-    void chat_thinkingOn_growsMaxTokensByTheReasoningHeadroom() {
-        client().chat(MODEL_ID, request(300, ReasoningLevel.ON));
-
-        server.verify(postRequestedFor(urlEqualTo(CHAT_PATH))
-                .withRequestBody(matchingJsonPath("$.max_tokens", equalTo("1324"))));
+                .withRequestBody(matchingJsonPath("$.max_tokens", equalTo("300"))));
     }
 
     @Test
@@ -108,8 +103,8 @@ class OpenAiCompatibleClientReasoningShapeTest {
     void chat_thinkingUnspecified_omitsTheEffortAndKeepsTheCap() {
         client().chat(MODEL_ID, request(300, null));
 
-        assertThat(server.getAllServeEvents())
-                .extracting(event -> event.getRequest().getBodyAsString())
+        assertThat(server.findAll(postRequestedFor(urlEqualTo(CHAT_PATH))))
+                .extracting(LoggedRequest::getBodyAsString)
                 .allSatisfy(body ->
                         assertThat(body).doesNotContain("reasoning_effort").contains("\"max_tokens\":300"));
     }
@@ -129,8 +124,8 @@ class OpenAiCompatibleClientReasoningShapeTest {
                                 null,
                                 null));
 
-        assertThat(server.getAllServeEvents())
-                .extracting(event -> event.getRequest().getBodyAsString())
+        assertThat(server.findAll(postRequestedFor(urlEqualTo(CHAT_PATH))))
+                .extracting(LoggedRequest::getBodyAsString)
                 .allSatisfy(body -> assertThat(body)
                         .contains("\"reasoning_effort\":\"medium\"")
                         .doesNotContain("max_tokens"));
@@ -151,11 +146,12 @@ class OpenAiCompatibleClientReasoningShapeTest {
 
     private OpenAiCompatibleClient client() {
         final ProviderConfig config = new ProviderConfig(
-                "lmstudio",
-                ProviderKind.OPENAI_COMPATIBLE,
-                URI.create(server.baseUrl() + "/v1"),
-                Duration.ofSeconds(2),
-                Duration.ofSeconds(2));
+                        "lmstudio",
+                        ProviderKind.OPENAI_COMPATIBLE,
+                        URI.create(server.baseUrl() + "/v1"),
+                        Duration.ofSeconds(2),
+                        Duration.ofSeconds(2))
+                .withEngine(ServerEngine.LM_STUDIO);
         return new OpenAiCompatibleClient(
                 config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
     }

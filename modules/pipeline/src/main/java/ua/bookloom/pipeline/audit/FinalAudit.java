@@ -25,8 +25,10 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.Tokens;
+import ua.bookloom.pipeline.checks.NegationCount;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.project.SegmentLocators;
+import ua.bookloom.pipeline.prompt.NegationPairs;
 import ua.bookloom.pipeline.qa.CheckName;
 import ua.bookloom.pipeline.qa.CheckResult;
 import ua.bookloom.pipeline.qa.QaEvaluator;
@@ -45,6 +47,8 @@ import ua.bookloom.pipeline.qa.SoftCheckInput;
 public final class FinalAudit {
 
     private static final String TOKEN_LEAK = "token-leak";
+    private static final String NEGATION = "negation";
+    private static final int MIN_LOST_NEGATIONS = 2;
 
     /**
      * The book as the audit reads it.
@@ -94,6 +98,7 @@ public final class FinalAudit {
             }
         }
         addNameVariants(book, targets, sourceTexts, doubted);
+        addSourceVariants(sourceTexts, targets, doubted);
         log.debug("Final audit looked at {} record(s) and doubts {}", records.size(), doubted.size());
         return doubted;
     }
@@ -133,6 +138,7 @@ public final class FinalAudit {
         final String sourceText = DisplayText.of(source.masked());
         final String target = DisplayText.of(maskedTarget);
         final List<QaFinding> found = new ArrayList<>(textChecks(book, source, sourceText, target));
+        negationDoubt(book, sourceText, target).ifPresent(found::add);
         final List<String> checks =
                 found.stream().map(QaFinding::raisedBy).distinct().toList();
         log.debug("Audit checks of segment {}: {}", source.id(), checks);
@@ -157,6 +163,40 @@ public final class FinalAudit {
                 });
     }
 
+    // A refrain translated two ways is a fact about the whole book, found after every segment has been read.
+    private static void addSourceVariants(
+            final Map<String, String> sourceTexts,
+            final Map<String, String> targets,
+            final Map<String, List<QaFinding>> doubted) {
+        SourceVariants.find(sourceTexts, targets).forEach((segmentId, variants) -> {
+            final List<QaFinding> merged = new ArrayList<>(doubted.getOrDefault(segmentId, List.of()));
+            variants.stream().map(AuditFindings::of).forEach(merged::add);
+            doubted.put(segmentId, List.copyOf(merged));
+        });
+    }
+
+    // A lost negation turns a sentence into its opposite; counting them is right only for a close pair, so it is
+    // advice.
+    private static Optional<QaFinding> negationDoubt(final Book book, final String sourceText, final String target) {
+        final BookBrief brief = book.brief();
+        final String targetLanguage = Objects.requireNonNull(brief.targetLanguage(), "target language");
+        if (!NegationPairs.counts(brief.sourceLanguage(), targetLanguage)) {
+            return Optional.empty();
+        }
+        final int lost = NegationCount.of(sourceText, Objects.requireNonNull(brief.sourceLanguage()))
+                - NegationCount.of(target, targetLanguage);
+        if (lost < MIN_LOST_NEGATIONS) {
+            return Optional.empty();
+        }
+        log.debug("Negation check: the target holds {} fewer negation words than its source", lost);
+        return Optional.of(new QaFinding(
+                "meaning",
+                Severity.LOW,
+                "The source holds " + lost + " more negation words than the translation: check that no negation was"
+                        + " lost.",
+                NEGATION));
+    }
+
     private static String maskedTarget(final SegmentRecord record) {
         return record.maskedUserTarget() != null
                 ? record.maskedUserTarget()
@@ -178,6 +218,7 @@ public final class FinalAudit {
         final String target = DisplayText.of(masked);
         final List<QaFinding> found = new ArrayList<>();
         textChecks(book, source, sourceText, target).forEach(found::add);
+        negationDoubt(book, sourceText, target).ifPresent(found::add);
         tokenLeak(record).ifPresent(found::add);
         final List<QaFinding> audited = found.stream().map(AuditFindings::of).toList();
         if (!audited.isEmpty()) {

@@ -64,7 +64,7 @@ final class XmlDocumentSerializer {
         }
         try {
             return Charset.forName(encoding.group(1));
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             log.debug("XML declaration names an unsupported encoding; writing UTF-8");
             return StandardCharsets.UTF_8;
         }

@@ -53,11 +53,16 @@ public final class HowCountedPane extends TitledPane {
         kindLines.getChildren().setAll(kinds.stream().map(this::kindLine).toList());
     }
 
+    // A forecast kind with no measured time is an estimate; a planned one is merely not timed yet.
+    private static MessageKey untimedKey(final ProgressFigures.KindFigures kind) {
+        return kind.forecast() ? MessageKey.PROGRESS_HOW_COUNTED_ESTIMATE : MessageKey.PROGRESS_HOW_COUNTED_UNTIMED;
+    }
+
     private Label kindLine(final ProgressFigures.KindFigures kind) {
         final String name = messages.get(kindName(kind.kind()));
         final Double seconds = kind.secondsPerStep();
         final String text = seconds == null
-                ? messages.get(MessageKey.PROGRESS_HOW_COUNTED_UNTIMED, name, kind.done(), kind.planned())
+                ? messages.get(untimedKey(kind), name, kind.done(), kind.planned())
                 : messages.get(
                         MessageKey.PROGRESS_HOW_COUNTED_LINE,
                         name,
@@ -72,12 +77,11 @@ public final class HowCountedPane extends TitledPane {
     private static MessageKey kindName(final StepKind kind) {
         return switch (kind) {
             case DRAFT -> MessageKey.PROGRESS_KIND_DRAFT;
-            case CHECK -> MessageKey.PROGRESS_KIND_CHECK;
             case REPAIR -> MessageKey.PROGRESS_KIND_REPAIR;
             case RE_ASK -> MessageKey.PROGRESS_KIND_RE_ASK;
             case RESEND -> MessageKey.PROGRESS_KIND_RESEND;
             case SUMMARY -> MessageKey.PROGRESS_KIND_SUMMARY;
-            case REVISION -> MessageKey.PROGRESS_KIND_REVISION;
+            case PROOFREAD -> MessageKey.PROGRESS_KIND_PROOFREAD;
             case STAGE -> MessageKey.PROGRESS_KIND_STAGE;
             case REQUEST -> MessageKey.PROGRESS_KIND_REQUEST;
         };

@@ -270,39 +270,6 @@ class SegmentActionsTest {
     }
 
     @Test
-    void skip_flaggedSegment_answersTheNextFlaggedIdAndChangesNothing() {
-        // Skip moves the queue on: no change, not reviewed
-        final Desk desk = flaggedThree();
-        final SegmentRecord before = stored(desk, FLAGGED_ID);
-
-        final Result<String> next = desk.actions().skip(desk.projectId(), FLAGGED_ID);
-
-        assertThat(next.data()).isEqualTo(ReviewFixtures.NAMES_ID);
-        assertThat(stored(desk, FLAGGED_ID)).isEqualTo(before);
-        assertThat(stored(desk, FLAGGED_ID).reviewed()).isFalse();
-    }
-
-    @Test
-    void skip_lastFlaggedSegment_wrapsToTheFirst() {
-        // the queue is a ring: after the last flagged segment comes the first
-        final Desk desk = flaggedThree();
-
-        assertThat(desk.actions()
-                        .skip(desk.projectId(), ReviewFixtures.SCRIPT_ID)
-                        .data())
-                .isEqualTo(FLAGGED_ID);
-    }
-
-    @Test
-    void skip_onlyFlaggedSegment_answersItself() {
-        // with no other flagged segment there is nowhere to move on to
-        final Desk desk = ReviewFixtures.epub(tempDir);
-        flag(desk, FLAGGED_ID, MONSTER_TARGET);
-
-        assertThat(desk.actions().skip(desk.projectId(), FLAGGED_ID).data()).isEqualTo(FLAGGED_ID);
-    }
-
-    @Test
     void acceptProposal_storedProposal_becomesUserTargetAndResolvesTheDeferral() {
         // a backward-revision proposal changes an edited segment only when the person accepts it
         final Desk desk = ReviewFixtures.epub(tempDir);
@@ -341,14 +308,6 @@ class SegmentActionsTest {
 
         assertThat(error(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(stored(desk, "ch02.xhtml:6")).isEqualTo(before);
-    }
-
-    private Desk flaggedThree() {
-        final Desk desk = ReviewFixtures.epub(tempDir);
-        flag(desk, FLAGGED_ID, MONSTER_TARGET);
-        flag(desk, ReviewFixtures.NAMES_ID, "Гейл пішов.");
-        flag(desk, ReviewFixtures.SCRIPT_ID, "Дім.");
-        return desk;
     }
 
     private static SegmentRecord ok(final Result<SegmentRecord> result) {

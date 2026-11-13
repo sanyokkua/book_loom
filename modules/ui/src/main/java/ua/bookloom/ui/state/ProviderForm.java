@@ -6,11 +6,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.function.UnaryOperator;
-import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyLongProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
@@ -114,6 +114,11 @@ public final class ProviderForm {
     /** Whether a save or a delete is under way. */
     public ReadOnlyBooleanProperty saving() {
         return flags.saving.getReadOnlyProperty();
+    }
+
+    /** How many saves have reached storage; each one asks the server which engine it is. */
+    public ReadOnlyLongProperty saves() {
+        return flags.saves.getReadOnlyProperty();
     }
 
     /** Whether the last save or delete failed in storage; the draft is untouched. */
@@ -224,16 +229,15 @@ public final class ProviderForm {
             log.debug("save of '{}' refused: {} finding(s)", id, findings.get().size());
             return;
         }
-        final boolean current =
+        final boolean isCurrent =
                 !adding && id.equals(viewModel.selectedProviderId().get());
         final ProviderConfig config = Objects.requireNonNull(built.data(), "data");
-        log.debug("saving '{}': adding {}, current {}", id, adding, current);
+        log.debug("saving '{}': adding {}, current {}", id, adding, isCurrent);
         flags.saving.set(true);
         flags.saveFailed.set(false);
         executor.execute(() -> {
-            final Result<Boolean> stored =
-                    storage.persist(config, current ? typed.model().strip() : null);
-            onFx(() -> saved(stored, new ProviderSaved(id, adding, current, typed), then));
+            final Result<Boolean> stored = storage.persist(config, typed.model(), isCurrent);
+            FxThread.run(() -> saved(stored, new ProviderSaved(id, adding, isCurrent, typed), then));
         });
     }
 
@@ -313,6 +317,7 @@ public final class ProviderForm {
             }
             showStored(done);
             flags.saving.set(false);
+            flags.saves.set(flags.saves.get() + 1);
             flags.justSaved.set(!dirty.get());
             then.run();
         });
@@ -330,13 +335,19 @@ public final class ProviderForm {
         recompute();
     }
 
+    // What a detection found is not typing: where storage holds it too, the saved baseline takes it as well.
+    void adoptEngine(final UnaryOperator<DraftEngine> change, final boolean stored) {
+        if (stored) {
+            baseline = baseline.withEngine(change.apply(baseline.engine()));
+        }
+        draft.set(draft.get().withEngine(change.apply(draft.get().engine())));
+        recompute();
+    }
+
     private void loadDraft() {
+        final String id = viewModel.editedProviderId().get();
         ProviderDrafts.open(viewModel)
-                .ifPresentOrElse(
-                        this::setBaseline,
-                        () -> log.debug(
-                                "no provider '{}' to load into the form",
-                                viewModel.editedProviderId().get()));
+                .ifPresentOrElse(this::setBaseline, () -> log.debug("no provider '{}' to load", id));
     }
 
     private void setBaseline(final ProviderDraft next) {
@@ -362,12 +373,10 @@ public final class ProviderForm {
     // The current model changed from outside (the first-launch look, a save): the open form follows it when it is the
     // current provider's, and whatever else was typed stays.
     private void onSavedModelChanged(final String was, final String now) {
-        final boolean current = !viewModel.adding().get()
-                && viewModel
-                        .editedProviderId()
-                        .get()
-                        .equals(viewModel.selectedProviderId().get());
-        if (current && baseline.model().equals(was)) {
+        final String edited = viewModel.editedProviderId().get();
+        final boolean isCurrent = !viewModel.adding().get()
+                && edited.equals(viewModel.selectedProviderId().get());
+        if (isCurrent && baseline.model().equals(was)) {
             final boolean untouched = draft.get().model().equals(was);
             baseline = baseline.withModel(now);
             if (untouched) {
@@ -386,13 +395,5 @@ public final class ProviderForm {
         credentialStatus.set(now.credentialStatus(environment));
         canUseThis.set(ProviderDrafts.canUse(viewModel, now, baseline));
         ProviderDrafts.publishSubject(viewModel, draft::get, () -> baseline);
-    }
-
-    private static void onFx(final Runnable action) {
-        if (Platform.isFxApplicationThread()) {
-            action.run();
-        } else {
-            Platform.runLater(action);
-        }
     }
 }

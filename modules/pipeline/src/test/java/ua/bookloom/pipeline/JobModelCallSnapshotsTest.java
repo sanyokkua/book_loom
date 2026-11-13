@@ -18,11 +18,15 @@ import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.CallAttempt;
+import ua.bookloom.api.llm.CallAttemptListener;
 import ua.bookloom.api.llm.ChatMessage;
+import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.llm.ModelWindow;
 import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallItemStatus;
 import ua.bookloom.api.pipeline.CallKind;
@@ -34,7 +38,6 @@ import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.pipeline.SegmentOutcomeNote;
 import ua.bookloom.api.project.SegmentLocator;
-import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.run.JobModelCalls;
@@ -66,7 +69,7 @@ class JobModelCallSnapshotsTest {
                 events::add,
                 new FixedClock(),
                 "uk",
-                ContextBudget.DEFAULT_WINDOW,
+                ModelWindow.DEFAULT_WINDOW,
                 LOCATORS);
     }
 
@@ -88,6 +91,55 @@ class JobModelCallSnapshotsTest {
                 .extracting(CallSnapshot::callId, CallSnapshot::state, CallSnapshot::reply)
                 .containsExactly(tuple(1L, CallState.WAITING, null), tuple(1L, CallState.ANSWERED, "{\"items\":[]}"));
         assertThat(snapshots().getLast().usage()).isNotNull();
+    }
+
+    @Test
+    void callAbout_clientReportsTheWireBodyAndRawReply_snapshotsHoldThemAfterTheRequestWentOut() {
+        final ChatModel wired = new ChatModel() {
+            @Override
+            public Result<ChatResponse> chat(final ChatRequest request) {
+                return Result.ok(new ChatResponse("ok", FinishReason.STOP, null, "{\"raw\":true}"));
+            }
+
+            @Override
+            public Result<ChatResponse> chat(final ChatRequest request, final CallAttemptListener attempts) {
+                attempts.started(new CallAttempt(1, 1, null, null, "{\"wire\":1}"));
+                return chat(request);
+            }
+        };
+
+        new JobModelCalls(
+                        onSent -> new CancellableChatModel(wired, control, onSent),
+                        events::add,
+                        new FixedClock(),
+                        "uk",
+                        ModelWindow.DEFAULT_WINDOW,
+                        LOCATORS)
+                .callAbout(CallKind.DRAFT, IDS, REQUEST, BATCH);
+
+        assertThat(snapshots())
+                .extracting(CallSnapshot::requestBody, CallSnapshot::rawReply)
+                .containsExactly(tuple("{\"wire\":1}", null), tuple("{\"wire\":1}", "{\"raw\":true}"));
+    }
+
+    @Test
+    void callAbout_aboutNoSegment_waitingSnapshotHoldsWhatWasAskedAndReadAddsTheAnswers() {
+        final JobModelCalls calls = callsOver(TranslationJobTestSupport.replies("x"));
+
+        calls.callAbout(
+                CallKind.NAME_KNOWLEDGE,
+                List.of(),
+                REQUEST,
+                CallDescriptor.asking(PromptName.NAME_KNOWLEDGE, List.of("Ivar", "Mira")));
+        calls.read(List.of(CallItem.answered("Ivar", "male"), CallItem.asked("Mira")));
+
+        assertThat(snapshots().getFirst().items())
+                .extracting(CallItem::id, CallItem::target)
+                .containsExactly(tuple("Ivar", null), tuple("Mira", null));
+        assertThat(snapshots().getLast().items())
+                .extracting(CallItem::id, CallItem::target)
+                .containsExactly(tuple("Ivar", "male"), tuple("Mira", null));
+        assertThat(snapshots().getLast().state()).isEqualTo(CallState.ANSWERED);
     }
 
     @Test
@@ -119,7 +171,7 @@ class JobModelCallSnapshotsTest {
         final ScriptedChatModel cancelled =
                 new ScriptedChatModel().answer(Result.err(AppError.of(ErrorCode.cancelled, "Cancelled", "Stopped.")));
 
-        callsOver(cancelled).callAbout(CallKind.REVIEW, IDS, REQUEST, BATCH);
+        callsOver(cancelled).callAbout(CallKind.PROOFREAD, IDS, REQUEST, BATCH);
 
         assertThat(snapshots()).extracting(CallSnapshot::state).containsExactly(CallState.WAITING, CallState.CANCELLED);
     }
@@ -136,7 +188,7 @@ class JobModelCallSnapshotsTest {
 
     @Test
     void callAbout_notDescribed_showsNoSnapshot() {
-        callsOver(TranslationJobTestSupport.replies("x")).callAbout(CallKind.SUMMARY, List.of(), REQUEST);
+        callsOver(TranslationJobTestSupport.replies("x")).callAbout(CallKind.CHAPTER_SUMMARY, List.of(), REQUEST);
 
         assertThat(snapshots()).isEmpty();
     }
@@ -171,8 +223,7 @@ class JobModelCallSnapshotsTest {
                 "REVIEW_TERMS",
                 "SUGGEST_TARGETS",
                 "TERM_CHOICE",
-                "SUMMARY",
-                "SUSPICIOUS_WORDS",
+                "CHAPTER_SUMMARY",
                 "BRIEF_SUGGESTION",
                 "FILE_NAME",
                 "BOOK_KNOWLEDGE",
@@ -199,7 +250,7 @@ class JobModelCallSnapshotsTest {
         final JobModelCalls calls = callsOver(TranslationJobTestSupport.replies("a", "b"));
 
         calls.callAbout(CallKind.DRAFT, IDS, REQUEST, BATCH);
-        calls.callAbout(CallKind.REVIEW, IDS, REQUEST, BATCH);
+        calls.callAbout(CallKind.PROOFREAD, IDS, REQUEST, BATCH);
 
         assertThat(snapshots()).extracting(CallSnapshot::callId).containsExactly(1L, 1L, 2L, 2L);
     }
@@ -267,7 +318,7 @@ class JobModelCallSnapshotsTest {
         final CallSnapshot shown = snapshots().getLast();
         assertThat(shown.callId()).isEqualTo(1L);
         assertThat(shown.state()).isEqualTo(CallState.ANSWERED);
-        assertThat(shown.reply()).isEqualTo("{\"target\":\"x\"}");
+        assertThat(shown.reply()).isEqualTo(TranslationJobTestSupport.targetReply("x"));
         assertThat(shown.items()).hasSize(4);
         assertThat(shown.items())
                 .filteredOn(item -> item.status() == CallItemStatus.MISSING)

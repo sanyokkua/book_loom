@@ -156,13 +156,13 @@ public final class ScriptedReviewDesk implements ReviewDesk {
     }
 
     @Override
-    public Result<SegmentRecord> skip(final String projectId, final String segmentId) {
-        return action("skip(" + projectId + ", " + segmentId + ")", projectId, segmentId);
+    public Result<SegmentRecord> acceptProposal(final String projectId, final String segmentId) {
+        return action("acceptProposal(" + projectId + ", " + segmentId + ")", projectId, segmentId);
     }
 
     @Override
-    public Result<SegmentRecord> acceptProposal(final String projectId, final String segmentId) {
-        return action("acceptProposal(" + projectId + ", " + segmentId + ")", projectId, segmentId);
+    public Result<SegmentRecord> undoProofread(final String projectId, final String segmentId) {
+        return action("undoProofread(" + projectId + ", " + segmentId + ")", projectId, segmentId);
     }
 
     @Override
@@ -254,7 +254,6 @@ public final class ScriptedReviewDesk implements ReviewDesk {
                 view.judgeScore(),
                 view.findings(),
                 view.path(),
-                0,
                 view.reviewed(),
                 view.context());
     }

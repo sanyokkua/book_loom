@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.PromptSection;
+import ua.bookloom.api.project.NamePolicy;
 
 /**
  * Loads every declared {@code *.prompt} template once and renders it. A template that uses an undeclared slot or lacks
@@ -43,31 +44,28 @@ public final class PromptTemplates {
     }
 
     private static final String EXAMPLES = "examples";
+    private static final String EXAMPLE_REPLY = "exampleReply";
     private static final String LANGUAGE_RULES = "languageRules";
-    private static final String TOKEN_RULES = "tokenRules";
-    private static final String NO_TOKEN_RULES = "noTokenRules";
-    private static final String NOTES_RULE = "notesRule";
-    private static final String RELATED_PAIRS_NAME = "relatedPairsName";
-    private static final String RELATED_PAIRS_MENTION = "Related earlier pairs, ";
-    private static final String GATE_OPEN = "on";
 
     private final Map<PromptName, Template> systems = new EnumMap<>(PromptName.class);
     private final Map<PromptName, Template> users = new EnumMap<>(PromptName.class);
     private final LanguageRules rules;
+    private final PreparationExamples preparations;
 
-    /** Loads the bundled templates. */
+    /** Loads the bundled templates with the bundled language rules. */
     @Inject
     public PromptTemplates() {
-        this(fileName -> PromptTemplates.class.getResourceAsStream(fileName), LanguageRules.forEnvironment());
+        this(PromptTemplates.class::getResourceAsStream, LanguageRules.bundled());
     }
 
     PromptTemplates(final ResourceLoader loader) {
-        this(loader, new LanguageRules(loader, false));
+        this(loader, new LanguageRules(loader));
     }
 
     PromptTemplates(final ResourceLoader loader, final LanguageRules rules) {
         Objects.requireNonNull(loader, "loader");
         this.rules = Objects.requireNonNull(rules, "rules");
+        this.preparations = new PreparationExamples(rules);
         for (final PromptName name : PromptName.values()) {
             name.systemSlots().ifPresent(slots -> systems.put(name, load(loader, name, "system", slots)));
             users.put(name, load(loader, name, "user", name.userSlots()));
@@ -78,6 +76,26 @@ public final class PromptTemplates {
                 Stream.concat(systems.values().stream(), users.values().stream())
                         .map(Template::fileName)
                         .toList());
+    }
+
+    /**
+     * The language-rules map the templates were loaded with, which the run frame chooses its rules and examples from.
+     *
+     * @return never null
+     */
+    public LanguageRules languageRules() {
+        return rules;
+    }
+
+    /**
+     * Block 12 of a proofread call for one language pair, from the language rules this instance was loaded with.
+     *
+     * @param sourceTag the source language tag, or null when nobody chose one
+     * @param targetTag the non-null target language tag
+     * @return the instruction and rules; never null
+     */
+    public ProofreadInstruction.Block proofreadBlock(@Nullable final String sourceTag, final String targetTag) {
+        return ProofreadInstruction.of(rules, sourceTag, targetTag);
     }
 
     /** Renders the system template of {@code name}; the map holds every required slot and only declared ones. */
@@ -112,46 +130,6 @@ public final class PromptTemplates {
      */
     public String renderSystem(final PromptName name, final CallFrame frame, final Map<String, String> extra) {
         return renderSystem(name, systemValues(name, frame, extra));
-    }
-
-    /**
-     * The system slots that choose the token rules of a draft or batch call: a call whose text holds no
-     * {@code ⟦gN⟧} token is sent the rules without the token paragraphs, so a small model is not taught a markup it
-     * has nothing to copy. A call that names neither slot gets the token rules.
-     *
-     * @param hasTokens whether any text the call translates holds a token
-     * @return never null; the slot values to pass as {@code extra}
-     */
-    public static Map<String, String> tokenGate(final boolean hasTokens) {
-        return hasTokens
-                ? Map.of(TOKEN_RULES, GATE_OPEN, NO_TOKEN_RULES, "")
-                : Map.of(TOKEN_RULES, "", NO_TOKEN_RULES, GATE_OPEN);
-    }
-
-    /**
-     * The system slot that adds the notes paragraph to the batch draft's rules (the 15i.X2 experiment).
-     *
-     * @param notes whether the batch asks for a note before each target
-     * @return never null; the slot value to pass as {@code extra}
-     */
-    public static Map<String, String> notesGate(final boolean notes) {
-        return Map.of(NOTES_RULE, notes ? GATE_OPEN : "");
-    }
-
-    /**
-     * The system slot that names the related-earlier-pairs block in the batch draft's context-only rule. Left empty when
-     * the run never shows the block, so the rule reads as it did before the block existed.
-     *
-     * @param relatedPairs whether the run's batches carry the block
-     * @return never null; the slot value to pass as {@code extra}
-     */
-    public static Map<String, String> relatedPairsGate(final boolean relatedPairs) {
-        return Map.of(RELATED_PAIRS_NAME, relatedPairs ? RELATED_PAIRS_MENTION : "");
-    }
-
-    /** Whether a block slot only chooses between two wordings of the fixed rules and so is no part of its own. */
-    static boolean isRuleGate(final String slot) {
-        return TOKEN_RULES.equals(slot) || NO_TOKEN_RULES.equals(slot) || NOTES_RULE.equals(slot);
     }
 
     /**
@@ -214,20 +192,32 @@ public final class PromptTemplates {
 
     private Map<String, String> systemValues(
             final PromptName name, final CallFrame frame, final Map<String, String> extra) {
+        return frameValues(name, name.systemSlots().orElse(Slots.NONE), frame, extra);
+    }
+
+    // The frame's values a template declares, the call's own values over them, then the examples and the language
+    // rules the template asks for, from the frame's language pair.
+    private Map<String, String> frameValues(
+            final PromptName name, final Slots slots, final CallFrame frame, final Map<String, String> extra) {
         Objects.requireNonNull(frame, "frame");
         Objects.requireNonNull(extra, "extra");
-        final Map<String, String> values = new HashMap<>(frame.systemSlotValues());
+        final Map<String, String> values = new HashMap<>();
+        frame.systemSlotValues().forEach((slot, value) -> {
+            if (slots.declares(slot)) {
+                values.put(slot, value);
+            }
+        });
         values.putAll(extra);
-        if (declares(name, TOKEN_RULES) && !extra.containsKey(TOKEN_RULES)) {
-            values.putAll(tokenGate(true));
-        }
-        if (declares(name, EXAMPLES)) {
+        final String kind = PreparationSlots.kindOf(name);
+        if (kind != null) {
+            final PreparationExample example = preparations.of(frame.sourceLanguage(), kind);
+            values.put(EXAMPLES, example.examples());
+            values.put(EXAMPLE_REPLY, example.reply());
+        } else if (slots.declares(EXAMPLES) && !extra.containsKey(EXAMPLES)) {
             values.put(EXAMPLES, examplesFor(name, frame));
         }
-        if (declares(name, LANGUAGE_RULES)) {
-            values.put(
-                    LANGUAGE_RULES,
-                    rules.section(frame.sourceLanguage(), frame.targetLanguage(), name.reviewsTranslation()));
+        if (slots.declares(LANGUAGE_RULES)) {
+            values.put(LANGUAGE_RULES, rules.section(frame.sourceLanguage(), frame.targetLanguage()));
         }
         return values;
     }
@@ -236,26 +226,44 @@ public final class PromptTemplates {
         final String source = frame.sourceLanguage();
         final String target = frame.targetLanguage();
         if (name.showsNameExamples()) {
-            return rules.nameExamples(source, target);
+            return rules.nameExamples(source, target, NamePolicy.TRANSLITERATE);
         }
-        return switch (name) {
-            case DRAFT_BATCH_JSON -> BatchExamples.render(rules.batchExamples(source, target));
-            case DRAFT_BATCH_MARKERS -> BatchExamples.renderMarked(rules.batchExamples(source, target));
-            case DRAFT_BATCH_DUAL -> BatchExamples.renderDual(rules.batchExamples(source, target));
-            default -> rules.examples(source, target);
-        };
+        return rules.examples(source, target);
     }
 
-    private static boolean declares(final PromptName name, final String slot) {
-        return Objects.requireNonNull(name, "name")
-                .systemSlots()
-                .map(slots -> slots.declares(slot))
-                .orElse(false);
+    /**
+     * The suggestion call's examples for a name policy, which the caller passes as the {@code examples} slot: the pair's
+     * example for that policy when it has one, else the nearest plain example.
+     *
+     * @param frame the run's language pair; never null
+     * @param policy the Book Brief's name policy, or the policy a group of entries is asked under; never null
+     * @return the examples text; never null
+     */
+    public String nameExamples(final CallFrame frame, final NamePolicy policy) {
+        Objects.requireNonNull(frame, "frame");
+        Objects.requireNonNull(policy, "policy");
+        return rules.nameExamples(frame.sourceLanguage(), frame.targetLanguage(), policy);
     }
 
     /** Renders the user template of {@code name}; the map holds every required slot and only declared ones. */
     public String renderUser(final PromptName name, final Map<String, String> values) {
         return render(Objects.requireNonNull(users.get(Objects.requireNonNull(name, "name"))), values);
+    }
+
+    /**
+     * Renders the task of an analysis call (design D8): its user template, with the frame's languages, the examples
+     * and the language rules the template declares filled in from the frame, so the system part stays the ANALYSIS
+     * frame's three sentences.
+     *
+     * @param name the non-null call
+     * @param frame the non-null call frame
+     * @param values the non-null values of the template's own slots, each declared by it
+     * @return the rendered task, stripped
+     */
+    public String renderTask(final PromptName name, final CallFrame frame, final Map<String, String> values) {
+        Objects.requireNonNull(name, "name");
+        return renderUser(name, frameValues(name, name.userSlots(), frame, values))
+                .strip();
     }
 
     private static Template load(
@@ -300,7 +308,7 @@ public final class PromptTemplates {
                 .replaceAll(block -> Matcher.quoteReplacement(
                         values.getOrDefault(block.group(1), "").isEmpty()
                                 ? ""
-                                : block.group(2) + (block.group(3) == null ? "" : block.group(3))));
+                                : block.group(2) + Objects.toString(block.group(3), "")));
         return fill(withBlocks, values);
     }
 

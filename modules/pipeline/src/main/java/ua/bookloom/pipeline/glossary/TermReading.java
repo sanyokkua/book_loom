@@ -6,20 +6,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.index.Window;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
@@ -33,19 +32,32 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
  * written here.
  */
 @Slf4j
-@RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class TermReading {
 
     // Per window a quote of a few words and three short labels; the term's two flags and the braces besides.
     private static final int BASE_TOKENS = 40;
+    // What a reading with no window that named a gender says in the call list.
+    private static final String NO_VOTE = "no gender vote";
     private static final int TOKENS_PER_WINDOW = 80;
     // Twice the expected reply: a full answer is never cut, a reply that loops is.
     private static final int CAP_FACTOR = 2;
     private static final String MARK_OPEN = "[[";
     private static final String MARK_CLOSE = "]]";
 
-    private final PromptTemplates templates;
+    private final ContextBuilder builder;
     private final ObjectMapper mapper;
+
+    /**
+     * Builds its requests on the ANALYSIS frame (design D8) from the catalogue's task templates.
+     *
+     * @param templates the non-null prompt catalogue
+     * @param mapper the non-null object mapper
+     */
+    @Inject
+    public TermReading(final PromptTemplates templates, final ObjectMapper mapper) {
+        this.builder = new ContextBuilder(Objects.requireNonNull(templates, "templates"));
+        this.mapper = Objects.requireNonNull(mapper, "mapper");
+    }
 
     /** How a window uses the term. */
     public enum Usage {
@@ -142,13 +154,39 @@ public final class TermReading {
      * @param windows the windows the reply answered, by number, each once
      * @param speaking whether the model says the name's meaning matters to the story
      * @param brand whether the model says the term is a brand or a product
+     * @param explanation the text of the window the model cited as one where the book explains or plays on the name's
+     *     meaning (design D5); empty when it cited none, or a window the call did not show
      */
-    public record Reading(String term, List<WindowReading> windows, boolean speaking, boolean brand) {
+    public record Reading(
+            String term, List<WindowReading> windows, boolean speaking, boolean brand, String explanation) {
 
         /** Copies the windows. */
         public Reading {
             Objects.requireNonNull(term, "term");
             windows = List.copyOf(windows);
+            Objects.requireNonNull(explanation, "explanation");
+        }
+
+        /**
+         * A reading that cites no window explaining the name.
+         *
+         * @param term the term read
+         * @param windows the windows the reply answered
+         * @param speaking whether the name's meaning matters to the story
+         * @param brand whether the term is a brand
+         */
+        public Reading(
+                final String term, final List<WindowReading> windows, final boolean speaking, final boolean brand) {
+            this(term, windows, speaking, brand, "");
+        }
+
+        /**
+         * Whether the book explains or plays on the name's meaning in a window the reading cited.
+         *
+         * @return {@code true} when a window was cited, {@code false} otherwise
+         */
+        public boolean explainsName() {
+            return !explanation.isEmpty();
         }
 
         /**
@@ -180,69 +218,80 @@ public final class TermReading {
         Objects.requireNonNull(calls, "calls");
         logEntry(subject, windows);
         if (windows.isEmpty()) {
-            log.debug("Term reading {} has no window: no call", subject.term());
+            log.debug("Term reading has no window: no call");
+            log.trace("Term reading {} has no window", subject.term());
             return Result.ok(Reading.none(subject.term()));
         }
         final Result<ChatResponse> reply = calls.callAbout(
                 CallKind.TERM_READING,
                 List.of(),
                 request(subject, windows, frame),
-                CallDescriptor.whole(PromptName.TERM_READING));
+                CallDescriptor.asking(PromptName.TERM_READING, List.of(subject.term())));
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
-            log.warn("Term reading {} failed code={}", subject.term(), error.code());
+            // The term is a word of the book, so it stays out of the always-on run log.
+            log.trace("Term reading failed term={}", subject.term());
+            log.warn(
+                    "Term reading failed mentions={} code={} reason={}",
+                    subject.mentions(),
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return Result.err(error);
         }
-        return Result.ok(readingOf(Objects.requireNonNull(reply.data(), "reply"), subject, windows, frame));
+        return Result.ok(readingOf(Objects.requireNonNull(reply.data(), "reply"), subject, windows, frame, calls));
     }
 
     private static void logEntry(final Subject subject, final List<Window> windows) {
         log.debug(
-                "Term reading {}: {} windows, {} mentions, cluster of {}",
-                subject.term(),
+                "Term reading: {} windows, {} mentions, cluster of {}",
                 windows.size(),
                 subject.mentions(),
                 subject.cluster().size());
+        log.trace("Term reading subject {}", subject.term());
     }
 
     private Reading readingOf(
-            final ChatResponse reply, final Subject subject, final List<Window> windows, final CallFrame frame) {
+            final ChatResponse reply,
+            final Subject subject,
+            final List<Window> windows,
+            final CallFrame frame,
+            final ModelCalls calls) {
         log.trace("Term reading {} reply {}", subject.term(), reply.content());
         final Reading reading =
                 TermReadingReplies.read(mapper, reply.content(), subject.term(), windows, frame.analysisLanguage());
         log.debug(
-                "Term reading {} answered {} of {} windows, {} votes, speaking={} brand={}",
-                subject.term(),
+                "Term reading answered {} of {} windows, {} votes, speaking={} brand={} explainsName={}",
                 reading.windows().size(),
                 windows.size(),
                 reading.windows().stream()
                         .filter(w -> w.vote() != Gender.UNKNOWN)
                         .count(),
                 reading.speaking(),
-                reading.brand());
+                reading.brand(),
+                reading.explainsName());
+        showRead(calls, subject, reading);
         return reading;
     }
 
+    // The windows that voted, and what they voted for, are what a person sees of the reading.
+    private static void showRead(final ModelCalls calls, final Subject subject, final Reading reading) {
+        final Gender[] votes = reading.windows().stream()
+                .map(WindowReading::vote)
+                .filter(vote -> vote != Gender.UNKNOWN)
+                .distinct()
+                .toArray(Gender[]::new);
+        calls.answered(Map.of(subject.term(), votes.length == 0 ? NO_VOTE : CallItem.words(votes)));
+    }
+
     private ChatRequest request(final Subject subject, final List<Window> windows, final CallFrame frame) {
-        final List<ChatMessage> messages = List.of(
-                new ChatMessage(
-                        ChatRole.SYSTEM,
-                        templates.renderSystem(PromptName.TERM_READING, frame).strip()),
-                new ChatMessage(
-                        ChatRole.USER,
-                        templates
-                                .renderUser(
-                                        PromptName.TERM_READING,
-                                        Map.of("term", termLine(subject), "windows", numbered(windows)))
-                                .strip()));
-        log.trace("Term reading messages {}", messages);
         final int expected = BASE_TOKENS + TOKENS_PER_WINDOW * windows.size();
-        return ChatRequests.build(
+        final ChatRequest request = builder.analysisRequest(
                 PromptName.TERM_READING,
-                messages,
-                new OutputLimit(expected, expected * CAP_FACTOR),
-                false,
-                frame.requestDefaults());
+                frame,
+                Map.of("term", termLine(subject), "windows", numbered(windows)),
+                new OutputLimit(expected, expected * CAP_FACTOR));
+        log.trace("Term reading messages {}", request.messages());
+        return request;
     }
 
     // What the code knows, on the term's own line: the count, the tally when there is one, the other spellings.

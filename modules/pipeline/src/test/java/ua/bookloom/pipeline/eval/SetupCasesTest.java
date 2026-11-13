@@ -154,22 +154,19 @@ class SetupCasesTest {
     void setupCase_expectationThatIsNeitherKnownNorUnknown_isRejected() {
         final SetupCase any = StageCases.setup().getFirst();
 
+        final var arg1 = any.id();
+        final var arg2 = any.source();
+        final var arg3 = any.target();
+        final var arg4 = any.fileStem();
+        final var arg5 = any.title();
+        final var arg6 = any.author();
+        final var arg7 = any.paragraphs();
+        final var arg8 = any.narrator();
+        final var arg9 = any.narratorGender();
+        final var arg10 = any.register();
+        final var arg11 = any.genreClass();
         assertThatThrownBy(() -> new SetupCase(
-                        any.id(),
-                        any.source(),
-                        any.target(),
-                        any.fileStem(),
-                        any.title(),
-                        any.author(),
-                        null,
-                        null,
-                        false,
-                        "maybe",
-                        any.paragraphs(),
-                        any.narrator(),
-                        any.narratorGender(),
-                        any.register(),
-                        any.genreClass()))
+                        arg1, arg2, arg3, arg4, arg5, arg6, null, null, false, "maybe", arg7, arg8, arg9, arg10, arg11))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("maybe");
     }

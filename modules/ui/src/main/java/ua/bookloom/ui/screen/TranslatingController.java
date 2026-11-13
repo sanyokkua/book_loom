@@ -9,19 +9,19 @@ import javafx.scene.layout.Pane;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.Navigator;
-import ua.bookloom.ui.dialog.ConfirmPrompt;
-import ua.bookloom.ui.dialog.NarratorDialog;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityTracker;
+import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.BriefEstimate;
+import ua.bookloom.ui.state.BriefLock;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.RunStateSource;
-import ua.bookloom.ui.state.SceneSummary;
 import ua.bookloom.ui.state.SectionMemory;
 import ua.bookloom.ui.state.SleepHelp;
+import ua.bookloom.ui.state.StartAdvice;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.TechnicalDetails;
 import ua.bookloom.ui.state.TranslatingViewModel;
@@ -62,55 +62,49 @@ public final class TranslatingController {
     /**
      * Receives the collaborators the injector owns.
      *
-     * @param viewModel what the run actions press and the ready card reads
+     * @param run what the run actions press and the ready card reads, and the run-state row the run actions and the
+     *     live line follow
      * @param mirror the run's state, figures and log the screen shows
-     * @param messages the catalogue the built parts are worded from
-     * @param navigator where Back and Continue to Export lead
-     * @param current the open book, whose languages head the live panel's panes
+     * @param context the open book, whose languages head the live panel's panes, the catalogue the built parts are
+     *     worded from, and where Back and Continue to Export lead
      * @param names the names of those languages
-     * @param review the review desk's view model, which counts the segments to review
-     * @param desk what opens the review desk from Review (n) and the strip
-     * @param sections the session's memory of which sections the person left open
-     * @param narratorDialog the question asked before a start when the book is told in the first person
-     * @param confirm the question asked before the run is stopped
-     * @param runs the run-state row the run actions and the live line follow
-     * @param parts what the strip, the help line and the live card read and open: the start estimate, the scene
-     *     summary, the sleep help, the technical-details switch, the modal host and the activities' clock
+     * @param reviewAccess the review desk's view model, which counts the segments to review, and what opens the desk
+     *     from Review (n) and the strip
+     * @param tools the session's memory of which sections the person left open, the question asked before a start
+     *     when the book is told in the first person, and the question asked before the run is stopped
+     * @param parts what the strip, the help line and the live card read and open: the start estimate,
+     *     the sleep help, the technical-details switch, the modal host and the activities' clock
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
     @Inject
     public TranslatingController(
-            final TranslatingViewModel viewModel,
+            final RunView run,
             final StateMirror mirror,
-            final Messages messages,
-            final Navigator navigator,
-            final CurrentProject current,
+            final ScreenContext context,
             final LanguageNames names,
-            final ReviewViewModel review,
-            final ReviewDeskLauncher desk,
-            final SectionMemory sections,
-            final NarratorDialog narratorDialog,
-            final ConfirmPrompt confirm,
-            final RunStateSource runs,
+            final ReviewAccess reviewAccess,
+            final TranslatingTools tools,
             final Parts parts) {
-        this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
+        this.viewModel = Objects.requireNonNull(run, "run").translating();
         this.mirror = Objects.requireNonNull(mirror, "mirror");
-        this.messages = Objects.requireNonNull(messages, "messages");
-        this.navigator = Objects.requireNonNull(navigator, "navigator");
-        this.current = Objects.requireNonNull(current, "current");
+        this.messages = Objects.requireNonNull(context, "context").messages();
+        this.navigator = context.navigator();
+        this.current = context.project();
         this.names = Objects.requireNonNull(names, "names");
-        this.review = Objects.requireNonNull(review, "review");
+        this.review = Objects.requireNonNull(reviewAccess, "reviewAccess").review();
         this.dialogs = new TranslatingDialogs(
-                Objects.requireNonNull(narratorDialog, "narratorDialog"),
-                Objects.requireNonNull(confirm, "confirm"),
+                Objects.requireNonNull(tools, "tools").narratorDialog(),
+                tools.confirm(),
                 parts.modals(),
                 messages,
-                parts.activities());
-        this.desk = Objects.requireNonNull(desk, "desk");
-        this.sections = Objects.requireNonNull(sections, "sections");
-        this.runs = Objects.requireNonNull(runs, "runs");
-        this.reads = new TranslatingView.Reads(parts.estimate(), parts.summary(), parts.sleep(), parts.technical());
+                parts.activities(),
+                parts.technical());
+        this.desk = reviewAccess.desk();
+        this.sections = tools.sections();
+        this.runs = run.runs();
+        this.reads = new TranslatingView.Reads(
+                parts.estimate(), parts.sleep(), parts.technical(), parts.advice(), parts.brief(), parts.lock());
     }
 
     /**
@@ -118,29 +112,35 @@ public final class TranslatingController {
      * constructor stays short.
      *
      * @param estimate the start estimate the strip shows before a run
-     * @param summary the scene summary line's text
      * @param sleep the sleep help line
      * @param technical whether technical details are on
+     * @param advice the language advice shown under the model row
      * @param modals where "All calls…" opens
      * @param activities whose clock the calls dialog reads
+     * @param brief the brief whose Chapter summaries switch the ready card shows, the same one the Book Brief shows
+     * @param lock what makes that switch read-only while a translation is at work
      */
     public record Parts(
             BriefEstimate estimate,
-            SceneSummary summary,
             SleepHelp sleep,
             TechnicalDetails technical,
+            StartAdvice advice,
             ModalHost modals,
-            ActivityTracker activities) {
+            ActivityTracker activities,
+            BookBriefViewModel brief,
+            BriefLock lock) {
 
         /** Receives the parts from the injector. */
         @Inject
         public Parts {
             Objects.requireNonNull(estimate, "estimate");
-            Objects.requireNonNull(summary, "summary");
             Objects.requireNonNull(sleep, "sleep");
             Objects.requireNonNull(technical, "technical");
+            Objects.requireNonNull(advice, "advice");
             Objects.requireNonNull(modals, "modals");
             Objects.requireNonNull(activities, "activities");
+            Objects.requireNonNull(brief, "brief");
+            Objects.requireNonNull(lock, "lock");
         }
     }
 

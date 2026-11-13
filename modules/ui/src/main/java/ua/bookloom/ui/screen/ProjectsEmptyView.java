@@ -13,9 +13,12 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.ui.MemorySource;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.control.RecommendationLine;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.LocalModelProbe;
@@ -47,6 +50,7 @@ final class ProjectsEmptyView {
     private final Navigator navigator;
     private final RunStateSource runState;
     private final LocalModelProbe probe;
+    private final MemorySource memory;
     private final HBox modelLine = new HBox(MODEL_SPACING);
     private final ChangeListener<ModelChoice> onModel = (observed, was, now) -> showModel();
     private final ChangeListener<ProbeOutcome> onOutcome = (observed, was, now) -> showModel();
@@ -55,16 +59,18 @@ final class ProjectsEmptyView {
             final Messages messages,
             final Navigator navigator,
             final RunStateSource runState,
-            final LocalModelProbe probe) {
+            final LocalModelProbe probe,
+            final MemorySource memory) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.runState = Objects.requireNonNull(runState, "runState");
         this.probe = Objects.requireNonNull(probe, "probe");
+        this.memory = Objects.requireNonNull(memory, "memory");
     }
 
     Node build() {
         log.debug("building the projects first-launch card");
-        final Label title = new Label(messages.get(MessageKey.PROJECTS_EMPTY_TITLE));
+        final Label title = Wrapped.wholeLines(new Label(messages.get(MessageKey.PROJECTS_EMPTY_TITLE)));
         title.getStyleClass().add("projects-empty-title");
         final VBox steps = new VBox(STEP_SPACING);
         steps.setMaxWidth(STEPS_WIDTH);
@@ -80,7 +86,9 @@ final class ProjectsEmptyView {
         runState.model().addListener(new WeakChangeListener<>(onModel));
         probe.outcome().addListener(new WeakChangeListener<>(onOutcome));
         showModel();
-        card.getChildren().addAll(modelLine, start());
+        card.getChildren().add(modelLine);
+        card.getChildren().addAll(RecommendationLine.nodes(messages, memory, "projects-empty"));
+        card.getChildren().add(start());
         card.setId("projects-empty-card");
         card.getStyleClass().add("card");
         return card;
@@ -134,11 +142,10 @@ final class ProjectsEmptyView {
     }
 
     private String readyText(final ModelChoice choice, final ProbeOutcome outcome) {
-        final boolean foundAtFirstLaunch = outcome instanceof ProbeOutcome.Found found
-                && found.atFirstLaunch()
-                && found.selection().modelId().equals(choice.modelId())
-                && ProviderNames.displayName(messages, found.selection().providerId())
-                        .equals(choice.provider());
+        final boolean foundAtFirstLaunch = outcome instanceof ProbeOutcome.Found(var selection, var atFirstLaunch)
+                && atFirstLaunch
+                && selection.modelId().equals(choice.modelId())
+                && ProviderNames.displayName(messages, selection.providerId()).equals(choice.provider());
         log.debug("model line: ready, found at first launch {}", foundAtFirstLaunch);
         return messages.get(
                 foundAtFirstLaunch ? MessageKey.PROJECTS_MODEL_READY_FOUND : MessageKey.PROJECTS_MODEL_READY,
@@ -163,7 +170,7 @@ final class ProjectsEmptyView {
                         declined ? MessageKey.PROJECTS_MODEL_DECLINED_TITLE : MessageKey.NAV_FOOTER_NO_MODEL)),
                 help);
         // A press of Try again that finds nothing again would otherwise leave the card exactly as it was.
-        if (probe.outcome().get() instanceof ProbeOutcome.NotFound notFound && notFound.afterTryAgain()) {
+        if (probe.outcome().get() instanceof ProbeOutcome.NotFound(var afterTryAgain) && afterTryAgain) {
             log.debug("model line: try again found nothing again");
             final Label still = new Label(messages.get(MessageKey.PROJECTS_MODEL_STILL_NOTHING));
             still.setId("projects-empty-still-nothing");

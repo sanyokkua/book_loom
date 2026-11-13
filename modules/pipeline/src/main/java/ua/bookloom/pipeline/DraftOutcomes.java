@@ -6,13 +6,14 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateResult;
-import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
+import ua.bookloom.pipeline.prompt.ExpectedTokens;
 
 /**
  * The outcomes the draft step answers with, each written with its one log line, so {@link SegmentTranslator} holds
@@ -51,8 +52,8 @@ final class DraftOutcomes {
                 restored.normalised()));
     }
 
-    // Design D3 rule 5: a reply whose markup still does not restore after its repair is not flagged here; its markup
-    // finding sends it to a directed fix that states the expected tokens.
+    // Design D3 rule 5: a reply whose markup the code repairs cannot restore is not flagged here; its markup finding
+    // earns the one repair stating the expected tokens, or at Fast one plain re-draft.
     static Result<DraftOutcome> stillFailingTheGate(
             final DraftAttempt attempt, final String maskedReply, final GateResult.GateFailed failed) {
         final Segment segment = attempt.segment();
@@ -80,9 +81,10 @@ final class DraftOutcomes {
             final DraftAttempt attempt, final AppError error, final String finish, final String observedTokens) {
         final Segment segment = attempt.segment();
         log.warn(
-                "Flagged segment id={} code={} expectedTokens={} observedTokens={}",
+                "Flagged segment id={} code={} reason={} expectedTokens={} observedTokens={}",
                 segment.id(),
                 error.code(),
+                FailureReason.tokenIn(error.details()),
                 expectedTokens(attempt),
                 observedTokens);
         log.debug(
@@ -104,7 +106,7 @@ final class DraftOutcomes {
         final String segmentId = attempt.segment().id();
         final int placeholderCount = Tokens.inOrder(attempt.shownText()).size();
         log.debug("Collected expected tokens segmentId={} placeholderCount={}", segmentId, placeholderCount);
-        return DraftPromptBuilder.expectedTokenSequence(attempt.shownText());
+        return ExpectedTokens.sequence(attempt.shownText());
     }
 
     static String observedTokens(final String text) {

@@ -8,6 +8,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
 import javafx.event.Event;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -82,22 +83,22 @@ class BusyHostTest extends ShellTestBase {
 
     // IF the delay were not cancelled by the end of the work, THEN a card would appear for work that already finished.
     @Test
-    void card_workEndsBeforeTheDelay_neverShows() throws InterruptedException {
+    void card_workEndsBeforeTheDelay_neverShows() {
         final ActivityTracker.Handle quick = begin(ActivityKind.IMPORT, false);
         onFx(quick::end);
 
-        Thread.sleep((long) BusyHost.DELAY.toMillis() + 250);
+        LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos((long) BusyHost.DELAY.toMillis() + 250));
 
         assertThat(isCardShown()).isFalse();
     }
 
     // IF work the window does not wait for blocked it, THEN a model listing would grey out the whole window.
     @Test
-    void card_nonBlockingWork_neverShowsAndLeavesTheNavigationEnabled() throws InterruptedException {
+    void card_nonBlockingWork_neverShowsAndLeavesTheNavigationEnabled() {
         begin(ActivityKind.MODEL_LISTING, true);
         begin(ActivityKind.TRANSLATION, false);
 
-        Thread.sleep((long) BusyHost.DELAY.toMillis() + 250);
+        LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos((long) BusyHost.DELAY.toMillis() + 250));
 
         assertThat(isCardShown()).isFalse();
         assertThat(required("shell-nav").isDisabled()).isFalse();

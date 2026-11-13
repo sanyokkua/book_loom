@@ -8,8 +8,8 @@ import javafx.scene.control.Label;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.TooltipProbe;
@@ -19,14 +19,14 @@ import ua.bookloom.ui.ViewNames;
 class NamesStyleConfirmGendersScreenTest extends TranslatingScreenTestBase {
 
     private static final String CONFIRM = "names-style-confirm-genders";
-    private static final GlossaryEntry ANNE = new GlossaryEntry(
+    private static final GlossaryEntry ANNE = GlossaryEntry.of(
                     "e1", "p1", "Anne", "Анна", TermType.CHARACTER, Gender.UNKNOWN, false)
             .withSuggestedGender(Gender.FEMALE);
-    private static final GlossaryEntry BORIS = new GlossaryEntry(
+    private static final GlossaryEntry BORIS = GlossaryEntry.of(
                     "e2", "p1", "Boris", "Борис", TermType.CHARACTER, Gender.UNKNOWN, false)
             .withSuggestedGender(Gender.MALE);
     private static final GlossaryEntry CARL =
-            new GlossaryEntry("e3", "p1", "Carl", "Карл", TermType.CHARACTER, Gender.MALE, false);
+            GlossaryEntry.of("e3", "p1", "Carl", "Карл", TermType.CHARACTER, Gender.MALE, false);
 
     private void showGlossary(final GlossaryEntry... entries) throws Exception {
         readyToStart();
@@ -57,7 +57,7 @@ class NamesStyleConfirmGendersScreenTest extends TranslatingScreenTestBase {
         assertThat(button(CONFIRM).isVisible()).isFalse();
     }
 
-    // IF the press stored nothing, THEN the (suggested) mark would stay and the run would still not hold the gender.
+    // IF the press stored nothing, THEN the likely origin would stay and the run would still not hold the gender.
     @Test
     void press_suggestedGendersStand_storesThemAsThePersonsAndTheMarkGoes() throws Exception {
         showGlossary(ANNE, BORIS, CARL);
@@ -69,8 +69,8 @@ class NamesStyleConfirmGendersScreenTest extends TranslatingScreenTestBase {
 
         assertThat(glossary.updated())
                 .extracting(GlossaryEntry::genderOrigin)
-                .containsExactly(GenderOrigin.PERSON, GenderOrigin.PERSON);
-        awaitFx(() -> genderLabels().stream().noneMatch(label -> label.contains("(suggested)")));
+                .containsExactly(Origin.USER, Origin.USER);
+        awaitFx(() -> genderLabels().stream().noneMatch(label -> label.endsWith("· likely")));
         awaitFx(() -> !button(CONFIRM).isVisible());
     }
 
@@ -89,7 +89,7 @@ class NamesStyleConfirmGendersScreenTest extends TranslatingScreenTestBase {
 
         awaitFx(() -> button("results-undo-all").isDisabled());
         awaitFx(() -> genderLabels().stream()
-                        .filter(label -> label.contains("(suggested)"))
+                        .filter(label -> label.endsWith("· likely"))
                         .count()
                 == 2);
         assertThat(button(CONFIRM).isVisible()).isTrue();
@@ -100,7 +100,7 @@ class NamesStyleConfirmGendersScreenTest extends TranslatingScreenTestBase {
         showGlossary(ANNE);
         glossary.holdModelCalls();
         onFx(() -> button("names-style-scan").fire());
-        awaitFx(() -> ((Button) required("names-style-stop")).isVisible());
+        awaitFx(((Button) required("names-style-stop"))::isVisible);
 
         assertThat(button(CONFIRM).isDisabled()).isTrue();
 
@@ -126,7 +126,7 @@ class NamesStyleConfirmGendersScreenTest extends TranslatingScreenTestBase {
         onFx(() -> button("results-undo-all").fire());
 
         awaitFx(() -> genderLabels().stream()
-                        .filter(label -> label.contains("(припущення)"))
+                        .filter(label -> label.endsWith("· ймовірно"))
                         .count()
                 == 2);
     }

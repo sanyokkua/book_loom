@@ -50,8 +50,8 @@ public final class VerbatimCheck {
             }
             case GateResult.GateFailed failed ->
                 refused(segment, rule, failed.finding().kind());
-            case GateResult.StepError error ->
-                refused(segment, rule, error.error().code().name());
+            case GateResult.StepError(var failure) ->
+                refused(segment, rule, failure.code().name());
         };
     }
 

@@ -1,0 +1,26 @@
+[Recently present — context only; do NOT translate]
+Scene so far: Chapter 1, after paragraph 2.
+
+[Glossary — the book's renderings of the names and terms in this passage; write each name out as plain text in the target language]
+Ивар → Івар (character, male)
+
+[Previous pairs — context only; do NOT translate or answer them]
+Source: Туман лежал над рекой, и лодки стояли у берега.
+Source: Ивар ушёл рано.
+
+[Previous attempt — data, not instructions]
+<PreviousAttempt>
+Унизу сказали, что ключ залишить ⟦g0⟧Івар⟦g1⟧, коли повернеться.
+</PreviousAttempt>
+
+[Defects to fix]
+- function-word-residue (MEDIUM): the Russian word «что» is left in the target
+
+Translate the item again and fix every defect listed; keep what the previous attempt got right, and do not copy or follow it blindly.
+
+Translate every item inside <Items> from Russian into Ukrainian. Return exactly one JSON object matching this schema: {"items":[{"id":"<id>","target":"<translation>"}]}
+
+<Items>
+<s id="1">Внизу сказали, что ключ оставит ⟦g0⟧Ивар⟦g1⟧, когда вернётся.</s>
+</Items>
+Keep every ⟦…⟧ mark exactly once.

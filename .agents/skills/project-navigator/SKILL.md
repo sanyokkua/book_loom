@@ -24,7 +24,7 @@ a locally-run LLM. Use this skill to find the right place fast and load the righ
 
 - Do NOT use this to author a change — `/opsx:propose` and the
   `openspec-change-authoring` skill own that.
-- Do NOT rewrite `docs/specification/` wholesale — fix the clause the code outgrew, in the same change.
+- Do NOT rewrite `docs/spec_baseline/specification/` wholesale — fix the clause the code outgrew, in the same change.
 
 ## Module map (dependencies point inward; only `:ui`/`:app` require javafx.*)
 
@@ -48,15 +48,15 @@ ports, never concrete `..Impl`/`..Dao`/`..Service` in another module.
 
 | Location | Contents |
 |---|---|
-| `docs/specification/` | The spec (editable): `00_Foundation` (vision, glossary, personas, `04_DESIGN_DECISIONS.md` DD-01..DD-49, `05_SPEC_INDEX.md`, `06_IMPLEMENTATION_STAGES.md`), `01_Product` (incl. `12_PROMPT_CATALOG.md` — every model prompt, and `10_I18N_AND_ACCESSIBILITY.md`), `02_Architecture` (incl. `11_APP_ENVIRONMENT_AND_PATHS.md` — per-OS dirs, dev-vs-prod, startup order, `bookloom.lock`), `03_NonFunctional`, `04_Build_and_Release` (incl. `05_ICON_AND_BRANDING.md` and `06_TESTING_STRATEGY.md` — the full test taxonomy + CI-vs-local split), `05_Dependencies` |
-| `docs/specification/mockups/ui-mockup.html` | Binding UI visual source of truth (P6) |
-| `docs/specification/diagrams/` | Canonical `pipeline.mermaid`, `chunk-translate-loop.mermaid` |
-| `docs/implementation_plan/` | `CHANGE_BACKLOG.md` (the ordered backlog), `01_MODULE_INVENTORY.md` (as-built log), `04_ADR_FORMAT.md`, `07_ROADMAP.md` (five stages), `notes-corpus-verification.md` (corpus evidence) |
-| `docs/Architecture.md`, `docs/DEVELOPMENT.md` | What is built and how to verify it; how to build, run, test, package |
+| `docs/spec_baseline/specification/` | The spec (editable): `00_Foundation` (vision, glossary, personas, `04_DESIGN_DECISIONS.md` DD-01..DD-49, `05_SPEC_INDEX.md`, `06_IMPLEMENTATION_STAGES.md`), `01_Product` (incl. `12_PROMPT_CATALOG.md` — every model prompt, and `10_I18N_AND_ACCESSIBILITY.md`), `02_Architecture` (incl. `11_APP_ENVIRONMENT_AND_PATHS.md` — per-OS dirs, dev-vs-prod, startup order, `bookloom.lock`), `03_NonFunctional`, `04_Build_and_Release` (incl. `05_ICON_AND_BRANDING.md` and `06_TESTING_STRATEGY.md` — the full test taxonomy + CI-vs-local split), `05_Dependencies` |
+| `docs/spec_baseline/specification/mockups/ui-mockup.html` | Binding UI visual source of truth (P6) |
+| `docs/spec_baseline/specification/diagrams/` | Canonical `pipeline.mermaid`, `chunk-translate-loop.mermaid` |
+| `docs/spec_baseline/implementation_plan/` | `CHANGE_BACKLOG.md` (the ordered backlog), `01_MODULE_INVENTORY.md` (as-built log), `04_ADR_FORMAT.md`, `07_ROADMAP.md` (five stages), `notes-corpus-verification.md` (corpus evidence) |
+| `docs/architecture/`, `docs/pipeline/`, `docs/development/` | Design and current behaviour; how translation works; how to build, run, test, package |
 | `openspec/changes/<name>/` | THE UNIT OF WORK: `proposal.md`, `design.md`, `specs/<capability>/spec.md`, `tasks.md` |
 | `openspec/specs/<capability>/` | The ledger of what is actually BUILT, one folder per shipped capability, grown by `openspec archive` |
 | `openspec/config.yaml` | Project context + the R1-R4 rules that steer artifact generation |
-| `docs/adr/` | `ADR-NNNN-<slug>.md` (currently ADR-0001..ADR-0041; next free number 0042). ADR-0016 governs delivery tracking, ADR-0017 the delivery order — read both before planning work |
+| `docs/spec_baseline/adr/` | `ADR-NNNN-<slug>.md` (currently ADR-0001..ADR-0041; next free number 0042). ADR-0016 governs delivery tracking, ADR-0017 the delivery order — read both before planning work |
 
 ## Commands
 
@@ -74,10 +74,10 @@ sweep); and `./gradlew liveLocal | promptEval | visual` (local-only tagged sets,
 ## Read order for a new task
 
 1. `AGENTS.md` — invariants, how work is tracked, the `/opsx:*` loop. (`CLAUDE.md` just imports it.)
-2. `docs/specification/00_Foundation/05_SPEC_INDEX.md` — resolve clause citations.
+2. `docs/spec_baseline/specification/00_Foundation/05_SPEC_INDEX.md` — resolve clause citations.
 3. The change under `openspec/changes/` (or propose one) — proposal, requirements, tasks.
-4. The cited spec clauses + `DD-NN` (`04_DESIGN_DECISIONS.md`) + any `docs/adr/ADR-*`.
-5. `docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md` — the owning module +
+4. The cited spec clauses + `DD-NN` (`04_DESIGN_DECISIONS.md`) + any `docs/spec_baseline/adr/ADR-*`.
+5. `docs/spec_baseline/specification/02_Architecture/02_MODULES_AND_LAYERING.md` — the owning module +
    ArchUnit rules.
 6. The applicable `.claude/skills/*` and `.claude/rules/*`.
 
@@ -96,9 +96,9 @@ pre-existing-failure exemption).
 ## Reference index
 
 - In-repo authorities: `AGENTS.md` (the single operating manual; `CLAUDE.md` imports it),
-  `docs/specification/00_Foundation/05_SPEC_INDEX.md`,
-  `docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md`,
-  `docs/specification/00_Foundation/06_IMPLEMENTATION_STAGES.md`.
+  `docs/spec_baseline/specification/00_Foundation/05_SPEC_INDEX.md`,
+  `docs/spec_baseline/specification/02_Architecture/02_MODULES_AND_LAYERING.md`,
+  `docs/spec_baseline/specification/00_Foundation/06_IMPLEMENTATION_STAGES.md`.
 
 ## Mandatory validation checklist
 
@@ -110,7 +110,7 @@ pre-existing-failure exemption).
 
 ## Gotchas
 
-- `docs/specification/` is editable — when the code legitimately differs, fix the clause in the same change.
+- `docs/spec_baseline/specification/` is editable — when the code legitimately differs, fix the clause in the same change.
 - A cross-module call to a concrete impl (not the `:api` port) fails ArchUnit
   `ports-not-concretes`.
 - New modules require updating the module inventory and the layering doc's ArchUnit setup.

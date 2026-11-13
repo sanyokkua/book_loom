@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -31,8 +33,8 @@ import ua.bookloom.llm.pseudo.PseudoChatModel;
  * would, with its capitals written in Cyrillic so a clean reply passes the target-script checks, or fails the way a
  * real client or a real small model fails — a timeout, a call that never returns until the watchdog ends it, a 5xx
  * burst, an unreachable server, one long outage, an unloaded model, an empty reply, a reply that drops, duplicates or
- * garbles its placeholders (in one item of a batch reply, whose refusal is the whole reply), a refusal, a judge reply that is no JSON or that asks for a fix, a hang on the re-judge
- * that fix leads to, or a step that throws.
+ * garbles its placeholders (in one item of a batch reply, whose refusal is the whole reply), a refusal, a proofread
+ * reply that is plain text with no JSON, or a step that throws.
  *
  * <p>Used from the job thread only, apart from {@link #probe()}, which reads the outage's end.
  */
@@ -54,11 +56,12 @@ final class FaultyModel implements ChatModel {
         GARBLE_TOKEN,
         STRAY_BRACKET,
         REFUSAL,
-        JUDGE_JUNK,
-        JUDGE_REVISE,
-        REJUDGE_HANG,
+        PROOFREAD_TEXT,
         THROW
     }
+
+    /** The words of the plain-text proofread reply the {@link Fault#PROOFREAD_TEXT} fault answers with. */
+    static final String PLAIN_PROOFREAD_REPLY = "The windows read well, nothing to change.";
 
     /** The message of an injected throw, so the log check can tell it from a real one. */
     static final String INJECTED = "soak: injected fault";
@@ -70,11 +73,7 @@ final class FaultyModel implements ChatModel {
     private static final int MAX_BURST = 4;
     private static final String DRAFT = "draft";
     private static final String BATCH = "draft-batch-json";
-    private static final String REVIEW = "reviewer";
-    private static final String DIRECTED_FIX = "directed-fix";
-    // A reviewer that asks to rewrite the first pair with text the checks refuse, so the draft stays and is flagged.
-    private static final String REVISE =
-            "{\"results\":[{\"id\":\"s1\",\"status\":\"rewrite\",\"rewrite\":\"THE WRONG SENSE\"}]}";
+    private static final String PROOFREAD = "proofread";
 
     private final PseudoChatModel pseudo;
     private final ObjectMapper mapper;
@@ -88,7 +87,6 @@ final class FaultyModel implements ChatModel {
     };
     private int calls;
     private int burstLeft;
-    private @Nullable String previousFormat;
 
     FaultyModel(final ObjectMapper mapper, final Clock clock, final FaultPlan plan) {
         this.pseudo = new PseudoChatModel(mapper);
@@ -125,15 +123,10 @@ final class FaultyModel implements ChatModel {
     @Override
     public Result<ChatResponse> chat(final ChatRequest request, final CallAttemptListener attempts) {
         calls++;
-        final String format = request.responseFormat() == null
-                ? "plain"
-                : Objects.requireNonNull(request.responseFormat()).name();
-        final boolean rejudge = REVIEW.equals(format) && DIRECTED_FIX.equals(previousFormat);
-        previousFormat = format;
-        final Fault fault = choose(format, rejudge);
+        final String format = request.responseFormat() == null ? "plain" : ScriptedChatModel.callName(request);
+        final Fault fault = choose(format);
         injected.merge(fault, 1, Integer::sum);
-        final CallAttempt attempt =
-                new CallAttempt(1, 1, fault == Fault.HANG || fault == Fault.REJUDGE_HANG ? HANG_TIMEOUT : null, null);
+        final CallAttempt attempt = new CallAttempt(1, 1, fault == Fault.HANG ? HANG_TIMEOUT : null, null);
         attempts.started(attempt);
         final Result<ChatResponse> result = answer(fault, request);
         final AppError error = result.error();
@@ -143,7 +136,7 @@ final class FaultyModel implements ChatModel {
         return result;
     }
 
-    private Fault choose(final String format, final boolean rejudge) {
+    private Fault choose(final String format) {
         if (calls == plan.outageAtCall()) {
             outageEnds.set(clock.instant().plus(plan.outage()));
         }
@@ -155,16 +148,13 @@ final class FaultyModel implements ChatModel {
             return Fault.UPSTREAM_BURST;
         }
         final int roll = random.nextInt(PER_MILLE);
-        if (rejudge && roll < plan.rejudgeHangPerMille()) {
-            return Fault.REJUDGE_HANG;
-        }
         final Fault any = plan.anyCall(roll);
         if (any != Fault.NONE) {
             return startBurst(any);
         }
         return switch (format) {
             case DRAFT, BATCH -> plan.draftCall(roll);
-            case REVIEW -> plan.judgeCall(roll);
+            case PROOFREAD -> plan.proofreadCall(roll);
             default -> Fault.NONE;
         };
     }
@@ -185,10 +175,8 @@ final class FaultyModel implements ChatModel {
         return switch (fault) {
             case TIMEOUT, UPSTREAM_BURST, UNREACHABLE, OUTAGE, MODEL_UNLOADED, EMPTY_COMPLETION ->
                 Result.err(failure(fault));
-            case HANG, REJUDGE_HANG -> hang();
-            case JUDGE_JUNK ->
-                Result.ok(new ChatResponse("The translation reads well {score: maybe", FinishReason.STOP));
-            case JUDGE_REVISE -> Result.ok(new ChatResponse(REVISE, FinishReason.STOP));
+            case HANG -> hang();
+            case PROOFREAD_TEXT -> Result.ok(new ChatResponse(PLAIN_PROOFREAD_REPLY, FinishReason.STOP));
             case THROW -> throw new IllegalStateException(INJECTED);
             case NONE, EMPTY_TARGET, DROP_TOKEN, DUPLICATE_TOKEN, GARBLE_TOKEN, STRAY_BRACKET, REFUSAL ->
                 reply(fault, request);
@@ -229,9 +217,9 @@ final class FaultyModel implements ChatModel {
     private Result<ChatResponse> hang() {
         stall.run();
         try {
-            Thread.sleep(Duration.ofSeconds(10));
+            new CountDownLatch(1).await(10, TimeUnit.SECONDS);
             throw new AssertionError("the stall watchdog never ended the hanging call");
-        } catch (InterruptedException interrupted) {
+        } catch (InterruptedException _) {
             return Result.err(AppError.of(ErrorCode.cancelled, "Provider request cancelled", "Interrupted."));
         }
     }
@@ -242,7 +230,7 @@ final class FaultyModel implements ChatModel {
         return Result.ok(new ChatResponse(rewrite(fault, response.content()), FinishReason.STOP));
     }
 
-    // Only a reply with a target, or a batch of them, is rewritten; the judge's and the scans' JSON pass through.
+    // Only a reply with a target, or a batch of them, is rewritten; the proofread's and the scans' JSON pass through.
     private String rewrite(final Fault fault, final String content) {
         try {
             final JsonNode node = mapper.readTree(content);
@@ -256,7 +244,7 @@ final class FaultyModel implements ChatModel {
             }
             final String damaged = FaultyText.damage(fault, Cyrillic.of(target.asText()), random);
             return mapper.writeValueAsString(Map.of("target", damaged));
-        } catch (JsonProcessingException notJson) {
+        } catch (JsonProcessingException _) {
             return content;
         }
     }

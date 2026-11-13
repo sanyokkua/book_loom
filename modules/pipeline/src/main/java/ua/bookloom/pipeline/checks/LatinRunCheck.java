@@ -29,7 +29,7 @@ final class LatinRunCheck {
     private static final Set<Script> CHECKED = Set.of(Script.CYRILLIC, Script.GREEK);
     private static final String LATIN_WORD = "[\\p{IsLatin}][\\p{IsLatin}\\p{M}'’ʼ-]*";
     private static final char FILL = '_';
-    private static final Pattern RUN = Pattern.compile(LATIN_WORD + "(?:[ \\u00a0]+" + LATIN_WORD + ")+");
+    private static final Pattern RUN = Pattern.compile(LATIN_WORD + "(?:[ \\u00a0]+" + LATIN_WORD + "){1,200}");
 
     static List<CheckFinding> find(
             final String source,

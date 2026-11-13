@@ -36,7 +36,9 @@ final class StepWords {
         /** Ended at once, needing no model call. */
         NO_CALL("–", "nocall", MessageKey.PROGRESS_STEP_NO_CALL),
         /** Ended without its outcome. */
-        FAILED("✕", "failed", MessageKey.PROGRESS_STEP_FAILED);
+        FAILED("✕", "failed", MessageKey.PROGRESS_STEP_FAILED),
+        /** Cut off by the person's Stop. */
+        STOPPED("■", "stopped", MessageKey.PROGRESS_STEP_STOPPED);
 
         private final String glyph;
         private final String token;
@@ -63,6 +65,10 @@ final class StepWords {
             return result;
         }
 
+        private static Look noCallLook(final StepEntry step) {
+            return step.kind() == StepKind.STAGE ? DONE : NO_CALL;
+        }
+
         static Look of(final StepEntry step) {
             if (step.isPending()) {
                 return PENDING;
@@ -75,8 +81,10 @@ final class StepWords {
                     ? DONE
                     : switch (ended) {
                         case DONE -> DONE;
-                        case NO_CALL -> NO_CALL;
+                        // A stage that needed no request still did its work (found, checked, wrote).
+                        case NO_CALL -> noCallLook(step);
                         case FAILED -> FAILED;
+                        case STOPPED -> STOPPED;
                     };
         }
     }
@@ -107,11 +115,13 @@ final class StepWords {
         return switch (stage) {
             case SCAN -> MessageKey.PROGRESS_NAMES_STEP_SCAN;
             case NAMES -> MessageKey.PROGRESS_NAMES_STEP_NAMES;
+            case NAMES_KNOWLEDGE -> MessageKey.PROGRESS_NAMES_STEP_NAMES_KNOWLEDGE;
             case TERMS_SCAN -> MessageKey.PROGRESS_NAMES_STEP_TERMS_SCAN;
             case TERMS_REVIEW -> MessageKey.PROGRESS_NAMES_STEP_TERMS_REVIEW;
             case TERMS_READ -> MessageKey.PROGRESS_NAMES_STEP_TERMS_READ;
             case NAMES_TRANSLATE -> MessageKey.PROGRESS_NAMES_STEP_NAMES_TRANSLATE;
             case TERMS_TRANSLATE -> MessageKey.PROGRESS_NAMES_STEP_TERMS_TRANSLATE;
+            case CHECK -> MessageKey.PROGRESS_NAMES_STEP_CHECK;
             case WRITE -> MessageKey.PROGRESS_NAMES_STEP_WRITE;
         };
     }
@@ -134,7 +144,10 @@ final class StepWords {
 
     /** {@return the step's one result line: its verdict when it gave one, else its state in words} */
     static String result(final Messages messages, final StepEntry step) {
-        if (step.requests() != StepEntry.NO_COUNT && !step.isPending() && Look.of(step) != Look.FAILED) {
+        if (step.requests() != StepEntry.NO_COUNT
+                && !step.isPending()
+                && Look.of(step) != Look.FAILED
+                && Look.of(step) != Look.STOPPED) {
             return messages.get(
                     step.isRunning()
                             ? MessageKey.PROGRESS_STAGE_REQUESTS_RUNNING

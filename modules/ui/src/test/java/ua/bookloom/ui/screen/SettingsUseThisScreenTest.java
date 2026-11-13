@@ -16,7 +16,7 @@ import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.state.CurrentProject;
-import ua.bookloom.ui.state.OpenBookForTest;
+import ua.bookloom.ui.state.OpenedBookFixture;
 
 /** "Use this one" in the form header: when it is offered, when it is off, and the question asked mid-book. */
 class SettingsUseThisScreenTest extends SettingsScreenTestBase {
@@ -49,7 +49,7 @@ class SettingsUseThisScreenTest extends SettingsScreenTestBase {
                 Instant.parse("2026-10-02T10:00:00Z"));
         projects.willList(
                 List.of(new ProjectSummary(project, decided, 142, ProjectFixtures.run("p1", JobState.PAUSED), null)));
-        onFx(() -> OpenBookForTest.open(injector.getInstance(CurrentProject.class), "p1", "en", "uk"));
+        onFx(() -> OpenedBookFixture.open(injector.getInstance(CurrentProject.class), "p1", "en", "uk"));
     }
 
     // IF the current provider offered itself, THEN the button would promise a change that does nothing.

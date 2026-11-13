@@ -10,6 +10,9 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
+import ua.bookloom.api.llm.ChatRequest;
+import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.llm.ModelSelection;
 
 /**
@@ -22,18 +25,26 @@ public final class ScriptedChatModelFactory implements ChatModelFactory {
     private final List<ModelSelection> selections = new CopyOnWriteArrayList<>();
     private final List<Boolean> askedOnFxThread = new CopyOnWriteArrayList<>();
 
-    private ScriptedChatModelFactory(final @Nullable AppError failure) {
+    private final int batchSize;
+
+    private ScriptedChatModelFactory(final @Nullable AppError failure, final int batchSize) {
         this.failure = failure;
+        this.batchSize = batchSize;
     }
 
     /** A factory that always creates a model. */
     public static ScriptedChatModelFactory ok() {
-        return new ScriptedChatModelFactory(null);
+        return new ScriptedChatModelFactory(null, ModelProfile.DEFAULT_BATCH_SIZE);
+    }
+
+    /** A factory whose models carry a profile with this batch size. */
+    public static ScriptedChatModelFactory withBatchSize(final int size) {
+        return new ScriptedChatModelFactory(null, size);
     }
 
     /** A factory that always answers with {@code error}. */
     public static ScriptedChatModelFactory failing(final AppError error) {
-        return new ScriptedChatModelFactory(Objects.requireNonNull(error, "error"));
+        return new ScriptedChatModelFactory(Objects.requireNonNull(error, "error"), ModelProfile.DEFAULT_BATCH_SIZE);
     }
 
     @Override
@@ -43,8 +54,29 @@ public final class ScriptedChatModelFactory implements ChatModelFactory {
         if (failure != null) {
             return Result.err(failure);
         }
-        return Result.ok(request -> Result.err(
-                AppError.of(ErrorCode.internal, "Not scripted", "The scripted model is never expected to be asked.")));
+        return Result.ok(new ChatModel() {
+            @Override
+            public Result<ChatResponse> chat(final ChatRequest request) {
+                return Result.err(AppError.of(
+                        ErrorCode.internal, "Not scripted", "The scripted model is never expected to be asked."));
+            }
+
+            @Override
+            public ModelProfile profile() {
+                final ModelProfile base = ModelProfile.defaults();
+                return new ModelProfile(
+                        base.reasoning(),
+                        base.markupFilters(),
+                        base.systemRole(),
+                        base.quirks(),
+                        base.sampling(),
+                        base.thinking(),
+                        base.context(),
+                        base.templateOverhead(),
+                        batchSize,
+                        base.tier());
+            }
+        });
     }
 
     public List<ModelSelection> selections() {

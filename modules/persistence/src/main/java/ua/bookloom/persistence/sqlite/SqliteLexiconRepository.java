@@ -1,5 +1,7 @@
 package ua.bookloom.persistence.sqlite;
 
+import static ua.bookloom.util.contract.ArgNames.PROJECT_ID;
+
 import com.google.inject.Inject;
 import java.util.List;
 import java.util.Objects;
@@ -26,7 +28,7 @@ public final class SqliteLexiconRepository implements LexiconRepository {
 
     @Override
     public Result<List<LexiconEntry>> all(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         return db.read("lexicon all", h -> {
             final List<LexiconEntry> entries = load(h, projectId).entries();
             log.debug("Lexicon all projectId={} entries={}", projectId, entries.size());
@@ -48,7 +50,7 @@ public final class SqliteLexiconRepository implements LexiconRepository {
     @Override
     public Result<Optional<LexiconEntry>> update(
             final String projectId, final String term, final UnaryOperator<LexiconEntry> change) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         Objects.requireNonNull(change, "change");
         return db.write("lexicon update", h -> {
@@ -63,7 +65,7 @@ public final class SqliteLexiconRepository implements LexiconRepository {
 
     @Override
     public Result<LexiconEntry> record(final String projectId, final String term, final String rendering) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         Objects.requireNonNull(rendering, "rendering");
         log.trace("Lexicon record term={} rendering={}", term, rendering);
@@ -80,7 +82,7 @@ public final class SqliteLexiconRepository implements LexiconRepository {
 
     @Override
     public Result<Boolean> remove(final String projectId, final String term) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         return db.write("lexicon remove", h -> {
             final String key = LexiconEntry.keyOf(term);
@@ -96,7 +98,7 @@ public final class SqliteLexiconRepository implements LexiconRepository {
 
     @Override
     public Result<Boolean> wasRemoved(final String projectId, final String term) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         log.debug("Lexicon wasRemoved projectId={}", projectId);
         return db.read("lexicon wasRemoved", h -> load(h, projectId).wasRemoved(LexiconEntry.keyOf(term)));

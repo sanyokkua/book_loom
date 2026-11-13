@@ -32,7 +32,7 @@ final class ProjectRenames {
         final boolean nameChanged = !candidate.name().equals(project.name());
         log.debug("updateBrief project={} pairChanged={} nameChanged={}", project.id(), pairChanged, nameChanged);
         if (!pairChanged && !nameChanged) {
-            return projects.save(candidate).map(ProjectChange.Saved::new);
+            return projects.save(candidate).map(saved -> new ProjectChange.Saved(saved, 0));
         }
         return saveUnlessClash(candidate);
     }
@@ -119,7 +119,7 @@ final class ProjectRenames {
                     clash.get().getClass().getSimpleName());
             return Result.ok(clash.get());
         }
-        return projects.save(candidate).map(ProjectChange.Saved::new);
+        return projects.save(candidate).map(saved -> new ProjectChange.Saved(saved, 0));
     }
 
     private static String automaticName(final Project project) {

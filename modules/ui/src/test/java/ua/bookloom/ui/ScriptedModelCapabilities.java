@@ -2,6 +2,7 @@ package ua.bookloom.ui;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -11,8 +12,15 @@ import javafx.application.Platform;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ContextLength;
+import ua.bookloom.api.llm.LanguageAdvice;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelReport;
+import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.llm.PastedModel;
+import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.QuantAdvice;
+import ua.bookloom.api.llm.QuantTier;
+import ua.bookloom.api.llm.ReasoningControl;
 
 /**
  * A hand-written {@link ModelCapabilities} that answers each model with the report the test scripted, records every
@@ -23,7 +31,11 @@ public final class ScriptedModelCapabilities implements ModelCapabilities {
     private static final long WAIT_SECONDS = 10;
 
     private final Map<String, ModelReport> reports = new ConcurrentHashMap<>();
+    private final Map<String, QuantAdvice> names = new ConcurrentHashMap<>();
+    private final Map<String, LanguageAdvice> advices = new ConcurrentHashMap<>();
+    private final Map<String, PastedModel> pastes = new ConcurrentHashMap<>();
     private final List<String> asked = new CopyOnWriteArrayList<>();
+    private volatile String date = "";
     private final AtomicInteger fxThreadCalls = new AtomicInteger();
     private final Map<String, CountDownLatch> holds = new ConcurrentHashMap<>();
 
@@ -38,7 +50,70 @@ public final class ScriptedModelCapabilities implements ModelCapabilities {
             final String modelId,
             final @Nullable Integer contextLength,
             final @Nullable Integer loaded) {
-        reports.put(providerId + "/" + modelId, new ModelReport(contextLength, loaded));
+        reports.put(providerId + "/" + modelId, ModelReport.windowsOnly(contextLength, loaded));
+    }
+
+    /** From now on reports {@code thinking} as the thinking control the model offers. */
+    public void thinking(final String providerId, final String modelId, final ReasoningControl thinking) {
+        reports.put(
+                providerId + "/" + modelId,
+                new ModelReport(
+                        null,
+                        null,
+                        null,
+                        ModelReport.Match.DEFAULT,
+                        ModelReport.UNKNOWN_MODEL,
+                        List.of(),
+                        thinking,
+                        null,
+                        null,
+                        null,
+                        null));
+    }
+
+    /** From now on reads the name {@code modelId} as the quant {@code token} judged {@code tier}, offline. */
+    public void nameQuant(final String modelId, final String token, final @Nullable QuantTier tier) {
+        names.put(modelId, advice(token, tier));
+    }
+
+    /** From now on the server's facts for the model report the quant {@code token} judged {@code tier}. */
+    public void factsQuant(
+            final String providerId, final String modelId, final String token, final @Nullable QuantTier tier) {
+        reports.put(
+                providerId + "/" + modelId,
+                new ModelReport(
+                        null,
+                        null,
+                        null,
+                        ModelReport.Match.DEFAULT,
+                        ModelReport.UNKNOWN_MODEL,
+                        List.of(),
+                        ReasoningControl.UNKNOWN,
+                        null,
+                        advice(token, tier),
+                        null,
+                        null));
+    }
+
+    /** From now on reports {@code report} for the model and advises {@code advice} for any language pair. */
+    public void advise(
+            final String providerId, final String modelId, final ModelReport report, final LanguageAdvice advice) {
+        reports.put(providerId + "/" + modelId, report);
+        advices.put(providerId + "/" + modelId, advice);
+    }
+
+    /** From now on the shipped model knowledge is dated {@code factsDate}. */
+    public void factsDate(final String factsDate) {
+        date = factsDate;
+    }
+
+    /** From now on reads the pasted {@code text} as {@code reading}. */
+    public void paste(final String text, final PastedModel reading) {
+        pastes.put(text, reading);
+    }
+
+    private static QuantAdvice advice(final String token, final @Nullable QuantTier tier) {
+        return new QuantAdvice(token, null, null, false, false, false, null, null, tier, "test");
     }
 
     /** Makes every later report of this model wait for {@code release}, the way a slow provider would. */
@@ -46,7 +121,7 @@ public final class ScriptedModelCapabilities implements ModelCapabilities {
         holds.put(providerId + "/" + modelId, release);
     }
 
-    /** Every {@code provider/model} asked about, oldest first. */
+    /** Every {@code provider/model} whose server was asked for a report, oldest first. */
     public List<String> asked() {
         return List.copyOf(asked);
     }
@@ -57,18 +132,50 @@ public final class ScriptedModelCapabilities implements ModelCapabilities {
     }
 
     @Override
+    public @Nullable QuantAdvice quantAdviceByName(final String modelId) {
+        return names.get(modelId);
+    }
+
+    @Override
+    public LanguageAdvice languageAdvice(
+            final ModelSelection selection, final @Nullable String sourceTag, final @Nullable String targetTag) {
+        return advices.getOrDefault(selection.providerId() + "/" + selection.modelId(), LanguageAdvice.NEUTRAL);
+    }
+
+    @Override
+    public String factsDate() {
+        return date;
+    }
+
+    @Override
+    public Optional<PastedModel> readPasted(final String text, final ProviderKind kind) {
+        return Optional.ofNullable(pastes.get(text));
+    }
+
+    @Override
     public Result<ContextLength> contextLength(final String providerId, final String modelId) {
         final ModelReport report = reports.get(providerId + "/" + modelId);
         return Result.ok(report == null ? ContextLength.unknown() : new ContextLength(report.contextLength()));
     }
 
+    // Offline by contract: what the test scripted stands for the name and the facts the session holds. Not recorded in
+    // asked(), which counts only the reads that would reach the server.
     @Override
-    public Result<ModelReport> report(final String providerId, final String modelId) {
+    public Result<ModelReport> heldReport(final ModelSelection selection) {
+        return Result.ok(reports.getOrDefault(
+                selection.providerId() + "/" + selection.modelId(), ModelReport.windowsOnly(null, null)));
+    }
+
+    @Override
+    public Result<ModelReport> report(final ModelSelection selection) {
+        final String providerId = selection.providerId();
+        final String modelId = selection.modelId();
         if (Platform.isFxApplicationThread()) {
             fxThreadCalls.incrementAndGet();
         }
         asked.add(providerId + "/" + modelId);
-        final ModelReport report = reports.getOrDefault(providerId + "/" + modelId, new ModelReport(null, null));
+        final ModelReport report =
+                reports.getOrDefault(providerId + "/" + modelId, ModelReport.windowsOnly(null, null));
         awaitHold(holds.get(providerId + "/" + modelId));
         return Result.ok(report);
     }

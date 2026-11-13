@@ -1,0 +1,17 @@
+flowchart TD
+    S0["0 · Setup & Book Brief<br/>languages, genre, tone, options"] --> S1
+    S1["1 · Open & unpack<br/>unzip EPUB / read FB2 / detect real language / refuse DRM"] --> S2
+    S2["2 · Read structure into a tree<br/>pull out text segments, protect tags/code/images/links"] --> S3
+    S3["3 · Prepare stage<br/>style sheet from the brief; frequency + casing names scan when the glossary is empty<br/>(the model names pass runs only when the person asks, in Names and style)"] --> S4
+    S4["4 · Translate loop<br/>chunk by chunk, with context"] --> S5
+    S5["5 · Auto-check<br/>accept if no check blocks; one repair for what fails, kept only if never worse"] --> S6
+    S6{"More chunks / chapters?"}
+    S6 -- yes --> S4
+    S6 -- no --> PR["6 · Proofread stage (every dial)<br/>audit · term sweep · deferrals settled by code · mark list<br/>Balanced/Max: one minimal-edit call per marked window, never-worse gate<br/>Max: round 2 over every story paragraph · Fast: no model call"]
+    PR --> S7["7 · Put text back into the tree<br/>images/fonts/IDs untouched, update language tags"]
+    S7 --> S8["8 · Repackage<br/>EPUB (mimetype-first) / FB2 / MD / TXT"]
+    S8 --> DONE(["Translated book saved"])
+    S5 -. " failing segments (rare) " .-> Q["Flagged segments<br/>(optional human look)"]
+    S5 -. " deferrals and marks<br/>(facts revealed later) " .-> PR
+    PR -. " Fast marks, proposals,<br/>kept rewrites (Undo proofread) " .-> Q
+    S8 --> Q

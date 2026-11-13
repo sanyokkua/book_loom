@@ -8,13 +8,21 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.LockSupport;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.AdvancedCheck;
+import ua.bookloom.api.llm.EngineDetection;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderVerifier;
+import ua.bookloom.api.llm.VerificationExchange;
+import ua.bookloom.api.llm.VerificationListener;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
+import ua.bookloom.api.llm.VerificationStage;
 
 /**
  * A hand-written {@link ProviderVerifier} that answers with what the test scripted (a result, or a thrown exception),
@@ -28,6 +36,13 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
     /** One check of a description that is not saved: the description, the model asked about and the depth. */
     public record DraftCall(ProviderConfig config, String modelId, VerificationPolicy policy) {}
 
+    /** One request the verifier tells its listener of before it answers, as the real one does before each call. */
+    public record Announced(
+            VerificationStage stage, @Nullable AdvancedCheck check, VerificationExchange request) {}
+
+    private final List<Announced> announcements = new CopyOnWriteArrayList<>();
+    private volatile int endedEarly;
+    private final List<VerificationStage> beginnings = new CopyOnWriteArrayList<>();
     private volatile @Nullable Result<VerificationReport> answer;
     private volatile @Nullable RuntimeException failure;
     private volatile @Nullable CountDownLatch gate;
@@ -38,6 +53,9 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
     private final List<String> connectionCalls = new CopyOnWriteArrayList<>();
     private final List<DraftCall> drafts = new CopyOnWriteArrayList<>();
     private final AtomicInteger calls = new AtomicInteger();
+    private final List<ProviderConfig> detections = new CopyOnWriteArrayList<>();
+    private volatile Result<EngineDetection> detection =
+            Result.err(AppError.of(ErrorCode.unreachable, "Unreachable", "The server did not answer."));
 
     private ScriptedProviderVerifier(final @Nullable Result<VerificationReport> answer) {
         this.answer = answer;
@@ -83,6 +101,26 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
         gate = latch;
     }
 
+    /** From now on answers Detect again with {@code next}; until then it answers that the server does not answer. */
+    public void detectWith(final Result<EngineDetection> next) {
+        detection = next;
+    }
+
+    /**
+     * Records the description and answers with the scripted detection at once. A detection asks no model, so it is
+     * not counted in {@link #callCount()} and is never held.
+     */
+    @Override
+    public Result<EngineDetection> detectEngine(final ProviderConfig config) {
+        detections.add(config);
+        return detection;
+    }
+
+    /** Every description Detect again was asked about, oldest first. */
+    public List<ProviderConfig> detections() {
+        return List.copyOf(detections);
+    }
+
     /** Records the provider id and answers as {@code verify} does, holding and throwing the same way. */
     @Override
     public Result<VerificationReport> verifyConnection(final String providerId) {
@@ -111,6 +149,47 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
         calls.incrementAndGet();
         entered.countDown();
         return answer(held);
+    }
+
+    /** From now on tells a listening check of {@code heard}, in order, before it holds or answers. */
+    public void announce(final Announced... heard) {
+        announcements.clear();
+        announcements.addAll(List.of(heard));
+    }
+
+    /** From now on tells a listening check that each of {@code begun} has started, in order, before anything else. */
+    public void begin(final VerificationStage... begun) {
+        beginnings.clear();
+        beginnings.addAll(List.of(begun));
+    }
+
+    /** From now on tells a listening check that the first {@code count} stages of the answer have ended, before it holds. */
+    public void endEarly(final int count) {
+        endedEarly = count;
+    }
+
+    /**
+     * Tells the listener of every scripted stage start and request, then answers as the unheard form does, then tells it of each stage
+     * of the answer, the order the real verifier keeps.
+     */
+    @Override
+    public Result<VerificationReport> verify(
+            final ProviderConfig draft,
+            final String modelId,
+            final VerificationPolicy policy,
+            final VerificationListener listener) {
+        beginnings.forEach(listener::stageStarted);
+        final Result<VerificationReport> scripted = answer;
+        if (scripted != null && scripted.data() != null) {
+            scripted.data().stages().stream().limit(endedEarly).forEach(listener::stageFinished);
+        }
+        announcements.forEach(heard -> listener.requestSent(heard.stage(), heard.check(), heard.request()));
+        final Result<VerificationReport> result = verify(draft, modelId, policy);
+        final VerificationReport report = result.data();
+        if (report != null) {
+            report.stages().stream().skip(endedEarly).forEach(listener::stageFinished);
+        }
+        return result;
     }
 
     private Result<VerificationReport> answer() {
@@ -152,13 +231,13 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
     }
 
     /** Blocks until {@code verify} or {@code verifyConnection} has been entered {@code expected} times in all. */
-    public void awaitCalls(final int expected) throws InterruptedException {
+    public void awaitCalls(final int expected) {
         final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(WAIT_SECONDS);
         while (calls.get() < expected) {
             if (System.nanoTime() > deadline) {
                 throw new IllegalStateException("the verifier was asked " + calls.get() + " time(s), not " + expected);
             }
-            TimeUnit.MILLISECONDS.sleep(5);
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(5));
         }
     }
 

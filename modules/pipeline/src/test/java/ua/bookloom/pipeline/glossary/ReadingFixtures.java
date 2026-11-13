@@ -97,7 +97,7 @@ final class ReadingFixtures {
     }
 
     static GlossaryEntry entry(final String term, final TermType type) {
-        return new GlossaryEntry(PROJECT + ":" + term, PROJECT, term, null, type, Gender.UNKNOWN, false);
+        return GlossaryEntry.of(PROJECT + ":" + term, PROJECT, term, null, type, Gender.UNKNOWN, false);
     }
 
     static GlossaryEntry untyped() {

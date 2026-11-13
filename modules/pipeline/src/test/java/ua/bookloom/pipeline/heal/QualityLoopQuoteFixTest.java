@@ -2,14 +2,16 @@ package ua.bookloom.pipeline.heal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.calls;
+import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.itemReply;
 import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.readable;
 import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.segment;
-import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.targetReply;
 
 import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.ProofreadCoverage;
+import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
@@ -37,7 +39,7 @@ class QualityLoopQuoteFixTest {
     void nextDecision_draftWithOnlyAnUnclosedQuote_isRepairedAndAcceptedWithNoModelCall() {
         final ScriptedChatModel model = new ScriptedChatModel();
 
-        final SegmentOutcome decided = decide(SOURCE, UNCLOSED, model, 1);
+        final SegmentOutcome decided = decide(SOURCE, UNCLOSED, model, true);
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(decided.machineTarget()).isEqualTo("Він відчинив «старі двері».");
@@ -46,10 +48,10 @@ class QualityLoopQuoteFixTest {
     }
 
     @Test
-    void nextDecision_roundReplyWithOnlyAnUnclosedQuote_isRepairedAndAccepted() {
-        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(UNCLOSED)));
+    void nextDecision_repairReplyWithOnlyAnUnclosedQuote_isRepairedAndAccepted() {
+        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(itemReply(UNCLOSED)));
 
-        final SegmentOutcome decided = decide(SOURCE, PURITY_ONLY + " «", model, 1);
+        final SegmentOutcome decided = decide(SOURCE, PURITY_ONLY + " «", model, true);
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(decided.path()).isEqualTo(SegmentPath.REPAIRED);
@@ -58,7 +60,7 @@ class QualityLoopQuoteFixTest {
 
     @Test
     void nextDecision_quoteTheRepairCannotClear_isFlaggedWithItsDraftAsMachineTarget() {
-        final SegmentOutcome decided = decide(SOURCE, TWO_UNCLOSED, new ScriptedChatModel(), 0);
+        final SegmentOutcome decided = decide(SOURCE, TWO_UNCLOSED, new ScriptedChatModel(), false);
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(decided.machineTarget()).isEqualTo(TWO_UNCLOSED);
@@ -68,7 +70,7 @@ class QualityLoopQuoteFixTest {
 
     @Test
     void nextDecision_scriptPurityFailureOnly_isFlaggedWithItsDraftAsMachineTarget() {
-        final SegmentOutcome decided = decide(SOURCE, PURITY_ONLY, new ScriptedChatModel(), 0);
+        final SegmentOutcome decided = decide(SOURCE, PURITY_ONLY, new ScriptedChatModel(), false);
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(decided.machineTarget()).isEqualTo(PURITY_ONLY);
@@ -76,7 +78,7 @@ class QualityLoopQuoteFixTest {
 
     @Test
     void nextDecision_englishLeftover_isFlaggedWithNoMachineTarget() {
-        final SegmentOutcome decided = decide(LONG_ENGLISH, LONG_ENGLISH, new ScriptedChatModel(), 0);
+        final SegmentOutcome decided = decide(LONG_ENGLISH, LONG_ENGLISH, new ScriptedChatModel(), false);
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(decided.findings()).extracting(QaFinding::raisedBy).contains("language-identity");
@@ -85,18 +87,20 @@ class QualityLoopQuoteFixTest {
     }
 
     private SegmentOutcome decide(
-            final String source, final String draft, final ScriptedChatModel model, final int repairRounds) {
-        final DraftOutcome.Drafted outcome =
-                new DraftOutcome.Drafted(segment(), source, List.of(), draft, draft, draft, null);
+            final String source, final String draft, final ScriptedChatModel model, final boolean repairs) {
+        final DraftOutcome.Drafted outcome = QualityLoopFixtures.repairing(
+                new DraftOutcome.Drafted(segment(), source, List.of(), draft, draft, draft, null));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.ASSISTED,
-                new DialParameters(0, repairRounds, 0, false, false, 4),
+                new DialParameters(RepairMode.ONE, ProofreadCoverage.NONE),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());
-        final ChunkDecider decider = Objects.requireNonNull(
-                loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model))
-                        .data());
+        final ChunkDecider decider = loop.start(
+                List.of(outcome),
+                repairs ? settings : settings.withoutRepair(),
+                QualityLoopFixtures.PASSTHROUGH_GATE,
+                calls(model));
         return Objects.requireNonNull(decider.nextDecision().data());
     }
 }

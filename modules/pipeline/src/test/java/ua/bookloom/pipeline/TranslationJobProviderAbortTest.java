@@ -38,7 +38,10 @@ class TranslationJobProviderAbortTest {
 
     private static final Duration LONG_DELAY = Duration.ofSeconds(30);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(60);
-    private static final long STOP_BUDGET_SECONDS = 5;
+    // A batch of one expects its reply's envelope too, so a short draft's timeout is about 10 s on a server that does
+    // not
+    // stream; the budget waits past it.
+    private static final long STOP_BUDGET_SECONDS = 15;
 
     @TempDir
     private Path tempDir;
@@ -104,7 +107,7 @@ class TranslationJobProviderAbortTest {
     @EnumSource(ProviderKind.class)
     void run_pauseDuringTimeoutBackoff_sendsNoFurtherRequest(final ProviderKind kind) {
         final WireMockProvider provider = start(kind);
-        provider.stubAlways(provider.target("ONE.", Duration.ofSeconds(10)));
+        provider.stubAlways(provider.target("ONE.", Duration.ofSeconds(20)));
         final CountDownLatch backoff = new CountDownLatch(1);
         final ChatModel model = provider.model(Duration.ofMillis(300), delay -> waitInBackoff(backoff));
         final TranslationJobImpl translation = markdownJob(model, "One.");

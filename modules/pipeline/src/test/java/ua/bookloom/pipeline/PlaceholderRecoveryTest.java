@@ -22,7 +22,6 @@ import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.ProtectedSpans;
-import ua.bookloom.pipeline.prompt.DraftContext;
 
 /**
  * The retry order for a reply the placeholder gate refuses, on the two paragraphs of a real chapter opening whose
@@ -61,20 +60,19 @@ class PlaceholderRecoveryTest {
                 .containsExactly("markup", Severity.LOW);
     }
 
+    // A swapped pair is placed again by code, by position, with no model call.
     @Test
-    void translate_swappedPairThenRepairDroppingTheClosingToken_isRestoredAfterOneRepairCall() {
+    void translate_swappedPair_isPlacedAgainByCodeWithNoCall() {
         final Segment segment = epubSegment(ITALIC);
-        final ScriptedChatModel model = TranslationJobTestSupport.replies(
-                "«Пам'ятай ⟦g1⟧це»,⟦g0⟧ — сказав він тихим голосом.", "«Пам'ятай ⟦g0⟧це», — сказав він тихим голосом.");
+        final ScriptedChatModel model =
+                TranslationJobTestSupport.replies("«Пам'ятай ⟦g1⟧це»,⟦g0⟧ — сказав він тихим голосом.");
 
         final DraftOutcome.Drafted drafted = drafted(segment, ProtectedMask.none(segment.masked()), model);
 
-        assertThat(model.requests()).hasSize(2);
-        assertThat(model.requests().get(1).messages().get(1).content())
-                .contains("Out of order: ⟦g1⟧ comes before ⟦g0⟧.")
-                .contains("In <Text>, ⟦g0⟧…⟦g1⟧ wraps \"this,”\"");
+        assertThat(model.requests()).hasSize(1);
         assertThat(drafted.restoredTarget())
                 .isEqualTo("«Пам'ятай <i class=\"calibre3\">це»,</i> — сказав він тихим голосом.");
+        assertThat(drafted.autoRepair()).isNotNull();
     }
 
     @Test
@@ -86,25 +84,25 @@ class PlaceholderRecoveryTest {
         final DraftOutcome.Drafted drafted = drafted(segment, mask, model);
 
         assertThat(model.requests().getFirst().messages().get(1).content())
-                .contains("<Text>\n“Above all,” said his master.\n</Text>")
+                .contains("<s id=\"1\">“Above all,” said his master.</s>")
                 .doesNotContain("Immutable tokens", "⟦gN⟧");
         assertThat(drafted.restoredTarget())
                 .isEqualTo("<span class=\"calibre8\">«П</span>онад усе», — сказав його господар.");
         assertThat(drafted.autoRepair()).isNull();
     }
 
+    // A drop cap's pair the reply wrapped around every word is placed again by code with no model call.
     @Test
-    void translate_dropCapWrappedAroundTheWholeReply_isRefusedAndRepairedOnTheFirstLetter() {
+    void translate_dropCapWrappedAroundTheWholeReply_isPlacedAgainByCodeWithNoCall() {
         final Segment segment = epubSegment(DROP_CAP);
-        final ScriptedChatModel model = TranslationJobTestSupport.replies(
-                "⟦g0⟧«Понад усе», — сказав його господар.⟦g1⟧", "«Понад усе», — сказав.");
+        final ScriptedChatModel model =
+                TranslationJobTestSupport.replies("⟦g0⟧«Понад усе», — сказав його господар.⟦g1⟧");
 
         final DraftOutcome.Drafted drafted = drafted(segment, ProtectedMask.none(segment.masked()), model);
 
-        assertThat(model.requests()).hasSize(2);
-        assertThat(model.requests().get(1).messages().get(1).content())
-                .contains("put all of its words inside one piece of formatting");
-        assertThat(drafted.restoredTarget()).isEqualTo("<span class=\"calibre8\">«П</span>онад усе», — сказав.");
+        assertThat(model.requests()).hasSize(1);
+        assertThat(drafted.restoredTarget())
+                .isEqualTo("<span class=\"calibre8\">«П</span>онад усе», — сказав його господар.");
     }
 
     private DraftOutcome.Drafted drafted(
@@ -113,7 +111,7 @@ class PlaceholderRecoveryTest {
                 ProtectedSpans.gate(Map.of(segment.id(), mask), GateFunction.of(documents, BookFormat.EPUB));
         final Result<DraftOutcome> result = DraftStepFixtures.segmentTranslator(
                         gate, (kind, segmentId, request) -> model.chat(request), BookFormat.EPUB, "uk", "en")
-                .translate(segment, DraftContext.empty(), mask);
+                .translate(segment, null, mask);
         return DraftStepFixtures.drafted(result);
     }
 

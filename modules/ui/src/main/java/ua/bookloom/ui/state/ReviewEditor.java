@@ -137,8 +137,9 @@ public final class ReviewEditor {
         source = MarkStatus.show(view.maskedSource());
         noTarget = view.maskedUserTarget() == null && view.maskedMachineTarget() == null;
         fromRejected = noTarget && view.rejectedTarget() != null;
-        targetNote.set(
-                noTarget ? (fromRejected ? MessageKey.REVIEW_TARGET_REJECTED : MessageKey.REVIEW_TARGET_SOURCE) : null);
+        final MessageKey fallbackNote =
+                fromRejected ? RejectedReplyNote.of(view.findings()) : MessageKey.REVIEW_TARGET_SOURCE;
+        targetNote.set(noTarget ? fallbackNote : null);
         log.debug(
                 "editor loads segment {} noTarget={} fromRejected={} sourceMarks={}",
                 loadedId,

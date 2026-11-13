@@ -246,19 +246,19 @@ class DiagnosticsTranslationJobTest {
         final CheckpointPort throwing = commit -> {
             throw failure;
         };
-        final RunStores stores = project.stores();
         return new TestProject(
                 project.id(),
                 new RunStores(
-                        stores.projects(),
-                        stores.segments(),
+                        project.stores().projects(),
+                        project.stores().segments(),
                         throwing,
-                        stores.openProjects(),
-                        stores.runs(),
-                        stores.glossary(),
-                        stores.tm(),
-                        stores.summaries(),
-                        stores.lexicon()),
+                        project.stores().openProjects(),
+                        project.stores().runs(),
+                        project.stores().glossary(),
+                        project.stores().tm(),
+                        project.stores().summaries(),
+                        project.stores().lexicon(),
+                        project.stores().promptFrames()),
                 project.documents(),
                 project.deferrals());
     }
@@ -274,14 +274,14 @@ class DiagnosticsTranslationJobTest {
                         "targetLanguage=uk",
                         "mode=UNATTENDED",
                         "dial=FAST",
-                        "contextSize=16384",
+                        "defaultWindow=16384",
                         "pausePoints=[]",
                         "segments=1",
                         "sections=1");
         assertThat(end.getFormattedMessage()).contains("state=COMPLETED", "segments=1", "accepted=1", "flagged=0");
         assertThat(start.getMDCPropertyMap().get("job")).isNotBlank();
-        assertThat(end.getMDCPropertyMap().get("job"))
-                .isEqualTo(start.getMDCPropertyMap().get("job"));
+        assertThat(end.getMDCPropertyMap())
+                .containsEntry("job", start.getMDCPropertyMap().get("job"));
     }
 
     private void assertOnlyErrorCarries(final Throwable cause) {
@@ -311,7 +311,7 @@ class DiagnosticsTranslationJobTest {
                                 .map(event -> event.getClass().getSimpleName())
                                 .filter(name -> !name.equals("CallSnapshotUpdated"))
                                 .toList()))
-                .isEqualTo("StageStarted StageStarted StepsPlanned " + call
+                .isEqualTo("StageStarted StageStarted StepsPlanned StepsPlanned " + call
                         + " SegmentDrafted StepChanged SegmentDecided " + call
                         + " StepChanged SegmentDecided " + call + " Finished");
         assertThat(((Finished) events.getLast()).report()).isEqualTo(result);
@@ -323,8 +323,8 @@ class DiagnosticsTranslationJobTest {
         assertThat(warning.getFormattedMessage())
                 .contains(
                         "stage=TRANSLATE",
-                        "reason=ON_ERROR",
-                        "errorCode=unreachable",
+                        "pauseReason=ON_ERROR",
+                        "errorCode=unreachable reason=none",
                         "accepted=0",
                         "flagged=0",
                         "pending=1");

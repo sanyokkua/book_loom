@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
@@ -119,7 +120,7 @@ class ScreenScrollTest extends ConformanceTestBase {
         final Node scope = ScrollReach.scope(scene);
         return ScrollReach.hiddenBelow(scope).stream()
                 .map(Hidden::pane)
-                .filter(pane -> pane != null)
+                .filter(Objects::nonNull)
                 .findFirst()
                 .orElse(null);
     }

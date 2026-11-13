@@ -29,7 +29,7 @@ import ua.bookloom.ui.state.CurrentProject;
 class NamesStyleNarratorRecheckTest extends TranslatingScreenTestBase {
 
     private static final GlossaryEntry NAME =
-            new GlossaryEntry("e1", "p1", "Edwin", "Едвін", TermType.CHARACTER, Gender.MALE, false);
+            GlossaryEntry.of("e1", "p1", "Edwin", "Едвін", TermType.CHARACTER, Gender.MALE, false);
     private static final String CARD = "narrator-card";
     private static final Narrator VERIFIED = new Narrator(
             NarratorPerson.FIRST, Gender.MALE, Narrator.GenderOrigin.VERIFIED, List.of("Hold on tight, Edwin"));

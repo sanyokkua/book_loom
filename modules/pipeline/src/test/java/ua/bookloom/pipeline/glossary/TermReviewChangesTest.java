@@ -64,7 +64,7 @@ class TermReviewChangesTest {
         glossary.add(well);
         glossary.add(hale);
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(VERDICTS)).answer(reply(SUGGESTIONS));
+                ReviewModels.scripted().answer(reply(VERDICTS)).answer(reply(SUGGESTIONS));
 
         final EntryChanges<GlossaryEntry> changes = Objects.requireNonNull(review.review(
                                 PROJECT,
@@ -103,7 +103,7 @@ class TermReviewChangesTest {
             @Nullable final String target,
             final TermType type,
             final Gender gender) {
-        return new GlossaryEntry(id, PROJECT, term, target, type, gender, target != null);
+        return GlossaryEntry.of(id, PROJECT, term, target, type, gender, target != null);
     }
 
     private static Result<ChatResponse> reply(final String content) {

@@ -263,7 +263,7 @@ class ExportJobVerificationTest {
         final String id = fixture.importBook(TestBooks.markdown(tempDir.resolve("Book.md"), "One."), "en");
         final Path folder = Files.createDirectory(tempDir.resolve("out"));
         final Path destination = folder.resolve("Book.uk.md");
-        final var job = ok(fixture.service().newExport(request(id, destination, false), null));
+        final var job = ok(fixture.service().newExport(request(id, destination, false)));
         Files.delete(folder);
 
         final Result<ExportReport> result = job.run();

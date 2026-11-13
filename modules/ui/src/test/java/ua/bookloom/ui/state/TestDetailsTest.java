@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -104,7 +106,7 @@ class TestDetailsTest {
         assertThat(detail.body()).isEqualTo("(no body)");
         assertThat(metricsOf(detail))
                 .extracting(Metric::name, Metric::value)
-                .containsExactly(tuple("status", "200 OK"), tuple("time", "1.2 s"), tuple("server", "—"));
+                .containsExactly(tuple("status", "200 OK"), tuple("time", "1.2 s"), tuple("server", "–"));
     }
 
     @Test
@@ -141,7 +143,7 @@ class TestDetailsTest {
                 false);
 
         assertThat(detail.verdict()).isEqualTo("The list of models was read. No model is chosen yet.");
-        assertThat(metricsOf(detail)).extracting(Metric::name, Metric::value).contains(tuple("chosen", "—"));
+        assertThat(metricsOf(detail)).extracting(Metric::name, Metric::value).contains(tuple("chosen", "–"));
     }
 
     // IF a server without a list read as a failure, THEN it could not be told from a server that is down.
@@ -172,7 +174,7 @@ class TestDetailsTest {
         final TestDetail detail =
                 TestDetails.of(EN, VerificationStage.CONNECTION, List.of(failed), false, "Ollama", false, true);
 
-        assertThat(metricsOf(detail)).extracting(Metric::name, Metric::value).contains(tuple("status", "—"));
+        assertThat(metricsOf(detail)).extracting(Metric::name, Metric::value).contains(tuple("status", "–"));
     }
 
     @Test
@@ -300,6 +302,28 @@ class TestDetailsTest {
         assertThat(detail.verdict()).isEqualTo("Testing...");
     }
 
+    // IF a stage that has begun but sent nothing read "Testing...", THEN a loading model would look like a hung window.
+    @Test
+    void of_stageBegunNoRequest_namesTheStepWhatItWaitsForAndHowLongInBothLanguages() {
+        final Instant begun = Instant.parse("2026-11-01T10:00:00Z");
+        final TestLive live = new TestLive(
+                List.of(),
+                List.of(new StageStart(VerificationStage.INFERENCE, begun)),
+                List.of(),
+                4,
+                begun.plusSeconds(12));
+        final TestDetails.Subject subject = new TestDetails.Subject("Ollama", true, true);
+
+        final TestDetail english = TestDetails.of(EN, VerificationStage.INFERENCE, List.of(), true, subject, live);
+        final TestDetail ukrainian = TestDetails.of(UK, VerificationStage.INFERENCE, List.of(), true, subject, live);
+
+        assertThat(english.verdict()).isEqualTo("Step 3 of 4 · Inference · waiting for the model to load or answer");
+        assertThat(english.response()).isEqualTo("Waiting for the model");
+        assertThat(english.metrics()).extracting(Metric::value).containsExactly("12.0 s");
+        assertThat(ukrainian.verdict())
+                .isEqualTo("Крок 3 з 4 · Відповідь моделі · чекаємо, поки модель завантажиться або відповість");
+    }
+
     @Test
     void of_inferencePassedInUkrainian_readsInUkrainian() {
         final TestDetail detail = TestDetails.of(
@@ -313,5 +337,60 @@ class TestDetailsTest {
 
         assertThat(detail.verdict()).isEqualTo("Модель відповіла правильно. Можна починати переклад.");
         assertThat(metricsOf(detail)).extracting(Metric::label).contains("Швидкість", "Перший токен");
+    }
+
+    private static List<Metric> inferenceMetrics(final VerificationExchange exchange) {
+        return TestDetails.of(
+                        EN,
+                        VerificationStage.INFERENCE,
+                        List.of(passed(VerificationStage.INFERENCE, exchange)),
+                        false,
+                        "Ollama",
+                        false,
+                        true)
+                .metrics();
+    }
+
+    private static VerificationExchange chatWith(
+            final @Nullable Long firstTokenMs, final Integer promptTokens, final @Nullable Integer cachedPrompt) {
+        return new VerificationExchange(
+                "POST",
+                "http://127.0.0.1:11434/v1/chat/completions",
+                "{}",
+                "OK",
+                200,
+                firstTokenMs,
+                31.5,
+                true,
+                "",
+                promptTokens,
+                17,
+                "{}",
+                "OK",
+                null,
+                cachedPrompt,
+                List.of());
+    }
+
+    // IF a missing first token read 0, THEN Ollama's OpenAI-compatible route would look instant.
+    @Test
+    void of_inferenceOnOllamaOpenAiRoute_firstTokenReadsDash() {
+        assertThat(inferenceMetrics(chatWith(null, 42, null)))
+                .extracting(Metric::name, Metric::value)
+                .contains(tuple("firstToken", "–"));
+    }
+
+    @Test
+    void of_inferenceOnMlx_promptReadingIsUncachedWithCachedShare() {
+        assertThat(inferenceMetrics(chatWith(1200L, 600, 200)))
+                .extracting(Metric::name, Metric::value)
+                .contains(tuple("firstToken", "1.2 s · uncached · 33 %"));
+    }
+
+    @Test
+    void of_cachedShareNotReported_hasNoShare() {
+        assertThat(inferenceMetrics(chatWith(1200L, 600, null)))
+                .extracting(Metric::name, Metric::value)
+                .contains(tuple("firstToken", "1.2 s"));
     }
 }

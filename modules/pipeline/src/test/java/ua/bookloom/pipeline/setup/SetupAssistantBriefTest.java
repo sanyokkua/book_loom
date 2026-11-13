@@ -42,8 +42,8 @@ class SetupAssistantBriefTest extends SetupAssistantBriefTestBase {
     }
 
     // Each field stands on what the code can check, and says so: genre on three passages, audience on what the model
-    // knows, register on four passages, the narrator on the detector's count; the voice one window offered is not
-    // kept, because what the model knows of the book does not say it.
+    // knows, register on four passages, the narrator on the detector's count; the voice one window offered stands on
+    // nothing the code can check, so it is the model's most probable value, marked likely.
     @Test
     void suggestBrief_windowsKnowledgeAndSynthesis_decideEachFieldOnItsOwnBasis() {
         knowledgeAnswers(KNOWN);
@@ -59,9 +59,9 @@ class SetupAssistantBriefTest extends SetupAssistantBriefTestBase {
         assertThat(suggestion.evidenceOf(BriefField.AUDIENCE))
                 .hasValueSatisfying(
                         proof -> assertThat(proof.describe()).isEqualTo("from what the model knows of this book"));
-        assertThat(suggestion.voiceEra()).isNull();
+        assertThat(suggestion.voiceEra()).isEqualTo("terse and wry");
         assertThat(suggestion.evidenceOf(BriefField.VOICE))
-                .hasValueSatisfying(proof -> assertThat(proof.isKept()).isFalse());
+                .hasValueSatisfying(proof -> assertThat(proof.isLikely()).isTrue());
         assertThat(suggestion.register()).isEqualTo(Register.CASUAL);
         assertThat(suggestion.evidenceOf(BriefField.REGISTER))
                 .hasValueSatisfying(proof -> assertThat(proof.describe()).isEqualTo("from 4 of 4 passages"));
@@ -91,7 +91,8 @@ class SetupAssistantBriefTest extends SetupAssistantBriefTestBase {
         final BriefSuggestion suggestion = suggested();
 
         assertThat(synthesisUserMessage()).doesNotContain("pirate romance");
-        assertThat(suggestion.audience()).isNull();
+        assertThat(suggestion.evidenceOf(BriefField.AUDIENCE))
+                .hasValueSatisfying(proof -> assertThat(proof.isLikely()).isTrue());
     }
 
     // IF an unproven reading reached the synthesis, THEN a line the book never had could still decide its genre.
@@ -227,19 +228,19 @@ class SetupAssistantBriefTest extends SetupAssistantBriefTestBase {
     // IF the window prompt invited the model's memory of the book, THEN a famous title would outweigh what the text
     // shows; what the model knows is asked apart, and checked.
     @Test
-    void suggestBrief_windowSystemMessage_asksOnlyFromThePassageAndFixesNoGenderInItsExample() {
+    void suggestBrief_windowTask_asksOnlyFromThePassageAndFixesNoGenderInItsExample() {
         knowledgeAnswers(KNOWN);
         everyWindowAnswers(window("crime story", "casual"));
         synthesisAnswers(SYNTHESIS);
 
         suggested();
 
-        final String system = requestsOf(CallKind.BRIEF_SUGGESTION)
+        final String task = requestsOf(CallKind.BRIEF_SUGGESTION)
                 .getFirst()
                 .messages()
-                .getFirst()
+                .getLast()
                 .content();
-        assertThat(system)
+        assertThat(task)
                 .doesNotContain("what you know of this book", "\"narratorGender\":\"male\"")
                 .contains("\"narratorGender\":{\"evidence\"");
     }

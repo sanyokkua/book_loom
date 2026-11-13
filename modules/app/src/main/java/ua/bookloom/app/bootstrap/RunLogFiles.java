@@ -51,7 +51,7 @@ final class RunLogFiles {
         final List<Path> found = new ArrayList<>();
         try (DirectoryStream<Path> files = Files.newDirectoryStream(logDir, AppPaths.RUN_LOG_PREFIX + "*" + SUFFIX)) {
             files.forEach(found::add);
-        } catch (IOException e) {
+        } catch (IOException _) {
             // Housekeeping: a directory that cannot be listed costs old files staying, not the launch.
             failed.add(logDir.getFileName().toString());
             return found;
@@ -63,7 +63,7 @@ final class RunLogFiles {
     private static void delete(Path file, List<String> failed) {
         try {
             Files.deleteIfExists(file);
-        } catch (IOException e) {
+        } catch (IOException _) {
             failed.add(file.getFileName().toString());
         }
     }

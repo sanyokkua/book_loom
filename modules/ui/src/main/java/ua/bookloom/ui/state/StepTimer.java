@@ -37,6 +37,6 @@ final class StepTimer {
         final int doneInStep = done - stepStartDone;
         return doneInStep <= 0 || total <= done
                 ? null
-                : Duration.between(began, now).dividedBy(doneInStep).multipliedBy(total - done);
+                : Duration.between(began, now).dividedBy(doneInStep).multipliedBy((long) total - done);
     }
 }

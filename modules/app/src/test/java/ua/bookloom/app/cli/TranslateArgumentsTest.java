@@ -2,6 +2,7 @@ package ua.bookloom.app.cli;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import java.io.IOException;
 import java.net.URI;
@@ -228,6 +229,18 @@ class TranslateArgumentsTest {
         };
     }
 
+    // IF the language-code pattern backtracked, THEN a long malformed tag would hang the command line.
+    @Test
+    void parse_longMalformedLanguageTag_isRefusedPromptly() throws IOException {
+        final String tag = "en" + "-ab".repeat(30_000) + "!";
+        final String book = book().toString();
+
+        final Result<TranslateArguments> result = assertTimeoutPreemptively(
+                Duration.ofSeconds(5), () -> TranslateArguments.parse(List.of(book, "--to", tag)));
+
+        assertThat(result.isErr()).isTrue();
+    }
+
     // IF --from auto were refused as a malformed language code, THEN the command line could not ask for Auto.
     @ParameterizedTest
     @ValueSource(strings = {"auto", "AUTO", "Auto"})
@@ -258,8 +271,9 @@ class TranslateArgumentsTest {
     // IF a request for Auto could still carry a language, THEN the run would name a language nobody chose.
     @Test
     void constructor_autoSourceNamingALanguage_isRefused() throws IOException {
+        final Path book = book();
         assertThatThrownBy(() -> new TranslateArguments(
-                        book(),
+                        book,
                         BookFormat.MARKDOWN,
                         "uk",
                         "fr",

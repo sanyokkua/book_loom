@@ -1,7 +1,10 @@
 package ua.bookloom.ui.state;
 
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.SegmentView;
+import ua.bookloom.api.project.ProofreadOutcome;
+import ua.bookloom.api.project.ProofreadVerdict;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.ui.control.StateMarker;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -17,6 +20,8 @@ public enum DeskMarker {
     ACCEPTED(StateMarker.Meaning.DONE, MessageKey.REVIEW_MARKER_ACCEPTED),
     /** The person's own edit is its translation. */
     YOUR_EDIT(StateMarker.Meaning.DONE, MessageKey.REVIEW_MARKER_YOUR_EDIT),
+    /** A rewrite the Proofread stage kept is its translation; Undo proofread can put the text before back. */
+    PROOFREAD(StateMarker.Meaning.DONE, MessageKey.REVIEW_MARKER_PROOFREAD),
     /** Left for later in this application run; still to review. */
     LATER(StateMarker.Meaning.WAITING, MessageKey.REVIEW_MARKER_LATER),
     /** Kept in the original language by choice. */
@@ -59,7 +64,13 @@ public enum DeskMarker {
         return switch (view.status()) {
             case PENDING, FLAGGED -> TO_REVIEW;
             case ACCEPTED -> ACCEPTED;
-            case REVISED -> YOUR_EDIT;
+            case REVISED -> isProofreadRewrite(view) ? PROOFREAD : YOUR_EDIT;
         };
+    }
+
+    // REVISED means the person's edit or a kept proofread rewrite; only the first holds a user target.
+    private static boolean isProofreadRewrite(final SegmentView view) {
+        final @Nullable ProofreadVerdict verdict = view.proofread();
+        return view.userTarget() == null && verdict != null && verdict.outcome() == ProofreadOutcome.KEPT;
     }
 }

@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -60,30 +61,36 @@ import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /**
  * The whole-book scenario {@link WholeBookPipelineEndToEndTest} checks facet by facet: the real document, persistence
- * and pipeline modules wired as the app wires them, the WireMock-backed model passed to the run, and the six
+ * and pipeline modules wired as the app wires them, the WireMock-backed model passed to the run, and the four
  * provider answers stubbed in the order the engine asks for them: the first chunk's eight drafts are one batch call.
  *
  * <p>Code-point lengths of each stubbed target against its source (D-3 needs 0.81–1.69 and Cyrillic):
  * {@code Book.md:0} 32/37 = 0.86; {@code Book.md:1} 35/40 = 0.88 and its fix 37/40 = 0.93; {@code Book.md:2} 45/47 =
  * 0.96 in masked form; {@code Book.md:3} to {@code :6} the four filler paragraphs, each inside the band; {@code
- * Book.md:7} 26/26 = 1.00 and the edit 30/26 = 1.15; {@code Book.md:8} 30/35 = 0.86. The eighth segment's fixes answer
- * its English source, which the echo check fails outright.
+ * Book.md:7} 26/26 = 1.00 and the edit 30/26 = 1.15; {@code Book.md:8} 30/35 = 0.86. The second and the eighth segment's drafts hold a
+ * Russian letter, which the alphabet check fails outright; the eighth's repair keeps it.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class WholeBookRun {
 
+    // The four filler paragraphs weigh about 190 estimated tokens each and the ninth about 500, so the chunk, which the
+    // large tier's current part of 1,000 tokens closes, ends after the eighth paragraph and the ninth opens the next
+    // one: only the token budget closes a chunk.
+    private static final int FILLER_SENTENCES = 12;
+    private static final int LAST_SENTENCES = 32;
+
     static final String DRAFT_0 = "Двері відчинив Гейл пізно вночі.";
-    static final String DRAFT_1 = "Вона пішла з Гейлом до темної зали.";
+    static final String DRAFT_1 = "Вона пішла з Гейлом до темної залы.";
+    static final String DRAFT_3 = "Він пішов з дому вдосвітэ.";
     static final String DRAFT_2 = "Вони чекали на ⟦g0⟧Гейла⟦g1⟧ до самого ранку.";
-    static final String DRAFT_3 = "Він пішов з дому вдосвіта.";
-    static final String FILLER_0 = "Рибалки лагодили свої сіті.";
-    static final String FILLER_1 = "Діти весело бігли вздовж берега.";
-    static final String FILLER_2 = "Пекар відчинив свою маленьку крамницю.";
-    static final String FILLER_3 = "Капітан вивчав стару карту.";
+    static final String FILLER_0 = "Рибалки лагодили свої сіті. " + padUk(FILLER_SENTENCES);
+    static final String FILLER_1 = "Діти весело бігли вздовж берега. " + padUk(FILLER_SENTENCES);
+    static final String FILLER_2 = "Пекар відчинив свою маленьку крамницю. " + padUk(FILLER_SENTENCES);
+    static final String FILLER_3 = "Капітан вивчав стару карту. " + padUk(FILLER_SENTENCES);
     static final String FIX_1 = "Вона пройшла з Гейлом до темної зали.";
     static final String EDIT = "Він вийшов з дому на світанку.";
-    static final String DRAFT_4 = "Того вечора дощ так і не вщух.";
+    static final String DRAFT_4 = "Того вечора дощ так і не вщух. " + padUk(LAST_SENTENCES);
 
     private static final String SOURCE_3 = "He left the house at dawn.";
     private static final String BOOK = String.join(
@@ -91,23 +98,14 @@ final class WholeBookRun {
             "The door was opened by Hale at night.",
             "She walked with Hale into the dark hall.",
             "They waited for *Hale* until the morning.",
-            "The fishermen mended their nets.",
-            "The children ran along the shore.",
-            "The baker opened his small shop.",
-            "The captain studied the old map.",
+            "The fishermen mended their nets. " + padEn(FILLER_SENTENCES),
+            "The children ran along the shore. " + padEn(FILLER_SENTENCES),
+            "The baker opened his small shop. " + padEn(FILLER_SENTENCES),
+            "The captain studied the old map. " + padEn(FILLER_SENTENCES),
             SOURCE_3,
-            "The rain did not stop that evening.");
-    // Two edits the code refuses as a swapped word, which leaves the reviewer's finding standing, so each segment gets
-    // one directed fix naming the reviewer's quote; the first fix answers a text that no longer holds the quote, the
-    // second one
-    // echoes
-    // the English source, which the echo check blocks.
-    private static final String CHUNK_REVIEW = "{\"results\":["
-            + "{\"id\":\"s2\",\"status\":\"edits\",\"edits\":[{\"criterion\":\"meaning\",\"quote\":\"пішла\","
-            + "\"replacement\":\"побігла\"}]},"
-            + "{\"id\":\"s8\",\"status\":\"edits\",\"edits\":[{\"criterion\":\"meaning\",\"quote\":\"Він пішов\","
-            + "\"replacement\":\"Він побіг\"}]}]}";
-    private static final String LAST_REVIEW = "{\"results\":[]}";
+            "The rain did not stop that evening. " + padEn(LAST_SENTENCES));
+    // Two drafts of the batch hold a Russian letter, which the alphabet check blocks, so each segment gets its one
+    // repair; the first repair answers a clean translation, the second one keeps the letter.
     private static final int PROMPT_TOKENS = 120;
     private static final int COMPLETION_TOKENS = 45;
     private static final long EVAL_NANOS = 1_500_000_000L;
@@ -146,6 +144,9 @@ final class WholeBookRun {
         }
     }
 
+    /** The first chunk's eight paragraphs go to the model in one batch, as the scenario describes. */
+    private static final int FIRST_BATCH = 8;
+
     /** An imported project on the real modules, and the services that act on it. */
     record Project(Injector injector, String id) {
 
@@ -159,6 +160,11 @@ final class WholeBookRun {
     }
 
     static Project project(final Path book, final QualityDial dial) {
+        return project(book, dial, "en", "uk");
+    }
+
+    static Project project(
+            final Path book, final QualityDial dial, final String sourceLanguage, final String targetLanguage) {
         final Injector injector = Guice.createInjector(
                 new DocumentModule(),
                 new LlmModule(),
@@ -168,7 +174,7 @@ final class WholeBookRun {
         final ProjectService projects = injector.getInstance(ProjectService.class);
         final ImportedBook imported = dataOf(projects.create(book));
         final String id = Objects.requireNonNull(imported.projectId(), "project id");
-        dataOf(projects.updateBrief(id, TranslationJobTestSupport.brief("en", "uk", dial)));
+        dataOf(projects.updateBrief(id, TranslationJobTestSupport.brief(sourceLanguage, targetLanguage, dial)));
         return new Project(injector, id);
     }
 
@@ -182,7 +188,7 @@ final class WholeBookRun {
         try (WireMockProvider provider = new WireMockProvider(kind)) {
             provider.stubSequence(replies(provider));
             final Project project = project(book(directory), QualityDial.BALANCED);
-            final TranslationJob job = project.job(ReviewMode.ASSISTED, provider.model(REQUEST_TIMEOUT, ignored -> {}));
+            final TranslationJob job = project.job(ReviewMode.ASSISTED, profiled(provider));
             final List<JobEvent> events = new CopyOnWriteArrayList<>();
             final LinkedBlockingQueue<Paused> pauses = recordEvents(job, events);
 
@@ -209,9 +215,16 @@ final class WholeBookRun {
         }
     }
 
+    private static ChatModel profiled(final WireMockProvider provider) {
+        return new ProfiledChatModel(provider.model(REQUEST_TIMEOUT, ignored -> {}), FIRST_BATCH);
+    }
+
     /** A pause for any other reason would mean the stubbed sequence was disturbed, so say what it was. */
     private static void assertFlaggedPause(final Paused pause) {
         assertThat(pause.reason()).as("pause error: %s", pause.error()).isEqualTo(PauseReason.ON_FLAGGED);
+        assertThat(pause.segmentId())
+                .as("pause on %s after %s", pause.segmentId(), pause.progress())
+                .isEqualTo("Book.md:7");
     }
 
     /** Keeps every event the job announces in {@code events} and answers the queue its pauses arrive on. */
@@ -230,15 +243,13 @@ final class WholeBookRun {
         return view(project, "Book.md:7");
     }
 
-    /** The six answers, in the order the engine is predicted to ask. */
+    /** The four answers, in the order the engine is predicted to ask. */
     private static List<ResponseDefinitionBuilder> replies(final WireMockProvider provider) {
         return List.of(
                 provider.replyWithUsage(firstBatch(), PROMPT_TOKENS, COMPLETION_TOKENS, EVAL_NANOS),
-                provider.reply(CHUNK_REVIEW, Duration.ZERO),
                 provider.target(FIX_1, Duration.ZERO),
-                provider.target(SOURCE_3, Duration.ZERO),
-                provider.target(DRAFT_4, Duration.ZERO),
-                provider.reply(LAST_REVIEW, Duration.ZERO));
+                provider.target(DRAFT_3, Duration.ZERO),
+                provider.target(DRAFT_4, Duration.ZERO));
     }
 
     /** The first chunk's eight drafts as one batch reply, ids numbered within the batch. */
@@ -258,14 +269,13 @@ final class WholeBookRun {
         }
     }
 
-    private static ExportReport export(final Project project, final Path destination) {
+    static ExportReport export(final Project project, final Path destination) {
         final ExportRequest request = new ExportRequest(
                 project.id(),
                 destination,
                 false,
-                Set.of(SideFile.GLOSSARY_CSV, SideFile.BILINGUAL_HTML, SideFile.QUALITY_REPORT),
-                false);
-        return dataOf(dataOf(project.injector().getInstance(ExportService.class).newExport(request, null))
+                Set.of(SideFile.GLOSSARY_CSV, SideFile.BILINGUAL_HTML, SideFile.QUALITY_REPORT));
+        return dataOf(dataOf(project.injector().getInstance(ExportService.class).newExport(request))
                 .run());
     }
 
@@ -304,12 +314,12 @@ final class WholeBookRun {
         }
     }
 
-    /** The text between the draft prompt's preceding-translations tags, or empty when it has none. */
-    static String precedingTargets(final String body) {
+    /** The window's previous pairs section of a draft prompt, up to the blank line that ends it, or empty. */
+    static String previousPairs(final String body) {
         final String message = userMessage(body);
-        final int start = message.indexOf("<PreviousTranslations>");
-        final int end = message.indexOf("</PreviousTranslations>");
-        return start < 0 || end < start ? "" : message.substring(start, end);
+        final int start = message.indexOf("[Previous pairs");
+        final int end = start < 0 ? -1 : message.indexOf("\n\n", start);
+        return start < 0 ? "" : message.substring(start, end < 0 ? message.length() : end);
     }
 
     static TokenUsage usage(final ModelCallFinished finished) {
@@ -327,5 +337,18 @@ final class WholeBookRun {
     static <T> T dataOf(final Result<T> result) {
         assertThat(result.isOk()).as("result: " + result.error()).isTrue();
         return Objects.requireNonNull(result.data(), "result data");
+    }
+
+    /** Numbered English sentences, so a long paragraph repeats none; the digits survive the translation. */
+    private static String padEn(final int sentences) {
+        return IntStream.rangeClosed(1, sentences)
+                .mapToObj(number -> "Lamp " + number + " was lit on the quay and the water stayed quiet.")
+                .collect(Collectors.joining(" "));
+    }
+
+    private static String padUk(final int sentences) {
+        return IntStream.rangeClosed(1, sentences)
+                .mapToObj(number -> "Ліхтар " + number + " засвітили на набережній, і вода залишалася тихою.")
+                .collect(Collectors.joining(" "));
     }
 }

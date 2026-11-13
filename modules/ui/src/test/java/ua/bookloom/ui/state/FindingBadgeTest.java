@@ -63,4 +63,35 @@ class FindingBadgeTest {
     void of_noFindingAndNoScore_hasNoBadge() {
         assertThat(FindingBadge.of(List.of(), null)).isEmpty();
     }
+
+    // The new checks keep the order: severity first, then a name, a wrong language, an omission.
+    @Test
+    void of_highResidueAndMediumName_isWrongLanguage() {
+        assertThat(FindingBadge.of(
+                        List.of(
+                                finding("language", Severity.HIGH, "function-word-residue"),
+                                finding("glossary", Severity.MEDIUM, "glossary")),
+                        null))
+                .contains(FindingBadge.WRONG_LANGUAGE);
+    }
+
+    @Test
+    void of_mediumResidueAndMediumName_isName() {
+        assertThat(FindingBadge.of(
+                        List.of(
+                                finding("language", Severity.MEDIUM, "function-word-residue"),
+                                finding("glossary", Severity.MEDIUM, "glossary")),
+                        null))
+                .contains(FindingBadge.NAME);
+    }
+
+    @Test
+    void of_negationOmissionAndTerminalMarkFluency_isOmission() {
+        assertThat(FindingBadge.of(
+                        List.of(
+                                finding("fluency", Severity.MEDIUM, "terminal-mark"),
+                                finding("omission", Severity.MEDIUM, "negation")),
+                        null))
+                .contains(FindingBadge.OMISSION);
+    }
 }

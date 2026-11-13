@@ -102,7 +102,7 @@ class CallSnapshotTest {
     void waiting_listsTheCallerKeepsChanging_areCopied() {
         final List<CallSegment> segments = new ArrayList<>(List.of(FIRST));
         final CallSnapshot snapshot =
-                CallSnapshot.waiting(1, CallKind.REVIEW, "reviewer", null, segments, List.of(), AT, 1, 1, null);
+                CallSnapshot.waiting(1, CallKind.PROOFREAD, "reviewer", null, segments, List.of(), AT, 1, 1, null);
         segments.clear();
 
         assertThat(snapshot.segments()).containsExactly(FIRST);
@@ -112,7 +112,7 @@ class CallSnapshotTest {
     void waiting_attemptBeyondItsMaximum_isRejected() {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> CallSnapshot.waiting(
-                        1, CallKind.REVIEW, "reviewer", null, List.of(), List.of(), AT, 3, 2, null));
+                        1, CallKind.PROOFREAD, "reviewer", null, List.of(), List.of(), AT, 3, 2, null));
     }
 
     @Test
@@ -147,14 +147,14 @@ class CallSnapshotTest {
     void waiting_callIdZero_isRejected() {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> CallSnapshot.waiting(
-                        0, CallKind.REVIEW, "reviewer", null, List.of(), List.of(), AT, 1, 1, null));
+                        0, CallKind.PROOFREAD, "reviewer", null, List.of(), List.of(), AT, 1, 1, null));
     }
 
     @Test
     void waiting_attemptZero_isRejected() {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> CallSnapshot.waiting(
-                        1, CallKind.REVIEW, "reviewer", null, List.of(), List.of(), AT, 0, 1, null));
+                        1, CallKind.PROOFREAD, "reviewer", null, List.of(), List.of(), AT, 0, 1, null));
     }
 
     @ParameterizedTest

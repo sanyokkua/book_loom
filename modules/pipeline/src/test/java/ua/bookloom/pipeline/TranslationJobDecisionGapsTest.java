@@ -41,8 +41,7 @@ class TranslationJobDecisionGapsTest {
         final JobReport report = report(job(UnaryOperator.identity(), source, "de", model));
 
         assertThat(report.end()).isEqualTo(JobState.COMPLETED);
-        assertThat(model.requests().getFirst().messages().getFirst().content())
-                .contains("from German (de) into Ukrainian (uk)");
+        assertThat(model.requests().getFirst().messages().getFirst().content()).contains("from German into Ukrainian.");
     }
 
     // The brief's source language is named as it stands, and none is named when the brief has none.
@@ -51,8 +50,8 @@ class TranslationJobDecisionGapsTest {
             delimiter = '|',
             nullValues = "NULL",
             value = {
-                "en|from English (en) into Ukrainian (uk)",
-                "NULL|from the language of this segment (infer it from its text) into Ukrainian (uk)"
+                "en|from English into Ukrainian.",
+                "NULL|from the language of this segment (infer it from its text) into Ukrainian."
             })
     void run_briefSourceLanguage_isNamedInThePrompt(
             @Nullable final String briefSource, final String expectedInstruction) {
@@ -88,11 +87,11 @@ class TranslationJobDecisionGapsTest {
     }
 
     // A reply missing its tokens that no deterministic repair can place (one word cannot hold the pair and keep text
-    // outside it) is flagged only after the draft, its placeholder repair and the one directed fix of Fast; the
+    // outside it) is flagged only after the draft and its one repair; the
     // other replies flag the segment at once, after its one call.
     private static Stream<Arguments> flaggingReplies() {
         return Stream.of(
-                Arguments.of("missing token", reply("ВІДЧИНИВ", FinishReason.STOP), 3, ErrorCode.validation),
+                Arguments.of("missing token", reply("ВІДЧИНИВ", FinishReason.STOP), 2, ErrorCode.validation),
                 Arguments.of(
                         "whitespace with a normal finish",
                         reply("  \n", FinishReason.STOP),

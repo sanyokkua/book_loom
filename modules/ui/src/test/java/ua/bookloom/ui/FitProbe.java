@@ -4,16 +4,20 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import javafx.geometry.Bounds;
+import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.ButtonBase;
 import javafx.scene.control.Control;
 import javafx.scene.control.Labeled;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableRow;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TitledPane;
+import javafx.scene.control.skin.TableHeaderRow;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.text.Text;
 import lombok.AccessLevel;
@@ -123,7 +127,7 @@ public final class FitProbe {
                     + Math.round(Math.min(viewportRight, cardRight)));
             return;
         }
-        if (node instanceof TextInputControl || node instanceof VirtualFlow<?>) {
+        if (node instanceof TextInputControl || node instanceof VirtualFlow<?> || isScrolledHeader(node)) {
             return;
         }
         final double card = node.getStyleClass().contains("card") ? Math.min(cardRight, box.getMaxX()) : cardRight;
@@ -151,6 +155,28 @@ public final class FitProbe {
         final double right = Math.min(
                 viewportRight, viewport.localToScene(viewport.getLayoutBounds()).getMaxX());
         overflow(content, right, cardRight, found);
+    }
+
+    // A table narrower than its columns' minimum widths scrolls across, its header with its rows: a header label past
+    // the table's edge is reached with the scroll bar — but only while that bar is shown. An empty table shows its
+    // placeholder and has no row to reach, so its header has no bar and nothing behind it. A table with rows that cuts
+    // its columns with no bar to reach them still fails.
+    private static boolean isScrolledHeader(final Node node) {
+        if (!(node instanceof TableHeaderRow)) {
+            return false;
+        }
+        Parent table = node.getParent();
+        while (table != null && !(table instanceof TableView<?>)) {
+            table = table.getParent();
+        }
+        return table instanceof TableView<?> view && (view.getItems().isEmpty() || hasAcrossBar(view));
+    }
+
+    private static boolean hasAcrossBar(final TableView<?> view) {
+        return view.lookupAll(".scroll-bar").stream()
+                .anyMatch(bar -> bar instanceof ScrollBar across
+                        && across.getOrientation() == Orientation.HORIZONTAL
+                        && across.isVisible());
     }
 
     // A closed fold keeps its content laid out at full size under a clip of no height; nothing in it is shown.

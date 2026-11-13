@@ -260,6 +260,6 @@ class SetupAssistantBriefStepsTest extends SetupAssistantBriefTestBase {
                 .toList();
         assertThat(reads).extracting(BriefSampleRead::sample).containsExactly(1, 2, 3);
         assertThat(reads).extracting(BriefSampleRead::samples).containsOnly(3);
-        assertThat(reads.getFirst().answers().get(BriefField.GENRE)).isEqualTo(new SampleAnswer("crime", QUOTE));
+        assertThat(reads.getFirst().answers()).containsEntry(BriefField.GENRE, new SampleAnswer("crime", QUOTE));
     }
 }

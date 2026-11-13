@@ -140,13 +140,15 @@ public final class StyleSuggestion {
             case AUDIENCE -> brief.audience();
             case NARRATOR -> brief.narrator().person();
             case NARRATOR_GENDER -> brief.narrator().gender();
+            case STORY_SHAPE -> brief.storyShape();
         };
     }
 
     private void forget() {
-        log.debug("the style suggestion's evidence is forgotten: the open book changed");
+        log.debug("the style suggestion's evidence and outcome are forgotten: the open book changed");
         dropHeld();
         applied = null;
+        outcome.set(StyleSuggestionOutcome.NONE);
         evidence.set(Map.of());
         languageProposal.set(null);
     }
@@ -280,7 +282,10 @@ public final class StyleSuggestion {
      */
     public void adoptNarrator(final Narrator narrator) {
         Objects.requireNonNull(narrator, "narrator");
-        change.accept("narrator re-check", brief -> brief.withNarrator(narrator));
+        change.accept(
+                "narrator re-check",
+                brief -> BriefRebuild.confirmed(
+                        brief.withNarrator(narrator), ua.bookloom.api.project.BriefField.NARRATOR));
     }
 
     // A source the person or the file named is never second-guessed: the proposal is held for an Auto source only.

@@ -83,12 +83,6 @@ class ReviewDeskImplTest {
                 return port.retry(desk.projectId(), id, null, false, RetryDraftTest.passing());
             }
         },
-        SKIP(FLAGGED_ID) {
-            @Override
-            Result<SegmentRecord> apply(final Desk desk, final ReviewDeskImpl port, final String id) {
-                return port.skip(desk.projectId(), id);
-            }
-        },
         APPLY_PROPOSAL(PROPOSAL_ID) {
             @Override
             Result<SegmentRecord> apply(final Desk desk, final ReviewDeskImpl port, final String id) {
@@ -175,19 +169,6 @@ class ReviewDeskImplTest {
 
         assertThat(record.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(record.userTarget()).isNull();
-    }
-
-    @Test
-    void skip_flaggedSegment_answersTheNextFlaggedRecord() {
-        // Skip changes nothing and answers the record the queue moves on to
-        final Desk desk = prepared();
-        flag(desk, NAMES_ID, "Гейл пішов.");
-        final SegmentRecord before = stored(desk, FLAGGED_ID);
-
-        final SegmentRecord next = ok(desk.reviewDesk(ReviewMode.ASSISTED).skip(desk.projectId(), FLAGGED_ID));
-
-        assertThat(next).isEqualTo(stored(desk, NAMES_ID));
-        assertThat(stored(desk, FLAGGED_ID)).isEqualTo(before);
     }
 
     @Test
@@ -286,8 +267,8 @@ class ReviewDeskImplTest {
         // a part's unexpected failure never crosses the port as an exception
         final Desk desk = prepared();
         final IllegalStateException failure = new IllegalStateException("store failed");
-        final SegmentActions actions = new SegmentActions(
-                desk.documents(), desk.openProjects(), desk.projects(), throwing(failure), desk.deferrals());
+        final SegmentActions actions =
+                new SegmentActions(desk.documents(), desk.openProjects(), throwing(failure), desk.deferrals());
         final ReviewDeskImpl port = new ReviewDeskImpl(
                 actions,
                 desk.queries(),

@@ -42,7 +42,7 @@ class ToastRoutingTest extends ShellTestBase {
     }
 
     private static String footerOf(final Node card) {
-        return ThemeTestSupport.onFx(() -> ((Label) card.lookup("#modal-feedback")).getText());
+        return ThemeTestSupport.onFx(((Label) card.lookup("#modal-feedback"))::getText);
     }
 
     private int toastCount() {

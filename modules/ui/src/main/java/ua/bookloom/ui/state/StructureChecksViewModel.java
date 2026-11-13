@@ -149,7 +149,7 @@ public final class StructureChecksViewModel {
                 return null;
             }
             return answer.data();
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             log.error("the project service threw instead of returning a result for the {}", what, thrown);
             return null;
         }

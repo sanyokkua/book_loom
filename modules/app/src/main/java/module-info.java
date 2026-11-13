@@ -19,6 +19,8 @@ module ua.bookloom.app {
     requires ua.bookloom.persistence;
     requires ua.bookloom.pipeline;
     requires ua.bookloom.ui;
+    // The computer's total memory for the model advice (`SystemMemory`).
+    requires jdk.management;
     requires javafx.controls;
     requires javafx.graphics;
     requires com.google.guice;

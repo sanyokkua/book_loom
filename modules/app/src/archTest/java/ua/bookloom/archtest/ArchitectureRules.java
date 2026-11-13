@@ -13,7 +13,7 @@ import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.lang.ArchRule;
 
 /**
- * The nine boundary rules of {@code 02_Architecture/02_MODULES_AND_LAYERING.md#archunit-rules}, declared once
+ * The ten boundary rules of {@code 02_Architecture/02_MODULES_AND_LAYERING.md#archunit-rules}, declared once
  * for the whole module graph.
  *
  * <p>Each rule's description begins with its spec name followed by {@value #NAME_SEPARATOR}. That is not
@@ -249,5 +249,30 @@ public final class ArchitectureRules {
                     + "styling comes from theme.css tokens and style classes")
             .because("an inline style is invisible to the token sheet, so no theme swap can reach it and it "
                     + "hard-codes a value the single stylesheet was meant to own (FR-THEME-5, theming-tokens.md)")
+            .allowEmptyShould(true);
+
+    // ===== 10. export-makes-no-model-call ================================================================
+
+    /**
+     * Rule 10: the checked export reads stored decisions only. No class that writes the book may hold a chat model,
+     * the factory that builds one or the gate that serialises inference, so a provider cannot be reached from it.
+     */
+    public static final ArchRule EXPORT_MAKES_NO_MODEL_CALL = noClasses()
+            .that()
+            .resideInAPackage(ROOT + ".pipeline.export..")
+            .should()
+            .dependOnClassesThat()
+            .haveFullyQualifiedName(ROOT + ".api.llm.ChatModel")
+            .orShould()
+            .dependOnClassesThat()
+            .haveFullyQualifiedName(ROOT + ".api.llm.ChatModelFactory")
+            .orShould()
+            .dependOnClassesThat()
+            .haveFullyQualifiedName(ROOT + ".llm.gate.InferenceGate")
+            .as("export-makes-no-model-call" + NAME_SEPARATOR
+                    + "no class in ua.bookloom.pipeline.export.. may depend on ChatModel, ChatModelFactory or "
+                    + "InferenceGate")
+            .because("the export writes the stored text and sends no request to any provider; with no model type "
+                    + "reachable from the package, that is a compile-gate fact rather than a test of a stub server")
             .allowEmptyShould(true);
 }

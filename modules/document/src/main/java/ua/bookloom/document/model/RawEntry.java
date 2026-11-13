@@ -1,5 +1,6 @@
 package ua.bookloom.document.model;
 
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -13,9 +14,27 @@ import java.util.Objects;
  * @param method the entry's {@link java.util.zip.ZipEntry} compression method ({@code STORED} or {@code DEFLATED})
  * @param content this entry's decompressed bytes
  */
-@SuppressWarnings("ArrayRecordComponent") // deliberate: raw binary content, defensively copied both ways below;
-// equals()/hashCode() are never used for this internal, non-record-shaped comparison.
+@SuppressWarnings("ArrayRecordComponent") // copied on entry and exit; equality reads the content, toString the length.
 public record RawEntry(String name, int order, int method, byte[] content) {
+    @Override
+    public boolean equals(final Object other) {
+        return other instanceof RawEntry(var oName, var oOrder, var oMethod, var oContent)
+                && Objects.equals(name, oName)
+                && order == oOrder
+                && method == oMethod
+                && Arrays.equals(content, oContent);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, order, method, Arrays.hashCode(content));
+    }
+
+    @Override
+    public String toString() {
+        return "RawEntry[name=" + name + ", order=" + order + ", method=" + method + ", content=" + content.length
+                + "]";
+    }
 
     /**
      * Defensively copies {@code content} so neither this record nor a caller can mutate the other's array after

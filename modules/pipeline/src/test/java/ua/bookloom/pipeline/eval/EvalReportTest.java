@@ -7,27 +7,22 @@ import org.junit.jupiter.api.Test;
 
 class EvalReportTest {
 
-    private static final List<DefectRow> ROWS = List.of(
-            new DefectRow("a", "quotes", true, true, true, true, 1, 0),
-            new DefectRow("b", "quotes", true, false, true, true, 1, 0),
-            new DefectRow("c", "gender", false, false, true, true, 1, 0));
-
     @Test
-    void table_corpusRows_endWithTheShareRightPerKind() {
-        final EvalReport report = new EvalReport("gemma4:e4b", List.of(), ROWS, "language");
+    void floors_noReviewSeparationFloor_isNotAskedFor() {
+        final EvalRow reviewFails = new EvalRow(
+                "c",
+                "draft",
+                EvalRow.Check.PASS,
+                EvalRow.Check.PASS,
+                EvalRow.Check.PASS,
+                EvalRow.Check.PASS,
+                EvalRow.Check.PASS,
+                EvalRow.Check.FAIL,
+                "");
+        final EvalReport report = new EvalReport("gemma4:e4b", List.of(reviewFails));
 
-        assertThat(report.table()).contains("corpus by kind  quotes 50%  gender 100%");
-    }
-
-    @Test
-    void json_corpusRows_carryTheShareRightPerKind() {
-        final EvalReport report = new EvalReport("gemma4:e4b", List.of(), ROWS, "language");
-
-        assertThat(report.json()).contains("\"byKind\":{\"quotes\":0.500,\"gender\":1.000}");
-    }
-
-    @Test
-    void kindSummary_noCorpusRun_isEmpty() {
-        assertThat(new EvalReport("gemma4:e4b", List.of()).kindSummary()).isEmpty();
+        assertThat(report.meetsThresholds()).isTrue();
+        assertThat(report.json()).doesNotContain("reviewSeparation");
+        assertThat(report.table()).doesNotContain("review ");
     }
 }

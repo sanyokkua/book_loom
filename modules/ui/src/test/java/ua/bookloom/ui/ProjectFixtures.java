@@ -107,7 +107,16 @@ public final class ProjectFixtures {
     /** An export written at {@code at}. */
     public static ExportRecord export(final Instant at) {
         return new ExportRecord(
-                at, Path.of("/out/earth-gravity-uk.epub"), 1200, 0, 40, 0, 1100, 100, 1200, java.util.List.of());
+                at,
+                Path.of("/out/earth-gravity-uk.epub"),
+                1200,
+                0,
+                40,
+                0,
+                1100,
+                100,
+                new ua.bookloom.api.pipeline.ProofreadSummary(12, 3),
+                java.util.List.of());
     }
 
     /** What opening a stored project answers: a book with English to Ukrainian chosen, so every step opens. */

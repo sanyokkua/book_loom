@@ -6,6 +6,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 
@@ -14,8 +17,9 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>This is a privacy control expressed as a type rather than as a review rule. {@code details} is rendered into an
  * expandable panel in the UI and written to the log file, so anything reaching it has left the process's control.
- * The allowlist — HTTP status, endpoint host, model name, timeout, attempt count, QA finding names, and the
- * expected/observed placeholder multisets — is therefore enforced twice over: it is exactly this record's
+ * The allowlist — a failure reason token, HTTP status, endpoint host, model name, timeout, attempt count, QA finding
+ * names, the expected/observed placeholder multisets, a folder's own name and the prompt and window token counts of
+ * a prompt that did not fit, the engine found at an address — is therefore enforced twice over: it is exactly this record's
  * <strong>component set</strong>, and it is exactly its <strong>method set</strong>. There is deliberately no
  * {@code withMessage(String)}, no {@code withException(...)}, and no {@code append(...)}, so a stack trace, a
  * response body, or an {@code Authorization} header has no syntax to arrive by.
@@ -49,6 +53,11 @@ import org.jspecify.annotations.Nullable;
  * @param observedPlaceholders the space-joined observed placeholder tokens, or {@code null}
  * @param folderName the last name of the folder a file was to be written into, flattened and capped — never the
  *     folder's path, which can name the person — or {@code null}
+ * @param promptTokens the tokens a request needed, as the provider stated them for a prompt that did not fit, or
+ *     {@code null}
+ * @param windowTokens the tokens the model's window holds, as the provider stated them, or {@code null}
+ * @param engine the {@code ServerEngine} constant name of the server found at the address, or {@code null}; only
+ *     an upper-case constant name is taken, so no reply text can arrive through it
  */
 public record SafeDetails(
         @Nullable String reason,
@@ -60,26 +69,33 @@ public record SafeDetails(
         @Nullable String qaFindings,
         @Nullable String expectedPlaceholders,
         @Nullable String observedPlaceholders,
-        @Nullable String folderName) {
-
-    /** Longest text a single allowlisted field may contribute, in characters. */
-    private static final int MAX_FIELD_LENGTH = 120;
+        @Nullable String folderName,
+        @Nullable Integer promptTokens,
+        @Nullable Integer windowTokens,
+        @Nullable String engine) {
 
     /** Most QA finding names rendered before the remainder is summarised as a count. */
     private static final int MAX_FINDINGS = 10;
 
+    /** The shape of an enum constant's name, the only text the engine field takes. */
+    private static final Pattern CONSTANT_NAME = Pattern.compile("[A-Z][A-Z_]{0,31}");
+
+    /** The rendered model field: its text runs to the next rendered key or the end. */
+    private static final Pattern MODEL_IN_DETAILS = Pattern.compile("(?:\\A|, )model=(.+?)(?=, [A-Za-z]+=|\\z)");
+
     /**
-     * Most observed placeholder tokens rendered before the remainder is summarised as a count. Comfortably above
-     * the forty-placeholder segment that motivated lifting the character cap on this field, and low enough that a
-     * degenerate provider response cannot turn the rendered details into a data dump.
+     * Reads back the model {@link #withModelName(String)} recorded, so the window can name the id in its own words.
+     *
+     * @param details the rendered details, or {@code null}
+     * @return the model id if the details name one, or empty if they do not
      */
-    private static final int MAX_OBSERVED_TOKENS = 64;
-
-    /** Longest a single observed placeholder token may render at; a real one is at most a handful of characters. */
-    private static final int MAX_OBSERVED_TOKEN_LENGTH = 16;
-
-    /** Matches any run of control or whitespace characters, which collapse to a single space. */
-    private static final String CONTROL_OR_SPACE = "[\\p{Cntrl}\\s]+";
+    public static Optional<String> modelIn(@Nullable String details) {
+        if (details == null) {
+            return Optional.empty();
+        }
+        final Matcher found = MODEL_IN_DETAILS.matcher(details);
+        return found.find() ? Optional.of(found.group(1)) : Optional.empty();
+    }
 
     /**
      * Starts from no details at all.
@@ -87,7 +103,7 @@ public record SafeDetails(
      * @return an instance with every allowlisted field absent
      */
     public static SafeDetails empty() {
-        return new SafeDetails(null, null, null, null, null, null, null, null, null, null);
+        return new SafeDetails(null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     /**
@@ -107,7 +123,10 @@ public record SafeDetails(
                 qaFindings,
                 expectedPlaceholders,
                 observedPlaceholders,
-                folderName);
+                folderName,
+                promptTokens,
+                windowTokens,
+                engine);
     }
 
     /**
@@ -128,14 +147,17 @@ public record SafeDetails(
                 : new SafeDetails(
                         reason,
                         httpStatus,
-                        sanitize(port < 0 ? host : host + ":" + port),
+                        SafeText.flatten(hostWithPort(host, port)),
                         modelName,
                         timeoutMillis,
                         attempt,
                         qaFindings,
                         expectedPlaceholders,
                         observedPlaceholders,
-                        folderName);
+                        folderName,
+                        promptTokens,
+                        windowTokens,
+                        engine);
     }
 
     /**
@@ -150,13 +172,16 @@ public record SafeDetails(
                 reason,
                 httpStatus,
                 endpointHost,
-                sanitize(model),
+                SafeText.flatten(model),
                 timeoutMillis,
                 attempt,
                 qaFindings,
                 expectedPlaceholders,
                 observedPlaceholders,
-                folderName);
+                folderName,
+                promptTokens,
+                windowTokens,
+                engine);
     }
 
     /**
@@ -177,7 +202,10 @@ public record SafeDetails(
                 qaFindings,
                 expectedPlaceholders,
                 observedPlaceholders,
-                folderName);
+                folderName,
+                promptTokens,
+                windowTokens,
+                engine);
     }
 
     /**
@@ -198,7 +226,10 @@ public record SafeDetails(
                 qaFindings,
                 expectedPlaceholders,
                 observedPlaceholders,
-                folderName);
+                folderName,
+                promptTokens,
+                windowTokens,
+                engine);
     }
 
     /**
@@ -214,10 +245,8 @@ public record SafeDetails(
         if (findingNames.isEmpty()) {
             return this;
         }
-        final String rendered = findingNames.stream()
-                .limit(MAX_FINDINGS)
-                .map(SafeDetails::sanitize)
-                .collect(Collectors.joining(","));
+        final String rendered =
+                findingNames.stream().limit(MAX_FINDINGS).map(SafeText::flatten).collect(Collectors.joining(","));
         final int overflow = findingNames.size() - MAX_FINDINGS;
         final String summarised = overflow > 0 ? rendered + ",+" + overflow + " more" : rendered;
         return new SafeDetails(
@@ -230,7 +259,10 @@ public record SafeDetails(
                 summarised,
                 expectedPlaceholders,
                 observedPlaceholders,
-                folderName);
+                folderName,
+                promptTokens,
+                windowTokens,
+                engine);
     }
 
     /**
@@ -243,7 +275,7 @@ public record SafeDetails(
      * <p><strong>The two sides have different origins, so they get different treatment.</strong> {@code expected}
      * is scanned out of a segment's own masked form, which this system produced, so every token in it is
      * well-formed by construction and the list is as long as the book's own markup made it — it renders in full,
-     * bypassing {@link #sanitize(String)}, because truncating it is the exact defect this component exists to
+     * bypassing {@link SafeText#flatten(String)}, because truncating it is the exact defect this component exists to
      * remove: a forty-placeholder segment renders at roughly 240 characters, and the 120-character cap would
      * silently drop half the tokens the repair tier needs to ask for.
      *
@@ -274,29 +306,11 @@ public record SafeDetails(
                 attempt,
                 qaFindings,
                 String.join(" ", expected),
-                renderObserved(observed),
-                folderName);
-    }
-
-    /** Renders the model-derived side under both bounds, stating any overflow instead of dropping it silently. */
-    private static String renderObserved(List<String> observed) {
-        final String rendered = observed.stream()
-                .limit(MAX_OBSERVED_TOKENS)
-                .map(SafeDetails::boundToken)
-                .collect(Collectors.joining(" "));
-        final int overflow = observed.size() - MAX_OBSERVED_TOKENS;
-        return overflow > 0 ? rendered + " +" + overflow + " more" : rendered;
-    }
-
-    /**
-     * Caps one observed token's length. A token of the real grammar is at most a handful of characters, so a
-     * longer one is not a token the repair tier can use anyway — the ellipsis both bounds it and marks it as
-     * something the model invented rather than something the gate can act on.
-     */
-    private static String boundToken(String token) {
-        return token.length() <= MAX_OBSERVED_TOKEN_LENGTH
-                ? token
-                : token.substring(0, MAX_OBSERVED_TOKEN_LENGTH) + "…";
+                SafeText.observed(observed),
+                folderName,
+                promptTokens,
+                windowTokens,
+                engine);
     }
 
     /**
@@ -317,7 +331,10 @@ public record SafeDetails(
                 qaFindings,
                 expectedPlaceholders,
                 observedPlaceholders,
-                folderName);
+                folderName,
+                promptTokens,
+                windowTokens,
+                engine);
     }
 
     /**
@@ -341,7 +358,69 @@ public record SafeDetails(
                         qaFindings,
                         expectedPlaceholders,
                         observedPlaceholders,
-                        sanitize(name.toString()));
+                        SafeText.flatten(name.toString()),
+                        promptTokens,
+                        windowTokens,
+                        engine);
+    }
+
+    /**
+     * Records the two counts a provider stated for a prompt that did not fit the model's window, so the flag can say
+     * "696 of 512 tokens". Typed integers only: the provider's sentence they were read from never enters the details.
+     *
+     * @param prompt the tokens the request needed; zero or more
+     * @param window the tokens the model's window holds; zero or more
+     * @return a copy carrying both counts
+     * @throws IllegalArgumentException if either count is negative
+     */
+    public SafeDetails withTokenCounts(int prompt, int window) {
+        if (prompt < 0 || window < 0) {
+            throw new IllegalArgumentException("token counts must not be negative");
+        }
+        return new SafeDetails(
+                reason,
+                httpStatus,
+                endpointHost,
+                modelName,
+                timeoutMillis,
+                attempt,
+                qaFindings,
+                expectedPlaceholders,
+                observedPlaceholders,
+                folderName,
+                prompt,
+                window,
+                engine);
+    }
+
+    /**
+     * Records which engine answers at the provider's address, so a test can name it in any display language. The
+     * root package takes the constant's name, not the {@code ua.bookloom.api.llm.ServerEngine} type, so it does not
+     * depend on a sub-package that depends on it.
+     *
+     * @param engineName the engine constant's {@code name()}, such as {@code LM_STUDIO}
+     * @return a copy carrying the engine
+     * @throws IllegalArgumentException if the name is not an upper-case constant name
+     */
+    public SafeDetails withEngine(String engineName) {
+        Objects.requireNonNull(engineName, "engineName");
+        if (!CONSTANT_NAME.matcher(engineName).matches()) {
+            throw new IllegalArgumentException("engine must be a constant name");
+        }
+        return new SafeDetails(
+                reason,
+                httpStatus,
+                endpointHost,
+                modelName,
+                timeoutMillis,
+                attempt,
+                qaFindings,
+                expectedPlaceholders,
+                observedPlaceholders,
+                folderName,
+                promptTokens,
+                windowTokens,
+                engineName);
     }
 
     /**
@@ -353,7 +432,7 @@ public record SafeDetails(
      * @return the rendered detail string, or {@code null} when no field is set
      */
     public @Nullable String render() {
-        final List<String> parts = new ArrayList<>(10);
+        final List<String> parts = new ArrayList<>(13);
         append(parts, "reason", reason);
         append(parts, "httpStatus", httpStatus);
         append(parts, "endpointHost", endpointHost);
@@ -364,6 +443,9 @@ public record SafeDetails(
         append(parts, "expectedPlaceholders", expectedPlaceholders);
         append(parts, "observedPlaceholders", observedPlaceholders);
         append(parts, "folder", folderName);
+        append(parts, "promptTokens", promptTokens);
+        append(parts, "windowTokens", windowTokens);
+        append(parts, "engine", engine);
         return parts.isEmpty() ? null : String.join(", ", parts);
     }
 
@@ -373,15 +455,7 @@ public record SafeDetails(
         }
     }
 
-    /**
-     * Flattens a value to one bounded, single-line token.
-     *
-     * <p>Not a filter for secrets — the component set is what keeps secrets out. This bounds the blast radius of a
-     * value passed to the wrong field: a newline would otherwise break a log line into two, and an unbounded value
-     * would turn an error dialog into a data dump.
-     */
-    private static String sanitize(String value) {
-        final String flattened = value.replaceAll(CONTROL_OR_SPACE, " ").trim();
-        return flattened.length() <= MAX_FIELD_LENGTH ? flattened : flattened.substring(0, MAX_FIELD_LENGTH) + "…";
+    private static String hostWithPort(final String host, final int port) {
+        return port < 0 ? host : host + ":" + port;
     }
 }

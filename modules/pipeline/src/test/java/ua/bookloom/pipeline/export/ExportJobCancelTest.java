@@ -9,8 +9,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,9 +18,6 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
-import ua.bookloom.api.llm.ChatModel;
-import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
@@ -30,21 +25,18 @@ import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
-import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.export.BookExporterTestSupport.RecordingDocumentPort;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
-import ua.bookloom.pipeline.revision.DeferralRegister;
+import ua.bookloom.pipeline.proofread.DeferralRegister;
 
 /**
- * A cancel is honoured as soon as the export can see it: before it starts, no model call and no write happen; raised
- * while the consistency pass waits on the model, the book is never written. Nothing is left behind either way, and the
- * message says how far the export got: nothing written, the book checked but not published, or the book published
- * without its side files.
+ * A cancel is honoured as soon as the export can see it: before it starts, no model call and no write happen. Nothing
+ * is left behind, and the message says how far the export got: nothing written, the book checked but not published,
+ * or the book published without its side files.
  */
 class ExportJobCancelTest {
 
-    private static final String REPLY = "{\"target\":\"Сем пішла.\"}";
     private static final String NOTHING_WRITTEN = "Nothing was written.";
 
     @TempDir
@@ -65,36 +57,11 @@ class ExportJobCancelTest {
         samWaitsOnAKnownGender();
     }
 
-    // A cancel made before run() answers cancelled with no model call, no write and nothing on disk.
+    // A cancel made before run() answers cancelled with no write and nothing on disk.
     @Test
-    void run_cancelledBeforeRun_returnsCancelledWithoutModelCallOrWrite() {
-        final ScriptedChatModel model =
-                new ScriptedChatModel().answerTo("revision", Result.ok(new ChatResponse(REPLY, FinishReason.STOP)));
-        final ExportJob job = ok(fixture.serviceOver(port).newExport(request(), model));
+    void run_cancelledBeforeRun_returnsCancelledWithoutWrite() {
+        final ExportJob job = ok(fixture.serviceOver(port).newExport(request()));
         job.cancel();
-
-        final Result<ExportReport> result = job.run();
-
-        assertThat(error(result))
-                .extracting(AppError::code, AppError::title, AppError::message)
-                .containsExactly(ErrorCode.cancelled, "Export cancelled", NOTHING_WRITTEN);
-        assertThat(model.requests()).isEmpty();
-        assertThat(port.writtenDocuments()).isEmpty();
-        assertThat(destination).doesNotExist();
-        assertThat(tempDir.resolve("Book.uk.report.md")).doesNotExist();
-        assertThat(hiddenFiles(tempDir)).isEmpty();
-    }
-
-    // A cancel raised while the consistency pass's model call is answered stops the export before the book is written.
-    @Test
-    void run_cancelRaisedDuringConsistencyPass_writesNothing() {
-        final AtomicReference<ExportJob> running = new AtomicReference<>();
-        final ChatModel cancelling = request -> {
-            Objects.requireNonNull(running.get(), "job").cancel();
-            return Result.ok(new ChatResponse(REPLY, FinishReason.STOP));
-        };
-        final ExportJob job = ok(fixture.serviceOver(port).newExport(request(), cancelling));
-        running.set(job);
 
         final Result<ExportReport> result = job.run();
 
@@ -105,20 +72,6 @@ class ExportJobCancelTest {
         assertThat(destination).doesNotExist();
         assertThat(tempDir.resolve("Book.uk.report.md")).doesNotExist();
         assertThat(hiddenFiles(tempDir)).isEmpty();
-    }
-
-    // A cancel must not wait for the provider to answer: the call in flight is interrupted and the export ends.
-    @Test
-    void cancel_whileAModelCallWaits_interruptsItAndEndsCancelled() {
-        final ScriptedChatModel waiting = new ScriptedChatModel().blockNthRequest(1);
-        final ExportJob job = ok(fixture.serviceOver(port).newExport(request(), waiting));
-        final CompletableFuture<Result<ExportReport>> running = CompletableFuture.supplyAsync(job::run);
-        waiting.awaitRequests(1);
-
-        job.cancel();
-
-        assertThat(error(running.orTimeout(5, TimeUnit.SECONDS).join()).code()).isEqualTo(ErrorCode.cancelled);
-        assertThat(destination).doesNotExist();
     }
 
     // A cancel raised once the book is written and checked, before it is moved into place, says exactly that.
@@ -136,7 +89,7 @@ class ExportJobCancelTest {
                 return super.write(document, target, sourceLanguage, targetLanguage);
             }
         };
-        final ExportJob job = ok(fixture.serviceOver(cancelling).newExport(withoutPass(), null));
+        final ExportJob job = ok(fixture.serviceOver(cancelling).newExport(withoutPass()));
         running.set(job);
 
         final Result<ExportReport> result = job.run();
@@ -159,7 +112,7 @@ class ExportJobCancelTest {
             Objects.requireNonNull(running.get(), "job").cancel();
             return ExportMoveOperation.nio().move(source, target, options);
         };
-        final ExportJob job = ok(fixture.serviceOver(port).newExportWith(withoutPass(), null, cancellingMove));
+        final ExportJob job = ok(fixture.serviceOver(port).newExportWith(withoutPass(), cancellingMove));
         running.set(job);
 
         final Result<ExportReport> result = job.run();
@@ -176,11 +129,11 @@ class ExportJobCancelTest {
     }
 
     private ExportRequest withoutPass() {
-        return new ExportRequest(projectId, destination, false, Set.of(SideFile.QUALITY_REPORT), false);
+        return new ExportRequest(projectId, destination, false, Set.of(SideFile.QUALITY_REPORT));
     }
 
     private ExportRequest request() {
-        return new ExportRequest(projectId, destination, false, Set.of(SideFile.QUALITY_REPORT), true);
+        return new ExportRequest(projectId, destination, false, Set.of(SideFile.QUALITY_REPORT));
     }
 
     /** Sam's segment is accepted while his gender is unknown, then the gender is set: the pass must call the model. */
@@ -196,7 +149,7 @@ class ExportJobCancelTest {
     }
 
     private GlossaryEntry sam(final Gender gender) {
-        return new GlossaryEntry(
+        return GlossaryEntry.of(
                 GlossaryIds.of(projectId, "Sam"), projectId, "Sam", "Сем", TermType.CHARACTER, gender, false);
     }
 }

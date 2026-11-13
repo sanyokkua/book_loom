@@ -10,7 +10,9 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.google.inject.Guice;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
@@ -23,6 +25,7 @@ import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.provider.ProviderClientFactory;
@@ -91,6 +94,70 @@ class ModelCatalogServiceTest {
         server.verify(1, getRequestedFor(urlEqualTo(OPENAI_MODELS_PATH)));
     }
 
+    // LM Studio's OpenAI list says nothing about a model's kind, so its own list is read and its embedding model left
+    // out.
+    @Test
+    void discover_lmStudioEmbeddingEntry_isLeftOut() {
+        register(
+                "lmstudio",
+                ProviderKind.OPENAI_COMPATIBLE,
+                URI.create(server.baseUrl() + "/v1"),
+                ServerEngine.LM_STUDIO);
+        server.stubFor(get(urlEqualTo("/api/v0/models"))
+                .willReturn(okJson("{\"object\":\"list\",\"data\":[{\"id\":\"google/gemma-4-e4b\",\"type\":\"vlm\"},"
+                        + "{\"id\":\"lapa-v0.1.2-instruct\",\"type\":\"llm\"},"
+                        + "{\"id\":\"text-embedding-nomic-embed-text-v1.5\",\"type\":\"embeddings\"}]}")));
+
+        final Result<List<ModelInfo>> result = catalog.listModels("lmstudio");
+
+        assertThat(result.data())
+                .containsExactly(new ModelInfo("google/gemma-4-e4b"), new ModelInfo("lapa-v0.1.2-instruct"));
+        server.verify(0, getRequestedFor(urlEqualTo(OPENAI_MODELS_PATH)));
+    }
+
+    // A vision projector file next to the weights is no model to translate with.
+    @Test
+    void discover_routerListingWithMmproj_dropsTheSidecar() {
+        register("llama", ProviderKind.OPENAI_COMPATIBLE, URI.create(server.baseUrl() + "/v1"), ServerEngine.LLAMA_CPP);
+        server.stubFor(get(urlEqualTo(OPENAI_MODELS_PATH))
+                .willReturn(okJson("{\"object\":\"list\",\"data\":["
+                        + "{\"id\":\"Model-9B-Q4_K_M.gguf\",\"object\":\"model\",\"owned_by\":\"llamacpp\"},"
+                        + "{\"id\":\"mmproj-BF16.gguf\",\"object\":\"model\",\"owned_by\":\"llamacpp\"}]}")));
+
+        assertThat(catalog.listModels("llama").data()).containsExactly(new ModelInfo("Model-9B-Q4_K_M.gguf"));
+    }
+
+    // An older LM Studio with no own list is still listed through its OpenAI route.
+    @Test
+    void discover_lmStudioWithoutOwnList_readsTheOpenAiList() {
+        register(
+                "lmstudio",
+                ProviderKind.OPENAI_COMPATIBLE,
+                URI.create(server.baseUrl() + "/v1"),
+                ServerEngine.LM_STUDIO);
+        server.stubFor(
+                get(urlEqualTo(OPENAI_MODELS_PATH)).willReturn(okJson("{\"data\":[{\"id\":\"google/gemma-4-e4b\"}]}")));
+
+        assertThat(catalog.listModels("lmstudio").data()).containsExactly(new ModelInfo("google/gemma-4-e4b"));
+    }
+
+    // The owner's decision: an Ollama cloud model is listed with a neutral label, never hidden.
+    @Test
+    void discover_ollamaCloudSuffix_isLabelledCloudAndListed() {
+        register("ollama", ProviderKind.OLLAMA, URI.create(server.baseUrl()), ServerEngine.OLLAMA);
+        server.stubFor(get(urlEqualTo(OLLAMA_TAGS_PATH))
+                .willReturn(okJson("{\"models\":[{\"name\":\"gemma4:e4b-mlx\"},{\"name\":\"gpt-oss:120b-cloud\"},"
+                        + "{\"name\":\"qwen3-coder:480b\",\"remote_host\":\"https://ollama.com:443\"}]}")));
+
+        final Result<List<ModelInfo>> result = catalog.listModels("ollama");
+
+        assertThat(result.data())
+                .containsExactly(
+                        new ModelInfo("gemma4:e4b-mlx", false),
+                        new ModelInfo("gpt-oss:120b-cloud", true),
+                        new ModelInfo("qwen3-coder:480b", true));
+    }
+
     // IF the provider id is not registered, THEN the result is a validation error and no request is sent.
     @Test
     void listModels_unknownProviderId_isValidationErrorAndRecordsNoRequest() {
@@ -107,13 +174,38 @@ class ModelCatalogServiceTest {
 
     // IF the endpoint refuses the connection, THEN the client's own error is passed through, not a validation error.
     @Test
-    void listModels_unreachableEndpoint_passesTheClientErrorThrough() throws IOException {
+    void listModels_unreachableEndpoint_passesTheClientErrorThrough() {
         register("ollama", ProviderKind.OLLAMA, closedEndpoint());
 
         final Result<List<ModelInfo>> result = catalog.listModels("ollama");
 
         assertThat(result.isErr()).isTrue();
         assertThat(Objects.requireNonNull(result.error(), "error").code()).isEqualTo(ErrorCode.unreachable);
+    }
+
+    // IF the provider is OpenRouter, THEN its catalog lists only models that answer in text.
+    @Test
+    void discover_openRouterCatalog_returnsTextModelsOnly() throws IOException {
+        final ProviderConfig config = new ProviderConfig(
+                        "openrouter",
+                        ProviderKind.OPENAI_COMPATIBLE,
+                        URI.create(server.baseUrl() + "/api/v1"),
+                        CONNECT_TIMEOUT,
+                        REQUEST_TIMEOUT)
+                .withEngine(ServerEngine.GENERIC, ServerEngine.OPENROUTER, null);
+        assertThat(configs.save(config).isOk()).isTrue();
+        try (InputStream in = Objects.requireNonNull(
+                getClass().getResourceAsStream("/ua/bookloom/llm/openrouter/catalog-modalities.json"))) {
+            server.stubFor(get(urlEqualTo("/api/v1/models"))
+                    .willReturn(okJson(new String(in.readAllBytes(), StandardCharsets.UTF_8))));
+        }
+
+        final Result<List<ModelInfo>> result = catalog.listModels("openrouter");
+
+        assertThat(result.isOk()).as("result: " + result.error()).isTrue();
+        assertThat(Objects.requireNonNull(result.data(), "models"))
+                .extracting(ModelInfo::id)
+                .containsExactly("example/text-chat", "example/vision-chat", "example/text-and-image");
     }
 
     // IF the composition root is built, THEN ModelCatalog resolves to the service.
@@ -126,7 +218,12 @@ class ModelCatalogServiceTest {
     }
 
     private void register(String id, ProviderKind kind, URI baseUrl) {
-        final ProviderConfig config = new ProviderConfig(id, kind, baseUrl, CONNECT_TIMEOUT, REQUEST_TIMEOUT);
+        register(id, kind, baseUrl, ServerEngine.GENERIC);
+    }
+
+    private void register(String id, ProviderKind kind, URI baseUrl, ServerEngine engine) {
+        final ProviderConfig config =
+                new ProviderConfig(id, kind, baseUrl, CONNECT_TIMEOUT, REQUEST_TIMEOUT).withEngine(engine);
         assertThat(configs.save(config).isOk()).isTrue();
     }
 

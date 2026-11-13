@@ -18,8 +18,9 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.NameKnowledge;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Kind;
@@ -64,13 +65,32 @@ final class ReviewCommit {
         return kept;
     }
 
+    /**
+     * What a finished review writes, in this order.
+     *
+     * @param verdicts the verdicts of the review's calls
+     * @param known the entries the name-knowledge stage answered, each holding its answer; it is applied again to the
+     *     entry as it is now
+     * @param suggestions the suggested targets
+     */
+    record Answers(List<Verdict> verdicts, List<GlossaryEntry> known, List<Suggestion> suggestions) {
+
+        /** Copies the lists. */
+        Answers {
+            verdicts = List.copyOf(verdicts);
+            known = List.copyOf(known);
+            suggestions = List.copyOf(suggestions);
+        }
+    }
+
     static Result<GlossaryReviewReport> apply(
             final GlossaryRepository glossary,
             final String projectId,
-            final List<Verdict> verdicts,
-            final List<Suggestion> suggestions,
+            final Answers answers,
             @Nullable final String sourceLanguage,
             final List<String> bookTexts) {
+        final List<Verdict> verdicts = answers.verdicts();
+        final List<Suggestion> suggestions = answers.suggestions();
         final Result<List<GlossaryEntry>> current = glossary.all(projectId);
         if (current.isErr()) {
             return Result.err(Objects.requireNonNull(current.error(), "error"));
@@ -78,7 +98,7 @@ final class ReviewCommit {
         final Map<String, GlossaryEntry> byId = new HashMap<>(Objects.requireNonNull(current.data(), "current").stream()
                 .collect(Collectors.toMap(GlossaryEntry::id, Function.identity())));
         final Tally tally = Tally.empty();
-        final Result<Boolean> applied = applyAll(glossary, byId, verdicts, suggestions, tally)
+        final Result<Boolean> applied = applyAll(glossary, byId, answers, tally)
                 .flatMap(done -> GivenNames.seedHeld(glossary, projectId, sourceLanguage)
                         .flatMap(seeded -> PronounGender.seedHeld(glossary, projectId, bookTexts, sourceLanguage))
                         .flatMap(seeded -> ClusterGender.reconcile(glossary, projectId, sourceLanguage))
@@ -133,16 +153,21 @@ final class ReviewCommit {
     private static Result<Boolean> applyAll(
             final GlossaryRepository glossary,
             final Map<String, GlossaryEntry> byId,
-            final List<Verdict> verdicts,
-            final List<Suggestion> suggestions,
+            final Answers answers,
             final Tally tally) {
-        for (final Verdict verdict : verdicts) {
+        for (final Verdict verdict : answers.verdicts()) {
             final Result<Boolean> applied = applyVerdict(glossary, byId, verdict, tally);
             if (applied.isErr()) {
                 return applied;
             }
         }
-        for (final Suggestion suggestion : suggestions) {
+        for (final GlossaryEntry known : answers.known()) {
+            final Result<Boolean> applied = applyKnowledge(glossary, byId, known, tally);
+            if (applied.isErr()) {
+                return applied;
+            }
+        }
+        for (final Suggestion suggestion : answers.suggestions()) {
             final Result<Boolean> applied = applySuggestion(glossary, byId, suggestion, tally);
             if (applied.isErr()) {
                 return applied;
@@ -179,15 +204,40 @@ final class ReviewCommit {
         return store(glossary, byId, guessed).map(stored -> tally.updated().add(now.id()));
     }
 
+    // A likely answer for a bare name, applied to the entry as it is now: a value the person, the book or a rule set
+    // meanwhile is kept, and the answer is recorded either way.
+    private static Result<Boolean> applyKnowledge(
+            final GlossaryRepository glossary,
+            final Map<String, GlossaryEntry> byId,
+            final GlossaryEntry known,
+            final Tally tally) {
+        final GlossaryEntry now = byId.get(known.id());
+        final NameKnowledge answer = known.knowledge();
+        if (now == null || answer == null) {
+            log.debug("Glossary review name knowledge for entry {} dropped: gone or not answered", known.id());
+            return Result.ok(false);
+        }
+        final GlossaryEntry next = NameKnowledgeReplies.applyTo(now, answer);
+        if (next.equals(now)) {
+            log.debug("Glossary review name knowledge for entry {} changes nothing", now.id());
+            return Result.ok(false);
+        }
+        log.debug(
+                "Glossary review name knowledge for entry {}: type={} gender={}", now.id(), next.type(), next.gender());
+        return store(glossary, byId, next).map(stored -> tally.updated().add(now.id()));
+    }
+
     private static Result<Boolean> applySuggestion(
             final GlossaryRepository glossary,
             final Map<String, GlossaryEntry> byId,
             final Suggestion suggestion,
             final Tally tally) {
         final GlossaryEntry now = byId.get(suggestion.entry().id());
-        if (now == null || !TermReview.isOpen(now)) {
+        // A suggestion is a likely value: it never replaces a target of a higher origin (design D3), even one held in
+        // the suggested state.
+        if (now == null || !TermReview.isOpen(now) || !Origin.LIKELY.mayReplace(now.targetOrigin())) {
             log.debug(
-                    "Glossary suggestion for entry {} dropped: gone, locked or given the person's target meanwhile",
+                    "Glossary suggestion for entry {} dropped: gone, locked or given a target of a higher origin",
                     suggestion.entry().id());
             return Result.ok(false);
         }
@@ -231,9 +281,9 @@ final class ReviewCommit {
                     "Glossary review: entry {} was a character by its pronouns only, the readings make it {}",
                     now.id(),
                     verdict.type());
-            return now.withType(verdict.type()).withGender(Gender.UNKNOWN);
+            return now.withType(verdict.type(), Origin.LIKELY).withGender(Gender.UNKNOWN);
         }
-        final GlossaryEntry typed = now.withType(now.type() == TermType.OTHER ? verdict.type() : now.type());
+        final GlossaryEntry typed = takesType(now, verdict) ? now.withType(verdict.type(), Origin.LIKELY) : now;
         if (typed.type() != TermType.CHARACTER) {
             return typed;
         }
@@ -245,8 +295,8 @@ final class ReviewCommit {
                     ? typed.withInferredGender(verdict.gender())
                     : typed.withSuggestedGender(verdict.gender());
         }
-        final GenderOrigin held = now.genderOrigin();
-        final boolean replaces = verdict.genderVerified() && held != GenderOrigin.PERSON;
+        final Origin held = now.genderOrigin();
+        final boolean replaces = verdict.genderVerified() && held != Origin.USER;
         log.debug(
                 "Glossary review gender for entry {}: held={} verified={} replaces={}",
                 now.id(),
@@ -254,6 +304,11 @@ final class ReviewCommit {
                 verdict.genderVerified(),
                 replaces);
         return replaces ? verified(typed, verdict.gender()) : typed;
+    }
+
+    // A review reading is a likely kind (design D3); it fills only the unset kind, other.
+    private static boolean takesType(final GlossaryEntry now, final Verdict verdict) {
+        return now.type() == TermType.OTHER && verdict.type() != TermType.OTHER;
     }
 
     private static GlossaryEntry marked(final GlossaryEntry typed) {
@@ -268,26 +323,15 @@ final class ReviewCommit {
         return verdict.read()
                 && !now.locked()
                 && now.type() == TermType.CHARACTER
-                && now.genderOrigin() == GenderOrigin.SUGGESTED
+                && now.typeOrigin() != Origin.USER
+                && now.genderOrigin() == Origin.LIKELY
                 && verdict.type() != TermType.CHARACTER
                 && verdict.type() != TermType.OTHER;
     }
 
-    // A verified verdict stands as a verified gender even where it agrees with the suggestion it replaces; the
-    // cluster's
-    // reconciliation upgrades its members the same way.
+    // A verified verdict stands as the book's gender even where it agrees with the suggestion it replaces; the
+    // cluster's reconciliation upgrades its members the same way.
     static GlossaryEntry verified(final GlossaryEntry entry, final Gender gender) {
-        return new GlossaryEntry(
-                entry.id(),
-                entry.projectId(),
-                entry.term(),
-                entry.target(),
-                entry.type(),
-                gender,
-                entry.locked(),
-                entry.origin(),
-                GenderOrigin.VERIFIED,
-                entry.genderSeedTried(),
-                entry.aliases());
+        return entry.withGenderFrom(gender, Origin.BOOK);
     }
 }

@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
@@ -23,12 +24,11 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Project;
-import ua.bookloom.pipeline.context.ContextBudget;
+import ua.bookloom.pipeline.context.ModelWindows;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.run.JobModelCalls;
 
 /**
@@ -47,30 +47,10 @@ public final class GlossaryModelScans {
     private final SuggestTargets suggestTargets;
     private final LexiconReading lexiconReading;
     private final Clock clock;
-    private final RequestDefaultsSource requestDefaultsSource;
-
-    /** Scans whose requests use the defaults the environment alone gives (the command line, tests). */
-    public GlossaryModelScans(
-            final ProjectRepository projects,
-            final OpenProjects openProjects,
-            final PreScan preScan,
-            final TermReview termReview,
-            final SuggestTargets suggestTargets,
-            final LexiconReading lexiconReading,
-            final Clock clock) {
-        this(
-                projects,
-                openProjects,
-                preScan,
-                termReview,
-                suggestTargets,
-                lexiconReading,
-                clock,
-                RequestDefaultsSource.environmentOnly());
-    }
 
     /** What a model action of the glossary runs on. */
-    record Book(BookSlice story, CallFrame frame, NamePolicy names, QualityDial dial) {}
+    record Book(
+            BookSlice story, CallFrame frame, NamePolicy names, QualityDial dial, Map<String, String> conventions) {}
 
     Result<EntryChanges<GlossaryEntry>> prescan(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
@@ -136,6 +116,7 @@ public final class GlossaryModelScans {
      *
      * @param projectId the non-null project whose book gives each term its windows
      * @param terms the non-null candidate terms
+     * @param forms each term's other forms by lexicon key; never null, a term absent has none
      * @param model the non-null model to call
      * @param progress the non-null receiver of each call's start and finish
      * @return a decision for every term asked, by lexicon key, or the first failed call's error
@@ -143,11 +124,12 @@ public final class GlossaryModelScans {
     public Result<Map<String, LexiconReading.Decision>> readTerms(
             final String projectId,
             final List<String> terms,
+            final Map<String, List<String>> forms,
             final ChatModel model,
             final Consumer<JobEvent> progress) {
         return book(projectId)
                 .flatMap(book -> lexiconReading.read(
-                        terms, book.story(), book.dial(), book.frame(), calls(model, progress, book)));
+                        terms, forms, book.story(), book.dial(), book.frame(), calls(model, progress, book)));
     }
 
     /**
@@ -155,6 +137,7 @@ public final class GlossaryModelScans {
      *
      * @param projectId the project; never null
      * @param terms the candidate words; never null
+     * @param forms each candidate's other forms by lexicon key; never null
      * @param model the model to ask; never null
      * @param progress where each call is announced; never null
      * @return a decision for every candidate, or the book's or the first failed call's error
@@ -162,16 +145,17 @@ public final class GlossaryModelScans {
     public Result<Map<String, LexiconReading.Decision>> scanTerms(
             final String projectId,
             final List<String> terms,
+            final Map<String, List<String>> forms,
             final ChatModel model,
             final Consumer<JobEvent> progress) {
         log.debug("Lexicon model scan reading project={} candidates={}", projectId, terms.size());
         return book(projectId)
                 .flatMap(book -> lexiconReading.scan(
-                        terms, book.story(), book.dial(), book.frame(), calls(model, progress, book)));
+                        terms, forms, book.story(), book.dial(), book.frame(), calls(model, progress, book)));
     }
 
     private ModelCalls calls(final ChatModel model, final Consumer<JobEvent> progress, final Book book) {
-        return calls(model, progress, book, ContextBudget.DEFAULT_WINDOW);
+        return calls(model, progress, book, ModelWindows.of(model, null));
     }
 
     ModelCalls calls(final ChatModel model, final Consumer<JobEvent> progress, final Book book, final int window) {
@@ -191,10 +175,17 @@ public final class GlossaryModelScans {
         return termReview.decide(projectId, book.story(), book.frame(), book.names(), book.dial(), calls);
     }
 
-    /** The names pass's translate step: a rendering for each entry, knowing the held glossary and the readings. */
+    /**
+     * The names pass's translate step: a rendering for each entry, knowing the held glossary and the readings; each
+     * batch's count of renderings the target's rules refused twice goes to {@code rejected}.
+     */
     Result<List<SuggestionReplies.Suggestion>> suggestFor(
-            final List<GlossaryEntry> entries, final TargetContext context, final Book book, final ModelCalls calls) {
-        return suggestTargets.suggest(entries, book.story(), book.frame(), book.names(), calls, context);
+            final List<GlossaryEntry> entries,
+            final TargetContext context,
+            final Book book,
+            final ModelCalls calls,
+            final IntConsumer rejected) {
+        return suggestTargets.suggest(entries, book.story(), book.frame(), book.names(), calls, context, rejected);
     }
 
     Result<Book> book(final String projectId) {
@@ -218,13 +209,13 @@ public final class GlossaryModelScans {
             return Result.err(
                     AppError.of(ErrorCode.validation, "No book is open", "Open the book before scanning for names."));
         }
-        final CallFrame frame = CallFrame.forBook(brief, document, index, requestDefaultsSource.current());
+        final CallFrame frame = CallFrame.forBook(brief, document, index);
         log.debug(
                 "Glossary model action project={} source={} analysis={} target={}",
                 projectId,
                 frame.sourceLanguage(),
                 frame.analysisLanguage(),
                 target);
-        return Result.ok(new Book(BookSlice.story(index), frame, brief.names(), brief.dial()));
+        return Result.ok(new Book(BookSlice.story(index), frame, brief.names(), brief.dial(), brief.conventions()));
     }
 }

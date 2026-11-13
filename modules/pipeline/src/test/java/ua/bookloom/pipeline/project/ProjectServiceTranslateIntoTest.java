@@ -40,7 +40,7 @@ class ProjectServiceTranslateIntoTest {
         uk = world.create(book);
         world.translate(uk, "en", "uk");
         world.glossary.add(
-                new GlossaryEntry("g1", uk, "Mira Holt", "Міра Голт", TermType.CHARACTER, Gender.FEMALE, true));
+                GlossaryEntry.of("g1", uk, "Mira Holt", "Міра Голт", TermType.CHARACTER, Gender.FEMALE, true));
         world.lexicon.put(LexiconEntry.of(uk, "warden"));
         world.lexicon.record(uk, "warden", "наглядач");
         world.tm.put(new TmEntry("t1", uk, "hash", "ctx", "The rain kept falling.", "Дощ не вщухав."));

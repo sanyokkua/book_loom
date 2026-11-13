@@ -24,7 +24,7 @@ class SleepHelpTest extends FxTestBase {
 
     private void open(final String projectId) {
         onFx(() -> {
-            OpenBookForTest.open(project, projectId, "en", "uk");
+            OpenedBookFixture.open(project, projectId, "en", "uk");
             return null;
         });
     }

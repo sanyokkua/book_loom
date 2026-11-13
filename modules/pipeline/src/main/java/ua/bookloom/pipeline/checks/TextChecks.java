@@ -7,14 +7,15 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.util.lang.Languages;
 
 /**
  * The deterministic text checks that need no model, run on one segment's display texts — a defect found here is a
- * fact, not an opinion, so a blocking finding fails the segment before any reviewer is asked. Blocking: a word that
+ * fact, not an opinion, so a blocking finding fails the segment before any repair is asked. Blocking: a word that
  * mixes alphabets, a quote pair the source balanced and the target did not, a paragraph left in the source language.
- * A glossary name swapped for another one and a run of source Latin words left in a target of another script block too. Soft: a doubled word, a spacing artefact, a changed number, a glossary name lost or spelled another way, a listed foreign word. The length check stays beside the other soft checks in
+ * A glossary name swapped for another one and a run of source Latin words left in a target of another script block too. Soft: a doubled word, a spacing artefact, a changed number, a glossary name lost or spelled another way, untranslated function words. The length check stays beside the other soft checks in
  * {@code qa}, where its band and its blend weight live.
  */
 @Slf4j
@@ -43,47 +44,111 @@ public final class TextChecks {
             final String targetLanguage,
             final List<String> glossaryPairs,
             final List<String> keptTerms) {
-        Objects.requireNonNull(source, "source");
-        Objects.requireNonNull(target, "target");
-        Objects.requireNonNull(targetLanguage, "targetLanguage");
-        Objects.requireNonNull(glossaryPairs, "glossaryPairs");
-        Objects.requireNonNull(keptTerms, "keptTerms");
-        if (NonProse.isLocatorOnly(target)) {
-            log.debug("Text checks skipped: the target is only digits and locators");
-            return List.of();
-        }
-        return runOn(source, target, sourceLanguage, targetLanguage, glossaryPairs, keptTerms);
+        return run(source, target, sourceLanguage, targetLanguage, glossaryPairs, keptTerms, UnitRole.BODY);
     }
 
-    // The identifiers are overwritten by filler first: no language or script check may hold them against the text.
-    private static List<CheckFinding> runOn(
-            final String original,
-            final String originalTarget,
+    /**
+     * Runs every deterministic text check on one segment of a unit with the given role. The Latin-run check is for
+     * running prose: a copyright page, a title or front matter legitimately holds Latin words (a publisher's line), so
+     * it is skipped outside {@link UnitRole#BODY}.
+     *
+     * @param source the source's display text
+     * @param target the candidate's display text, with kept names and protected tokens already out
+     * @param sourceLanguage the source language tag, or {@code null} when none is declared
+     * @param targetLanguage the target language tag
+     * @param glossaryPairs {@code term → target} lines of the glossary names the segment holds; never null
+     * @param keptTerms the terms Keep original keeps as written; never null
+     * @param role the role of the unit the segment belongs to; never null
+     * @return the findings, as {@link #run(String, String, String, String, List, List)}
+     */
+    public static List<CheckFinding> run(
+            final String source,
+            final String target,
             @Nullable final String sourceLanguage,
             final String targetLanguage,
             final List<String> glossaryPairs,
-            final List<String> keptTerms) {
-        final String source = Identifiers.masked(original);
-        final String target = Identifiers.masked(originalTarget);
-        final List<CheckFinding> findings = new ArrayList<>(IdentifierCheck.find(original, originalTarget));
+            final List<String> keptTerms,
+            final UnitRole role) {
+        return run(new TextCheckInput(
+                source, target, sourceLanguage, targetLanguage, glossaryPairs, keptTerms, role, List.of()));
+    }
+
+    /**
+     * Runs every deterministic text check on one segment, knowing which glossary renderings are pinned.
+     *
+     * @return the findings, as {@link #run(String, String, String, String, List, List)}
+     */
+    public static List<CheckFinding> run(final TextCheckInput input) {
+        Objects.requireNonNull(input, "input");
+        if (NonProse.isLocatorOnly(input.target())) {
+            log.debug("Text checks skipped: the target is only digits and locators");
+            return List.of();
+        }
+        return runOn(input);
+    }
+
+    // The identifiers are overwritten by filler first: no language or script check may hold them against the text.
+    private static List<CheckFinding> runOn(final TextCheckInput input) {
+        final @Nullable String sourceLanguage = input.sourceLanguage();
+        final String targetLanguage = input.targetLanguage();
+        final String source = Identifiers.masked(input.source());
+        final String target = Identifiers.masked(input.target());
+        final List<CheckFinding> findings = new ArrayList<>(IdentifierCheck.find(input.source(), input.target()));
         ResidueCheck.find(source, target, targetLanguage).ifPresent(findings::add);
-        findings.addAll(ScriptPurityCheck.find(target, Languages.scriptOf(targetLanguage)));
+        findings.addAll(ScriptPurityCheck.find(source, target, Languages.scriptOf(targetLanguage)));
         QuoteBalanceCheck.find(source, target, sourceLanguage, targetLanguage).ifPresent(findings::add);
         findings.addAll(LanguageIdentityCheck.find(target, sourceLanguage, targetLanguage));
-        if (findings.stream().noneMatch(finding -> finding.kind() == FindingKind.LEFTOVER_LANGUAGE)) {
-            findings.addAll(LatinRunCheck.find(source, target, Languages.scriptOf(targetLanguage), keptTerms));
-        }
-        findings.addAll(ForeignWordCheck.find(source, target, targetLanguage));
+        latinRun(input, source, target, findings);
+        withoutResidueInLatinRuns(findings, target, sourceLanguage, targetLanguage);
         findings.addAll(AddressMixCheck.find(target, targetLanguage));
+        findings.addAll(AddressMixCheck.parity(source, target, sourceLanguage, targetLanguage));
         findings.addAll(DuplicateWordCheck.find(source, target));
         findings.addAll(SpacingCheck.find(source, target));
         SentenceCountCheck.find(source, target, sourceLanguage, targetLanguage).ifPresent(findings::add);
-        findings.addAll(glossaryNameChecks(source, target, sourceLanguage, targetLanguage, glossaryPairs));
+        findings.addAll(glossaryNameChecks(
+                source, target, sourceLanguage, targetLanguage, input.glossaryPairs(), input.pinnedTargets()));
         findings.addAll(NumberCheck.find(source, target));
+        TerminalMarkCheck.find(source, target, input.role()).ifPresent(findings::add);
         if (!findings.isEmpty()) {
             report(findings);
         }
         return List.copyOf(findings);
+    }
+
+    private static void latinRun(
+            final TextCheckInput input, final String source, final String target, final List<CheckFinding> findings) {
+        if (input.role() != UnitRole.BODY) {
+            log.debug("Latin run check skipped: the unit is {}", input.role());
+        } else if (findings.stream().noneMatch(finding -> finding.kind() == FindingKind.LEFTOVER_LANGUAGE)) {
+            findings.addAll(
+                    LatinRunCheck.find(source, target, Languages.scriptOf(input.targetLanguage()), input.keptTerms()));
+        }
+    }
+
+    // A Latin run already names the English words it holds; counting them again as residue would make one copied
+    // phrase two findings, so the residue finding is read again with the runs left out.
+    private static void withoutResidueInLatinRuns(
+            final List<CheckFinding> findings,
+            final String target,
+            @Nullable final String sourceLanguage,
+            final String targetLanguage) {
+        final List<TextSpan> runs = findings.stream()
+                .filter(finding -> finding.kind() == FindingKind.LATIN_RUN)
+                .map(CheckFinding::span)
+                .toList();
+        final boolean residue =
+                findings.stream().anyMatch(finding -> finding.kind() == FindingKind.FUNCTION_WORD_RESIDUE);
+        log.debug("Residue against Latin runs: runs={} residue={}", runs.size(), residue);
+        if (runs.isEmpty() || !residue) {
+            return;
+        }
+        final int at = findings.indexOf(findings.stream()
+                .filter(finding -> finding.kind() == FindingKind.FUNCTION_WORD_RESIDUE)
+                .findFirst()
+                .orElseThrow());
+        findings.remove(at);
+        LanguageIdentityCheck.residueOutside(target, sourceLanguage, targetLanguage, runs)
+                .ifPresent(left -> findings.add(at, left));
     }
 
     // The vocative and the swap check hold the target to the glossary's renderings with the same stem rule.
@@ -92,12 +157,13 @@ public final class TextChecks {
             final String target,
             @Nullable final String sourceLanguage,
             final String targetLanguage,
-            final List<String> glossaryPairs) {
+            final List<String> glossaryPairs,
+            final List<String> pinnedTargets) {
         final List<String> alternations = LanguageRules.bundled().stemAlternations(targetLanguage);
         final List<CheckFinding> found =
                 new ArrayList<>(VocativeCheck.find(source, target, glossaryPairs, alternations, sourceLanguage));
         found.addAll(NameSwapCheck.find(source, target, glossaryPairs, alternations, sourceLanguage));
-        found.addAll(NameLossCheck.find(source, target, glossaryPairs, sourceLanguage, targetLanguage));
+        found.addAll(NameLossCheck.find(source, target, glossaryPairs, sourceLanguage, targetLanguage, pinnedTargets));
         return found;
     }
 

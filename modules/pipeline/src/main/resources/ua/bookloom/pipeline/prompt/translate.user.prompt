@@ -1,0 +1,1 @@
+Translate every item inside <Items> from {{source}} into {{target}}. Return exactly one JSON object matching this schema: {"items":[{"id":"<id>","target":"<translation>"}]}

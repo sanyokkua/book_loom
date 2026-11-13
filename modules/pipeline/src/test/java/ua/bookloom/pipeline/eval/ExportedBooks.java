@@ -129,7 +129,7 @@ public final class ExportedBooks {
         try {
             for (final GlossaryCsv.Row row : GlossaryCsv.parse(Files.readString(csv, StandardCharsets.UTF_8))
                     .rows()) {
-                entries.add(new GlossaryEntry(
+                entries.add(GlossaryEntry.of(
                         PROJECT + "-" + entries.size(),
                         PROJECT,
                         row.term(),
@@ -172,7 +172,6 @@ public final class ExportedBooks {
                 null,
                 List.<QaFinding>of(),
                 SegmentPath.DRAFT,
-                0,
                 false,
                 null);
     }

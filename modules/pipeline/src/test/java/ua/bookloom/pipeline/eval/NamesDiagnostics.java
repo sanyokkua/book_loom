@@ -15,9 +15,9 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.api.project.Origin;
 
 /**
  * The cases behind a {@link NamesScore}, so a miss can be read and classified (model, code rule, triage or gold): each
@@ -65,13 +65,13 @@ record NamesDiagnostics(
             String term,
             Gender gold,
             Gender got,
-            @Nullable GenderOrigin origin,
+            @Nullable Origin origin,
             @Nullable String entry,
             int mentions,
             boolean noEvidence) {
 
         boolean isVerified() {
-            return got != Gender.UNKNOWN && origin == GenderOrigin.VERIFIED;
+            return got != Gender.UNKNOWN && origin == Origin.BOOK;
         }
     }
 
@@ -232,9 +232,9 @@ record NamesDiagnostics(
                 entry.term(),
                 entry.type().name(),
                 entry.gender() + "/" + entry.genderOrigin() + (entry.noGenderEvidence() ? "/no-evidence" : ""),
-                String.valueOf(entry.target()) + "/" + entry.origin(),
+                String.valueOf(entry.target()) + "/" + entry.targetOrigin(),
                 entry.locked() ? "locked" : "open",
-                String.join(",", entry.aliases()));
+                String.join(",", entry.forms()));
     }
 
     private static String lower(final String text) {

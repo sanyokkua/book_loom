@@ -14,6 +14,7 @@ import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderAuth;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
@@ -33,13 +34,20 @@ class SettingsViewModelTest extends SettingsViewModelTestBase {
 
         assertThat(onFx(() -> List.copyOf(viewModel.providers())))
                 .containsExactly(
-                        new ProviderRow("ollama", ProviderKind.OLLAMA, "http://localhost:11434", "localhost:11434", ""),
+                        new ProviderRow(
+                                "ollama",
+                                ProviderKind.OLLAMA,
+                                "http://localhost:11434",
+                                "localhost:11434",
+                                "",
+                                ServerEngine.OLLAMA),
                         new ProviderRow(
                                 "lmstudio",
                                 ProviderKind.OPENAI_COMPATIBLE,
                                 "http://localhost:1234/v1",
                                 "localhost:1234",
-                                ""));
+                                "",
+                                ServerEngine.LM_STUDIO));
         assertThat(onFx(() -> viewModel.selectedProviderId().get())).isEqualTo("ollama");
     }
 
@@ -137,7 +145,11 @@ class SettingsViewModelTest extends SettingsViewModelTestBase {
                 null,
                 null,
                 java.util.Map.of(),
-                List.of()));
+                List.of(),
+                ServerEngine.GENERIC,
+                null,
+                null,
+                false));
         final SettingsViewModel viewModel = viewModel(ScriptedProviderVerifier.idle());
 
         assertThat(onFx(() -> viewModel.providerName("office-lm"))).isEqualTo("Office LM");

@@ -3,6 +3,8 @@ package ua.bookloom.api.project;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -35,6 +37,7 @@ class BookBriefTest {
     @ParameterizedTest
     @ValueSource(ints = {-1, 101})
     void constructor_balanceOutsideRange_throws(final int balance) {
+        final var arg1 = AlsoTranslate.defaults();
         assertThatThrownBy(() -> new BookBrief(
                         "en",
                         null,
@@ -47,7 +50,7 @@ class BookBriefTest {
                         FootnotePolicy.TRANSLATE,
                         UnitPolicy.KEEP,
                         balance,
-                        AlsoTranslate.defaults(),
+                        arg1,
                         QualityDial.BALANCED))
                 .isInstanceOf(IllegalArgumentException.class);
     }
@@ -102,5 +105,90 @@ class BookBriefTest {
                 .isFalse();
         assertThat(new Narrator(NarratorPerson.FIRST, Gender.MALE).hasCheckableGender())
                 .isTrue();
+    }
+
+    // One character means one code point: a pair of characters is not an apostrophe.
+    @Test
+    void withApostrophe_twoCharacters_isRejected() {
+        final BookBrief base = BookBrief.defaults("en");
+
+        assertThatThrownBy(() -> base.withApostrophe("''")).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    // The policy keys survive a change of language and default to "the target file's default".
+    @Test
+    void withPolicyKeys_thenLanguages_keepsThemAndDefaultsAreEmpty() {
+        final BookBrief base = BookBrief.defaults("en");
+        final BookBrief declared = base.withApostrophe("\u2019")
+                .withQuoteStyle(new QuoteStyle("\u00ab", "\u00bb", "\u201e", "\u201c"))
+                .withDefaultAddress(new Address(AddressForm.INFORMAL, AddressForm.FORMAL))
+                .withConventions(Map.of("hardG", "\u0433"))
+                .withLikely(Set.of(BriefField.GENRE))
+                .withLanguages("en", "uk");
+
+        assertThat(declared.apostrophe()).isEqualTo("\u2019");
+        assertThat(declared.quoteStyle()).isEqualTo(new QuoteStyle("\u00ab", "\u00bb", "\u201e", "\u201c"));
+        assertThat(declared.defaultAddress()).isEqualTo(new Address(AddressForm.INFORMAL, AddressForm.FORMAL));
+        assertThat(declared.conventions()).containsEntry("hardG", "\u0433");
+        assertThat(declared.likely()).containsExactly(BriefField.GENRE);
+        assertThat(base.apostrophe()).isNull();
+        assertThat(base.quoteStyle()).isNull();
+        assertThat(base.defaultAddress()).isNull();
+        assertThat(base.conventions()).isEmpty();
+        assertThat(base.likely()).isEmpty();
+    }
+
+    @Test
+    void summariesOn_noAnalysis_true() {
+        assertThat(BookBrief.defaults("en").summariesOn()).isTrue();
+    }
+
+    @Test
+    void summariesOn_separateStoriesNotForced_false() {
+        final BookBrief brief = BookBrief.defaults("en").withStoryShape(StoryShape.SEPARATE_STORIES);
+
+        assertThat(brief.summariesOn()).isFalse();
+    }
+
+    @Test
+    void summariesOn_forcedOnWithSeparateStories_true() {
+        final BookBrief brief = BookBrief.defaults("en")
+                .withStoryShape(StoryShape.SEPARATE_STORIES)
+                .withChapterSummaries(true);
+
+        assertThat(brief.summariesOn()).isTrue();
+    }
+
+    @Test
+    void summariesOn_forcedOffWithOneStory_false() {
+        final BookBrief brief =
+                BookBrief.defaults("en").withStoryShape(StoryShape.ONE_STORY).withChapterSummaries(false);
+
+        assertThat(brief.summariesOn()).isFalse();
+    }
+
+    @Test
+    void withKeysOf_storyShapeAndSwitch_kept() {
+        final BookBrief other = BookBrief.defaults("en")
+                .withStoryShape(StoryShape.SEPARATE_STORIES)
+                .withChapterSummaries(true);
+
+        final BookBrief merged = BookBrief.defaults("uk").withGenre("Fable").withKeysOf(other);
+
+        assertThat(merged.storyShape()).isEqualTo(StoryShape.SEPARATE_STORIES);
+        assertThat(merged.chapterSummaries()).isTrue();
+        assertThat(merged.genre()).isEqualTo("Fable");
+    }
+
+    @Test
+    void withLanguages_storyShapeAndSwitch_kept() {
+        final BookBrief brief = BookBrief.defaults("en")
+                .withStoryShape(StoryShape.ONE_STORY)
+                .withChapterSummaries(false)
+                .withLanguages("en", "uk")
+                .withApostrophe("\u2019");
+
+        assertThat(brief.storyShape()).isEqualTo(StoryShape.ONE_STORY);
+        assertThat(brief.chapterSummaries()).isFalse();
     }
 }

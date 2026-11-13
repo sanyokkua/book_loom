@@ -13,7 +13,6 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -151,7 +150,10 @@ class OllamaClientTest {
         stubChat("""
                 {"model":"gemma4:e4b-mlx","message":{"content":"<think>private reasoning</think>"},"done_reason":"stop"}
                 """);
-        assertThat(sendChat(messageOnlyRequest())).isEqualTo(new ChatResponse("", FinishReason.STOP));
+        assertThat(sendChat(messageOnlyRequest()))
+                .usingRecursiveComparison()
+                .ignoringFields("rawBody")
+                .isEqualTo(new ChatResponse("", FinishReason.STOP));
     }
 
     @Test
@@ -242,7 +244,7 @@ class OllamaClientTest {
     }
 
     @Test
-    void listModels_closedEndpoint_preservesUnreachable() throws IOException {
+    void listModels_closedEndpoint_preservesUnreachable() {
         final Result<List<ModelInfo>> result =
                 client(closedEndpoint(), Duration.ofSeconds(2)).listModels().result();
 
@@ -286,7 +288,7 @@ class OllamaClientTest {
     }
 
     @Test
-    void chat_closedEndpoint_returnsUnreachable() throws IOException {
+    void chat_closedEndpoint_returnsUnreachable() {
         final URI closedEndpoint = closedEndpoint();
 
         final Result<ChatResponse> result = client(closedEndpoint, Duration.ofSeconds(2))
@@ -326,8 +328,9 @@ class OllamaClientTest {
         return new OllamaClient(config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper());
     }
 
+    // The client sends the level a request carries; one whose profile decided no reasoning control carries none.
     private static ChatRequest messageOnlyRequest() {
-        return new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")));
+        return new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello"))).withoutReasoning();
     }
 
     private static ChatRequest formattedRequest() {

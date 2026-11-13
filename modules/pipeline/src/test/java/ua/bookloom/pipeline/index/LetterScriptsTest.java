@@ -3,7 +3,6 @@ package ua.bookloom.pipeline.index;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.Character.UnicodeScript;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -32,7 +31,7 @@ class LetterScriptsTest {
             delimiter = '|',
             value = {"⟦g0⟧⟦g1⟧", "1914 — 1918", "''"})
     void majorityOf_textWithNoLetter_isEmpty(final String text) {
-        assertThat(LetterScripts.majorityOf(text)).isEqualTo(Optional.empty());
+        assertThat(LetterScripts.majorityOf(text)).isEmpty();
     }
 
     @Test

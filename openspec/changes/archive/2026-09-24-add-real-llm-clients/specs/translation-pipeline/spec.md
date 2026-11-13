@@ -155,7 +155,7 @@ exit with code 1, leaving any existing output file unchanged. The error's techni
 file.
 
 **Source:** `02_Architecture/09_ERROR_HANDLING.md#app-error`, `#ui-surfacing`, ADR-0022
-(`docs/adr/ADR-0022-busy-error-code-covers-the-single-instance-lock.md`).
+(`docs/spec_baseline/adr/ADR-0022-busy-error-code-covers-the-single-instance-lock.md`).
 In plain words: a script can tell a usage mistake (2) from a book or a server that did not make it (1), and a person
 reads the same short title and message a screen would show. A missing model name or a mistyped provider is caught
 before a single byte is sent. The command line and the desktop app share one data folder and its lock, so they never

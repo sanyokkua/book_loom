@@ -23,8 +23,8 @@ substituted into a catalogue-owned frame, not text the interface wrote. This bui
 language the port that built them wrote them in, which is English, and SHALL NOT attempt to translate them in the
 window.
 
-**Source:** FR-UI-06, FR-UI-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-I18N-1,
-FR-I18N-9 (`docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#internationalization`).
+**Source:** FR-UI-06, FR-UI-08 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-I18N-1,
+FR-I18N-9 (`docs/spec_baseline/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#internationalization`).
 In plain words: a sentence assembled from pieces at runtime cannot be translated, because other languages put the
 pieces in a different order and inflect them differently. One key, one whole sentence, with the variable parts
 marked inside it, is the only shape a translator can actually work with. A failure's text is carved out because
@@ -59,8 +59,8 @@ The application SHALL ship a catalogue in English and a catalogue in Ukrainian. 
 Both catalogues SHALL define exactly the same set of keys: a key present in one and absent from the other is a
 defect, as is a key defined in a catalogue that nothing displays.
 
-**Source:** FR-UI-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-I18N-2, FR-I18N-9
-(`docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#internationalization`).
+**Source:** FR-UI-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-I18N-2, FR-I18N-9
+(`docs/spec_baseline/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#internationalization`).
 In plain words: a missing key does not fail loudly — it shows the raw key or an English word in the middle of a
 Ukrainian sentence, and nobody notices until a user does. Checking both directions catches both the untranslated
 string and the translation nobody uses any more.
@@ -82,8 +82,8 @@ number, in the language being displayed.
 
 The Ukrainian catalogue SHALL provide every plural form Ukrainian distinguishes for such a message.
 
-**Source:** FR-UI-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-I18N-8, DD-48
-(`docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#icu-messages`).
+**Source:** FR-UI-08 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-I18N-8, DD-48
+(`docs/spec_baseline/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#icu-messages`).
 In plain words: English has two forms and Ukrainian has four, so "1 segment / 2 segments" translated as a pair
 is wrong for most numbers in Ukrainian. Naming the forms in the catalogue is what makes `21 сегмент`,
 `23 сегменти` and `25 сегментів` all come out right from the same key.
@@ -109,7 +109,7 @@ is wrong for most numbers in Ukrainian. Naming the forms in the catalogue is wha
 
 WHEN the application starts and no language has been chosen in Settings, it SHALL display Ukrainian IF the operating system's language is Ukrainian, and English otherwise, without asking. WHEN a person picks a language in Settings › Appearance, the application SHALL store the choice, say it applies after a restart and offer "Restart now", and SHALL display that language, not the operating system's, on every later launch.
 
-**Source**: FR-UI-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-I18N-4 (`docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#internationalization`), `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`. In plain words: guessing from the desktop is right almost always, so nobody is asked on first launch; but a person who wants another language than their desktop's can say so once, and it is remembered. The switch applies after a restart because changing the language live would rebuild every screen, and the sentence beside the switch says so.
+**Source**: FR-UI-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-I18N-4 (`docs/spec_baseline/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#internationalization`), `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`. In plain words: guessing from the desktop is right almost always, so nobody is asked on first launch; but a person who wants another language than their desktop's can say so once, and it is remembered. The switch applies after a restart because changing the language live would rebuild every screen, and the sentence beside the switch says so.
 
 #### Scenario: A Ukrainian desktop gets a Ukrainian interface
 
@@ -147,7 +147,7 @@ WHEN the application starts and no language has been chosen in Settings, it SHAL
 A number, a count or a duration the application displays SHALL be formatted for the language currently being
 displayed, not for the machine's own region.
 
-**Source:** FR-I18N-6 (`docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#locale-formatted-fields`).
+**Source:** FR-I18N-6 (`docs/spec_baseline/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#locale-formatted-fields`).
 In plain words: an interface reading Ukrainian with American thousands separators is half-translated. Following
 the displayed language rather than the machine keeps a single choice in charge of everything a person reads.
 

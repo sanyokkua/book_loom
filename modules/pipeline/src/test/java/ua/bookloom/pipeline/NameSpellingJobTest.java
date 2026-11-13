@@ -40,7 +40,7 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 class NameSpellingJobTest {
 
     private static final Pattern ITEM = Pattern.compile("<s id=\"(\\d+)\">(.*)</s>");
-    private static final Pattern SHOWN = Pattern.compile("<Text>\\n(.*?)\\n</Text>", Pattern.DOTALL);
+    private static final Pattern SHOWN = Pattern.compile("<s id=\"1\">(.*?)</s>", Pattern.DOTALL);
     private static final String SPELLING_LINE = "Zerubin → Зерубін";
     private static final String P4 = "Zerubin sat in the dark.";
     private static final List<List<String>> CHAPTERS = List.of(
@@ -83,7 +83,9 @@ class NameSpellingJobTest {
         public Result<ChatResponse> chat(final ChatRequest request) {
             requests.add(request);
             final String user = userMessage(request);
-            final String name = user.contains(P4) && !user.contains(SPELLING_LINE) ? "Зерубин" : "Зерубін";
+            // The next source after a batch may be the fourth chapter's paragraph; only translating it can drift.
+            final String name =
+                    user.contains(">" + P4 + "</s>") && !user.contains(SPELLING_LINE) ? "Зерубин" : "Зерубін";
             final Matcher items = ITEM.matcher(user);
             final List<String> entries = new ArrayList<>();
             while (items.find()) {
@@ -101,7 +103,7 @@ class NameSpellingJobTest {
         }
 
         private static String target(final String source, final String name) {
-            return Objects.requireNonNull(TARGETS.get(source)).formatted(name);
+            return TARGETS.getOrDefault(source, source).formatted(name);
         }
     }
 
@@ -110,7 +112,7 @@ class NameSpellingJobTest {
                 project(TestBooks.epub(tempDir.resolve("Book.epub"), CHAPTERS, "en"), brief("en", "uk"));
         project.stores()
                 .glossary()
-                .add(new GlossaryEntry("g1", project.id(), "Zerubin", target, TermType.CHARACTER, Gender.MALE, locked));
+                .add(GlossaryEntry.of("g1", project.id(), "Zerubin", target, TermType.CHARACTER, Gender.MALE, locked));
         return project;
     }
 

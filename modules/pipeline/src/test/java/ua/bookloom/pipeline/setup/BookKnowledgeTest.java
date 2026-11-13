@@ -19,6 +19,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.llm.ModelWindow;
 import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -27,6 +28,7 @@ import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.pipeline.ScriptedChatModel;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
@@ -56,7 +58,8 @@ class BookKnowledgeTest {
 
     private final ScriptedChatModel model = new ScriptedChatModel();
     private final List<JobEvent> events = new ArrayList<>();
-    private final BookKnowledge knowledge = new BookKnowledge(new PromptTemplates(), new ObjectMapper());
+    private final BookKnowledge knowledge =
+            new BookKnowledge(new ContextBuilder(new PromptTemplates()), new ObjectMapper());
     private final CallFrame frame =
             new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
     private JobModelCalls calls;
@@ -70,7 +73,8 @@ class BookKnowledgeTest {
                 },
                 events::add,
                 Clock.systemUTC(),
-                "uk");
+                "uk",
+                ModelWindow.DEFAULT_WINDOW);
     }
 
     private static Result<ChatResponse> reply(final String content) {
@@ -140,11 +144,11 @@ class BookKnowledgeTest {
         ask(FACTS, STEM);
 
         assertThat(events)
-                .filteredOn(event -> event instanceof ModelCallStarted)
+                .filteredOn(ModelCallStarted.class::isInstance)
                 .extracting(event -> ((ModelCallStarted) event).kind())
                 .containsExactly(CallKind.BOOK_KNOWLEDGE);
         assertThat(events)
-                .filteredOn(event -> event instanceof ModelCallFinished)
+                .filteredOn(ModelCallFinished.class::isInstance)
                 .extracting(event -> ((ModelCallFinished) event).kind())
                 .containsExactly(CallKind.BOOK_KNOWLEDGE);
     }

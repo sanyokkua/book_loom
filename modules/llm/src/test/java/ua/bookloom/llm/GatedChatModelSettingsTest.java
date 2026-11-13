@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -23,8 +24,11 @@ import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.provider.ModelSettingsCache;
@@ -157,7 +161,19 @@ class GatedChatModelSettingsTest {
             @Nullable final Integer window,
             @Nullable final Integer maxOutput,
             final OutputLengthField field) {
-        return new ModelSettings(PROVIDER, MODEL, choice, temperature, window, maxOutput, field, List.of(), null, null);
+        return new ModelSettings(
+                PROVIDER,
+                MODEL,
+                choice,
+                temperature,
+                window,
+                maxOutput,
+                field,
+                List.of(),
+                Map.of(),
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
     }
 
     private static ChatRequest request(final Double temperature, @Nullable final Integer cap) {
@@ -172,7 +188,10 @@ class GatedChatModelSettingsTest {
                 null,
                 CallKind.DRAFT,
                 null,
-                null);
+                null,
+                null,
+                null,
+                false);
     }
 
     /** Hand-written provider fake that records what the bound model hands it. */

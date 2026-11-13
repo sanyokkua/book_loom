@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.MissingResourceException;
 import java.util.Objects;
 import java.util.ResourceBundle;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -35,7 +36,7 @@ public final class Messages {
 
     private final LocaleProvider localeProvider;
     private final ReentrantLock decision = new ReentrantLock();
-    private volatile @Nullable Resolved resolved;
+    private final AtomicReference<@Nullable Resolved> resolved = new AtomicReference<>();
 
     /**
      * Keeps the provider; the language is decided at the first use, not here, because the injector builds this class
@@ -52,16 +53,16 @@ public final class Messages {
     private record Resolved(Locale locale, ResourceBundle active, ResourceBundle english) {}
 
     private Resolved resolved() {
-        final Resolved done = resolved;
+        final Resolved done = resolved.get();
         if (done != null) {
             return done;
         }
         decision.lock();
         try {
-            if (resolved == null) {
-                resolved = decide();
+            if (resolved.get() == null) {
+                resolved.set(decide());
             }
-            return Objects.requireNonNull(resolved, "resolved");
+            return Objects.requireNonNull(resolved.get(), "resolved");
         } finally {
             decision.unlock();
         }
@@ -105,13 +106,19 @@ public final class Messages {
      *
      * @param key a message whose argument 0 selects on the normalised code and whose {@code other} branch shows {1}
      * @param code the code as reported, for example {@code MISSING} or {@code latin-run}
+     * @param more the message's further arguments, from {2} on, for a branch that shows figures; none for most codes
      * @return the words of the interface language, or the code itself when the message has none for it
      */
-    public String code(final MessageKey key, final String code) {
+    public String code(final MessageKey key, final String code, final Object... more) {
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(code, "code");
+        Objects.requireNonNull(more, "more");
         final String selector = code.strip().toLowerCase(Locale.ROOT).replace('-', '_');
-        return get(key, selector.isEmpty() ? "none" : selector, code);
+        final Object[] args = new Object[2 + more.length];
+        args[0] = selector.isEmpty() ? "none" : selector;
+        args[1] = code;
+        System.arraycopy(more, 0, args, 2, more.length);
+        return get(key, args);
     }
 
     /**
@@ -136,7 +143,7 @@ public final class Messages {
     private String patternFor(final Resolved now, final MessageKey key) {
         try {
             return now.active().getString(key.key());
-        } catch (MissingResourceException missingInActive) {
+        } catch (MissingResourceException _) {
             log.debug("{} is missing for {}, resolving it for the English catalogue", key.key(), now.locale());
             return englishPatternFor(now, key);
         }
@@ -145,7 +152,7 @@ public final class Messages {
     private String englishPatternFor(final Resolved now, final MessageKey key) {
         try {
             return now.english().getString(key.key());
-        } catch (MissingResourceException missingEverywhere) {
+        } catch (MissingResourceException _) {
             log.warn("{} is in no catalogue, displaying the raw key", key.key());
             return key.key();
         }

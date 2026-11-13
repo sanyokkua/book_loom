@@ -7,15 +7,15 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 
 /** The bundled first-name lists suggest a gender, never decide one, and say nothing about a name both genders use. */
 class GivenNamesTest {
 
     private static GlossaryEntry entry(final String term, final TermType type, final Gender gender) {
-        return new GlossaryEntry("e", "p", term, null, type, gender, false);
+        return GlossaryEntry.of("e", "p", term, null, type, gender, false);
     }
 
     @ParameterizedTest
@@ -54,12 +54,13 @@ class GivenNamesTest {
         assertThat(GivenNames.genderOf("John the Elder of Wales", "en")).isEmpty();
     }
 
+    // The list's gender is a rule's: shown with the "rule" chip, never enforced.
     @Test
     void seeded_characterWithUnknownGender_getsASuggestedGender() {
         final GlossaryEntry seeded = GivenNames.seeded(entry("John", TermType.CHARACTER, Gender.UNKNOWN), "en");
 
         assertThat(seeded.gender()).isEqualTo(Gender.MALE);
-        assertThat(seeded.genderOrigin()).isEqualTo(GenderOrigin.SUGGESTED);
+        assertThat(seeded.genderOrigin()).isEqualTo(Origin.RULE);
         assertThat(seeded.locked()).isFalse();
     }
 
@@ -121,16 +122,16 @@ class GivenNamesTest {
         final GlossaryEntry seeded = GivenNames.seeded(entry("John", TermType.CHARACTER, Gender.UNKNOWN), "en");
 
         assertThat(seeded.withInferredGender(Gender.MALE)).isSameAs(seeded);
-        assertThat(seeded.withInferredGender(Gender.MALE).genderOrigin()).isEqualTo(GenderOrigin.SUGGESTED);
-        assertThat(seeded.withGender(Gender.MALE).genderOrigin()).isEqualTo(GenderOrigin.PERSON);
+        assertThat(seeded.withInferredGender(Gender.MALE).genderOrigin()).isEqualTo(Origin.RULE);
+        assertThat(seeded.withGender(Gender.MALE).genderOrigin()).isEqualTo(Origin.USER);
     }
 
     @Test
     void seeded_aPersonsGenderEditOrLock_confirmsItButATargetEditDoesNot() {
         final GlossaryEntry seeded = GivenNames.seeded(entry("John", TermType.CHARACTER, Gender.UNKNOWN), "en");
 
-        assertThat(seeded.withGender(Gender.MALE).genderOrigin()).isEqualTo(GenderOrigin.PERSON);
-        assertThat(seeded.withLocked(true).genderOrigin()).isEqualTo(GenderOrigin.PERSON);
-        assertThat(seeded.withTarget("Джон").genderOrigin()).isEqualTo(GenderOrigin.SUGGESTED);
+        assertThat(seeded.withGender(Gender.MALE).genderOrigin()).isEqualTo(Origin.USER);
+        assertThat(seeded.withLocked(true).genderOrigin()).isEqualTo(Origin.USER);
+        assertThat(seeded.withTarget("Джон").genderOrigin()).isEqualTo(Origin.RULE);
     }
 }

@@ -1,8 +1,8 @@
 package ua.bookloom.pipeline;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 import lombok.AccessLevel;
@@ -41,9 +41,9 @@ final class ChunkRunFixtures {
     static final String DOOR_ECHO = "HE OPENED THE OLD DOOR.";
     static final String DOOR_TARGET = "Він відчинив старі двері.";
     static final String EDIT = "Він рвучко відчинив двері.";
-    static final String REVIEW = "reviewer";
     static final String DRAFT = "draft";
-    static final String FIX = "directed-fix";
+    static final String PROOFREAD = "proofread";
+    static final String REPAIR = "repair";
 
     static Path fourParagraphs(final Path directory) {
         return TestBooks.markdown(directory.resolve("Book.md"), String.join("\n\n", S0, S1, S2, S3));
@@ -57,32 +57,36 @@ final class ChunkRunFixtures {
         return TestBooks.txt(directory.resolve("Book.txt"), DOOR);
     }
 
-    /** A reviewer reply that finds nothing to change in any pair of the chunk. */
-    static Result<ChatResponse> reviewed() {
-        return Result.ok(new ChatResponse("{\"results\":[]}", FinishReason.STOP));
-    }
-
     static Result<ChatResponse> target(final String text) {
         return Result.ok(new ChatResponse(TranslationJobTestSupport.targetReply(text), FinishReason.STOP));
     }
 
+    /** A single-target reply, the shape a directed fix and a revision are read in. */
+    static Result<ChatResponse> singleTarget(final String text) {
+        return Result.ok(new ChatResponse(TestReplies.singleTargetReply(text), FinishReason.STOP));
+    }
+
     static List<String> formats(final ScriptedChatModel model) {
-        return model.requests().stream()
-                .map(request -> Objects.requireNonNull(request.responseFormat(), "format")
-                        .name())
-                .toList();
+        return model.requests().stream().map(ScriptedChatModel::callName).toList();
     }
 
     static String userMessage(final ChatRequest request) {
         return request.messages().get(1).content();
     }
 
-    static String preceding(final String... targets) {
-        return "<PreviousTranslations>\n" + String.join("\n\n", targets) + "\n</PreviousTranslations>";
+    /** The previous pairs block of a window whose neighbours were accepted, each as its source and translation. */
+    static String preceding(final String... sourcesAndTargets) {
+        final List<String> lines = new ArrayList<>();
+        for (int i = 0; i + 1 < sourcesAndTargets.length; i += 2) {
+            lines.add("Source: " + sourcesAndTargets[i]);
+            lines.add("Translation: " + sourcesAndTargets[i + 1]);
+        }
+        return String.join("\n", lines);
     }
 
+    /** The one item of a single draft, a batch of one. */
     static String shown(final String source) {
-        return "<Text>\n" + source + "\n</Text>";
+        return "<s id=\"1\">" + source + "</s>";
     }
 
     static void pauseOn(final TranslationJobImpl translation, final String segmentId, final JobEvent event) {

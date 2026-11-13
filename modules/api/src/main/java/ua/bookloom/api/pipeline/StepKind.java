@@ -4,9 +4,7 @@ package ua.bookloom.api.pipeline;
 public enum StepKind {
     /** One segment's draft; a segment kept verbatim is a draft step done at once with no call. */
     DRAFT,
-    /** A chunk's reviewer pass (Fast 0, Balanced 1, Max 2 per chunk). */
-    CHECK,
-    /** A repair round or a directed fix started after a draft or check. */
+    /** The one repair, started after a draft. */
     REPAIR,
     /** A batch re-ask for ids the reply left out. */
     RE_ASK,
@@ -14,8 +12,8 @@ public enum StepKind {
     RESEND,
     /** One of Max's chapter summaries. */
     SUMMARY,
-    /** Max's backward revision. */
-    REVISION,
+    /** The Proofread stage's work (and, until group 14, the export pass's calls). */
+    PROOFREAD,
     /** One stage of the names pass: a group row of its progress dialog that no percentage counts. */
     STAGE,
     /** One model call of a names pass, of the brief suggestion or of a card action. */

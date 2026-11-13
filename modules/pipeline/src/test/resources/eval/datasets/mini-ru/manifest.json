@@ -1,0 +1,25 @@
+{
+  "id": "mini-ru",
+  "version": 2,
+  "pair": "ru-uk",
+  "ownerData": false,
+  "files": [
+    {
+      "path": "datasets/mini-ru/book.json",
+      "sha256": "5269e634c1fddc4ca31acf0fd2bd240b231811fb23159386133d87a901024a46"
+    },
+    {
+      "path": "datasets/mini-ru/expectations.json",
+      "sha256": "99eb6f01b162f99f970392810a6c3eeb3fa8e5e3d1d7a43899c54e7a4998b29f"
+    },
+    {
+      "path": "datasets/mini-ru/gold-map.json",
+      "sha256": "27b52c98ad9036211b0ee6da3cf38f388444b70fdf4a96e5fd741365a881756b"
+    },
+    {
+      "path": "datasets/mini-ru/labels.json",
+      "sha256": "a5f6b1846bcefe215fa1e4296297bf58f4c984d85288e7f52ccfbf6ba64745fc"
+    }
+  ],
+  "rootHash": "852efa31cc1e8b5280da197e365c657d092bb933acf9646e1569a52050eac852"
+}

@@ -47,7 +47,7 @@ final class CorpusTsv {
     private static String openStatusOf(CorpusOpenOutcome open) {
         return switch (open) {
             case CorpusOpenOutcome.Failed failed -> "failed:" + failed.errorCode();
-            case CorpusOpenOutcome.Opened ignored -> "opened";
+            case CorpusOpenOutcome.Opened _ -> "opened";
         };
     }
 
@@ -61,10 +61,10 @@ final class CorpusTsv {
 
     private static String identityStatusOf(CorpusIdentityOutcome identity) {
         return switch (identity) {
-            case CorpusIdentityOutcome.NotAttempted ignored -> "notAttempted";
+            case CorpusIdentityOutcome.NotAttempted _ -> "notAttempted";
             case CorpusIdentityOutcome.OpenFailed openFailed -> "openFailed:" + openFailed.errorCode();
             case CorpusIdentityOutcome.WriteFailed writeFailed -> "writeFailed:" + writeFailed.errorCode();
-            case CorpusIdentityOutcome.Written ignored -> "written";
+            case CorpusIdentityOutcome.Written _ -> "written";
         };
     }
 
@@ -76,10 +76,10 @@ final class CorpusTsv {
 
     private static String fixedPointStatusOf(CorpusFixedPointOutcome fixedPoint) {
         return switch (fixedPoint) {
-            case CorpusFixedPointOutcome.NotAttempted ignored -> "notAttempted";
+            case CorpusFixedPointOutcome.NotAttempted _ -> "notAttempted";
             case CorpusFixedPointOutcome.ReopenFailed reopenFailed -> "reopenFailed:" + reopenFailed.errorCode();
             case CorpusFixedPointOutcome.WriteFailed writeFailed -> "writeFailed:" + writeFailed.errorCode();
-            case CorpusFixedPointOutcome.Written ignored -> "written";
+            case CorpusFixedPointOutcome.Written _ -> "written";
         };
     }
 
@@ -91,11 +91,11 @@ final class CorpusTsv {
 
     private static String mutationStatusOf(CorpusMutationOutcome mutation) {
         return switch (mutation) {
-            case CorpusMutationOutcome.NotAttempted ignored -> "notAttempted";
+            case CorpusMutationOutcome.NotAttempted _ -> "notAttempted";
             case CorpusMutationOutcome.OpenFailed openFailed -> "openFailed:" + openFailed.errorCode();
             case CorpusMutationOutcome.WriteFailed writeFailed -> mutationWriteFailedCellOf(writeFailed);
             case CorpusMutationOutcome.ReopenFailed reopenFailed -> "reopenFailed:" + reopenFailed.errorCode();
-            case CorpusMutationOutcome.Completed ignored -> "completed";
+            case CorpusMutationOutcome.Completed _ -> "completed";
         };
     }
 
@@ -124,9 +124,9 @@ final class CorpusTsv {
 
     private static String idempotenceStatusOf(CorpusIdempotenceOutcome idempotence) {
         return switch (idempotence) {
-            case CorpusIdempotenceOutcome.NotAttempted ignored -> "notAttempted";
+            case CorpusIdempotenceOutcome.NotAttempted _ -> "notAttempted";
             case CorpusIdempotenceOutcome.ReopenFailed reopenFailed -> "reopenFailed:" + reopenFailed.errorCode();
-            case CorpusIdempotenceOutcome.Completed ignored -> "completed";
+            case CorpusIdempotenceOutcome.Completed _ -> "completed";
         };
     }
 
@@ -144,8 +144,8 @@ final class CorpusTsv {
 
     private static String maskStatusOf(CorpusMaskOutcome mask) {
         return switch (mask) {
-            case CorpusMaskOutcome.NotAttempted ignored -> "notAttempted";
-            case CorpusMaskOutcome.Completed ignored -> "completed";
+            case CorpusMaskOutcome.NotAttempted _ -> "notAttempted";
+            case CorpusMaskOutcome.Completed _ -> "completed";
         };
     }
 

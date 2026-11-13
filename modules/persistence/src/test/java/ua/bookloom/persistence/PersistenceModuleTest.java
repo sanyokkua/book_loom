@@ -96,7 +96,6 @@ class PersistenceModuleTest {
                 null,
                 List.of(),
                 SegmentPath.DRAFT,
-                0,
                 false,
                 null);
         segments.saveAll("p1", List.of(record));

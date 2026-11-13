@@ -37,7 +37,6 @@ public final class AutomationSettings {
         REVIEW_MODE,
         DIAL,
         OPEN_DESK,
-        LAST_CHECK,
         KEEP_AWAKE,
         REOPEN
     }
@@ -48,8 +47,6 @@ public final class AutomationSettings {
     private final ObjectProperty<ReviewMode> reviewMode = new SimpleObjectProperty<>(ReviewMode.UNATTENDED);
     private final ObjectProperty<QualityDial> defaultDial = new SimpleObjectProperty<>(QualityDial.BALANCED);
     private final BooleanProperty openReviewDesk = new SimpleBooleanProperty(true);
-    private final BooleanProperty lastCheck = new SimpleBooleanProperty(false);
-    private final BooleanProperty lastCheckChosen = new SimpleBooleanProperty(false);
     private final BooleanProperty keepAwake = new SimpleBooleanProperty(true);
     private final BooleanProperty reopenLastProject = new SimpleBooleanProperty(true);
     private final StringProperty reviewModeOverride = new SimpleStringProperty();
@@ -79,8 +76,6 @@ public final class AutomationSettings {
                         writer.read(AppSetting.REVIEW_MODE),
                         writer.read(AppSetting.DEFAULT_DIAL),
                         writer.read(AppSetting.OPEN_REVIEW_DESK),
-                        writer.read(AppSetting.LAST_CHECK),
-                        writer.isWritten(AppSetting.LAST_CHECK),
                         writer.read(AppSetting.KEEP_AWAKE),
                         writer.read(AppSetting.REOPEN_LAST_PROJECT),
                         reviewModeChoice.launchOverride().orElse(null)),
@@ -92,8 +87,6 @@ public final class AutomationSettings {
             ReviewMode reviewMode,
             QualityDial dial,
             boolean openDesk,
-            boolean lastCheck,
-            boolean lastCheckWritten,
             boolean keepAwake,
             boolean reopen,
             @Nullable String override) {}
@@ -103,10 +96,6 @@ public final class AutomationSettings {
         setUnlessChosen(Choice.REVIEW_MODE, reviewMode, stored.reviewMode());
         setUnlessChosen(Choice.DIAL, defaultDial, stored.dial());
         setUnlessChosen(Choice.OPEN_DESK, openReviewDesk, stored.openDesk());
-        setUnlessChosen(Choice.LAST_CHECK, lastCheck, stored.lastCheck());
-        if (!chosen.contains(Choice.LAST_CHECK)) {
-            lastCheckChosen.set(stored.lastCheckWritten());
-        }
         setUnlessChosen(Choice.KEEP_AWAKE, keepAwake, stored.keepAwake());
         setUnlessChosen(Choice.REOPEN, reopenLastProject, stored.reopen());
         reviewModeOverride.set(stored.override());
@@ -159,19 +148,6 @@ public final class AutomationSettings {
     }
 
     /**
-     * Holds and stores the last-check default; from now on it is a written choice, not the follow-the-quality default.
-     *
-     * @param on the choice
-     */
-    public void chooseLastCheck(final boolean on) {
-        log.debug("last check default choice {} -> {}", lastCheck.get(), on);
-        hold(Choice.LAST_CHECK);
-        lastCheck.set(on);
-        lastCheckChosen.set(true);
-        writer.put(AppSetting.LAST_CHECK, on);
-    }
-
-    /**
      * Holds and stores keep-awake; a computer held awake is let go at once when this turns it off.
      *
      * @param on the choice
@@ -213,16 +189,6 @@ public final class AutomationSettings {
     /** {@return whether the review desk opens by itself when a run ends with segments to review} */
     public BooleanProperty openReviewDeskProperty() {
         return openReviewDesk;
-    }
-
-    /** {@return the last-check default, off while it has not been chosen} */
-    public BooleanProperty lastCheckProperty() {
-        return lastCheck;
-    }
-
-    /** {@return whether the last-check default has been written, so it no longer follows the book's quality} */
-    public ReadOnlyBooleanProperty lastCheckChosenProperty() {
-        return lastCheckChosen;
     }
 
     /** {@return whether the computer is kept awake while a model works} */

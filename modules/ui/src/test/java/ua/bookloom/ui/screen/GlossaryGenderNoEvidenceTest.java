@@ -14,17 +14,17 @@ import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
 
 /**
- * A character the scan found no evidence of a gender for reads "not specified" with the reason, so the person can see
- * the scan looked and found nothing (15i.N5); a character nobody has scanned and a person's own "unknown" read as
- * plain "unknown".
+ * The Gender column never reads "unknown": a character with no gender yet reads "not specified", and adds "no evidence in
+ * the book" only when the names pass read the book and found none (15i.N5); a character nobody has read, or whose gender
+ * the person cleared, says no more than that (glossary spec, "The Gender column").
  */
 class GlossaryGenderNoEvidenceTest extends TranslatingScreenTestBase {
 
-    private static final GlossaryEntry NO_EVIDENCE = new GlossaryEntry(
+    private static final GlossaryEntry NO_EVIDENCE = GlossaryEntry.of(
                     "e1", "p1", "Odo", null, TermType.CHARACTER, Gender.UNKNOWN, false)
             .withNoGenderEvidence();
     private static final GlossaryEntry NEVER_SCANNED =
-            new GlossaryEntry("e2", "p1", "Wren", null, TermType.CHARACTER, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e2", "p1", "Wren", null, TermType.CHARACTER, Gender.UNKNOWN, false);
     private static final GlossaryEntry EDITED_BACK = NO_EVIDENCE.withGender(Gender.UNKNOWN);
 
     private List<String> genderLabels(final Locale locale) throws Exception {
@@ -39,21 +39,25 @@ class GlossaryGenderNoEvidenceTest extends TranslatingScreenTestBase {
     }
 
     @Test
-    void table_englishNoEvidenceCharacter_saysNotSpecifiedWithTheReason() throws Exception {
+    void table_englishNoEvidenceCharacter_saysNotSpecifiedWithTheReasonOnlyWhenTheBookGaveNone() throws Exception {
         assertThat(genderLabels(Locale.ENGLISH))
-                .contains("not specified — no evidence in the book", "unknown")
-                .doesNotContain("unknown (suggested)");
+                .doesNotContain("unknown")
+                .filteredOn(label -> label.startsWith("not specified"))
+                .containsExactly("not specified — no evidence in the book", "not specified");
     }
 
     @Test
     void table_ukrainianNoEvidenceCharacter_saysItInUkrainian() throws Exception {
         assertThat(genderLabels(Locale.forLanguageTag("uk")))
-                .contains("не вказано — у книзі немає свідчень", "невідомо");
+                .doesNotContain("невідомо")
+                .filteredOn(label -> label.startsWith("не вказано"))
+                .containsExactly("не вказано — у книзі немає свідчень", "не вказано");
     }
 
-    // The person's edit back to unknown is not the scan's finding.
+    // IF a gender the person cleared read "unknown", THEN the column would show the word the spec rules out; IF it read
+    // "no evidence in the book", THEN it would misstate why it is empty.
     @Test
-    void table_personEditedTheMarkedGenderBackToUnknown_readsPlainUnknown() throws Exception {
+    void table_personClearedTheGender_readsNotSpecified() throws Exception {
         readyToStart();
         glossary.willAnswer(Result.ok(List.of(EDITED_BACK)));
         onFx(() -> shell.activate(ViewNames.IMPORT));
@@ -64,6 +68,8 @@ class GlossaryGenderNoEvidenceTest extends TranslatingScreenTestBase {
                         .map(label -> ((Label) label).getText())
                         .toList());
 
-        assertThat(labels).contains("unknown").noneMatch(label -> label.contains("no evidence"));
+        assertThat(labels)
+                .contains("not specified")
+                .doesNotContain("not specified — no evidence in the book", "unknown");
     }
 }

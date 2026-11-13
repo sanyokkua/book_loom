@@ -5,11 +5,13 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobProgress;
@@ -36,8 +38,8 @@ final class UnattendedRecovery {
     private final Clock clock;
     private final RecoveryTimer timer;
     private final Consumer<JobEvent> emit;
-    private volatile ProviderProbe probe = ProviderProbe.ASSUME_REACHABLE;
-    private volatile Duration maxOutage = RecoverySchedule.MAX_OUTAGE;
+    private final AtomicReference<Probing> probing =
+            new AtomicReference<>(new Probing(ProviderProbe.ASSUME_REACHABLE, RecoverySchedule.MAX_OUTAGE));
     private @Nullable Instant downSince;
     private int wakes;
     private int cappedWakes;
@@ -52,13 +54,20 @@ final class UnattendedRecovery {
         this.emit = Objects.requireNonNull(emit, "emit");
     }
 
+    /** The probe and the longest outage waited out, replaced together so a wake never reads one of each pair. */
+    private record Probing(ProviderProbe probe, Duration maxOutage) {}
+
+    private Probing probing() {
+        return Objects.requireNonNull(probing.get(), "probing");
+    }
+
     void probeWith(final ProviderProbe probe, final Duration maxOutage) {
-        this.probe = Objects.requireNonNull(probe, "probe");
+        Objects.requireNonNull(probe, "probe");
         Objects.requireNonNull(maxOutage, "maxOutage");
         if (maxOutage.isNegative() || maxOutage.isZero()) {
             throw new IllegalArgumentException("maxOutage must be positive: " + maxOutage);
         }
-        this.maxOutage = maxOutage;
+        probing.set(new Probing(probe, maxOutage));
         log.debug("Recovery probe set maxOutage={}", maxOutage);
     }
 
@@ -112,11 +121,11 @@ final class UnattendedRecovery {
 
     private PauseWait waitThrough(final AppError error, final JobProgress progress, final Instant since) {
         lastProbe = null;
-        final int cap = PauseDecider.recovery(error.code()).wakesPerOutage();
+        final int cap = PauseDecider.recovery(error).wakesPerOutage();
         while (true) {
             final Instant now = clock.instant();
-            final Optional<Duration> delay =
-                    RecoverySchedule.delayBefore(wakes + 1, Duration.between(since, now), maxOutage);
+            final Optional<Duration> delay = RecoverySchedule.delayBefore(
+                    wakes + 1, Duration.between(since, now), probing().maxOutage());
             if (delay.isEmpty() || cappedWakes >= cap) {
                 logGivingUp(error, since, cap);
                 return holdFor(RecoveryWaiting.Status.GAVE_UP, error, progress, since, lastProbe);
@@ -132,12 +141,16 @@ final class UnattendedRecovery {
     private void logGivingUp(final AppError error, final Instant since, final int cap) {
         if (cappedWakes >= cap) {
             log.warn(
-                    "No model loaded after {} wakes code={}; waiting for the person to load it and resume",
+                    "No model loaded after {} wakes code={} reason={}; waiting for the person to load it and resume",
                     cappedWakes,
-                    error.code());
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return;
         }
-        log.warn("Provider down since {} for over {}; waiting for the person", since, maxOutage);
+        log.warn(
+                "Provider down since {} for over {}; waiting for the person",
+                since,
+                probing().maxOutage());
     }
 
     // One wait and its probe: empty to wait again, or how the pause ended.
@@ -157,7 +170,7 @@ final class UnattendedRecovery {
         if (cap != PauseDecider.UNCAPPED_WAKES) {
             cappedWakes++;
         }
-        lastProbe = probeOnce();
+        lastProbe = probeOnce(error);
         return lastProbe == null ? resumeAfterProbe(error, progress, since) : Optional.empty();
     }
 
@@ -173,10 +186,11 @@ final class UnattendedRecovery {
             final AppError error, final JobProgress progress, final Instant since) {
         if (control.resumeAutomatically()) {
             log.info(
-                    "Resumed by itself after {} min and {} wakes code={}",
+                    "Resumed by itself after {} min and {} wakes code={} reason={}",
                     Duration.between(since, clock.instant()).toMinutes(),
                     wakes,
-                    error.code());
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return Optional.of(PauseWait.RESUMED);
         }
         return settle(control.awaitWake(0), error, progress, since, null);
@@ -227,9 +241,10 @@ final class UnattendedRecovery {
     }
 
     // A probe that throws is a failed probe, never a reason to leave the wait.
-    private @Nullable ErrorCode probeOnce() {
+    private @Nullable ErrorCode probeOnce(final AppError pausedOn) {
         try {
-            final Result<Duration> probed = Objects.requireNonNull(probe.probe(), "probe result");
+            final Result<Duration> probed =
+                    Objects.requireNonNull(probing().probe().probe(pausedOn), "probe result");
             if (probed.isOk()) {
                 log.info("Provider probe at wake {} passed in {} ms", wakes, millisOf(probed));
                 return null;

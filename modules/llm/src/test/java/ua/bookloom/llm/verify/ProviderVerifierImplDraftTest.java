@@ -22,7 +22,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
@@ -42,11 +41,15 @@ import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.llm.LlmModule;
+import ua.bookloom.llm.engine.EngineDetector;
+import ua.bookloom.llm.engine.EngineFacts;
+import ua.bookloom.llm.engine.EngineRegistry;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 import ua.bookloom.llm.retry.RetryPolicy;
+import ua.bookloom.llm.testing.FakeModelSettingsRepository;
 import ua.bookloom.llm.testing.FakeProviderConfigs;
 
 /** Verifying an unsaved provider description: signed in, never registered, nothing leaked. */
@@ -359,32 +362,29 @@ class ProviderVerifierImplDraftTest {
 
     private ProviderConfig openAiDraft(String id) {
         return new ProviderConfig(
-                id,
-                ProviderKind.OPENAI_COMPATIBLE,
-                URI.create(server.baseUrl() + "/v1"),
-                Duration.ofSeconds(2),
-                Duration.ofSeconds(3),
-                null,
-                ProviderAuth.BEARER,
-                null,
-                KEY_VARIABLE,
-                null,
-                null,
-                Map.of(),
-                List.of());
+                        id,
+                        ProviderKind.OPENAI_COMPATIBLE,
+                        URI.create(server.baseUrl() + "/v1"),
+                        Duration.ofSeconds(2),
+                        Duration.ofSeconds(3))
+                .withAuth(ProviderAuth.BEARER)
+                .withCredentialRef(KEY_VARIABLE);
     }
 
     private ProviderVerifierImpl verifier(Map<String, String> env) {
         final var mapper = new LlmModule().objectMapper();
-        factory = new ProviderClientFactory(
-                new HttpExchange(new HttpClients(), System::nanoTime, env::get), mapper, System::nanoTime);
+        final HttpExchange exchange = new HttpExchange(new HttpClients(), System::nanoTime, env::get);
+        factory = new ProviderClientFactory(exchange, mapper, System::nanoTime);
         return new ProviderVerifierImpl(
                 configs,
                 factory,
-                new InferenceGate(),
-                new RetryPolicy(FIXED_CLOCK, () -> 0.5, delay -> {}),
-                mapper,
-                System::nanoTime);
+                new RetriedCalls(new InferenceGate(), new RetryPolicy(FIXED_CLOCK, () -> 0.5, delay -> {})),
+                new EngineRegistry(configs, new EngineDetector(exchange, mapper), new EngineFacts(exchange, mapper)),
+                new ProbeTools(
+                        mapper,
+                        System::nanoTime,
+                        new FakeModelSettingsRepository(),
+                        ProbeShapings.over(new FakeModelSettingsRepository())));
     }
 
     private static VerificationReport report(Result<VerificationReport> result) {

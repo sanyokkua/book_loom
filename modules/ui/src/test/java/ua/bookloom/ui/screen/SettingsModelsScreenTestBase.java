@@ -1,6 +1,7 @@
 package ua.bookloom.ui.screen;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -11,8 +12,11 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.RefusedSetting;
+import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.ui.ScriptedModelCapabilities;
 import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.ThemeTestSupport;
@@ -78,7 +82,7 @@ abstract class SettingsModelsScreenTestBase extends SettingsScreenTestBase {
     }
 
     String shown(final String id) {
-        return ThemeTestSupport.onFx(() -> ((Labeled) required(id)).getText());
+        return ThemeTestSupport.onFx(((Labeled) required(id))::getText);
     }
 
     boolean visible(final String id) {
@@ -114,8 +118,10 @@ abstract class SettingsModelsScreenTestBase extends SettingsScreenTestBase {
                 limit,
                 OutputLengthField.MAX_TOKENS,
                 List.<RefusedSetting>of(),
-                null,
-                null);
+                Map.of(),
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
     }
 
     Button press(final String id) {

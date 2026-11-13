@@ -13,8 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.CallState;
-import ua.bookloom.api.pipeline.MemoryKind;
-import ua.bookloom.api.pipeline.MemoryUpdated;
+import ua.bookloom.api.pipeline.ChapterSummaryKept;
+import ua.bookloom.api.pipeline.ProofreadWindowRead;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDetail;
 import ua.bookloom.api.pipeline.SegmentDrafted;
@@ -22,7 +22,8 @@ import ua.bookloom.api.pipeline.SegmentStarted;
 
 /**
  * The two calls of the live panel, worked out from the call snapshots, the targets of their segments, the run's rows
- * (the chunk being translated last, earlier chunks above it), the last {@value #MAX_RECENT} calls and the rolling summary's version.
+ * (the chunk being translated last, earlier chunks above it, and the kept chapter summaries) and the last
+ * {@value #MAX_RECENT} calls.
  *
  * <p>One call arrives many times under one id: waiting, then answered or failed, then once more for each outcome noted
  * on it. An update of either held call replaces it in place; a call newer than both pushes the current one back and
@@ -43,7 +44,6 @@ final class LiveCallState {
     private final ChunkRows rows = new ChunkRows();
     private final Deque<CallSnapshot> history = new ArrayDeque<>();
     private List<CallSnapshot> recent = List.of();
-    private int summaryVersion;
     private @Nullable CallSnapshot current;
     private @Nullable CallSnapshot previous;
 
@@ -95,17 +95,12 @@ final class LiveCallState {
         rows.started(event);
     }
 
-    void memory(final MemoryUpdated event) {
-        if (event.kind() != MemoryKind.SUMMARY) {
-            return;
-        }
-        try {
-            summaryVersion = Integer.parseInt(event.label().trim());
-        } catch (NumberFormatException notANumber) {
-            summaryVersion++;
-            log.debug("live calls: summary label {} is no version, counted as {}", event.label(), summaryVersion);
-        }
-        log.debug("live calls: rolling summary now at version {}", summaryVersion);
+    void summaryKept(final ChapterSummaryKept kept) {
+        rows.summaryKept(kept);
+    }
+
+    void windowRead(final ProofreadWindowRead read) {
+        rows.windowRead(read);
     }
 
     void drafted(final SegmentDrafted event) {
@@ -138,18 +133,12 @@ final class LiveCallState {
      *
      * @param now the moment the panel is read
      * @return the two calls, their segments, the waiting clock in whole seconds while the current call waits, the
-     *     chunk's rows, the history and the summary's version
+     *     chunk's rows and the history
      */
     LiveCalls view(final Instant now) {
         final boolean waits = current != null && current.state() == CallState.WAITING;
         return new LiveCalls(
-                current,
-                previous,
-                segments,
-                waits ? now.truncatedTo(ChronoUnit.SECONDS) : null,
-                rows.rows(),
-                recent,
-                summaryVersion);
+                current, previous, segments, waits ? now.truncatedTo(ChronoUnit.SECONDS) : null, rows.rows(), recent);
     }
 
     private void remember(final String segmentId, final SegmentLive live) {

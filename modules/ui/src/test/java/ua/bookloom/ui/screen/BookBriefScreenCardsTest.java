@@ -47,7 +47,7 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
     void cards_bookOpened_areAllPresentAndEnabled() throws TimeoutException {
         openFrankensteinThenShowBrief();
 
-        assertThat(CARD_IDS).allSatisfy(id -> {
+        assertThat(List.copyOf(CARD_IDS)).allSatisfy(id -> {
             assertThat(isShown(id)).as(id).isTrue();
             assertThat(required(id).isDisabled()).as(id).isFalse();
         });
@@ -157,10 +157,10 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
         onFx(() -> ((TextField) required("brief-tone-audience")).setText("a".repeat(600)));
         onFx(() -> ((TextArea) required("brief-tone-voice")).setText("v".repeat(600)));
 
-        assertThat(ThemeTestSupport.onFx(() -> ((TextField) required("brief-tone-audience")).getText()))
+        assertThat(ThemeTestSupport.<String>onFx(((TextField) required("brief-tone-audience"))::getText))
                 .hasSize(200);
         assertThat(brief().audience()).hasSize(200);
-        assertThat(ThemeTestSupport.onFx(() -> ((TextArea) required("brief-tone-voice")).getText()))
+        assertThat(ThemeTestSupport.<String>onFx(((TextArea) required("brief-tone-voice"))::getText))
                 .hasSize(500);
         assertThat(brief().voiceEra()).hasSize(500);
     }
@@ -258,12 +258,27 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
     void qualityHint_dialMovedToMax_followsTheDial() throws TimeoutException {
         openFrankensteinThenShowBrief();
         assertThat(labelText("brief-quality-hint"))
-                .isEqualTo("Balanced: groups of up to 8 segments · AI reviewer on · backward-consistency pass off");
+                .isEqualTo(
+                        "Balanced: fixing calls — one repair per piece · proofread — marked and doubtful windows · extra calls — about one call per marked passage");
 
         onFx(() -> segmented("brief-quality").getButtons().get(2).setSelected(true));
 
         assertThat(labelText("brief-quality-hint"))
-                .isEqualTo("Max: groups of up to 2 segments · AI reviewer on · backward-consistency pass on");
+                .isEqualTo(
+                        "Max: fixing calls — one repair per piece · proofread — marked and doubtful windows, then the whole book re-read · extra calls — about one call per marked passage, plus one call per 2 paragraphs of the whole book");
+    }
+
+    // IF Fast's hint promised a reviewer or calls it does not make, THEN the trade would be made on a false picture.
+    @Test
+    void qualityHint_dialMovedToFast_namesNoExtraCalls() throws TimeoutException {
+        openFrankensteinThenShowBrief();
+
+        onFx(() -> segmented("brief-quality").getButtons().get(0).setSelected(true));
+
+        assertThat(labelText("brief-quality-hint"))
+                .isEqualTo(
+                        "Fast: fixing calls — none, marks for review (lost formatting marks retried once) · proofread — marks for review, no model calls · extra calls — no extra calls");
+        assertThat(labelText("brief-quality-same")).isEqualTo("The same for every model.");
     }
 
     // IF the model row named another model than the run uses, THEN the person would trust the wrong one; and
@@ -280,6 +295,24 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
         onFx(() -> button("brief-model-change").fire());
 
         assertThat(currentView()).isEqualTo(ViewNames.SETTINGS);
+    }
+
+    // IF change opened the settings on the provider last edited there, THEN the person would be shown another
+    // provider's models than the one the run uses.
+    @Test
+    void modelRow_anotherProviderLastEdited_changeOpensTheSettingsOnTheCurrentProvider() throws TimeoutException {
+        final SettingsViewModel settings = injector.getInstance(SettingsViewModel.class);
+        onFx(() -> settings.model().set("gemma4:26b"));
+        openFrankensteinThenShowBrief();
+        onFx(() -> settings.editProvider("lmstudio"));
+        assertThat(ThemeTestSupport.onFx(() -> settings.editedProviderId().get()))
+                .isEqualTo("lmstudio");
+
+        onFx(() -> button("brief-model-change").fire());
+
+        assertThat(currentView()).isEqualTo(ViewNames.SETTINGS);
+        assertThat(ThemeTestSupport.onFx(() -> settings.editedProviderId().get()))
+                .isEqualTo("ollama");
     }
 
     // IF the model row kept its text after the model changed, THEN it would name a model the run no longer uses.

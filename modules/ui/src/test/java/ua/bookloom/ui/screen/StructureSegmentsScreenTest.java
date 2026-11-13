@@ -118,7 +118,7 @@ class StructureSegmentsScreenTest extends StructureScreenTestBase {
     }
 
     private static String text(final Node cell, final String selector) {
-        return ThemeTestSupport.onFx(() -> ((Label) cell.lookup(selector)).getText());
+        return ThemeTestSupport.onFx(((Label) cell.lookup(selector))::getText);
     }
 
     private void pick(final int index) {

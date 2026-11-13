@@ -6,7 +6,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 import java.util.function.LongSupplier;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -14,6 +13,7 @@ import ua.bookloom.api.EnvironmentVariables;
 import ua.bookloom.api.llm.ProviderConfigRules;
 import ua.bookloom.app.env.CommandRunner;
 import ua.bookloom.app.env.OsEnvironment;
+import ua.bookloom.util.paths.NameLookup;
 
 /**
  * The one lookup of an environment variable, for both the request headers (the value, at call time) and the
@@ -28,7 +28,7 @@ final class SystemEnvironmentVariables implements EnvironmentVariables {
     /** How long an answer of the operating system's store is reused, so the form's every keystroke spawns nothing. */
     static final Duration CACHE_TIME = Duration.ofSeconds(2);
 
-    private final Function<String, @Nullable String> process;
+    private final NameLookup process;
     private final OsEnvironment os;
     private final LongSupplier nanoTime;
     private final Map<String, Answer> answers = new ConcurrentHashMap<>();
@@ -42,8 +42,7 @@ final class SystemEnvironmentVariables implements EnvironmentVariables {
                 System::nanoTime);
     }
 
-    SystemEnvironmentVariables(
-            final Function<String, @Nullable String> process, final OsEnvironment os, final LongSupplier nanoTime) {
+    SystemEnvironmentVariables(final NameLookup process, final OsEnvironment os, final LongSupplier nanoTime) {
         this.process = Objects.requireNonNull(process, "process");
         this.os = Objects.requireNonNull(os, "os");
         this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");

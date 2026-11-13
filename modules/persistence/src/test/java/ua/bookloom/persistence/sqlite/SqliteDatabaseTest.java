@@ -204,6 +204,15 @@ class SqliteDatabaseTest {
     private record OtherShape(String only) {}
 
     @Test
+    void open_databaseWithOldShapes_isRenamedAside() {
+        try (SqliteDatabase first = open()) {
+            first.write("mark", h -> h.execute("update meta set value = 'old' where key = 'record_shapes'"));
+        }
+        open().close();
+        assertThat(dir.resolve("bookloom.db.old-20261020-101530")).exists();
+    }
+
+    @Test
     void setAside_fileWithSidecars_movesTheSidecarsWithIt() throws IOException {
         Files.writeString(dir.resolve("bookloom.db"), "main bytes");
         Files.writeString(dir.resolve("bookloom.db-wal"), "wal bytes");
@@ -219,7 +228,7 @@ class SqliteDatabaseTest {
     }
 
     @Test
-    void open_otherSchemaVersion_renamesFileAsideAndCreatesFresh() throws IOException {
+    void open_otherSchemaVersion_renamesFileAsideAndCreatesFresh() {
         try (SqliteDatabase first = open()) {
             first.write("mark", h -> {
                 h.execute("pragma user_version = 99");

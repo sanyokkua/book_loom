@@ -42,7 +42,7 @@ public record WaitingCall(
     /**
      * The word the catalogue selects the call kind's name by.
      *
-     * @return the kind's name in lower case, such as {@code judge} or {@code directed_fix}
+     * @return the kind's name in lower case, such as {@code draft} or {@code repair}
      */
     public String kindToken() {
         return tokenOf(kind);

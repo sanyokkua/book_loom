@@ -18,7 +18,7 @@ import lombok.Builder;
  * @param hardGateFailuresRound0 segments whose first evaluation failed a hard gate, so they needed a repair round
  * @param hardGateKinds the findings of those segments' first repair round, counted per kind
  * @param leakedProtocol targets holding batch protocol: a terms field, a code fence or a JSON object with an id
- * @param reviewerTruncated reviewer replies cut off at the output cap ({@code finish=LENGTH})
+ * @param proofreadTruncated proofread replies cut off at the output cap ({@code finish=LENGTH})
  * @param termClaimedWrong lexicon terms whose learned rendering another term also claimed
  * @param claimedRenderings those shared renderings, {@code rendering <- term, term}
  * @param dominantShareMean the mean over the terms of the share of their occurrences carrying the commonest rendering
@@ -46,6 +46,10 @@ import lombok.Builder;
  * @param callsPerSegment {@code calls / segments}
  * @param secondsPerSegment wall seconds of the run per segment
  * @param elapsedSeconds wall seconds of the run
+ * @param promptReadSecondsPerSegment seconds the provider spent reading prompts (time to first token) per segment,
+ *     for the calls that reported it; reported, never weighed
+ * @param promptTokens prompt tokens the provider reported over all calls
+ * @param cachedPromptTokens how many of those it served from its cache
  * @param batchedItems segments drafted inside a multi-item batch call
  * @param batchFallbacks batch items that fell back to their own draft
  * @param batchFallbackRate {@code batchFallbacks / batchedItems}
@@ -56,6 +60,7 @@ import lombok.Builder;
  * @param terms one entry per fixture term
  * @param names one entry per fixture name
  * @param learnedRenderings the learned renderings, {@code term -> rendering}
+ * @param summaryGate what the chapter-summary gate kept and dropped
  */
 @Builder
 record SequenceMetrics(
@@ -69,7 +74,7 @@ record SequenceMetrics(
         int hardGateFailuresRound0,
         Map<String, Integer> hardGateKinds,
         int leakedProtocol,
-        int reviewerTruncated,
+        int proofreadTruncated,
         int termClaimedWrong,
         List<String> claimedRenderings,
         double dominantShareMean,
@@ -93,6 +98,9 @@ record SequenceMetrics(
         double callsPerSegment,
         double secondsPerSegment,
         double elapsedSeconds,
+        double promptReadSecondsPerSegment,
+        long promptTokens,
+        long cachedPromptTokens,
         int batchedItems,
         int batchFallbacks,
         double batchFallbackRate,
@@ -102,7 +110,8 @@ record SequenceMetrics(
         Map<String, Integer> callsByKind,
         List<TermStat> terms,
         List<NameStat> names,
-        List<String> learnedRenderings) {
+        List<String> learnedRenderings,
+        SummaryGateTally summaryGate) {
 
     static final String SUITE = "sequence";
 

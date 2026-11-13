@@ -13,6 +13,7 @@ import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
+import ua.bookloom.pipeline.qa.LockedRendering;
 
 /**
  * {@link DraftOutcome.Drafted}: {@code restoredTarget} and {@code gateFinding} must be exactly one null and one
@@ -26,27 +27,35 @@ class DraftOutcomeTest {
 
     @Test
     void constructor_bothRestoredTargetAndGateFindingPresent_throws() {
-        assertThatThrownBy(() -> new DraftOutcome.Drafted(
-                        segment(), SOURCE, List.of(), SOURCE, SOURCE, SOURCE, placeholderFinding()))
+        final List<LockedRendering> arg1 = List.of();
+        final var drafted = segment();
+        final var finding = placeholderFinding();
+        assertThatThrownBy(() -> new DraftOutcome.Drafted(drafted, SOURCE, arg1, SOURCE, SOURCE, SOURCE, finding))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void constructor_neitherRestoredTargetNorGateFindingPresent_throws() {
-        assertThatThrownBy(() -> new DraftOutcome.Drafted(segment(), SOURCE, List.of(), SOURCE, null, null, null))
+        final List<LockedRendering> arg1 = List.of();
+        final var drafted = segment();
+        assertThatThrownBy(() -> new DraftOutcome.Drafted(drafted, SOURCE, arg1, SOURCE, null, null, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void constructor_restoredTargetWithoutMaskedForm_throws() {
-        assertThatThrownBy(() -> new DraftOutcome.Drafted(segment(), SOURCE, List.of(), SOURCE, null, SOURCE, null))
+        final List<LockedRendering> arg1 = List.of();
+        final var drafted = segment();
+        assertThatThrownBy(() -> new DraftOutcome.Drafted(drafted, SOURCE, arg1, SOURCE, null, SOURCE, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void constructor_maskedFormWithoutRestoredTarget_throws() {
-        assertThatThrownBy(() -> new DraftOutcome.Drafted(
-                        segment(), SOURCE, List.of(), SOURCE, SOURCE, null, placeholderFinding()))
+        final List<LockedRendering> arg1 = List.of();
+        final var drafted = segment();
+        final var finding = placeholderFinding();
+        assertThatThrownBy(() -> new DraftOutcome.Drafted(drafted, SOURCE, arg1, SOURCE, SOURCE, null, finding))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

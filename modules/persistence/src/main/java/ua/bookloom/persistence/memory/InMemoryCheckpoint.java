@@ -3,6 +3,7 @@ package ua.bookloom.persistence.memory;
 import com.google.inject.Inject;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,8 +18,8 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TmEntry;
+import ua.bookloom.persistence.GlossaryIndex;
 import ua.bookloom.persistence.memory.InMemoryStore.ProjectGlossary;
-import ua.bookloom.util.text.GlossaryKeys;
 
 /**
  * Applies one chunk's decided segments, TM entries, deferrals, glossary additions and run record all together, under the
@@ -46,7 +47,7 @@ public final class InMemoryCheckpoint implements CheckpointPort {
             applyAll(commit, byId);
             final int glossaryApplied = applyGlossaryAdditions(commit);
             return Result.ok(logAndCount(commit, glossaryApplied));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         } finally {
             writeLock.unlock();
@@ -59,12 +60,14 @@ public final class InMemoryCheckpoint implements CheckpointPort {
                 + commit.deferrals().size()
                 + glossaryApplied;
         log.debug(
-                "Commit applied projectId={} segments={} tmEntries={} deferrals={} glossaryApplied={} "
-                        + "glossarySkipped={}",
+                "Commit applied projectId={} segments={} verdicts={} tmEntries={} deferrals={} resolvedDeferrals={} "
+                        + "glossaryApplied={} glossarySkipped={}",
                 commit.projectId(),
                 commit.segments().size(),
+                commit.verdictCount(),
                 commit.tmEntries().size(),
                 commit.deferrals().size(),
+                commit.resolvedDeferralIds().size(),
                 glossaryApplied,
                 commit.glossaryAdditions().size() - glossaryApplied);
         return applied;
@@ -93,6 +96,9 @@ public final class InMemoryCheckpoint implements CheckpointPort {
             tm.put(InMemoryStore.tmKey(entry.sourceHash(), entry.contextKey()), entry);
         }
         final Map<String, Deferral> deferrals = store.deferrals(commit.projectId());
+        // Resolved first: a new proposal shares the key of the earlier one it supersedes.
+        final Set<String> resolved = Set.copyOf(commit.resolvedDeferralIds());
+        deferrals.values().removeIf(open -> resolved.contains(open.id()));
         for (final Deferral deferral : commit.deferrals()) {
             deferrals.putIfAbsent(
                     InMemoryStore.deferralKey(deferral.segmentId(), deferral.reason(), deferral.waitingOn()), deferral);
@@ -111,14 +117,16 @@ public final class InMemoryCheckpoint implements CheckpointPort {
 
     private int applyGlossaryAdditions(final ChunkCommit commit) {
         final ProjectGlossary glossary = store.glossary(commit.projectId());
+        final GlossaryIndex index = GlossaryIndex.of(glossary.allInInsertionOrder());
         int applied = 0;
         for (final GlossaryEntry entry : commit.glossaryAdditions()) {
-            final String key = GlossaryKeys.of(entry.term());
-            if (glossary.findByKey(key).isPresent() || glossary.removedKeys().contains(key)) {
-                log.trace("Glossary addition skipped projectId={} term={}", commit.projectId(), key);
+            if (index.holderOf(entry).isPresent()
+                    || GlossaryIndex.keysOf(entry).stream().anyMatch(glossary.removedKeys()::contains)) {
+                log.trace("Glossary addition skipped projectId={} term={}", commit.projectId(), entry.term());
                 continue;
             }
             glossary.put(entry);
+            index.add(entry);
             applied++;
         }
         return applied;

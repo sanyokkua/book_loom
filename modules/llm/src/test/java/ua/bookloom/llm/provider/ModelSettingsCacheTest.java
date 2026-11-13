@@ -3,6 +3,7 @@ package ua.bookloom.llm.provider;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 import org.jspecify.annotations.Nullable;
@@ -12,7 +13,10 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
+import ua.bookloom.api.llm.ProbeVerdicts;
+import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.llm.testing.FakeModelSettingsRepository;
 
@@ -73,8 +77,10 @@ class ModelSettingsCacheTest {
                 null,
                 OutputLengthField.MAX_TOKENS,
                 List.of(),
-                null,
-                null);
+                Map.of(),
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
     }
 
     /** Answers the first read, then fails every later one. */

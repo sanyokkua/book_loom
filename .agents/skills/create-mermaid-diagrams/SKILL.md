@@ -5,19 +5,19 @@ description: >-
   specification — flowchart label quoting rules and avoiding `<`, `>`, and `->` inside
   labels so the diagram renders. Covers the safe-label conventions and validating a
   `.mermaid` file. Note the two canonical pipeline diagrams already at
-  `docs/specification/diagrams/` — reference them, do not duplicate them.
+  `docs/spec_baseline/specification/diagrams/` — reference them, do not duplicate them.
 allowed-tools: Read, Write, Bash, Glob, Grep
 ---
 
 # Create Mermaid Diagrams
 
-Diagrams in the spec are `.mermaid` files under `docs/specification/diagrams/`. They must
+Diagrams in the spec are `.mermaid` files under `docs/spec_baseline/specification/diagrams/`. They must
 render in a standard mermaid renderer without escaping errors. The two canonical pipeline
 diagrams already exist — reference them, never invent parallel copies.
 
 ## When to use
 
-- Adding a new diagram to `docs/specification/diagrams/` for a spec section — the spec is
+- Adding a new diagram to `docs/spec_baseline/specification/diagrams/` for a spec section — the spec is
   editable, but a new diagram there should accompany the change that needs it; diagrams elsewhere (e.g. in a note)
   follow the same syntax rules.
 - Fixing a diagram that fails to render (parse/escaping error).
@@ -26,8 +26,8 @@ diagrams already exist — reference them, never invent parallel copies.
 ## When NOT to use
 
 - Do NOT create a new pipeline or chunk-loop diagram — the canonical ones already exist at
-  `docs/specification/diagrams/pipeline.mermaid` (whole-book flow) and
-  `docs/specification/diagrams/chunk-translate-loop.mermaid` (per-chunk loop). Reference
+  `docs/spec_baseline/specification/diagrams/pipeline.mermaid` (whole-book flow) and
+  `docs/spec_baseline/specification/diagrams/chunk-translate-loop.mermaid` (per-chunk loop). Reference
   them from prose instead.
 - Do NOT embed a diagram's meaning only in the diagram — the spec text is authoritative;
   the diagram illustrates it.
@@ -35,7 +35,7 @@ diagrams already exist — reference them, never invent parallel copies.
 
 ## Workflow
 
-1. **Check for an existing diagram** in `docs/specification/diagrams/` before authoring; if
+1. **Check for an existing diagram** in `docs/spec_baseline/specification/diagrams/` before authoring; if
    the concept is the pipeline or the chunk loop, cite the canonical file rather than
    redraw it.
 2. **Choose the diagram type** (`flowchart TD`/`LR`, `stateDiagram-v2`, `sequenceDiagram`)
@@ -71,11 +71,11 @@ diagrams already exist — reference them, never invent parallel copies.
 ## Reference index
 
 - Canonical in-repo diagrams (reference, do not duplicate):
-  `docs/specification/diagrams/pipeline.mermaid`,
-  `docs/specification/diagrams/chunk-translate-loop.mermaid`.
-- In-repo authorities: `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md`,
-  `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md`,
-  `docs/specification/01_Product/06_REVIEW_AND_EDITING.md` (state machine).
+  `docs/spec_baseline/specification/diagrams/pipeline.mermaid`,
+  `docs/spec_baseline/specification/diagrams/chunk-translate-loop.mermaid`.
+- In-repo authorities: `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md`,
+  `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md`,
+  `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md` (state machine).
 
 ## Mandatory validation checklist
 

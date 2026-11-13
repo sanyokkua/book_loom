@@ -38,13 +38,14 @@ final class GlossaryCalls {
     /**
      * Runs one call that a person may stop.
      *
-     * @return the submitted work, which {@link Future#cancel(boolean)} interrupts; or null when the executor refused
-     *     it, which is answered at once
+     * @return a call that interrupts the submitted work; or null when the executor refused it, which is answered at
+     *     once
      */
     @Nullable
-    <T> Future<?> start(final String what, final Supplier<Result<T>> work, final Consumer<Result<T>> publish) {
+    <T> Runnable start(final String what, final Supplier<Result<T>> work, final Consumer<Result<T>> publish) {
         try {
-            return executor.submit(task(what, work, publish));
+            final Future<?> submitted = executor.submit(task(what, work, publish));
+            return () -> submitted.cancel(true);
         } catch (RuntimeException rejected) {
             refused(what, rejected, publish);
             return null;
@@ -68,7 +69,7 @@ final class GlossaryCalls {
     private static <T> Result<T> attempt(final String what, final Supplier<Result<T>> work) {
         try {
             return work.get();
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             log.error("the glossary service threw instead of returning a result for the {}", what, thrown);
             return Result.err(unavailable());
         }

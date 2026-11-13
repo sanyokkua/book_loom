@@ -115,9 +115,9 @@ class EpubReaderAuxiliaryTest {
         for (int i = 0; i < documents; i++) {
             ids[i] = "c%02d".formatted(i);
             builder.entry("OEBPS/" + ids[i] + ".xhtml", chapter("Chapter " + i));
-            manifest.append("<item id=\"%s\" href=\"%s.xhtml\" media-type=\"application/xhtml+xml\"/>\n"
+            manifest.append("<item id=\"%s\" href=\"%s.xhtml\" media-type=\"application/xhtml+xml\"/>%n"
                     .formatted(ids[i], ids[i]));
-            spine.append("<itemref idref=\"%s\"/>\n".formatted(ids[i]));
+            spine.append("<itemref idref=\"%s\"/>%n".formatted(ids[i]));
         }
         final String opf = """
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -141,8 +141,8 @@ class EpubReaderAuxiliaryTest {
         final StringBuilder spine = new StringBuilder();
         for (final String id : ids) {
             manifest.append(
-                    "<item id=\"%s\" href=\"%s.xhtml\" media-type=\"application/xhtml+xml\"/>\n".formatted(id, id));
-            spine.append("<itemref idref=\"%s\"/>\n".formatted(id));
+                    "<item id=\"%s\" href=\"%s.xhtml\" media-type=\"application/xhtml+xml\"/>%n".formatted(id, id));
+            spine.append("<itemref idref=\"%s\"/>%n".formatted(id));
         }
         return """
                 <?xml version="1.0" encoding="UTF-8"?>

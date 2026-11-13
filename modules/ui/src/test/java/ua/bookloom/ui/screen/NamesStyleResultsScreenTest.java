@@ -27,11 +27,11 @@ import ua.bookloom.ui.state.SettingsViewModel;
 class NamesStyleResultsScreenTest extends TranslatingScreenTestBase {
 
     private static final GlossaryEntry WELL =
-            new GlossaryEntry("e1", "p1", "Well", null, TermType.OTHER, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e1", "p1", "Well", null, TermType.OTHER, Gender.UNKNOWN, false);
     private static final GlossaryEntry HALE =
-            new GlossaryEntry("e2", "p1", "Hale", null, TermType.OTHER, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e2", "p1", "Hale", null, TermType.OTHER, Gender.UNKNOWN, false);
     private static final GlossaryEntry WELL_TYPED =
-            new GlossaryEntry("e1", "p1", "Well", null, TermType.CHARACTER, Gender.FEMALE, false);
+            GlossaryEntry.of("e1", "p1", "Well", null, TermType.CHARACTER, Gender.FEMALE, false);
 
     private void showScreen() throws Exception {
         readyToStart();
@@ -146,7 +146,7 @@ class NamesStyleResultsScreenTest extends TranslatingScreenTestBase {
         assertThat(ThemeTestSupport.onFx(() -> glossaryTable().getItems()))
                 .extracting(GlossaryEntry::term)
                 .containsExactly("Well");
-        assertThat(ThemeTestSupport.onFx(() -> ((ToggleButton) required("names-style-changed-filter")).isSelected()))
+        assertThat(ThemeTestSupport.onFx(((ToggleButton) required("names-style-changed-filter"))::isSelected))
                 .isTrue();
     }
 

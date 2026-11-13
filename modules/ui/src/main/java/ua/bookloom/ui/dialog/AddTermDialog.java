@@ -14,8 +14,8 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;
 import lombok.extern.slf4j.Slf4j;
-import org.controlsfx.control.ToggleSwitch;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.TargetState;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.GlossaryLabels;
@@ -25,7 +25,7 @@ import ua.bookloom.ui.state.NamesStyleViewModel;
 import ua.bookloom.ui.state.NewTerm;
 
 /**
- * The Add term card: source, target, type, gender and lock, in the shape the reference gives every dialog.
+ * The Add term card: source, target, type, gender and State (pinned, or locked), in the shape the reference gives every dialog.
  *
  * <p>The card stays open when the term is refused and says why beside the buttons, so the person corrects the field
  * instead of typing the term again. It never decides what is refused: the view model does, so the table's edits, an
@@ -45,7 +45,7 @@ public final class AddTermDialog {
     private final TextField target = field("add-term-target");
     private final ComboBox<TermType> type;
     private final ComboBox<Gender> gender;
-    private final ToggleSwitch lock;
+    private final ComboBox<TargetState> state;
     private final Label message = new Label();
 
     /**
@@ -61,13 +61,22 @@ public final class AddTermDialog {
         this.onClose = Objects.requireNonNull(onClose, "onClose");
         this.type = choice("add-term-type", TermType.values(), TermType.CHARACTER, this::typeLabel);
         this.gender = choice("add-term-gender", Gender.values(), Gender.UNKNOWN, this::genderLabel);
-        this.lock = new ToggleSwitch(messages.get(MessageKey.DIALOG_ADD_TERM_LOCK));
-        lock.setId("add-term-lock");
+        this.state = choice(
+                "add-term-state",
+                new TargetState[] {TargetState.PINNED, TargetState.LOCKED},
+                TargetState.PINNED,
+                value -> GlossaryLabels.state(messages, value));
         message.setId("add-term-message");
         message.setWrapText(true);
         message.getStyleClass().add("dialog-sub");
         message.setVisible(false);
         message.setManaged(false);
+        // A refusal speaks of what was confirmed; once a field changes it no longer holds, and Add asks again.
+        source.textProperty().addListener((observed, was, now) -> clearRefusal());
+        target.textProperty().addListener((observed, was, now) -> clearRefusal());
+        type.valueProperty().addListener((observed, was, now) -> clearRefusal());
+        gender.valueProperty().addListener((observed, was, now) -> clearRefusal());
+        state.valueProperty().addListener((observed, was, now) -> clearRefusal());
     }
 
     /**
@@ -90,7 +99,7 @@ public final class AddTermDialog {
                 pair(
                         labelled(MessageKey.DIALOG_ADD_TERM_TYPE, type),
                         labelled(MessageKey.DIALOG_ADD_TERM_GENDER, gender)),
-                lock,
+                labelled(MessageKey.DIALOG_ADD_TERM_STATE, state),
                 message));
         buttons(card);
         return card;
@@ -122,13 +131,13 @@ public final class AddTermDialog {
         Tips.install(messages, target, MessageKey.DIALOG_ADD_TERM_TARGET_TIP);
         Tips.install(messages, type, MessageKey.DIALOG_ADD_TERM_TYPE_TIP);
         Tips.install(messages, gender, MessageKey.DIALOG_ADD_TERM_GENDER_TIP);
-        Tips.install(messages, lock, MessageKey.DIALOG_ADD_TERM_LOCK_TIP);
+        Tips.install(messages, state, MessageKey.DIALOG_ADD_TERM_STATE_TIP);
     }
 
     private void confirm() {
         final NewTerm term =
-                new NewTerm(source.getText(), target.getText(), type.getValue(), gender.getValue(), lock.isSelected());
-        glossary.add(term, this::added, this::refused);
+                new NewTerm(source.getText(), target.getText(), type.getValue(), gender.getValue(), state.getValue());
+        glossary.rowChanges().add(term, this::added, this::refused);
     }
 
     private void added() {
@@ -141,6 +150,15 @@ public final class AddTermDialog {
         message.setText(reason);
         message.setVisible(true);
         message.setManaged(true);
+    }
+
+    private void clearRefusal() {
+        if (message.isVisible()) {
+            log.debug("a field changed after a refusal: the reason is cleared");
+            message.setText("");
+            message.setVisible(false);
+            message.setManaged(false);
+        }
     }
 
     private static TextField field(final String id) {

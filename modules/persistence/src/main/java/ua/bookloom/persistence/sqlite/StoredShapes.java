@@ -17,10 +17,11 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.ProviderConfig;
+import ua.bookloom.api.project.ChapterSummary;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.ExportRecord;
 import ua.bookloom.api.project.Project;
-import ua.bookloom.api.project.RollingSummary;
+import ua.bookloom.api.project.PromptFrame;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TmEntry;
@@ -52,11 +53,12 @@ final class StoredShapes {
             SegmentRecord.class,
             GlossaryDocument.class,
             LexiconDocument.class,
-            RollingSummary.class,
+            ChapterSummary.class,
             Deferral.class,
             RunRecord.class,
             TmEntry.class,
             ExportRecord.class,
+            PromptFrame.class,
             ProviderConfig.class,
             ModelSettings.class);
 

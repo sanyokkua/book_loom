@@ -1,6 +1,5 @@
 package ua.bookloom.pipeline;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -13,9 +12,8 @@ import org.slf4j.MDC;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.DocumentPort;
-import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobReport;
@@ -27,43 +25,16 @@ import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.Subscription;
 import ua.bookloom.api.pipeline.TranslationJob;
-import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.api.project.IdSource;
-import ua.bookloom.pipeline.batch.BatchDrafter;
-import ua.bookloom.pipeline.batch.BatchFormat;
-import ua.bookloom.pipeline.batch.BatchPromptBuilder;
-import ua.bookloom.pipeline.batch.BatchReplyParser;
-import ua.bookloom.pipeline.checks.WordValidator;
-import ua.bookloom.pipeline.heal.GateFunction;
-import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.lexicon.Lexicon;
-import ua.bookloom.pipeline.memory.RollingSummaryKeeper;
-import ua.bookloom.pipeline.project.SegmentLocators;
-import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
-import ua.bookloom.pipeline.prompt.DraftReplyParser;
-import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
-import ua.bookloom.pipeline.prompt.StepAnnouncer;
-import ua.bookloom.pipeline.prompt.StyleSheet;
-import ua.bookloom.pipeline.revision.ConsistencyPass;
-import ua.bookloom.pipeline.run.ChunkRunner;
-import ua.bookloom.pipeline.run.JobModelCalls;
 import ua.bookloom.pipeline.run.MemoryEvents;
-import ua.bookloom.pipeline.run.NarratorStage;
 import ua.bookloom.pipeline.run.PendingCommit;
 import ua.bookloom.pipeline.run.PrepStage;
-import ua.bookloom.pipeline.run.RunAudit;
 import ua.bookloom.pipeline.run.RunEnd;
 import ua.bookloom.pipeline.run.RunRecorder;
 import ua.bookloom.pipeline.run.RunReports;
-import ua.bookloom.pipeline.run.RunSettings;
 import ua.bookloom.pipeline.run.RunSinks;
 import ua.bookloom.pipeline.run.RunStart;
-import ua.bookloom.pipeline.run.RunSteps;
 import ua.bookloom.pipeline.run.RunStores;
-import ua.bookloom.pipeline.run.RunWindow;
 import ua.bookloom.pipeline.run.StageRunner;
 import ua.bookloom.pipeline.run.WorkList;
 
@@ -71,15 +42,10 @@ import ua.bookloom.pipeline.run.WorkList;
 @Slf4j
 final class TranslationJobImpl implements TranslationJob {
 
-    private final DocumentPort documents;
     private final RunRequest request;
     private final ChatModel model;
-    private final ObjectMapper mapper;
-    private final PromptTemplates templates;
+    private final RunWiring wiring;
     private final RunStores stores;
-    private final QualityLoop qualityLoop;
-    private final SentenceSplitter splitter;
-    private final ConsistencyPass revision;
     private final Clock clock;
     private final JobControl control;
     private final JobSubscribers subscribers = new JobSubscribers();
@@ -95,53 +61,33 @@ final class TranslationJobImpl implements TranslationJob {
     private final UnattendedRecovery recovery;
     private final StallWatchdog watchdog;
     private final RunTicks ticks;
-    private final int batchSize;
-    private final WordValidator words;
-    private final RequestDefaultsSource requestDefaultsSource;
 
     /**
-     * Creates a job with the given recovery timer, tick cadence and first batch size, for a scripted clock; its
-     * requests use the reasoning level and sampling mode the source reads when the run starts.
+     * Creates a job paced by {@code pacing}, for a scripted clock; its start line names the provider kind {@code
+     * logFacts} holds, the kind of server the model runs on or {@code unknown}.
      */
     TranslationJobImpl(
-            final DocumentPort documents,
             final RunRequest request,
-            final ChatModel model,
-            final ObjectMapper mapper,
-            final PromptTemplates templates,
+            final JobTools tools,
             final RunStores stores,
-            final QualityLoop qualityLoop,
-            final SentenceSplitter splitter,
-            final ConsistencyPass revision,
-            final Clock clock,
-            final IdSource idSource,
-            final RecoveryTimer timer,
-            final RunTicks ticks,
-            final int batchSize,
-            final WordValidator words,
-            final RequestDefaultsSource requestDefaultsSource) {
-        this.requestDefaultsSource = Objects.requireNonNull(requestDefaultsSource, "requestDefaultsSource");
-        this.jobId = Objects.requireNonNull(idSource, "idSource").newId();
-        this.words = Objects.requireNonNull(words, "words");
-        this.batchSize = batchSize;
-        this.documents = Objects.requireNonNull(documents, "documents");
+            final RunChecks checks,
+            final RunPacing pacing,
+            final RunLogFacts logFacts) {
+        this.jobId = pacing.idSource().newId();
         this.request = Objects.requireNonNull(request, "request");
-        this.model = Objects.requireNonNull(model, "model");
-        this.mapper = Objects.requireNonNull(mapper, "mapper");
-        this.templates = Objects.requireNonNull(templates, "templates");
+        this.model = tools.model();
         this.stores = Objects.requireNonNull(stores, "stores");
-        this.qualityLoop = Objects.requireNonNull(qualityLoop, "qualityLoop");
-        this.splitter = Objects.requireNonNull(splitter, "splitter");
-        this.revision = Objects.requireNonNull(revision, "revision");
-        this.clock = Objects.requireNonNull(clock, "clock");
+        this.clock = pacing.clock();
         this.control = new JobControl(request.mode().pausePoints());
-        this.runSummary = new RunSummaryLogger(clock);
+        this.runSummary = new RunSummaryLogger(clock, logFacts.ledger());
         this.recorder = new RunRecorder(stores.runs(), jobId, request.projectId(), clock, request.model());
         this.pending = new PendingCommit(stores.checkpoint(), request.projectId(), recorder);
         this.startedAt = clock.instant();
-        this.recovery = new UnattendedRecovery(control, clock, Objects.requireNonNull(timer, "timer"), this::emit);
+        this.recovery = new UnattendedRecovery(control, clock, pacing.timer(), this::emit);
         this.watchdog = new StallWatchdog(control, clock);
-        this.ticks = Objects.requireNonNull(ticks, "ticks");
+        this.ticks = pacing.ticks();
+        this.wiring = new RunWiring(
+                request, tools, stores, checks, pacing, logFacts, new RunLive(control, watchdog, this::emit));
     }
 
     @Override
@@ -155,7 +101,7 @@ final class TranslationJobImpl implements TranslationJob {
         try {
             stopWatchdog = watchdog.start(ticks);
             return runClaimed();
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             control.finish(JobState.FAILED);
             return Result.err(unexpectedError(cause));
         } finally {
@@ -230,14 +176,14 @@ final class TranslationJobImpl implements TranslationJob {
             if (control.isCancellationRequested()) {
                 return finish(JobState.CANCELLED, run, null);
             }
-            final Result<WorkList> read = WorkList.read(stores, request.projectId(), run.document());
+            final Result<WorkList> read = WorkList.read(stores, request.projectId(), run.document(), run.chapters());
             if (read.isErr()) {
                 return finish(JobState.FAILED, run, errorOf(read));
             }
             final WorkList work = dataOf(read);
             JobLifecycleLogger.started(request, run, work, control.pausePoints());
             return translate(run, work);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return finish(JobState.FAILED, run, unexpectedError(cause));
         }
     }
@@ -259,70 +205,25 @@ final class TranslationJobImpl implements TranslationJob {
         if (proposed > 0) {
             emit(MemoryEvents.namesAdded(proposed));
         }
-        final RunEnd end = stages(run, dataOf(prepared).styleSheet()).run(work);
+        announceProfile();
+        final Result<StageRunner> stages = wiring.stages(run, dataOf(prepared), sinks());
+        if (stages.isErr()) {
+            log.warn("The run's prompt frame could not be built project={}", request.projectId());
+            return finish(JobState.FAILED, run, errorOf(stages));
+        }
+        final RunEnd end = dataOf(stages).run(work);
         new Lexicon(stores.lexicon()).logConsistency(request.projectId());
         return finish(end.state(), run, end.error());
     }
 
-    private StageRunner stages(final RunStart.Started run, final StyleSheet styleSheet) {
-        final BookBrief brief = run.project().brief();
-        final RunWindow runWindow = new RunWindow(request.detectedContext(), model::contextWindowOverride);
-        final CallFrame frame = CallFrame.forRun(
-                brief,
-                styleSheet,
-                run.document(),
-                run.index().majorityScript().orElse(null),
-                words,
-                requestDefaultsSource.current());
-        final ModelCalls calls = new JobModelCalls(
-                        onSent -> new CancellableChatModel(model, control, onSent, watchdog),
-                        this::emit,
-                        clock,
-                        frame.targetLanguage(),
-                        runWindow::current,
-                        SegmentLocators.of(run.document()))
-                .withSteps(StepAnnouncer.over(this::emit));
-        final RunSettings settings = RunSettings.forRun(request, brief, frame, runWindow.current());
-        final RunSinks sinks = new RunSinks(pending, recorder, this::emit, boundaries());
-        return new StageRunner(
-                chunkRunner(run, settings, runWindow, sinks, calls),
-                revision,
-                settings,
-                sinks,
-                calls,
-                new NarratorStage(stores, sinks, run.document(), settings));
+    // The model's first profile ask is the run's start: it writes the profile line beside the start line.
+    private void announceProfile() {
+        final ModelProfile profile = model.profile();
+        log.debug("Run model profile batch={} tier={}", profile.batchSize(), profile.tier());
     }
 
-    private ChunkRunner chunkRunner(
-            final RunStart.Started run,
-            final RunSettings settings,
-            final RunWindow runWindow,
-            final RunSinks sinks,
-            final ModelCalls calls) {
-        final GateFunction gate = GateFunction.of(documents, run.document().format());
-        final SegmentTranslator translator = new SegmentTranslator(
-                gate,
-                calls,
-                run.document().format(),
-                new DraftPromptBuilder(templates, settings.frame()),
-                new DraftReplyParser(mapper));
-        final RollingSummaryKeeper summary = new RollingSummaryKeeper(
-                stores.summaries(), stores.glossary(), templates, mapper, settings.frame(), settings.dial(), calls);
-        final BatchDrafter batch = new BatchDrafter(
-                new BatchPromptBuilder(templates, settings.frame(), BatchFormat.current(), settings.relevantPairs()),
-                new BatchReplyParser(mapper),
-                calls,
-                settings.frame().sourceLanguage(),
-                settings.frame().targetLanguage(),
-                batchSize);
-        return new ChunkRunner(
-                new RunSteps(translator, qualityLoop, gate, calls, splitter, summary, batch),
-                settings,
-                runWindow,
-                stores,
-                sinks,
-                run.index(),
-                run.document());
+    private RunSinks sinks() {
+        return new RunSinks(pending, recorder, this::emit, boundaries());
     }
 
     private JobBoundaries boundaries() {
@@ -333,8 +234,7 @@ final class TranslationJobImpl implements TranslationJob {
                 this::emit,
                 stores.segments(),
                 request.projectId(),
-                skipRequested,
-                recovery);
+                new JobBoundaries.PauseHandling(skipRequested, recovery));
     }
 
     private Result<JobReport> finish(final JobState end, final RunStart.Started run, @Nullable final AppError error) {
@@ -343,7 +243,6 @@ final class TranslationJobImpl implements TranslationJob {
         if (unsaved != null && end != JobState.FAILED) {
             return finish(JobState.FAILED, run, unsaved);
         }
-        RunAudit.after(end, stores, words, run.project().id());
         final JobReport report =
                 RunReports.of(stores, run.project().id(), run.document().format(), end, error);
         recorder.ended(report.end());

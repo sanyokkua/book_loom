@@ -18,7 +18,7 @@ context. These rules apply to every task:
   `.claude/rules/offline-and-privacy.md`.
 - **Finish** with `./gradlew spotlessApply`, then the task's **Done when** commands.
 - **Sources.** Requirements are named in quotes and live in this change's `specs/<capability>/spec.md`. Decisions are
-  in `design.md`; the two contract decisions are in `docs/adr/ADR-0033-bound-chat-model-and-pausable-translation-job.md`.
+  in `design.md`; the two contract decisions are in `docs/spec_baseline/adr/ADR-0033-bound-chat-model-and-pausable-translation-job.md`.
 
 ## 1. Contracts and document lifetime
 
@@ -135,7 +135,7 @@ context. These rules apply to every task:
     warning and message lines in `modules/pipeline/build/test-logs/test.log`.
 - [x] 3.2 Add `BookExporter`, which re-opens the source, applies the job's decisions, writes a hidden temporary file, re-opens it to compare segment counts, and only then moves it onto the destination. Writers change the opened tree, so this is what makes a retried export safe and keeps a broken book from replacing a good one. → `:pipeline`
   - **Read:** `specs/export/spec.md` (both requirements); design.md D5 and D8;
-    `docs/specification/02_Architecture/11_APP_ENVIRONMENT_AND_PATHS.md#lock-and-atomic`; `open`, `write` and `close`
+    `docs/spec_baseline/specification/02_Architecture/11_APP_ENVIRONMENT_AND_PATHS.md#lock-and-atomic`; `open`, `write` and `close`
     in `modules/api/src/main/java/ua/bookloom/api/document/DocumentPort.java`.
   - **Change:** the package-private `BookExporter`. It re-opens the source and compares `contentHash` with the one
     read at the start (`ErrorCode.validation` when they differ); applies the decisions with `Segment.withDecision`,
@@ -159,7 +159,7 @@ context. These rules apply to every task:
 - [x] 3.3 Add `TranslationJobImpl`: the job's states and boundaries, the four pause points with one pause per boundary, pause-point changes, pause and cancel before `run()`, cancellation including an interrupt while paused, ordered events on the job's thread, and the job's lifecycle logging with its MDC. A screen will drive pause, resume and cancel from another thread, so a wrong wait, or a lock held while an event is sent, hangs the app. → `:pipeline`
   - **Read:** `specs/resume/spec.md` (every requirement); `specs/translation-pipeline/spec.md` "Stop the job on any
     other failure" and "Report progress and the outcome"; design.md D2, D3 and D8; ADR-0033;
-    `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`.
+    `docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`.
   - **Change:** the package-private `TranslationJobImpl`, using `SegmentTranslator` and `BookExporter`: a
     `ReentrantLock` with a `Condition` and no `synchronized`; PAUSED set before `Paused` is sent;
     `while (paused && !cancelRequested) await()`; control methods that never wait for the job; events sent on the
@@ -331,18 +331,18 @@ context. These rules apply to every task:
 - [x] 6.1 Update the specification clauses this change outgrows and the project documents that describe the code. Stale docs send the next reader down the wrong path. → docs
   - **Read:** design.md; ADR-0033; the code as built.
   - **Change, specification:**
-    - `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`: `TranslationJob` instead of
+    - `docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`: `TranslationJob` instead of
       `JobHandle`, segment boundaries, pause points, and a cancel that ends the job with a Cancelled report instead
       of `ErrorCode.cancelled`.
-    - `docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md#module-api`, `#module-llm` and
+    - `docs/spec_baseline/specification/02_Architecture/02_MODULES_AND_LAYERING.md#module-api`, `#module-llm` and
       `#module-pipeline`: the two new `:api` packages, and the `:llm` and `:pipeline` module declarations as built.
-    - `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-architecture` and `#chat-contracts`: the
+    - `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-architecture` and `#chat-contracts`: the
       engine-facing `ChatModel` in front of the future `Provider`, and a `ChatRequest` without a model name whose
       per-call hints are nullable components.
-    - `docs/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`: the job report.
-    - `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`: the engine's `JobProgress`, and
+    - `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`: the job report.
+    - `docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`: the engine's `JobProgress`, and
       how the screen's snapshot will be built from it.
-    - `docs/specification/02_Architecture/10_DI_AND_LIFECYCLE.md#guice-modules`: `ChatModelFactory` in `LlmModule`,
+    - `docs/spec_baseline/specification/02_Architecture/10_DI_AND_LIFECYCLE.md#guice-modules`: `ChatModelFactory` in `LlmModule`,
       `TranslationEngine` in `PipelineModule`, and `CoreModules` shared with the command line.
   - **Change, project documents:**
     - `docs/Architecture.md`: §1 and §2 (the modules that are now real), §3 (the new contracts, and `close` in §3.3),
@@ -353,18 +353,18 @@ context. These rules apply to every task:
       in `--args="'/path/with spaces/Book.epub' --to uk"`; and that the DEBUG default of a development run writes
       about 37 lines per segment, so a large book runs with `BOOKLOOM_LOG_LEVEL=INFO`).
     - `AGENTS.md`: the where-it-stands paragraph.
-    - `docs/implementation_plan/CHANGE_BACKLOG.md`: `#where-this-stands`; the Stage C rows for `inference`,
+    - `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md`: `#where-this-stands`; the Stage C rows for `inference`,
       `translation-pipeline`, `resume` and `export` change from NEW to MOD, noting that the job lifecycle and
       FR-EXPORT-03 were delivered here; `#decision-debt` D3 resolved; a new entry for logging inside `:document`'s
       readers, writers and maskers.
   - **Done when:** every edited citation resolves to a heading or `{#anchor}` in its file, and
     `OPENSPEC_TELEMETRY=0 openspec validate add-translation-engine-and-cli --strict` is clean.
 - [x] 6.2 Write `docs/next_features.md` with every gap the review of this change found and left for later, so none is forgotten when real models and the translation screen arrive. Most are `:document` behaviour a real translation would expose, such as an untranslated table of contents or XHTML files that still declare `xml:lang="en"`. → docs
-  - **Read:** `docs/implementation_plan/CHANGE_BACKLOG.md` (`#decision-debt`, and the row and scope of
-    `add-metadata-units-and-language-detection`); DD-47 in `docs/specification/00_Foundation/04_DESIGN_DECISIONS.md`;
-    `docs/adr/ADR-0028-xhtml-self-closed-raw-text-repair.md`;
-    `docs/adr/ADR-0029-transcode-to-utf8-on-unrepresentable-target-text.md`;
-    `docs/implementation_plan/notes-corpus-verification.md`.
+  - **Read:** `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md` (`#decision-debt`, and the row and scope of
+    `add-metadata-units-and-language-detection`); DD-47 in `docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md`;
+    `docs/spec_baseline/adr/ADR-0028-xhtml-self-closed-raw-text-repair.md`;
+    `docs/spec_baseline/adr/ADR-0029-transcode-to-utf8-on-unrepresentable-target-text.md`;
+    `docs/spec_baseline/implementation_plan/notes-corpus-verification.md`.
   - **Change:** one entry per gap: what is wrong, the owning module and spec clause, how to reproduce it (the book,
     the command and what to inspect), the evidence the review measured, and a suggested fix. A gap already planned
     elsewhere points to its backlog item instead of repeating its design. A one-line pointer to the file goes into
@@ -402,8 +402,8 @@ context. These rules apply to every task:
 
 ## 7. Gate
 
-- [x] 7.1 Update `docs/implementation_plan/01_MODULE_INVENTORY.md` with the new packages in `:api` and `:app` and the new classes in `:llm` and `:pipeline`, so the module map matches the code. → docs
-  - **Read:** `docs/implementation_plan/01_MODULE_INVENTORY.md` `#module-api`, `#module-llm`, `#module-pipeline`,
+- [x] 7.1 Update `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md` with the new packages in `:api` and `:app` and the new classes in `:llm` and `:pipeline`, so the module map matches the code. → docs
+  - **Read:** `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md` `#module-api`, `#module-llm`, `#module-pipeline`,
     `#module-app` and its as-built status section.
   - **Change:** `#module-api`: `ua.bookloom.api.llm` and `ua.bookloom.api.pipeline` as real, keeping
     `Provider`/`ProviderFactory` under one owner instead of listing them twice; `#module-llm`: `ChatModelFactoryImpl`

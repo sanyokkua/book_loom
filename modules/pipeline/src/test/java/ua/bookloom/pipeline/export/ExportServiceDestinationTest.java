@@ -24,6 +24,7 @@ import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.CallLedgerTestModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.TestProjects;
@@ -43,6 +44,7 @@ class ExportServiceDestinationTest {
                 new DocumentModule(),
                 new InMemoryPersistenceModule(),
                 new ReviewModeTestModule(),
+                new CallLedgerTestModule(),
                 binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
         service = injector.getInstance(ExportServiceImpl.class);
         projects = injector.getInstance(ProjectRepository.class);
@@ -62,7 +64,7 @@ class ExportServiceDestinationTest {
             final String sourceName, final String destinationName) {
         storeProject(tempDir.resolve(sourceName));
 
-        final Result<ExportJob> result = service.newExport(request(tempDir.resolve(destinationName), true), null);
+        final Result<ExportJob> result = service.newExport(request(tempDir.resolve(destinationName), true));
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(tempDir.resolve(destinationName)).doesNotExist();
@@ -75,7 +77,7 @@ class ExportServiceDestinationTest {
             final String sourceName, final String destinationName) {
         storeProject(tempDir.resolve(sourceName));
 
-        final Result<ExportJob> result = service.newExport(request(tempDir.resolve(destinationName), true), null);
+        final Result<ExportJob> result = service.newExport(request(tempDir.resolve(destinationName), true));
 
         assertThat(result.isOk()).isTrue();
     }
@@ -87,7 +89,7 @@ class ExportServiceDestinationTest {
         storeProject(source);
         final Path alias = tempDir.resolve("folder").resolve("..").resolve("Book.md");
 
-        final Result<ExportJob> result = service.newExport(request(alias, true), null);
+        final Result<ExportJob> result = service.newExport(request(alias, true));
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(Files.readString(source)).isEqualTo("Original.");
@@ -102,7 +104,7 @@ class ExportServiceDestinationTest {
         final Path link = Files.createSymbolicLink(tempDir.resolve("link"), child);
         storeProject(link.resolve("..").resolve("Book.md"));
 
-        final Result<ExportJob> result = service.newExport(request(sourceFile, true), null);
+        final Result<ExportJob> result = service.newExport(request(sourceFile, true));
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(Files.readString(sourceFile)).isEqualTo("Original.");
@@ -115,7 +117,7 @@ class ExportServiceDestinationTest {
         final Path alias = Files.createLink(tempDir.resolve("Alias.md"), source);
         storeProject(source);
 
-        final Result<ExportJob> result = service.newExport(request(alias, true), null);
+        final Result<ExportJob> result = service.newExport(request(alias, true));
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(Files.readString(source)).isEqualTo("Original.");
@@ -131,14 +133,14 @@ class ExportServiceDestinationTest {
         Files.createSymbolicLink(destination, cyclePeer.getFileName());
         Files.createSymbolicLink(cyclePeer, destination.getFileName());
 
-        final Result<ExportJob> result = service.newExport(request(destination, true), null);
+        final Result<ExportJob> result = service.newExport(request(destination, true));
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.internal);
     }
 
     @Test
     void newExport_unknownProject_returnsValidation() {
-        final Result<ExportJob> result = service.newExport(request(tempDir.resolve("Book.uk.md"), true), null);
+        final Result<ExportJob> result = service.newExport(request(tempDir.resolve("Book.uk.md"), true));
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
     }
@@ -148,7 +150,7 @@ class ExportServiceDestinationTest {
     }
 
     private static ExportRequest request(final Path destination, final boolean overwrite) {
-        return new ExportRequest("p1", destination, overwrite, Set.of(), false);
+        return new ExportRequest("p1", destination, overwrite, Set.of());
     }
 
     private static AppError errorOf(final Result<?> result) {

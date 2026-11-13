@@ -18,10 +18,10 @@ import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorHint;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.run.PrepStage;
@@ -61,7 +61,7 @@ class PrepStageTest {
     @Test
     void run_glossaryHoldingHale_isNotRescanned() {
         final TestProject project = project(book(), brief("en", "uk"));
-        final GlossaryEntry hale = new GlossaryEntry(
+        final GlossaryEntry hale = GlossaryEntry.of(
                 project.id() + ":hale", project.id(), "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, false);
         project.stores().glossary().add(hale);
 
@@ -167,7 +167,7 @@ class PrepStageTest {
         final TestProject project = project(book(), brief("en", "uk"));
         project.stores()
                 .glossary()
-                .add(new GlossaryEntry(
+                .add(GlossaryEntry.of(
                         project.id() + ":harry",
                         project.id(),
                         "Harry",
@@ -182,7 +182,7 @@ class PrepStageTest {
                 .filteredOn(entry -> entry.term().equals("Harry"))
                 .singleElement()
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(Gender.MALE, GenderOrigin.SUGGESTED);
+                .containsExactly(Gender.MALE, Origin.RULE);
     }
 
     // A person set Harry back to unknown on purpose; a run start must not suggest the list's gender again.
@@ -191,7 +191,7 @@ class PrepStageTest {
         final TestProject project = project(book(), brief("en", "uk"));
         project.stores()
                 .glossary()
-                .add(new GlossaryEntry(
+                .add(GlossaryEntry.of(
                                 project.id() + ":harry",
                                 project.id(),
                                 "Harry",

@@ -61,17 +61,9 @@ final class ScanReads {
         final Optional<String> source = LanguageTags.normalize(sourceLanguage);
         final Map<Integer, Occurrences.Read> reads = new HashMap<>();
         for (int ordinal = 0; ordinal < data.infos().size(); ordinal++) {
-            if (!RUNNING_TEXT.contains(data.infos().get(ordinal).kind())) {
-                continue;
-            }
-            final SegmentFacts facts = data.facts().get(ordinal);
-            if (isForeign(facts.declaredLanguage(), source)) {
-                continue;
-            }
-            final String masked = data.texts().get(ordinal);
-            final String text = withoutTitleLines(withoutForeignRuns(masked, facts, source));
-            if (!text.isBlank()) {
-                reads.put(ordinal, Occurrences.read(text));
+            final Optional<Occurrences.Read> read = readOf(data, ordinal, source);
+            if (read.isPresent()) {
+                reads.put(ordinal, read.get());
             }
         }
         log.debug(
@@ -80,6 +72,21 @@ final class ScanReads {
                 reads.size(),
                 data.infos().size());
         return reads;
+    }
+
+    // Empty for a segment that is not running text, declares a foreign language or is left blank.
+    private static Optional<Occurrences.Read> readOf(
+            final IndexData data, final int ordinal, final Optional<String> source) {
+        if (!RUNNING_TEXT.contains(data.infos().get(ordinal).kind())) {
+            return Optional.empty();
+        }
+        final SegmentFacts facts = data.facts().get(ordinal);
+        if (isForeign(facts.declaredLanguage(), source)) {
+            return Optional.empty();
+        }
+        final String masked = data.texts().get(ordinal);
+        final String text = withoutTitleLines(withoutForeignRuns(masked, facts, source));
+        return text.isBlank() ? Optional.empty() : Optional.of(Occurrences.read(text));
     }
 
     /**

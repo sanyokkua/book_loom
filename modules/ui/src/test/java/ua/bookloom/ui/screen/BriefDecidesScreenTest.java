@@ -7,11 +7,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeoutException;
-import javafx.scene.control.ListView;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -22,11 +18,9 @@ import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.FieldEvidence;
 import ua.bookloom.api.pipeline.JobEvent;
-import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
-import ua.bookloom.ui.ScriptedSetupAssistant;
 import ua.bookloom.ui.state.ProgressDialogDefaults;
 import ua.bookloom.ui.state.ProgressDialogModel;
 
@@ -35,48 +29,20 @@ import ua.bookloom.ui.state.ProgressDialogModel;
  * the samples and, on selecting a row, each sample's answer beside the quote from the book (book-brief "Show what the
  * suggestion decides with its agreement and verified quote").
  */
-class BriefDecidesScreenTest extends BriefRunScreenTestBase {
+class BriefDecidesScreenTest extends BriefSuggestTestBase {
 
-    private ScriptedSetupAssistant assistant;
-
-    @BeforeEach
-    void scriptAnAnswer() {
-        assistant = (ScriptedSetupAssistant) injector.getInstance(SetupAssistant.class);
-        assistant.answersBrief(Result.ok(BriefFillFixtures.ANSWER));
-    }
-
-    private void fillIn() throws TimeoutException {
-        onFx(() -> button("brief-suggest-style").fire());
-        awaitFx(() -> optional("busy-card") != null && optional("busy-card").isVisible());
-    }
-
-    private void awaitApplicable() throws TimeoutException {
-        awaitFx(() ->
-                optional("progress-apply") != null && !button("progress-apply").isDisabled());
-    }
-
-    @SuppressWarnings("unchecked")
-    private ListView<Object> decisions() {
-        return (ListView<Object>) required("progress-decisions");
-    }
-
-    private void selectDecision(final int index) {
-        onFx(() -> decisions().getSelectionModel().select(index));
-        WaitForAsyncUtils.waitForFxEvents();
-    }
-
-    // IF the rows were not the four of the mockup, THEN a field would be decided that the person was never shown.
+    // IF the rows were not the five the dialog names, THEN a field would be decided that the person was never shown.
     @Test
-    void decides_answerArrived_listsTheFourFieldsUnderTheirGroup() throws Exception {
+    void decides_answerArrived_listsTheFiveFieldsUnderTheirGroup() throws Exception {
         openAndShowBrief();
         assistant.announces(BriefFillFixtures.threeOfFourCasual(true));
 
         fillIn();
         awaitApplicable();
 
-        assertThat(decisions().getItems()).hasSize(4);
+        assertThat(decisions().getItems()).hasSize(5);
         assertThat(textOf("progress-decisions"))
-                .contains("Genre", "Register", "Who tells the story", "Who reads it · voice");
+                .contains("Genre", "Register", "Who tells the story", "Who reads it · voice", "Story shape");
         assertThat(textOf("busy-card")).contains("What it decides").contains("Steps");
     }
 

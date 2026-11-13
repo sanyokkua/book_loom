@@ -2,7 +2,9 @@ package ua.bookloom.ui.state;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.AccessLevel;
@@ -11,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.llm.ProbeCall;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationExchange;
 import ua.bookloom.api.llm.VerificationStage;
@@ -52,11 +55,34 @@ public final class TestDetails {
             final String providerName,
             final boolean localProgram,
             final boolean modelChosen) {
+        return of(messages, stage, chips, running, new Subject(providerName, localProgram, modelChosen), TestLive.NONE);
+    }
+
+    /**
+     * The dialog's content for one test, with what the running test has said so far: a stage that has ended shows
+     * its result, a stage whose request is out shows the request and waits for the reply.
+     *
+     * @param messages the catalogue the words come from
+     * @param stage the test shown
+     * @param chips the findings of the last run, empty before any and while a test runs
+     * @param running whether a test covering {@code stage} is under way
+     * @param subject who the test was about
+     * @param live what the running test has sent and finished, and the time now
+     * @return the verdict, the request, the figures and the reply
+     */
+    public static TestDetail of(
+            final Messages messages,
+            final VerificationStage stage,
+            final List<StageChip> chips,
+            final boolean running,
+            final Subject subject,
+            final TestLive live) {
+        Objects.requireNonNull(live, "live");
+        if (running) {
+            return runningDetail(messages, stage, subject, live);
+        }
         final Optional<StageChip> found =
                 chips.stream().filter(chip -> chip.stage() == stage).findFirst();
-        if (running) {
-            return plain(Severity.INFO, messages.get(MessageKey.SETTINGS_TEST_VERDICT_RUNNING));
-        }
         final Optional<VerificationStage> failed = failedBefore(stage, chips);
         if (found.isEmpty() && failed.isEmpty()) {
             return plain(Severity.INFO, messages.get(MessageKey.SETTINGS_TEST_VERDICT_NOT_RUN));
@@ -72,7 +98,36 @@ public final class TestDetails {
                             MessageKey.SETTINGS_TEST_VERDICT_SKIPPED,
                             failed.map(Enum::name).orElse(EARLIER)));
         }
-        return measured(messages, found.get(), new Subject(providerName, localProgram, modelChosen));
+        return measured(messages, found.get(), subject);
+    }
+
+    private static TestDetail runningDetail(
+            final Messages messages, final VerificationStage stage, final Subject subject, final TestLive live) {
+        final Optional<StageChip> ended =
+                live.finished().stream().filter(chip -> chip.stage() == stage).findFirst();
+        if (ended.isPresent()) {
+            return measured(messages, ended.get(), subject);
+        }
+        final List<SentCall> sent =
+                live.sent().stream().filter(call -> call.stage() == stage).toList();
+        if (!sent.isEmpty()) {
+            return LiveDetail.waiting(messages, stage, sent, live.steps(), live.now());
+        }
+        return live.started().stream()
+                .filter(begun -> begun.stage() == stage)
+                .findFirst()
+                .map(begun -> LiveDetail.starting(messages, stage, live.steps(), begun.startedAt(), live.now()))
+                .orElseGet(() -> plain(Severity.INFO, messages.get(MessageKey.SETTINGS_TEST_VERDICT_RUNNING)));
+    }
+
+    /**
+     * The place of a stage among the stages a test goes through, counted from one.
+     *
+     * @param stage the stage
+     * @return how many stages up to and including {@code stage} a test runs
+     */
+    public static int stepOf(final VerificationStage stage) {
+        return EnumSet.range(VerificationStage.CONNECTION, stage).size();
     }
 
     /**
@@ -111,19 +166,41 @@ public final class TestDetails {
         return new TestDetail(severity, verdict, "", "", "", "", List.of(), "", "");
     }
 
+    // The card shows and copies the bodies laid out for reading; Copy as curl repeats the body as it was sent.
     private static TestDetail measured(final Messages messages, final StageChip chip, final Subject subject) {
         final @Nullable VerificationExchange exchange = chip.exchange();
         final String noBody = messages.get(MessageKey.SETTINGS_TEST_NO_BODY);
+        final String body = exchange == null ? "" : shownBody(messages, exchange, true);
+        final String reply = exchange == null ? "" : shownBody(messages, exchange, false);
         return new TestDetail(
                 severityOf(chip.status()),
                 verdictOf(messages, chip, subject),
                 exchange == null ? "" : exchange.method() + " " + exchange.url(),
                 exchange == null ? "" : CurlCommand.of(exchange),
-                exchange == null ? "" : orElse(exchange.requestBody(), noBody),
-                exchange == null ? "" : orElse(exchange.responseBody(), noBody),
+                exchange == null ? "" : orElse(body, noBody),
+                exchange == null ? "" : orElse(reply, noBody),
                 new TestMetrics(messages, chip, exchange, subject.modelChosen()).list(),
-                exchange == null ? "" : exchange.requestBody(),
-                exchange == null ? "" : exchange.responseBody());
+                body,
+                reply,
+                chip.stage() == VerificationStage.ADVANCED && chip.status() != StageStatus.FAILED
+                        ? AdvancedRows.of(messages, chip.note(), callsOf(exchange))
+                        : List.of());
+    }
+
+    // A stage of several calls lists each call's body under its heading; a stage of one shows that one.
+    private static List<ProbeCall> callsOf(final @Nullable VerificationExchange exchange) {
+        return exchange == null ? List.of() : exchange.calls();
+    }
+
+    private static String shownBody(final Messages messages, final VerificationExchange exchange, final boolean sent) {
+        if (exchange.calls().isEmpty()) {
+            return sent ? exchange.shownRequestBody() : exchange.shownResponseBody();
+        }
+        return AdvancedRows.listed(
+                messages,
+                exchange.calls().stream()
+                        .map(call -> Map.entry(call.check(), sent ? call.shownRequestBody() : call.shownResponseBody()))
+                        .toList());
     }
 
     private static String orElse(final String text, final String fallback) {
@@ -159,6 +236,7 @@ public final class TestDetails {
                                 ? MessageKey.SETTINGS_TEST_VERDICT_MODELS
                                 : MessageKey.SETTINGS_TEST_VERDICT_MODELS_LISTED);
             case INFERENCE -> messages.get(MessageKey.SETTINGS_TEST_VERDICT_INFERENCE);
+            case ADVANCED -> messages.get(MessageKey.SETTINGS_TEST_VERDICT_ADVANCED);
         };
     }
 
@@ -212,6 +290,8 @@ public final class TestDetails {
                 case CONNECTION -> figures.add(metric("server", MessageKey.SETTINGS_TEST_METRIC_SERVER, none()));
                 case MODELS -> modelsFigures(figures);
                 case INFERENCE -> inferenceFigures(figures);
+                // The checks' verdicts and their calls' figures are the card's check rows.
+                case ADVANCED -> log.trace("advanced figures are worded in the check rows");
             }
             return figures;
         }
@@ -229,14 +309,15 @@ public final class TestDetails {
         }
 
         private void inferenceFigures(final List<Metric> figures) {
-            final @Nullable Long firstToken = exchange == null ? null : exchange.firstTokenMs();
+            final @Nullable Long load = exchange == null ? null : exchange.loadMs();
+            if (load != null) {
+                figures.add(metric(
+                        "load",
+                        MessageKey.SETTINGS_TEST_METRIC_LOAD,
+                        CheckSentences.durationText(messages, Duration.ofMillis(load))));
+            }
             final @Nullable Double speed = exchange == null ? null : exchange.tokensPerSecond();
-            figures.add(metric(
-                    "firstToken",
-                    MessageKey.SETTINGS_TEST_METRIC_FIRST_TOKEN,
-                    firstToken == null
-                            ? none()
-                            : CheckSentences.durationText(messages, Duration.ofMillis(firstToken))));
+            figures.add(metric("firstToken", MessageKey.SETTINGS_TEST_METRIC_FIRST_TOKEN, firstToken()));
             figures.add(metric(
                     "speed",
                     MessageKey.SETTINGS_TEST_METRIC_SPEED,
@@ -251,15 +332,30 @@ public final class TestDetails {
                                     : MessageKey.SETTINGS_TEST_METRIC_NO)));
         }
 
+        // A server that read the prompt from a cache reports the time of the part it had to read: the cell says so and
+        // gives the share beside it; a route that reports no time at all is a dash, never 0.
+        private String firstToken() {
+            final @Nullable VerificationExchange sent = exchange;
+            final @Nullable Long firstToken = sent == null ? null : sent.firstTokenMs();
+            if (sent == null || firstToken == null) {
+                return none();
+            }
+            final String time = CheckSentences.durationText(messages, Duration.ofMillis(firstToken));
+            final @Nullable Integer share = CallTimings.cachedShare(sent.promptTokens(), sent.cachedPromptTokens());
+            return share == null
+                    ? time
+                    : messages.get(MessageKey.SETTINGS_TEST_METRIC_UNCACHED, time, share.toString());
+        }
+
         private String tokens() {
             final @Nullable Integer prompt = exchange == null ? null : exchange.promptTokens();
             final @Nullable Integer reply = exchange == null ? null : exchange.completionTokens();
-            return prompt == null && reply == null
-                    ? none()
-                    : messages.get(
-                            MessageKey.SETTINGS_TEST_METRIC_TOKENS_VALUE,
-                            prompt == null ? none() : prompt,
-                            reply == null ? none() : reply);
+            if (prompt == null && reply == null) {
+                return none();
+            }
+            final Object shownPrompt = prompt == null ? none() : prompt;
+            final Object shownReply = reply == null ? none() : reply;
+            return messages.get(MessageKey.SETTINGS_TEST_METRIC_TOKENS_VALUE, shownPrompt, shownReply);
         }
 
         private String status() {

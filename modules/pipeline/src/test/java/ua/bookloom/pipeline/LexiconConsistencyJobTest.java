@@ -24,6 +24,7 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.project.LexiconEntry;
@@ -32,10 +33,11 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 
 /**
- * A recurring term a model would render two ways stays one: the first batch establishes «господар», the second batch
- * is shown it as a rendering to keep, and the lexicon's metric reads one rendering per term. The model is a fake that
- * drifts to «учитель» whenever its prompt does not name the established rendering — the behaviour the block exists to
- * stop — and it answers at the HTTP-free call seam, so the counts are exact.
+ * A recurring term a model would render two ways stays one: the person chose «господар», every batch is shown it as a
+ * rendering to keep, and no batch is asked which rendering it used (arm 5b retired the key-term asks). The model is a
+ * fake that drifts to «учитель» whenever its prompt does not name the established rendering — the behaviour the block
+ * exists to stop — and that still reports a {@code terms} object, which the run ignores; it answers at the HTTP-free call
+ * seam, so the counts are exact.
  */
 class LexiconConsistencyJobTest {
 
@@ -59,7 +61,7 @@ class LexiconConsistencyJobTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
-    /** Writes «господар» when its prompt names it as established, «учитель» on every call after the first without. */
+    /** Writes «господар» when its prompt names it as established, «учитель» on every call without. */
     private static final class DriftingModel implements ChatModel {
 
         private final List<ChatRequest> requests = new CopyOnWriteArrayList<>();
@@ -68,7 +70,7 @@ class LexiconConsistencyJobTest {
         public Result<ChatResponse> chat(final ChatRequest request) {
             requests.add(request);
             final String user = userMessage(request);
-            final String rendering = user.contains(ESTABLISHED_LINE) || requests.size() == 1 ? "господар" : "учитель";
+            final String rendering = user.contains(ESTABLISHED_LINE) ? "господар" : "учитель";
             final List<String> entries = new ArrayList<>();
             final Matcher items = ITEM.matcher(user);
             while (items.find()) {
@@ -91,7 +93,7 @@ class LexiconConsistencyJobTest {
     private TestProject book() {
         final TestProject project = project(
                 TestBooks.markdown(tempDir.resolve("Book.md"), String.join("\n\n", P1, P2, P3, P4)), brief("en", "uk"));
-        project.stores().lexicon().put(LexiconEntry.of(project.id(), "master"));
+        project.stores().lexicon().put(LexiconEntry.of(project.id(), "master").withChosen("господар"));
         return project;
     }
 
@@ -101,7 +103,7 @@ class LexiconConsistencyJobTest {
     }
 
     @Test
-    void run_modelWouldDriftBetweenBatches_theSecondBatchIsShownTheEstablishedRendering() {
+    void run_modelWouldDriftBetweenBatches_everyBatchIsShownTheEstablishedRenderingAndNoKeyTerms() {
         final DriftingModel model = new DriftingModel();
         final TestProject project = book();
 
@@ -109,23 +111,22 @@ class LexiconConsistencyJobTest {
                 .run());
 
         assertThat(model.requests).hasSize(2);
-        assertThat(userMessage(model.requests.getFirst()))
-                .contains("[Key terms", "master")
-                .doesNotContain(ESTABLISHED_LINE);
-        assertThat(userMessage(model.requests.get(1))).contains("[Established renderings", ESTABLISHED_LINE);
+        assertThat(model.requests)
+                .extracting(ChunkRunFixtures::userMessage)
+                .allSatisfy(user -> assertThat(user)
+                        .contains("[Established renderings", ESTABLISHED_LINE)
+                        .doesNotContain("[Key terms"));
     }
 
     @Test
-    void run_modelWouldDriftBetweenBatches_theBookKeepsOneRenderingPerTerm() {
+    void run_modelWouldDriftAndReportsTerms_theBookKeepsOneRenderingAndRecordsNoReport() {
         final DriftingModel model = new DriftingModel();
         final TestProject project = book();
 
         report(batchedJob(project, model, new RunRequest(project.id(), ReviewMode.UNATTENDED), 2)
                 .run());
 
-        final RenderingConsistency metric = RenderingConsistency.of(lexicon(project));
-        assertThat(metric.distinctPerTerm()).isEqualTo(1.0);
-        assertThat(lexicon(project).getFirst().renderings()).containsExactly(new LexiconEntry.Rendering("господар", 3));
+        assertThat(lexicon(project).getFirst().renderings()).isEmpty();
         assertThat(counts(project)).isEqualTo(new SegmentCounts(0, 4, 0, 0, 0));
         assertThat(storedTargets(project)).noneMatch(target -> target.contains("Учитель"));
     }
@@ -149,8 +150,8 @@ class LexiconConsistencyJobTest {
 
         final SegmentRecord third = TranslationJobTestSupport.stored(project, "Book.md:3");
         assertThat(third.context()).isNotNull();
-        assertThat(Objects.requireNonNull(third.context()).lexicon())
-                .extracting(rendering -> rendering.term() + " → " + rendering.rendering())
-                .containsExactly(ESTABLISHED_LINE);
+        assertThat(Objects.requireNonNull(third.context()).sections())
+                .flatExtracting(PromptSection::lines)
+                .anySatisfy(line -> assertThat(line).contains(ESTABLISHED_LINE));
     }
 }

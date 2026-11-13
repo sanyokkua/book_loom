@@ -1,5 +1,7 @@
 package ua.bookloom.persistence.memory;
 
+import static ua.bookloom.util.contract.ArgNames.PROJECT_ID;
+
 import com.google.inject.Inject;
 import java.util.List;
 import java.util.Objects;
@@ -34,39 +36,39 @@ public final class InMemoryTmRepository implements TmRepository {
                     entry.sourceHash(),
                     entry.contextKey());
             return Result.ok(entry);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
 
     @Override
     public Result<List<TmEntry>> exact(final String projectId, final String sourceHash) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(sourceHash, "sourceHash");
         try {
             return Result.ok(store.tm(projectId).values().stream()
                     .filter(entry -> entry.sourceHash().equals(sourceHash))
                     .toList());
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
 
     @Override
     public Result<Optional<TmEntry>> context(final String projectId, final String sourceHash, final String contextKey) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(sourceHash, "sourceHash");
         Objects.requireNonNull(contextKey, "contextKey");
         try {
             return Result.ok(Optional.ofNullable(store.tm(projectId).get(InMemoryStore.tmKey(sourceHash, contextKey))));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
 
     @Override
     public Result<List<TmEntry>> candidates(final String projectId, final int minChars, final int maxChars) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         try {
             return Result.ok(store.tm(projectId).values().stream()
                     .filter(entry -> {
@@ -75,7 +77,7 @@ public final class InMemoryTmRepository implements TmRepository {
                         return length >= minChars && length <= maxChars;
                     })
                     .toList());
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }

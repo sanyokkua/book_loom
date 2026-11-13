@@ -5,10 +5,10 @@ package ua.bookloom.api.document;
  * ({@code 02_Architecture/03_DOCUMENT_MODEL.md#segment-status-machine}).
  *
  * <pre>
- *         translate + pass QA/judge
+ *         translate + pass the checks
  * PENDING ─────────────────────────► ACCEPTED
  *    │                                   │
- *    │ fail after N repair tries         │ backward-revision re-render
+ *    │ fail after the one repair         │ a person's edit or a kept Proofread rewrite
  *    ▼                                   ▼
  * FLAGGED ───(manual/assisted edit)──► REVISED
  * </pre>
@@ -16,22 +16,22 @@ package ua.bookloom.api.document;
  * <p>{@link #ACCEPTED} and {@link #REVISED} are terminal-exportable; {@link #FLAGGED} is exportable too, carrying
  * the source or best draft through — export is allowed at any time, not only once every segment is accepted.
  *
- * <p>{@code add-document-skeleton-and-epub-roundtrip} never translates, so every segment it produces is
- * {@link #PENDING} and stays there; the other three constants ship now because the pipeline and the persistence
- * schema both key on the whole enum.
+ *
+ * <p>The document engine produces only {@link #PENDING}; the pipeline and the persistence schema key on the whole
+ * enum.
  */
 public enum SegmentStatus {
 
-    /** Parsed, not yet translated or judged. The only status this change ever produces. */
+    /** Parsed, not yet translated. */
     PENDING,
 
-    /** Translated and passed QA/judge. Terminal-exportable. */
+    /** Translated and passed the checks. Terminal-exportable. */
     ACCEPTED,
 
-    /** Failed after the repair budget was exhausted. Exportable, carrying the source/best draft through. */
+    /** Failed after its one repair call. Exportable, carrying the source/best draft through. */
     FLAGGED,
 
-    /** Reached from {@link #FLAGGED} by a manual/assisted edit, or from {@link #ACCEPTED} by a backward-revision
-     * re-render. Terminal-exportable. */
+    /** Reached from {@link #FLAGGED} or {@link #ACCEPTED} by a person's edit, or from {@link #ACCEPTED} by a
+     * Proofread rewrite that was kept. Terminal-exportable. */
     REVISED
 }

@@ -13,13 +13,14 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.AcceptReport;
 import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
-import ua.bookloom.api.project.TargetOrigin;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ScriptedChatModelFactory;
@@ -33,14 +34,14 @@ import ua.bookloom.ui.i18n.Messages;
 class NamesStyleSuggestionsTest extends FxTestBase {
 
     private static final String PROJECT = "p1";
-    private static final GlossaryEntry HALE = new GlossaryEntry(
+    private static final GlossaryEntry HALE = GlossaryEntry.of(
                     "e1", PROJECT, "Hale", null, TermType.CHARACTER, Gender.MALE, false)
             .withSuggestedTarget("Гейл");
-    private static final GlossaryEntry WALES = new GlossaryEntry(
+    private static final GlossaryEntry WALES = GlossaryEntry.of(
                     "e2", PROJECT, "Wales", null, TermType.PLACE, Gender.UNKNOWN, false)
             .withSuggestedTarget("Уельс");
     private static final GlossaryEntry MILTON =
-            new GlossaryEntry("e3", PROJECT, "Milton", "Мілтон", TermType.PLACE, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e3", PROJECT, "Milton", "Мілтон", TermType.PLACE, Gender.UNKNOWN, false);
 
     private ScriptedGlossaryService glossary;
     private SettingsViewModel settings;
@@ -58,11 +59,8 @@ class NamesStyleSuggestionsTest extends FxTestBase {
         final Injector injector = UiTestInjector.create(Locale.ENGLISH);
         settings = injector.getInstance(SettingsViewModel.class);
         vm = onFx(() -> new NamesStyleViewModel(
-                glossary,
-                new ScriptedLexiconService(),
-                new ScriptedNamesPass(),
-                ScriptedChatModelFactory.ok(),
-                settings,
+                new NamesServices(glossary, new ScriptedLexiconService(), new ScriptedNamesPass()),
+                new ModelAccess(ScriptedChatModelFactory.ok(), settings),
                 new DirectExecutor(),
                 injector.getInstance(Messages.class),
                 injector.getInstance(ActivityTracker.class),
@@ -74,7 +72,7 @@ class NamesStyleSuggestionsTest extends FxTestBase {
 
     @Test
     void suggestedCount_rowsWithSuggestions_countsOnlyThose() {
-        assertThat(onFx(() -> vm.suggestedCount().get())).isEqualTo(2);
+        assertThat(onFx(() -> vm.suggestions().suggestedCount().get())).isEqualTo(2);
     }
 
     @Test
@@ -84,20 +82,20 @@ class NamesStyleSuggestionsTest extends FxTestBase {
         run(() -> vm.accept("e1"));
 
         assertThat(glossary.updated())
-                .extracting(GlossaryEntry::target, GlossaryEntry::origin)
-                .containsExactly(tuple("Гейл", TargetOrigin.PERSON));
-        assertThat(onFx(() -> vm.suggestedCount().get())).isEqualTo(1);
+                .extracting(GlossaryEntry::target, GlossaryEntry::targetOrigin)
+                .containsExactly(tuple("Гейл", Origin.USER));
+        assertThat(onFx(() -> vm.suggestions().suggestedCount().get())).isEqualTo(1);
     }
 
     @Test
-    void acceptAll_twoSuggestions_storesEachAsThePersonsAndLeavesTheOtherRowAlone() {
-        glossary.willAnswer(Result.ok(HALE.accepted()));
-        glossary.willAnswer(Result.ok(WALES.accepted()));
+    void acceptAll_twoSuggestions_asksTheServiceOnceAndShowsBothAccepted() {
+        glossary.willAnswer(Result.ok(new AcceptReport(List.of(HALE.accepted(), WALES.accepted()), List.of())));
 
-        run(vm::acceptAll);
+        run(vm.suggestions()::acceptAll);
 
-        assertThat(glossary.updated()).containsExactly(HALE.accepted(), WALES.accepted());
-        assertThat(onFx(() -> vm.suggestedCount().get())).isZero();
+        assertThat(glossary.calls()).containsOnlyOnce("acceptSuggested(p1)");
+        assertThat(glossary.updated()).isEmpty();
+        assertThat(onFx(() -> vm.suggestions().suggestedCount().get())).isZero();
     }
 
     // IF the suggestion stage showed only "request 3", THEN a long glossary would give no sense of how far it is.

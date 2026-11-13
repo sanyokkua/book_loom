@@ -21,7 +21,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 class GlossaryEntryGenderOriginTest {
 
     private static GlossaryEntry unknown() {
-        return new GlossaryEntry("e1", "p1", "Wren", null, TermType.CHARACTER, Gender.UNKNOWN, false);
+        return GlossaryEntry.of("e1", "p1", "Wren", null, TermType.CHARACTER, Gender.UNKNOWN, false);
     }
 
     private static GlossaryEntry person() {
@@ -37,9 +37,8 @@ class GlossaryEntryGenderOriginTest {
     }
 
     @Test
-    void genderOrigin_enum_listsTheThreeOriginsFromStrongestToWeakest() {
-        assertThat(GenderOrigin.values())
-                .containsExactly(GenderOrigin.PERSON, GenderOrigin.VERIFIED, GenderOrigin.SUGGESTED);
+    void origin_enum_listsTheFourOriginsFromStrongestToWeakest() {
+        assertThat(Origin.values()).containsExactly(Origin.USER, Origin.BOOK, Origin.RULE, Origin.LIKELY);
     }
 
     @Test
@@ -52,22 +51,21 @@ class GlossaryEntryGenderOriginTest {
     @Test
     void new_sevenComponentsWithAKnownGender_isThePersons() {
         final GlossaryEntry entry =
-                new GlossaryEntry("e1", "p1", "Wren", null, TermType.CHARACTER, Gender.FEMALE, false);
+                GlossaryEntry.of("e1", "p1", "Wren", null, TermType.CHARACTER, Gender.FEMALE, false);
 
-        assertThat(entry.genderOrigin()).isEqualTo(GenderOrigin.PERSON);
+        assertThat(entry.genderOrigin()).isEqualTo(Origin.USER);
     }
 
     @Test
     void new_nineComponentsMarkedSuggested_isSuggested() {
-        final GlossaryEntry entry = new GlossaryEntry(
-                "e1", "p1", "Wren", null, TermType.CHARACTER, Gender.FEMALE, false, TargetOrigin.PERSON, true);
+        final GlossaryEntry entry = withOrigin(Gender.FEMALE, false, Origin.LIKELY);
 
-        assertThat(entry.genderOrigin()).isEqualTo(GenderOrigin.SUGGESTED);
+        assertThat(entry.genderOrigin()).isEqualTo(Origin.LIKELY);
     }
 
     @ParameterizedTest
-    @EnumSource(GenderOrigin.class)
-    void new_unknownGenderWithAnyOrigin_hasNoOrigin(final GenderOrigin stated) {
+    @EnumSource(Origin.class)
+    void new_unknownGenderWithAnyOrigin_hasNoOrigin(final Origin stated) {
         final GlossaryEntry entry = withOrigin(Gender.UNKNOWN, false, stated);
 
         assertThat(entry.genderOrigin()).isNull();
@@ -78,14 +76,14 @@ class GlossaryEntryGenderOriginTest {
     void new_knownGenderWithNoStatedOrigin_isThePersons() {
         final GlossaryEntry entry = withOrigin(Gender.FEMALE, false, null);
 
-        assertThat(entry.genderOrigin()).isEqualTo(GenderOrigin.PERSON);
+        assertThat(entry.genderOrigin()).isEqualTo(Origin.USER);
     }
 
     @ParameterizedTest
     @EnumSource(
-            value = GenderOrigin.class,
-            names = {"PERSON", "VERIFIED"})
-    void new_knownGenderWithAStatedOrigin_keepsIt(final GenderOrigin stated) {
+            value = Origin.class,
+            names = {"USER", "BOOK"})
+    void new_knownGenderWithAStatedOrigin_keepsIt(final Origin stated) {
         assertThat(withOrigin(Gender.FEMALE, false, stated).genderOrigin()).isEqualTo(stated);
     }
 
@@ -93,33 +91,32 @@ class GlossaryEntryGenderOriginTest {
     // rule's lock leaves it suggested (15i review); a gender already verified by the book stays verified.
     @Test
     void new_lockedEntryWithASuggestedGender_keepsItSuggested() {
-        assertThat(withOrigin(Gender.FEMALE, true, GenderOrigin.SUGGESTED).genderOrigin())
-                .isEqualTo(GenderOrigin.SUGGESTED);
+        assertThat(withOrigin(Gender.FEMALE, true, Origin.LIKELY).genderOrigin())
+                .isEqualTo(Origin.LIKELY);
     }
 
     @Test
     void new_lockedEntryWithAVerifiedGender_staysVerified() {
-        assertThat(withOrigin(Gender.FEMALE, true, GenderOrigin.VERIFIED).genderOrigin())
-                .isEqualTo(GenderOrigin.VERIFIED);
+        assertThat(withOrigin(Gender.FEMALE, true, Origin.BOOK).genderOrigin()).isEqualTo(Origin.BOOK);
     }
 
     @Test
     void withGender_aGender_isThePersons() {
-        assertThat(unknown().withGender(Gender.FEMALE).genderOrigin()).isEqualTo(GenderOrigin.PERSON);
+        assertThat(unknown().withGender(Gender.FEMALE).genderOrigin()).isEqualTo(Origin.USER);
     }
 
     // IF the person agreeing with a suggestion or a verified gender changed nothing, THEN "choose a value to confirm
     // it" would be false and the next review could still overwrite the value the person chose.
     @Test
     void withGender_theGenderAlreadyHeldAsSuggestedOrVerified_becomesThePersons() {
-        assertThat(suggested().withGender(Gender.MALE).genderOrigin()).isEqualTo(GenderOrigin.PERSON);
-        assertThat(verified().withGender(Gender.MALE).genderOrigin()).isEqualTo(GenderOrigin.PERSON);
+        assertThat(suggested().withGender(Gender.MALE).genderOrigin()).isEqualTo(Origin.USER);
+        assertThat(verified().withGender(Gender.MALE).genderOrigin()).isEqualTo(Origin.USER);
     }
 
     @Test
     void withGender_anotherGenderOverVerifiedOrSuggested_isThePersons() {
-        assertThat(suggested().withGender(Gender.FEMALE).genderOrigin()).isEqualTo(GenderOrigin.PERSON);
-        assertThat(verified().withGender(Gender.FEMALE).genderOrigin()).isEqualTo(GenderOrigin.PERSON);
+        assertThat(suggested().withGender(Gender.FEMALE).genderOrigin()).isEqualTo(Origin.USER);
+        assertThat(verified().withGender(Gender.FEMALE).genderOrigin()).isEqualTo(Origin.USER);
     }
 
     // IF a gender cleared to unknown kept its old origin, THEN an entry would claim a person fixed nothing.
@@ -134,7 +131,7 @@ class GlossaryEntryGenderOriginTest {
 
     @Test
     void withInferredGender_aNewGender_isVerified() {
-        assertThat(unknown().withInferredGender(Gender.FEMALE).genderOrigin()).isEqualTo(GenderOrigin.VERIFIED);
+        assertThat(unknown().withInferredGender(Gender.FEMALE).genderOrigin()).isEqualTo(Origin.BOOK);
     }
 
     // IF a verdict that disagrees replaced a suggestion silently as a person's choice, THEN the table would show a
@@ -144,7 +141,7 @@ class GlossaryEntryGenderOriginTest {
         final GlossaryEntry replaced = suggested().withInferredGender(Gender.FEMALE);
 
         assertThat(replaced.gender()).isEqualTo(Gender.FEMALE);
-        assertThat(replaced.genderOrigin()).isEqualTo(GenderOrigin.VERIFIED);
+        assertThat(replaced.genderOrigin()).isEqualTo(Origin.BOOK);
     }
 
     @Test
@@ -158,9 +155,9 @@ class GlossaryEntryGenderOriginTest {
     // The gender a person set is never downgraded to "verified" by a model repeating it.
     @Test
     void withInferredGender_theGenderTheEntryAlreadyHolds_changesNothing() {
-        assertThat(person().withInferredGender(Gender.MALE).genderOrigin()).isEqualTo(GenderOrigin.PERSON);
-        assertThat(suggested().withInferredGender(Gender.MALE).genderOrigin()).isEqualTo(GenderOrigin.SUGGESTED);
-        assertThat(verified().withInferredGender(Gender.MALE).genderOrigin()).isEqualTo(GenderOrigin.VERIFIED);
+        assertThat(person().withInferredGender(Gender.MALE).genderOrigin()).isEqualTo(Origin.USER);
+        assertThat(suggested().withInferredGender(Gender.MALE).genderOrigin()).isEqualTo(Origin.LIKELY);
+        assertThat(verified().withInferredGender(Gender.MALE).genderOrigin()).isEqualTo(Origin.BOOK);
     }
 
     @Test
@@ -168,7 +165,7 @@ class GlossaryEntryGenderOriginTest {
         final GlossaryEntry seeded = unknown().withSuggestedGender(Gender.FEMALE);
 
         assertThat(seeded.gender()).isEqualTo(Gender.FEMALE);
-        assertThat(seeded.genderOrigin()).isEqualTo(GenderOrigin.SUGGESTED);
+        assertThat(seeded.genderOrigin()).isEqualTo(Origin.LIKELY);
         assertThat(seeded.genderSeedTried()).isTrue();
     }
 
@@ -179,13 +176,13 @@ class GlossaryEntryGenderOriginTest {
 
     @Test
     void withLocked_onASuggestedGender_confirmsItAsThePersons() {
-        assertThat(suggested().withLocked(true).genderOrigin()).isEqualTo(GenderOrigin.PERSON);
+        assertThat(suggested().withLocked(true).genderOrigin()).isEqualTo(Origin.USER);
     }
 
     @Test
     void withLocked_onAVerifiedOrPersonsGender_keepsItsOrigin() {
-        assertThat(verified().withLocked(true).genderOrigin()).isEqualTo(GenderOrigin.VERIFIED);
-        assertThat(person().withLocked(true).genderOrigin()).isEqualTo(GenderOrigin.PERSON);
+        assertThat(verified().withLocked(true).genderOrigin()).isEqualTo(Origin.BOOK);
+        assertThat(person().withLocked(true).genderOrigin()).isEqualTo(Origin.USER);
     }
 
     // IF a copy that touches another field lost the origin, THEN a target edit would make a verified gender the
@@ -193,9 +190,9 @@ class GlossaryEntryGenderOriginTest {
     @ParameterizedTest
     @MethodSource("editsThatLeaveTheGenderAlone")
     void otherEdits_leaveTheGenderOriginAsItWas(final UnaryOperator<GlossaryEntry> edit) {
-        assertThat(edit.apply(verified()).genderOrigin()).isEqualTo(GenderOrigin.VERIFIED);
-        assertThat(edit.apply(suggested()).genderOrigin()).isEqualTo(GenderOrigin.SUGGESTED);
-        assertThat(edit.apply(person()).genderOrigin()).isEqualTo(GenderOrigin.PERSON);
+        assertThat(edit.apply(verified()).genderOrigin()).isEqualTo(Origin.BOOK);
+        assertThat(edit.apply(suggested()).genderOrigin()).isEqualTo(Origin.LIKELY);
+        assertThat(edit.apply(person()).genderOrigin()).isEqualTo(Origin.USER);
     }
 
     static Stream<Arguments> editsThatLeaveTheGenderAlone() {
@@ -203,26 +200,33 @@ class GlossaryEntryGenderOriginTest {
                 Arguments.of(Named.<UnaryOperator<GlossaryEntry>>of("withTarget", entry -> entry.withTarget("Рен"))),
                 Arguments.of(Named.<UnaryOperator<GlossaryEntry>>of(
                         "withSuggestedTarget", entry -> entry.withSuggestedTarget("Рен"))),
-                Arguments.of(
-                        Named.<UnaryOperator<GlossaryEntry>>of("withType", entry -> entry.withType(TermType.OTHER))),
+                Arguments.of(Named.<UnaryOperator<GlossaryEntry>>of(
+                        "withType", entry -> entry.withType(TermType.OTHER, Origin.USER))),
                 Arguments.of(Named.<UnaryOperator<GlossaryEntry>>of("accepted", GlossaryEntry::accepted)),
                 Arguments.of(Named.<UnaryOperator<GlossaryEntry>>of(
-                        "withAliases", entry -> entry.withAliases(List.of("Wrens")))));
+                        "withForms", entry -> entry.withForms(List.of("Wrens")))));
     }
 
-    private static GlossaryEntry withOrigin(
-            final Gender gender, final boolean locked, @Nullable final GenderOrigin stated) {
+    private static GlossaryEntry withOrigin(final Gender gender, final boolean locked, @Nullable final Origin stated) {
         return new GlossaryEntry(
                 "e1",
                 "p1",
                 "Wren",
+                List.of(),
+                false,
                 locked ? "Рен" : null,
+                locked ? TargetState.LOCKED : TargetState.PINNED,
+                Origin.USER,
                 TermType.CHARACTER,
+                null,
+                Origin.USER,
                 gender,
-                locked,
-                TargetOrigin.PERSON,
                 stated,
                 false,
-                List.of());
+                false,
+                null,
+                null,
+                null,
+                0);
     }
 }

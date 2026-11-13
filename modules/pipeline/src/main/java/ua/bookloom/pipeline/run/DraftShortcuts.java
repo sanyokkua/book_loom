@@ -1,7 +1,6 @@
 package ua.bookloom.pipeline.run;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -43,25 +42,20 @@ final class DraftShortcuts {
             Set.of(SegmentKind.NAV_LABEL, SegmentKind.ALT, SegmentKind.TITLE, SegmentKind.HEADING);
 
     private final Map<String, String> acceptedAuxiliary = new HashMap<>();
-    private final ContextSnapshot noContext;
     private final FixedLabels labels;
 
     /** The shortcuts of a run with {@code frame}. */
     static DraftShortcuts forFrame(final CallFrame frame) {
-        return new DraftShortcuts(
-                frame.styleSheet().text(), FixedLabels.forPair(frame.sourceLanguage(), frame.targetLanguage()));
+        return new DraftShortcuts(FixedLabels.forPair(frame.sourceLanguage(), frame.targetLanguage()));
     }
 
     /**
      * Creates the shortcuts of one run.
      *
-     * @param styleSheet the non-null style sheet of the run, which a segment that saw no other context still records
      * @param labels the fixed labels of the run's language pair
      */
-    DraftShortcuts(final String styleSheet, final FixedLabels labels) {
+    DraftShortcuts(final FixedLabels labels) {
         this.labels = Objects.requireNonNull(labels, "labels");
-        this.noContext = new ContextSnapshot(
-                List.of(), List.of(), List.of(), null, Objects.requireNonNull(styleSheet, "styleSheet"));
     }
 
     /**
@@ -84,7 +78,7 @@ final class DraftShortcuts {
         final DraftOutcome.Verbatim verbatim =
                 VerbatimCheck.check(segment, mask.maskedText(), mask.presentLocked(), gate);
         if (verbatim != null) {
-            drafts.drafted(verbatim, noContext);
+            drafts.drafted(verbatim, ContextSnapshot.noCall());
             return verbatim;
         }
         final DraftOutcome fixed = fixedLabel(segment, mask, gate, loop, drafts);
@@ -145,7 +139,7 @@ final class DraftShortcuts {
                 "Auxiliary segmentId={} takes the draft of identical segmentId={}, no call",
                 segment.id(),
                 sibling.segment().id());
-        drafts.drafted(copy, drafts.snapshot(sibling.segment().id()).withSent(null));
+        drafts.drafted(copy, drafts.snapshot(sibling.segment().id()));
         return copy;
     }
 
@@ -203,7 +197,7 @@ final class DraftShortcuts {
             return null;
         }
         log.debug("Auxiliary segmentId={} takes the accepted target of an identical text, no call", segment.id());
-        drafts.drafted(reused, noContext);
+        drafts.drafted(reused, ContextSnapshot.noCall());
         return reused;
     }
 }

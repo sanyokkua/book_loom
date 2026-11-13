@@ -19,6 +19,8 @@ import ua.bookloom.api.project.Deferral;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class SqliteDeferralRepository implements DeferralRepository {
 
+    private static final String PROJECT = "project";
+
     private static final String INSERT_IF_ABSENT = """
             INSERT INTO deferrals (project_id, segment_id, reason, waiting_on, json)
             VALUES (:project, :segment, :reason, :waitingOn, :json)
@@ -45,7 +47,7 @@ public final class SqliteDeferralRepository implements DeferralRepository {
                     deferral.reason(),
                     added);
             return h.createQuery(SELECT_ONE)
-                    .bind("project", deferral.projectId())
+                    .bind(PROJECT, deferral.projectId())
                     .bind("segment", deferral.segmentId())
                     .bind("reason", deferral.reason().name())
                     .bind("waitingOn", waitingOn(deferral.waitingOn()))
@@ -62,7 +64,7 @@ public final class SqliteDeferralRepository implements DeferralRepository {
         return db.read(
                 "deferral open",
                 h -> List.copyOf(h.createQuery("SELECT json FROM deferrals WHERE project_id = :project ORDER BY rowid")
-                        .bind("project", projectId)
+                        .bind(PROJECT, projectId)
                         .mapTo(String.class)
                         .map(json -> codec.read(json, Deferral.class))
                         .list()));
@@ -73,12 +75,7 @@ public final class SqliteDeferralRepository implements DeferralRepository {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(deferralId, "deferralId");
         return db.write("deferral resolve", h -> {
-            final boolean resolved = h.createUpdate(
-                                    "DELETE FROM deferrals WHERE project_id = :project AND json_extract(json, '$.id') = :id")
-                            .bind("project", projectId)
-                            .bind("id", deferralId)
-                            .execute()
-                    > 0;
+            final boolean resolved = resolveIn(h, projectId, deferralId);
             log.debug("Deferral resolve projectId={} deferralId={} resolved={}", projectId, deferralId, resolved);
             return resolved;
         });
@@ -93,11 +90,20 @@ public final class SqliteDeferralRepository implements DeferralRepository {
     static boolean insertIfAbsent(
             final Handle h, final JsonCodec codec, final String projectId, final Deferral deferral) {
         return h.createUpdate(INSERT_IF_ABSENT)
-                        .bind("project", projectId)
+                        .bind(PROJECT, projectId)
                         .bind("segment", deferral.segmentId())
                         .bind("reason", deferral.reason().name())
                         .bind("waitingOn", waitingOn(deferral.waitingOn()))
                         .bind("json", codec.write(deferral))
+                        .execute()
+                > 0;
+    }
+
+    /** Deletes one open deferral by id; the checkpoint shares it so a window's settled deferrals go with its texts. */
+    static boolean resolveIn(final Handle h, final String projectId, final String deferralId) {
+        return h.createUpdate("DELETE FROM deferrals WHERE project_id = :project AND json_extract(json, '$.id') = :id")
+                        .bind(PROJECT, projectId)
+                        .bind("id", deferralId)
                         .execute()
                 > 0;
     }

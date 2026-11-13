@@ -34,8 +34,9 @@ class AllCallsEndToEndTest extends WorkspaceTestBase {
 
     private final FxRobot robot = new FxRobot();
 
-    // IF an answered translate call said "Nothing yet." (the real window showed it), THEN the dialog would hide what
-    // the model wrote; each translate row says what it brought back, the pseudo model's capitals.
+    // IF an answered translate call said "Nothing yet." (the real window showed it), or that its reply holds no
+    // translated text, THEN the dialog would hide what the model wrote; each translate row — the batch's and each
+    // single draft's — says what it brought back, the pseudo model's capitals.
     @Test
     void allCalls_afterARealRun_eachAnsweredTranslateCallShowsTheTextItBroughtBack() throws Exception {
         final Path book = Files.writeString(booksDir.resolve("Letter.txt"), SOURCE_TEXT, StandardCharsets.UTF_8);
@@ -46,7 +47,7 @@ class AllCallsEndToEndTest extends WorkspaceTestBase {
         onFx(() -> shell.activate(ViewNames.TRANSLATING));
         runToTheEnd();
 
-        onFx(() -> ((Button) exportNode("#translating-live-all-calls")).fire());
+        onFx(((Button) exportNode("#translating-live-all-calls"))::fire);
         WaitForAsyncUtils.waitForFxEvents();
         final List<String> rows = readEveryRow();
 
@@ -54,6 +55,9 @@ class AllCallsEndToEndTest extends WorkspaceTestBase {
         assertThat(rows)
                 .filteredOn(row -> row.startsWith("Translate is done."))
                 .isNotEmpty()
+                .allMatch(row -> row.contains("IT WAS A DARK NIGHT.")
+                        || row.contains("THE RAIN FELL ON THE OLD HOUSE.")
+                        || row.contains("NOBODY CAME TO THE DOOR."))
                 .anyMatch(row -> row.contains("IT WAS A DARK NIGHT."));
     }
 
@@ -64,10 +68,16 @@ class AllCallsEndToEndTest extends WorkspaceTestBase {
         return IntStream.range(0, count).mapToObj(this::readRow).toList();
     }
 
+    // The click must have chosen the row it was aimed at: a row read while another stays chosen would be misread.
     private String readRow(final int index) {
         final Node row = onFx(() -> lookup("#progress-step-" + index));
         robot.clickOn(row);
         WaitForAsyncUtils.waitForFxEvents();
+        assertThat(onFx(() -> ((ListView<?>) lookup("#progress-steps"))
+                        .getSelectionModel()
+                        .getSelectedIndex()))
+                .as("the row chosen after clicking row %d", index)
+                .isEqualTo(index);
         return onFx(() -> ((Label) lookup("#progress-say")).getText() + " | "
                 + ((TextArea) lookup("#progress-output")).getText());
     }

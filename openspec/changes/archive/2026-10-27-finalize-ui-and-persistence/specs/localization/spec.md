@@ -4,7 +4,7 @@
 
 WHEN the application starts and no language has been chosen in Settings, it SHALL display Ukrainian IF the operating system's language is Ukrainian, and English otherwise, without asking. WHEN a person picks a language in Settings › Appearance, the application SHALL store the choice, say it applies after a restart and offer "Restart now", and SHALL display that language, not the operating system's, on every later launch.
 
-**Source**: FR-UI-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-I18N-4 (`docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#internationalization`), `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`. In plain words: guessing from the desktop is right almost always, so nobody is asked on first launch; but a person who wants another language than their desktop's can say so once, and it is remembered. The switch applies after a restart because changing the language live would rebuild every screen, and the sentence beside the switch says so.
+**Source**: FR-UI-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-I18N-4 (`docs/spec_baseline/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#internationalization`), `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`. In plain words: guessing from the desktop is right almost always, so nobody is asked on first launch; but a person who wants another language than their desktop's can say so once, and it is remembered. The switch applies after a restart because changing the language live would rebuild every screen, and the sentence beside the switch says so.
 
 #### Scenario: A Ukrainian desktop gets a Ukrainian interface
 

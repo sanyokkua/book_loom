@@ -171,22 +171,14 @@ class SuggestionRefusalsTest {
         "Kharkiv,Харків",
         "Petriv,Петрів",
         "Bahamas,Багами",
-        "Thamesor,Темзор"
+        "Thamesor,Темзор",
+        // The source's own last letter decides: a name that ends in a vowel, or in w, y or h, may end in -а or -у.
+        "Sarah,Сара",
+        "Arlo,Арло",
+        "Charrow,Чарроу",
+        "Dana,Дана"
     })
-    void suggest_nameThatOnlyEndsLikeACaseForm_isKept(final String term, final String rendering) {
-        final ScriptedChatModel model = new ScriptedChatModel().answer(says(term, rendering));
-
-        final Result<List<Suggestion>> result = asked(place(term), NamePolicy.TRANSLITERATE, model);
-
-        assertThat(result.data()).extracting(Suggestion::target).containsExactly(rendering);
-        assertThat(model.requests()).hasSize(1);
-    }
-
-    // The source's own last letter decides: a name that ends in a vowel, or in w, y or h, may end in -а or -у.
-    @ParameterizedTest(name = "{0} -> {1}")
-    @CsvSource({"Sarah,Сара", "Arlo,Арло", "Charrow,Чарроу", "Dana,Дана"})
-    void suggest_nameWhoseSourceDoesNotEndInAConsonant_isKeptWithTheEndingItHas(
-            final String term, final String rendering) {
+    void suggest_nameThatOnlyEndsLikeACaseFormOrEndsInAVowel_isKept(final String term, final String rendering) {
         final ScriptedChatModel model = new ScriptedChatModel().answer(says(term, rendering));
 
         final Result<List<Suggestion>> result = asked(place(term), NamePolicy.TRANSLITERATE, model);

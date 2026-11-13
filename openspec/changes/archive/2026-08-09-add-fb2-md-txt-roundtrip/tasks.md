@@ -39,7 +39,7 @@ exactly that.
 - [x] 1.3 Correct `BookFormat`'s Javadoc, which cites `add-fb2-markdown-txt-roundtrip` — a change name that does not
       exist. A citation that does not resolve is worse than none, and this one is read by every later change that
       opens the enum.
-      → `:api/ua.bookloom.api.document` · `docs/implementation_plan/CHANGE_BACKLOG.md`
+      → `:api/ua.bookloom.api.document` · `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md`
 - [x] 1.4 Cover the model changes: a `ByteSpanAnchor` rejects a negative start and an end below its start, a
       `NodeAnchor` rejects a negative run index, and a `Document` round-trips a null charset. Mechanical
       record-invariant tests; no `Covers:` marker.
@@ -502,7 +502,7 @@ entry in the same commit — but nothing in this change needs one.
       `.md`, `.txt` and `.detect` now exist and that `ua.bookloom.document` performs the format dispatch its
       `#inventory` row has always claimed. The inventory is the citation target every later change resolves against,
       so a stale row is a broken citation in every proposal that follows.
-      → `docs/implementation_plan/` · `01_MODULE_INVENTORY.md#as-built-baseline`
+      → `docs/spec_baseline/implementation_plan/` · `01_MODULE_INVENTORY.md#as-built-baseline`
 - [x] 12.6 Confirm the offline invariant, which this change makes measurable rather than assumed: 53 books in the
       surveyed corpus rely on XHTML named entities under a DOCTYPE, so verify the XHTML parser resolves `&nbsp;`
       **without fetching a DTD over the network**, that `SecureXml` still disables external entity and DTD loading on

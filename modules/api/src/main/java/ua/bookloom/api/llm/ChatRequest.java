@@ -11,8 +11,8 @@ import ua.bookloom.api.pipeline.CallKind;
  * @param messages the conversation in wire order; never null and defensively copied
  * @param temperature the sampling temperature for this call, or null when provider defaults should apply
  * @param responseFormat the requested structured response format, or null when no format is requested
- * @param reasoningEnabled null when the provider should use its default, false when supported reasoning output
- *     should be disabled
+ * @param reasoningEnabled the reasoning level: before the model's profile is applied, the intent the call asks for;
+ *     after it, the level the model is sent, or null when no reasoning control is sent
  * @param contextWindow the provider context-window size to request, or null when the provider default applies
  * @param expectedOutputTokens the expected completion length used to scale the request timeout, or null when not
  *     known
@@ -24,6 +24,13 @@ import ua.bookloom.api.pipeline.CallKind;
  *     verification probe)
  * @param sampling the sampling controls beyond temperature, or null when the server's defaults should apply
  * @param outputField the request field that carries the output cap, or null for {@code max_tokens}
+ * @param source how much source text the call sends, which sizes a thinking model's reasoning reserve, or null when
+ *     the call does not say
+ * @param reasoningReserve the tokens added to the cap and the expected output for the model's reasoning, or null when
+ *     the call is not sent to think; positive when set
+ * @param keepLoaded whether the server is asked to keep the model loaded after the call: only a translation run's own
+ *     calls ask it, so a long pause does not unload the model, and a test or a setup call leaves the server's own
+ *     setting in force
  */
 public record ChatRequest(
         List<ChatMessage> messages,
@@ -36,60 +43,12 @@ public record ChatRequest(
         @Nullable Integer seed,
         @Nullable CallKind callKind,
         @Nullable SamplingParams sampling,
-        @Nullable OutputLengthField outputField) {
+        @Nullable OutputLengthField outputField,
+        @Nullable SourceSize source,
+        @Nullable Integer reasoningReserve,
+        boolean keepLoaded) {
 
-    /**
-     * Preserves the ten-argument construction form, with {@code max_tokens} as the output-cap field.
-     *
-     * @param messages the conversation in wire order; never null and defensively copied
-     * @param temperature the sampling temperature for this call, or null when provider defaults should apply
-     * @param responseFormat the requested structured response format, or null when no format is requested
-     * @param reasoningEnabled null when the provider should use its default
-     * @param contextWindow the provider context-window size to request, or null when the provider default applies
-     * @param expectedOutputTokens the expected completion length used to scale the request timeout, or null
-     * @param maxOutputTokens the hard cap on the completion length, or null
-     * @param seed the sampling seed, or null
-     * @param callKind what the call is for, or null
-     * @param sampling the sampling controls beyond temperature, or null
-     */
-    public ChatRequest(
-            List<ChatMessage> messages,
-            @Nullable Double temperature,
-            @Nullable ResponseFormat responseFormat,
-            @Nullable ReasoningLevel reasoningEnabled,
-            @Nullable Integer contextWindow,
-            @Nullable Integer expectedOutputTokens,
-            @Nullable Integer maxOutputTokens,
-            @Nullable Integer seed,
-            @Nullable CallKind callKind,
-            @Nullable SamplingParams sampling) {
-        this(
-                messages,
-                temperature,
-                responseFormat,
-                reasoningEnabled,
-                contextWindow,
-                expectedOutputTokens,
-                maxOutputTokens,
-                seed,
-                callKind,
-                sampling,
-                null);
-    }
-
-    /**
-     * Preserves the nine-argument construction form, with the server's own sampling.
-     *
-     * @param messages the conversation in wire order; never null and defensively copied
-     * @param temperature the sampling temperature for this call, or null when provider defaults should apply
-     * @param responseFormat the requested structured response format, or null when no format is requested
-     * @param reasoningEnabled null when the provider should use its default
-     * @param contextWindow the provider context-window size to request, or null when the provider default applies
-     * @param expectedOutputTokens the expected completion length used to scale the request timeout, or null
-     * @param maxOutputTokens the hard cap on the completion length, or null
-     * @param seed the sampling seed, or null
-     * @param callKind what the call is for, or null
-     */
+    /** Preserves the nine-argument construction form, with the server's own sampling. */
     public ChatRequest(
             List<ChatMessage> messages,
             @Nullable Double temperature,
@@ -110,39 +69,25 @@ public record ChatRequest(
                 maxOutputTokens,
                 seed,
                 callKind,
-                null);
+                null,
+                null,
+                null,
+                null,
+                false);
     }
 
-    /**
-     * Preserves the original message-only construction form, with no per-call settings.
-     *
-     * @param messages the conversation in wire order; never null and defensively copied
-     */
+    /** Preserves the original message-only construction form, with no per-call settings and the reasoning intent Off. */
     public ChatRequest(List<ChatMessage> messages) {
-        this(messages, null, null, null, null, null, null);
+        this(messages, null, null, ReasoningLevel.OFF, null, null, null);
     }
 
-    /**
-     * Preserves the original per-call settings construction form without a reasoning control.
-     *
-     * @param messages the conversation in wire order; never null and defensively copied
-     * @param temperature the sampling temperature for this call, or null when provider defaults should apply
-     * @param responseFormat the requested structured response format, or null when no format is requested
-     */
+    /** Preserves the original per-call settings construction form without a reasoning control. */
     public ChatRequest(
             List<ChatMessage> messages, @Nullable Double temperature, @Nullable ResponseFormat responseFormat) {
-        this(messages, temperature, responseFormat, null, null, null, null);
+        this(messages, temperature, responseFormat, null);
     }
 
-    /**
-     * Preserves the original four-argument construction form, with no context window or expected output hint.
-     *
-     * @param messages the conversation in wire order; never null and defensively copied
-     * @param temperature the sampling temperature for this call, or null when provider defaults should apply
-     * @param responseFormat the requested structured response format, or null when no format is requested
-     * @param reasoningEnabled null when the provider should use its default, false when supported reasoning output
-     *     should be disabled
-     */
+    /** Preserves the original four-argument construction form, with no context window or expected output hint. */
     public ChatRequest(
             List<ChatMessage> messages,
             @Nullable Double temperature,
@@ -151,18 +96,7 @@ public record ChatRequest(
         this(messages, temperature, responseFormat, reasoningEnabled, null, null, null);
     }
 
-    /**
-     * Preserves the six-argument construction form, with no output cap.
-     *
-     * @param messages the conversation in wire order; never null and defensively copied
-     * @param temperature the sampling temperature for this call, or null when provider defaults should apply
-     * @param responseFormat the requested structured response format, or null when no format is requested
-     * @param reasoningEnabled null when the provider should use its default, false when supported reasoning output
-     *     should be disabled
-     * @param contextWindow the provider context-window size to request, or null when the provider default applies
-     * @param expectedOutputTokens the expected completion length used to scale the request timeout, or null when not
-     *     known
-     */
+    /** Preserves the six-argument construction form, with no output cap. */
     public ChatRequest(
             List<ChatMessage> messages,
             @Nullable Double temperature,
@@ -173,19 +107,7 @@ public record ChatRequest(
         this(messages, temperature, responseFormat, reasoningEnabled, contextWindow, expectedOutputTokens, null);
     }
 
-    /**
-     * Preserves the seven-argument construction form, with no seed and no call kind.
-     *
-     * @param messages the conversation in wire order; never null and defensively copied
-     * @param temperature the sampling temperature for this call, or null when provider defaults should apply
-     * @param responseFormat the requested structured response format, or null when no format is requested
-     * @param reasoningEnabled null when the provider should use its default, false when supported reasoning output
-     *     should be disabled
-     * @param contextWindow the provider context-window size to request, or null when the provider default applies
-     * @param expectedOutputTokens the expected completion length used to scale the request timeout, or null when not
-     *     known
-     * @param maxOutputTokens the hard cap on the completion length, or null when the provider should not be told one
-     */
+    /** Preserves the seven-argument construction form, with no seed and no call kind. */
     public ChatRequest(
             List<ChatMessage> messages,
             @Nullable Double temperature,
@@ -202,7 +124,6 @@ public record ChatRequest(
                 contextWindow,
                 expectedOutputTokens,
                 maxOutputTokens,
-                null,
                 null,
                 null);
     }
@@ -223,6 +144,55 @@ public record ChatRequest(
         if (maxOutputTokens != null && maxOutputTokens <= 0) {
             throw new IllegalArgumentException("maxOutputTokens must be positive: " + maxOutputTokens);
         }
+        if (reasoningReserve != null && reasoningReserve <= 0) {
+            throw new IllegalArgumentException("reasoningReserve must be positive: " + reasoningReserve);
+        }
+    }
+
+    /**
+     * Copies this request with the size of the source it sends, so a model that thinks gets room in proportion.
+     *
+     * @param size the source size, or null when the call does not say
+     * @return a copy with {@code source} replaced and every other field unchanged
+     */
+    public ChatRequest withSource(@Nullable SourceSize size) {
+        final Copy copy = new Copy(this);
+        copy.source = size;
+        return copy.build();
+    }
+
+    /**
+     * Copies this request with the reasoning level the model is sent and the room its reasoning needs: the reserve is
+     * added to the output cap (an uncapped request stays uncapped) and to the expected output, so the wait grows with
+     * it.
+     *
+     * @param level the level sent, or null to send no reasoning control
+     * @param reserve the tokens reserved for reasoning, or zero when the call does not think; zero or more
+     * @return a copy with the level, the reserve, the cap and the expected output replaced
+     */
+    public ChatRequest withReasoning(@Nullable ReasoningLevel level, int reserve) {
+        if (reserve < 0) {
+            throw new IllegalArgumentException("reserve must not be negative: " + reserve);
+        }
+        final boolean reserved = reserve > 0;
+        final Copy copy = new Copy(this);
+        copy.reasoningEnabled = level;
+        copy.reasoningReserve = reserved ? Integer.valueOf(reserve) : null;
+        if (reserved) {
+            copy.expectedOutputTokens = (expectedOutputTokens == null ? 0 : expectedOutputTokens) + reserve;
+            copy.maxOutputTokens = maxOutputTokens == null ? null : maxOutputTokens + reserve;
+        }
+        return copy.build();
+    }
+
+    /**
+     * Whether the model is expected to think on this call: room was reserved for its reasoning, or a thinking level is
+     * sent.
+     *
+     * @return {@code true} if the call thinks, {@code false} otherwise
+     */
+    public boolean isThinking() {
+        return reasoningReserve != null || (reasoningEnabled != null && reasoningEnabled.isThinking());
     }
 
     /**
@@ -231,18 +201,9 @@ public record ChatRequest(
      * @return a copy with {@code responseFormat} null and every other field unchanged
      */
     public ChatRequest withoutResponseFormat() {
-        return new ChatRequest(
-                messages,
-                temperature,
-                null,
-                reasoningEnabled,
-                contextWindow,
-                expectedOutputTokens,
-                maxOutputTokens,
-                seed,
-                callKind,
-                sampling,
-                outputField);
+        final Copy copy = new Copy(this);
+        copy.responseFormat = null;
+        return copy.build();
     }
 
     /**
@@ -251,18 +212,9 @@ public record ChatRequest(
      * @return a copy with {@code reasoningEnabled} null and every other field unchanged
      */
     public ChatRequest withoutReasoning() {
-        return new ChatRequest(
-                messages,
-                temperature,
-                responseFormat,
-                null,
-                contextWindow,
-                expectedOutputTokens,
-                maxOutputTokens,
-                seed,
-                callKind,
-                sampling,
-                outputField);
+        final Copy copy = new Copy(this);
+        copy.reasoningEnabled = null;
+        return copy.build();
     }
 
     /**
@@ -272,18 +224,9 @@ public record ChatRequest(
      * @return a copy with {@code seed} replaced and every other field unchanged
      */
     public ChatRequest withSeed(int fixedSeed) {
-        return new ChatRequest(
-                messages,
-                temperature,
-                responseFormat,
-                reasoningEnabled,
-                contextWindow,
-                expectedOutputTokens,
-                maxOutputTokens,
-                fixedSeed,
-                callKind,
-                sampling,
-                outputField);
+        final Copy copy = new Copy(this);
+        copy.seed = fixedSeed;
+        return copy.build();
     }
 
     /**
@@ -295,18 +238,10 @@ public record ChatRequest(
      * @return a copy with {@code contextWindow} replaced and {@code maxOutputTokens} no larger than the limit
      */
     public ChatRequest sizedTo(int window, int outputCapLimit) {
-        return new ChatRequest(
-                messages,
-                temperature,
-                responseFormat,
-                reasoningEnabled,
-                window,
-                expectedOutputTokens,
-                maxOutputTokens == null ? null : Math.min(maxOutputTokens, outputCapLimit),
-                seed,
-                callKind,
-                sampling,
-                outputField);
+        final Copy copy = new Copy(this);
+        copy.contextWindow = window;
+        copy.maxOutputTokens = maxOutputTokens == null ? null : Math.min(maxOutputTokens, outputCapLimit);
+        return copy.build();
     }
 
     /**
@@ -317,18 +252,10 @@ public record ChatRequest(
      * @return a copy with {@code seed} and {@code maxOutputTokens} replaced and every other field unchanged
      */
     public ChatRequest forRetry(int retrySeed, @Nullable Integer retryCap) {
-        return new ChatRequest(
-                messages,
-                temperature,
-                responseFormat,
-                reasoningEnabled,
-                contextWindow,
-                expectedOutputTokens,
-                retryCap,
-                retrySeed,
-                callKind,
-                sampling,
-                outputField);
+        final Copy copy = new Copy(this);
+        copy.seed = retrySeed;
+        copy.maxOutputTokens = retryCap;
+        return copy.build();
     }
 
     /**
@@ -338,18 +265,9 @@ public record ChatRequest(
      * @return a copy with {@code sampling} replaced and every other field unchanged
      */
     public ChatRequest withSampling(@Nullable SamplingParams params) {
-        return new ChatRequest(
-                messages,
-                temperature,
-                responseFormat,
-                reasoningEnabled,
-                contextWindow,
-                expectedOutputTokens,
-                maxOutputTokens,
-                seed,
-                callKind,
-                params,
-                outputField);
+        final Copy copy = new Copy(this);
+        copy.sampling = params;
+        return copy.build();
     }
 
     /**
@@ -362,18 +280,22 @@ public record ChatRequest(
      */
     public ChatRequest withModelSettings(
             @Nullable Double newTemperature, @Nullable Integer cap, @Nullable OutputLengthField field) {
-        return new ChatRequest(
-                messages,
-                newTemperature,
-                responseFormat,
-                reasoningEnabled,
-                contextWindow,
-                expectedOutputTokens,
-                cap,
-                seed,
-                callKind,
-                sampling,
-                field);
+        final Copy copy = new Copy(this);
+        copy.temperature = newTemperature;
+        copy.maxOutputTokens = cap;
+        copy.outputField = field;
+        return copy.build();
+    }
+
+    /**
+     * Copies this request as one of a translation run's own calls, so a server that unloads an idle model keeps it.
+     *
+     * @return a copy with {@code keepLoaded} set and every other field unchanged
+     */
+    public ChatRequest keptLoaded() {
+        final Copy copy = new Copy(this);
+        copy.keepLoaded = true;
+        return copy.build();
     }
 
     /**
@@ -383,5 +305,59 @@ public record ChatRequest(
      */
     public SamplingParams samplingOrNone() {
         return sampling == null ? SamplingParams.NONE : sampling;
+    }
+
+    // One copy that changes only the named fields, so a copy method never repeats every component; it lives for one
+    // copy method's call and is never shared.
+    private static final class Copy {
+        private List<ChatMessage> messages;
+        private @Nullable Double temperature;
+        private @Nullable ResponseFormat responseFormat;
+        private @Nullable ReasoningLevel reasoningEnabled;
+        private @Nullable Integer contextWindow;
+        private @Nullable Integer expectedOutputTokens;
+        private @Nullable Integer maxOutputTokens;
+        private @Nullable Integer seed;
+        private @Nullable CallKind callKind;
+        private @Nullable SamplingParams sampling;
+        private @Nullable OutputLengthField outputField;
+        private @Nullable SourceSize source;
+        private @Nullable Integer reasoningReserve;
+        private boolean keepLoaded;
+
+        Copy(final ChatRequest request) {
+            messages = request.messages();
+            temperature = request.temperature();
+            responseFormat = request.responseFormat();
+            reasoningEnabled = request.reasoningEnabled();
+            contextWindow = request.contextWindow();
+            expectedOutputTokens = request.expectedOutputTokens();
+            maxOutputTokens = request.maxOutputTokens();
+            seed = request.seed();
+            callKind = request.callKind();
+            sampling = request.sampling();
+            outputField = request.outputField();
+            source = request.source();
+            reasoningReserve = request.reasoningReserve();
+            keepLoaded = request.keepLoaded();
+        }
+
+        ChatRequest build() {
+            return new ChatRequest(
+                    messages,
+                    temperature,
+                    responseFormat,
+                    reasoningEnabled,
+                    contextWindow,
+                    expectedOutputTokens,
+                    maxOutputTokens,
+                    seed,
+                    callKind,
+                    sampling,
+                    outputField,
+                    source,
+                    reasoningReserve,
+                    keepLoaded);
+        }
     }
 }

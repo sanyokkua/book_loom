@@ -232,4 +232,17 @@ class StyleSuggestionApplyTest extends ExportViewModelTestBase {
 
         assertThat(pending()).isNull();
     }
+
+    // IF the outcome outlived the book, THEN a second project would open saying a suggestion was applied to it.
+    @Test
+    void apply_anotherProjectOpens_saysNothing() {
+        assistant.answersBrief(Result.ok(SCIENCE_FICTION));
+        ask();
+        applyHeld();
+
+        openBook(dir.resolve("Other.epub"), BookFixtures.frankensteinImport());
+
+        assertThat(onFx(() -> brief.styleSuggestion().outcome().get().kind()))
+                .isEqualTo(StyleSuggestionOutcome.Kind.NONE);
+    }
 }

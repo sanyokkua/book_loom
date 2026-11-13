@@ -70,18 +70,21 @@ class BufferReassemblerTest {
 
         BufferReassembler.splice(SOURCE, List.of(at(0, 6, "A much longer replacement indeed.")));
 
-        assertThat(SOURCE).isEqualTo(original);
+        assertThat(original).containsExactly(SOURCE);
     }
 
     @Test
     void splice_overlappingSpans_isRejected() {
-        assertThatThrownBy(() -> spliced(at(0, 6, "x"), at(3, 13, "y")))
+        final var arg1 = at(0, 6, "x");
+        final var arg2 = at(3, 13, "y");
+        assertThatThrownBy(() -> spliced(arg1, arg2))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Overlapping");
     }
 
     @Test
     void splice_spanRunningPastTheBuffer_isRejected() {
-        assertThatThrownBy(() -> spliced(at(8, 99, "x"))).isInstanceOf(IllegalArgumentException.class);
+        final var arg = at(8, 99, "x");
+        assertThatThrownBy(() -> spliced(arg)).isInstanceOf(IllegalArgumentException.class);
     }
 }

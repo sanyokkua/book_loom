@@ -24,6 +24,7 @@ import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.app.bootstrap.ReviewModeResolver;
+import ua.bookloom.llm.knowledge.ModelKnowledgeFiles;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.ui.IoExecutor;
 import ua.bookloom.ui.UiModule;
@@ -138,6 +139,17 @@ class AppBootSmokeTest {
         assertThat(app.injector().getInstance(SegmentRepository.class)).isNotNull();
         assertThat(app.injector().getInstance(TranslationEngine.class)).isNotNull();
         assertThat(app.injector().getInstance(ChatModelFactory.class)).isNotNull();
+    }
+
+    @Test
+    void boot_knowledgeFiles_loaded() throws Exception {
+        final BookLoomApplication app = boot();
+
+        final var loaded = app.injector().getInstance(ModelKnowledgeFiles.class).load();
+
+        assertThat(loaded.isOk()).isTrue();
+        assertThat(java.util.Objects.requireNonNull(loaded.data()).dataVersion())
+                .isEqualTo("2026-10-28");
     }
 
     // IF a port the window needs were left unbound, THEN it would fail when a screen first asked for it; the injector

@@ -47,7 +47,7 @@ class ProjectActionsRenameRemoveTest extends ProjectActionsTestBase {
     @Test
     void rename_confirmed_callsTheServiceWithTheTypedNameAndRefreshesTheList() throws Exception {
         listStored(UK, DE);
-        service.edits().onRename(Result.ok(new ProjectChange.Saved(UK.withName("New name", NameOrigin.USER))));
+        service.edits().onRename(Result.ok(new ProjectChange.Saved(UK.withName("New name", NameOrigin.USER), 0)));
         renameRowOfUk();
         final int listedBefore = service.listCalls();
 
@@ -62,7 +62,7 @@ class ProjectActionsRenameRemoveTest extends ProjectActionsTestBase {
     @Test
     void rename_useAutomaticName_callsTheServiceWithNull() throws Exception {
         listStored(UK, DE);
-        service.edits().onRename(Result.ok(new ProjectChange.Saved(UK)));
+        service.edits().onRename(Result.ok(new ProjectChange.Saved(UK, 0)));
         renameRowOfUk();
 
         onFx(() -> rename.rename(null));
@@ -128,7 +128,7 @@ class ProjectActionsRenameRemoveTest extends ProjectActionsTestBase {
         onFx(() -> actions().remove(rowOf(UK)));
         final int listedBefore = service.listCalls();
 
-        onFx(() -> ((Button) required("confirm-yes")).fire());
+        onFx(((Button) required("confirm-yes"))::fire);
         settle();
 
         assertThat(service.removedProjects()).containsExactly("p-uk");
@@ -140,7 +140,7 @@ class ProjectActionsRenameRemoveTest extends ProjectActionsTestBase {
     void remove_cancelled_removesNothing() throws Exception {
         onFx(() -> actions().remove(rowOf(UK)));
 
-        onFx(() -> ((Button) required("confirm-cancel")).fire());
+        onFx(((Button) required("confirm-cancel"))::fire);
         settle();
 
         assertThat(service.removedProjects()).isEmpty();
@@ -156,7 +156,7 @@ class ProjectActionsRenameRemoveTest extends ProjectActionsTestBase {
                 new ProjectRow(summaryOf(UK), 0, ProjectStatus.NOT_STARTED, true, ViewNames.BOOK_BRIEF, "");
 
         onFx(() -> actions().remove(open));
-        onFx(() -> ((Button) required("confirm-yes")).fire());
+        onFx(((Button) required("confirm-yes"))::fire);
         settle();
 
         assertThat(service.removedProjects()).containsExactly("p-uk");
@@ -170,7 +170,7 @@ class ProjectActionsRenameRemoveTest extends ProjectActionsTestBase {
         onFx(() -> current.open(openedBookOf("p-de")));
 
         onFx(() -> actions().remove(rowOf(UK)));
-        onFx(() -> ((Button) required("confirm-yes")).fire());
+        onFx(((Button) required("confirm-yes"))::fire);
         settle();
 
         assertThat(service.removedProjects()).containsExactly("p-uk");

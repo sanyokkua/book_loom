@@ -15,8 +15,10 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SentenceSplitter;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.ReviewMode;
@@ -25,10 +27,10 @@ import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.persistence.memory.InMemoryProviderConfigs;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 
 /** Covers the public engine boundary: the job it creates runs over the stored project it is asked for. */
 class TranslationEngineImplTest {
@@ -43,7 +45,8 @@ class TranslationEngineImplTest {
                         new DocumentModule(),
                         new InMemoryPersistenceModule(),
                         new PipelineModule(),
-                        new ReviewModeTestModule())
+                        new ReviewModeTestModule(),
+                        new CallLedgerTestModule())
                 .getInstance(TranslationEngine.class);
 
         assertThat(engine).isInstanceOf(TranslationEngineImpl.class);
@@ -120,27 +123,23 @@ class TranslationEngineImplTest {
     }
 
     private static TranslationEngine engine(final TestProject project) {
+        return engine(project, new InMemoryProviderConfigs());
+    }
+
+    /** The engine over the project's stores, naming a run's provider kind from {@code providers}. */
+    static TranslationEngine engine(final TestProject project, final ProviderConfigs providers) {
         return new TranslationEngineImpl(
                 project.documents(),
                 new ObjectMapper(),
                 new PromptTemplates(),
-                project.stores().projects(),
-                project.stores().segments(),
-                project.stores().checkpoint(),
-                project.stores().openProjects(),
-                project.stores().runs(),
-                project.stores().glossary(),
-                project.stores().tm(),
-                project.stores().summaries(),
-                project.stores().lexicon(),
-                TranslationJobTestSupport.qualityLoop(),
-                Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),
-                ConsistencyPassFixture.over(project),
-                Clock.systemUTC(),
-                new UuidIdSource(),
-                RecoveryTimer.REAL,
-                WordValidator.none(),
-                RequestDefaultsSource.environmentOnly());
+                project.stores(),
+                new RunChecks(
+                        TranslationJobTestSupport.qualityLoop(),
+                        Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),
+                        ProofreadFixture.over(project),
+                        WordValidator.none()),
+                new RunPacing(Clock.systemUTC(), new UuidIdSource(), RecoveryTimer.REAL),
+                new RunLogSources(CallLedger.none(), providers));
     }
 
     private static ScriptedChatModel answers(final String reply) {

@@ -9,7 +9,7 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.project.SegmentLocator;
-import ua.bookloom.pipeline.context.ContextBudget;
+import ua.bookloom.pipeline.context.ModelWindows;
 import ua.bookloom.pipeline.project.SegmentLocators;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.run.JobModelCalls;
@@ -38,7 +38,7 @@ final class RetryCalls {
                 progress,
                 clock,
                 targetLanguage,
-                ContextBudget.DEFAULT_WINDOW,
+                ModelWindows.of(model, null),
                 locators);
     }
 }

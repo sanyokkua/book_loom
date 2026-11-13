@@ -55,7 +55,7 @@ what it proves; the test was observed red before the implementation (ADR-0032).
 | Prompt eval (`promptEval`) | production prompt builder vs real model, embedding-scored rubric | JUnit 5, real local model (env-gated, NOT CI) |
 | Visual (`visual`) | pinned-env snapshot + tolerant diff of key screens × themes | TestFX snapshot (nightly/on-demand, NOT the merge gate) |
 
-Full taxonomy and CI-vs-local split: `docs/specification/04_Build_and_Release/06_TESTING_STRATEGY.md`.
+Full taxonomy and CI-vs-local split: `docs/spec_baseline/specification/04_Build_and_Release/06_TESTING_STRATEGY.md`.
 
 ## Workflow
 
@@ -183,12 +183,12 @@ Full taxonomy and CI-vs-local split: `docs/specification/04_Build_and_Release/06
 
 ## Reference index
 
-- In-repo authorities: `docs/specification/04_Build_and_Release/06_TESTING_STRATEGY.md` (the
-  full test taxonomy + CI-vs-local split), `docs/specification/04_Build_and_Release/02_QUALITY_GATES.md`,
-  `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md` (screens/states/dialogs for the
-  conformance checklist), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md` (both client
-  dialects + response handling), `docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md`
-  (ArchUnit rules), `docs/specification/02_Architecture/09_ERROR_HANDLING.md`.
+- In-repo authorities: `docs/spec_baseline/specification/04_Build_and_Release/06_TESTING_STRATEGY.md` (the
+  full test taxonomy + CI-vs-local split), `docs/spec_baseline/specification/04_Build_and_Release/02_QUALITY_GATES.md`,
+  `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md` (screens/states/dialogs for the
+  conformance checklist), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md` (both client
+  dialects + response handling), `docs/spec_baseline/specification/02_Architecture/02_MODULES_AND_LAYERING.md`
+  (ArchUnit rules), `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md`.
 
 ## Mandatory validation checklist
 

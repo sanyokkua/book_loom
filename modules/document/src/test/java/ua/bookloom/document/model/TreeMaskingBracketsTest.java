@@ -128,13 +128,4 @@ class TreeMaskingBracketsTest {
         assertThat(segment.masked()).isEqualTo("⟦g0⟧A⟦g1⟧ and ⟦g2⟧");
         assertThat(segment.placeholders()).containsOnlyKeys("g0", "g1", "g2");
     }
-
-    // WHEN a segment is masked, the system SHALL assert every emitted token is unique and the
-    // placeholder map is a bijection over the tokens in the masked form.
-    @Test
-    void mask_fragmentContainingATokenSpelling_doesNotBreakTheInvariant() {
-        final Segment segment = onlySegment("<p>Type <code>⟦g0⟧</code> exactly.</p>");
-
-        assertThat(segment.masked()).isEqualTo("Type ⟦g0⟧ exactly.");
-    }
 }

@@ -8,6 +8,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.qa.CheckName;
 import ua.bookloom.pipeline.qa.CheckResult;
 import ua.bookloom.pipeline.qa.QaEvaluator;
@@ -24,17 +26,17 @@ class AcceptanceRuleTest {
     @ParameterizedTest
     @CsvSource({"0.0", "0.30", "0.70", "0.95", "1.0"})
     void accepts_cleanChecksAtAnyConfidence_accepted(final double confidence) {
-        assertThat(AcceptanceRule.accepts(qa(confidence, false, false), 0)).isTrue();
+        assertThat(AcceptanceRule.accepts(qa(confidence, false, false))).isTrue();
     }
 
     @Test
     void accepts_aFailedHardGate_blocksRegardlessOfConfidence() {
-        assertThat(AcceptanceRule.accepts(qa(1.0, true, false), 0)).isFalse();
+        assertThat(AcceptanceRule.accepts(qa(1.0, true, false))).isFalse();
     }
 
     @Test
     void accepts_aSoftCheckFailedOutright_blocksRegardlessOfConfidence() {
-        assertThat(AcceptanceRule.accepts(qa(1.0, false, true), 0)).isFalse();
+        assertThat(AcceptanceRule.accepts(qa(1.0, false, true))).isFalse();
     }
 
     @Test
@@ -42,13 +44,7 @@ class AcceptanceRuleTest {
         final CheckResult failedLength = CheckResult.fail(CheckName.LENGTH, "length ratio 0.47 outside [0.7,1.8]");
         final QaResult qa = new QaResult(List.of(), List.of(failedLength), 0.95, List.of(failedLength.finding()), true);
 
-        assertThat(AcceptanceRule.accepts(qa, 0)).isFalse();
-    }
-
-    @ParameterizedTest
-    @CsvSource({"1", "2", "5"})
-    void accepts_aVerifiedBlockerLeft_blocksEvenWhenEveryCheckPasses(final int blockersLeft) {
-        assertThat(AcceptanceRule.accepts(qa(0.95, false, false), blockersLeft)).isFalse();
+        assertThat(AcceptanceRule.accepts(qa)).isFalse();
     }
 
     @Test
@@ -60,20 +56,8 @@ class AcceptanceRuleTest {
                 CheckResult.pass(CheckName.LENGTH, 0.2),
                 CheckResult.skip(CheckName.GLOSSARY));
 
-        assertThat(AcceptanceRule.accepts(new QaResult(List.of(), soft, 0.70, List.of(), false), 0))
+        assertThat(AcceptanceRule.accepts(new QaResult(List.of(), soft, 0.70, List.of(), false)))
                 .isTrue();
-    }
-
-    @Test
-    void readyForReview_cleanChecks_isTrue() {
-        assertThat(AcceptanceRule.readyForReview(qa(0.9, false, false))).isTrue();
-    }
-
-    @ParameterizedTest
-    @CsvSource({"true,false", "false,true"})
-    void readyForReview_textACheckRefuses_isFalse(final boolean hardGateFailed, final boolean failedOutright) {
-        assertThat(AcceptanceRule.readyForReview(qa(0.9, hardGateFailed, failedOutright)))
-                .isFalse();
     }
 
     @Test
@@ -81,7 +65,7 @@ class AcceptanceRuleTest {
         final QaResult qa = QaEvaluator.evaluate(List.of(), reuse("Yes.", "Так."));
 
         assertThat(qa.confidence()).isEqualTo(1.0);
-        assertThat(AcceptanceRule.accepts(qa, 0)).isTrue();
+        assertThat(AcceptanceRule.accepts(qa)).isTrue();
     }
 
     @Test
@@ -90,7 +74,55 @@ class AcceptanceRuleTest {
                 CheckResult.hardGateFailed(CheckName.LOCKED_TERM, "The locked rendering of ⟦g0⟧ is missing.");
         final QaResult qa = QaEvaluator.evaluate(List.of(spanGate), reuse("Hale nodded.", "Хейл кивнув."));
 
-        assertThat(AcceptanceRule.accepts(qa, 0)).isFalse();
+        assertThat(AcceptanceRule.accepts(qa)).isFalse();
+    }
+
+    @Test
+    void decide_onlyRepairFindingLeft_acceptsWithProofreadMark() {
+        final QaFinding gender = new QaFinding("gender", Severity.MEDIUM, "\"зачинила\"", "gender");
+        final QaResult qa = withFindings(List.of(gender));
+
+        final AcceptanceRule.Decision decision = AcceptanceRule.decide(qa);
+
+        assertThat(decision.accepted()).isTrue();
+        assertThat(decision.mark()).isEqualTo(AcceptanceRule.Mark.PROOFREAD);
+        assertThat(decision.repair()).containsExactly(gender);
+        assertThat(decision.block()).isEmpty();
+    }
+
+    @Test
+    void decide_noteOnly_acceptsWithAuditMark() {
+        final QaFinding spacing = new QaFinding("fluency", Severity.LOW, "\"  \"", "spacing");
+
+        final AcceptanceRule.Decision decision = AcceptanceRule.decide(withFindings(List.of(spacing)));
+
+        assertThat(decision.accepted()).isTrue();
+        assertThat(decision.mark()).isEqualTo(AcceptanceRule.Mark.AUDIT);
+        assertThat(decision.note()).containsExactly(spacing);
+    }
+
+    @Test
+    void decide_blockLeft_flags() {
+        final QaFinding alphabet = new QaFinding("language", Severity.HIGH, "\"кобылу\"", "alphabet");
+        final QaFinding gender = new QaFinding("gender", Severity.MEDIUM, "\"зачинила\"", "gender");
+
+        final AcceptanceRule.Decision decision = AcceptanceRule.decide(withFindings(List.of(alphabet, gender)));
+
+        assertThat(decision.accepted()).isFalse();
+        assertThat(decision.block()).containsExactly(alphabet);
+        assertThat(decision.mark()).isEqualTo(AcceptanceRule.Mark.PROOFREAD);
+    }
+
+    @Test
+    void decide_lowConfidenceNoFinding_accepts() {
+        final AcceptanceRule.Decision decision = AcceptanceRule.decide(qa(0.30, false, false));
+
+        assertThat(decision.accepted()).isTrue();
+        assertThat(decision.mark()).isEqualTo(AcceptanceRule.Mark.NONE);
+    }
+
+    private static QaResult withFindings(final List<QaFinding> findings) {
+        return new QaResult(List.of(), List.of(), 0.9, findings, false);
     }
 
     private static SoftCheckInput reuse(final String source, final String target) {

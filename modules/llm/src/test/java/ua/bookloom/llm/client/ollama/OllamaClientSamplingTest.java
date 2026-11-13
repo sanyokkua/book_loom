@@ -79,7 +79,11 @@ class OllamaClientSamplingTest {
                 null,
                 null,
                 null,
-                sampling);
+                sampling,
+                null,
+                null,
+                null,
+                false);
     }
 
     private void send(ChatRequest request) {

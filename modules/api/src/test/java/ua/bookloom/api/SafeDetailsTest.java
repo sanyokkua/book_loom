@@ -1,6 +1,7 @@
 package ua.bookloom.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -14,8 +15,11 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import ua.bookloom.api.llm.ServerEngine;
 
 /**
  * The safe-details allowlist — the privacy half of the error envelope.
@@ -37,7 +41,10 @@ class SafeDetailsTest {
             "qaFindings",
             "expectedPlaceholders",
             "observedPlaceholders",
-            "folderName");
+            "folderName",
+            "promptTokens",
+            "windowTokens",
+            "engine");
 
     // WHEN a failure carries technical detail, the system SHALL
     // populate AppError.details only from the allowlisted fields: HTTP status, endpoint host, model name, timeout,
@@ -52,12 +59,14 @@ class SafeDetailsTest {
                 .withAttempt(2, 3)
                 .withQaFindings(List.of("tagMismatch", "lengthRatio"))
                 .withPlaceholderMultiset(List.of("⟦g0⟧", "⟦g1⟧"), List.of("⟦g0⟧"))
+                .withTokenCounts(9120, 8192)
                 .render();
 
         assertThat(details)
                 .isEqualTo("httpStatus=429, endpointHost=localhost:11434, model=llama3.1:8b, timeoutMs=30000, "
                         + "attempt=2/3, qaFindings=tagMismatch,lengthRatio, "
-                        + "expectedPlaceholders=⟦g0⟧ ⟦g1⟧, observedPlaceholders=⟦g0⟧");
+                        + "expectedPlaceholders=⟦g0⟧ ⟦g1⟧, observedPlaceholders=⟦g0⟧, "
+                        + "promptTokens=9120, windowTokens=8192");
     }
 
     // IF a value would carry a credential, THEN the system SHALL
@@ -100,6 +109,45 @@ class SafeDetailsTest {
                 .as("no allowlisted field may be populated from a throwable")
                 .allSatisfy(method ->
                         assertThat(Stream.of(method.getParameterTypes())).noneMatch(Throwable.class::isAssignableFrom));
+    }
+
+    // The window names the engine in its own language, so the details carry the engine and nothing a reply wrote.
+    @Test
+    void withEngine_constantName_isRenderedAndReadBack() {
+        final String details = SafeDetails.empty()
+                .withReason(FailureReason.ENGINE_MISMATCH)
+                .withEndpoint(URI.create("http://127.0.0.1:11434"))
+                .withEngine("LM_STUDIO")
+                .render();
+
+        assertThat(details).isEqualTo("reason=engine-mismatch, endpointHost=127.0.0.1:11434, engine=LM_STUDIO");
+        assertThat(ServerEngine.in(details)).contains(ServerEngine.LM_STUDIO);
+    }
+
+    // The window says which id a server lacks in its own words, so the id is read back from the details.
+    @ParameterizedTest
+    @CsvSource({
+        "'reason=model-not-listed, endpointHost=127.0.0.1:1234, model=gemma-4-e4b-typo, engine=LM_STUDIO', gemma-4-e4b-typo",
+        "'model=google/gemma-4-e4b', google/gemma-4-e4b",
+        "'httpStatus=404, model=a b, timeoutMs=5', a b"
+    })
+    void modelIn_renderedModel_isReadBack(final String details, final String model) {
+        assertThat(SafeDetails.modelIn(details)).contains(model);
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"reason=auth", "endpointHost=example.com"})
+    void modelIn_noModel_isEmpty(final String details) {
+        assertThat(SafeDetails.modelIn(details)).isEmpty();
+    }
+
+    // IF any text could be passed as the engine, THEN a reply's words could reach a dialog through it.
+    @ParameterizedTest
+    @ValueSource(strings = {"lm studio", "LM_STUDIO, model=x", "", "Ollama"})
+    void withEngine_notAConstantName_isRefused(final String name) {
+        final var target = SafeDetails.empty();
+        assertThatThrownBy(() -> target.withEngine(name)).isInstanceOf(IllegalArgumentException.class);
     }
 
     // A value passed to the wrong field cannot be prevented by an API, but its blast radius can be bounded: a newline
@@ -243,6 +291,23 @@ class SafeDetailsTest {
         assertThat(extended.render()).isEqualTo("httpStatus=500, model=llama3");
     }
 
+    // The flag says "696 of 512 tokens" from these typed counts; the provider's sentence they came from never enters.
+    @Test
+    void withTokenCounts_696And512_rendersBothCounts() {
+        final String details = SafeDetails.empty()
+                .withReason(FailureReason.CONTEXT_OVERFLOW)
+                .withTokenCounts(696, 512)
+                .render();
+
+        assertThat(details).isEqualTo("reason=context-overflow, promptTokens=696, windowTokens=512");
+    }
+
+    @Test
+    void withTokenCounts_negativeCount_isRefused() {
+        final var target = SafeDetails.empty();
+        assertThatThrownBy(() -> target.withTokenCounts(-1, 512)).isInstanceOf(IllegalArgumentException.class);
+    }
+
     // IF the folder's whole path were kept, THEN a dialog and a log line would name the person's home folder.
     @Test
     void withFolder_aDeepPath_keepsOnlyTheFoldersOwnName() {
@@ -270,5 +335,21 @@ class SafeDetailsTest {
     @ValueSource(strings = {"httpStatus=500", "reason=unheard-of", "folder=reason=disk-full"})
     void in_detailsWithoutAKnownLeadingReason_isEmpty(final String details) {
         assertThat(FailureReason.in(details)).isEmpty();
+    }
+
+    // The flag says "696 of 512 tokens" from the typed counts, never from the provider's sentence.
+    @Test
+    void promptTokensIn_renderedWithTokenCounts_readsBothBack() {
+        final String details = SafeDetails.empty()
+                .withReason(FailureReason.CONTEXT_OVERFLOW)
+                .withHttpStatus(400)
+                .withTokenCounts(696, 512)
+                .render();
+
+        assertThat(DetailCounts.promptTokensIn(details)).hasValue(696);
+        assertThat(DetailCounts.windowTokensIn(details)).hasValue(512);
+        assertThat(DetailCounts.promptTokensIn("reason=context-overflow, httpStatus=400"))
+                .isEmpty();
+        assertThat(DetailCounts.windowTokensIn(null)).isEmpty();
     }
 }

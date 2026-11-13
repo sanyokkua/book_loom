@@ -34,7 +34,7 @@ class NoSourceLanguageReadersTest {
     }
 
     private static GlossaryEntry entry(final String term, final TermType type) {
-        return new GlossaryEntry("id-" + term, "p1", term, null, type, Gender.UNKNOWN, false);
+        return GlossaryEntry.of("id-" + term, "p1", term, null, type, Gender.UNKNOWN, false);
     }
 
     private static List<NameCandidate> namesOf(final List<String> lines, final @Nullable String language) {

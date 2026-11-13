@@ -38,6 +38,8 @@ import ua.bookloom.ui.state.Tone;
 @Slf4j
 final class StructureChecksRows extends VBox {
 
+    private static final String STRUCTURE_CHECK_ROUNDTRIP = "structure-check-roundtrip";
+
     private static final double ROW_SPACING = 12;
     private static final double GLYPH_SPACING = 10;
     private static final String WARNING_GLYPH = "⚠";
@@ -102,7 +104,7 @@ final class StructureChecksRows extends VBox {
         switch (state) {
             case StructureChecks.Running _ ->
                 rows.add(row(
-                        "structure-check-roundtrip", Messages.ELLIPSIS, Tone.INFO, MessageKey.STRUCTURE_CHECK_RUNNING));
+                        STRUCTURE_CHECK_ROUNDTRIP, Messages.ELLIPSIS, Tone.INFO, MessageKey.STRUCTURE_CHECK_RUNNING));
             case StructureChecks.Finished finished -> addFinished(rows, finished);
         }
         getChildren().setAll(rows);
@@ -112,7 +114,7 @@ final class StructureChecksRows extends VBox {
         if (finished.hasReport()) {
             addReport(rows, finished.requiredReport());
         } else {
-            rows.add(row("structure-check-roundtrip", "!", Tone.WARN, MessageKey.STRUCTURE_CHECK_UNAVAILABLE));
+            rows.add(row(STRUCTURE_CHECK_ROUNDTRIP, "!", Tone.WARN, MessageKey.STRUCTURE_CHECK_UNAVAILABLE));
         }
         if (technical.get() && finished.oversizedSegments() > 0) {
             rows.add(warning(finished.oversizedSegments()));
@@ -125,7 +127,7 @@ final class StructureChecksRows extends VBox {
                 && report.idsPreserved()
                 && report.missingIds().isEmpty();
         if (clean && !technical.get()) {
-            rows.add(row("structure-check-roundtrip", "✓", Tone.OK, MessageKey.STRUCTURE_CHECK_PLAIN));
+            rows.add(row(STRUCTURE_CHECK_ROUNDTRIP, "✓", Tone.OK, MessageKey.STRUCTURE_CHECK_PLAIN));
             return;
         }
         rows.add(roundTripRow(report));
@@ -134,18 +136,18 @@ final class StructureChecksRows extends VBox {
 
     private Node roundTripRow(final RoundTripReport report) {
         if (report.structurePreserved()) {
-            return row("structure-check-roundtrip", "✓", Tone.OK, MessageKey.STRUCTURE_CHECK_PASSED);
+            return row(STRUCTURE_CHECK_ROUNDTRIP, "✓", Tone.OK, MessageKey.STRUCTURE_CHECK_PASSED);
         }
         if (report.sourceSegments() != report.copySegments()) {
             return row(
-                    "structure-check-roundtrip",
+                    STRUCTURE_CHECK_ROUNDTRIP,
                     "✗",
                     Tone.ERR,
                     MessageKey.STRUCTURE_CHECK_FAILED_COUNTS,
                     numbers.format(report.copySegments()),
                     report.sourceSegments());
         }
-        return row("structure-check-roundtrip", "✗", Tone.ERR, MessageKey.STRUCTURE_CHECK_FAILED);
+        return row(STRUCTURE_CHECK_ROUNDTRIP, "✗", Tone.ERR, MessageKey.STRUCTURE_CHECK_FAILED);
     }
 
     private Node idsRow(final RoundTripReport report) {

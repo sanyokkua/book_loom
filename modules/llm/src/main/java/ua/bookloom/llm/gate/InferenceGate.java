@@ -26,11 +26,11 @@ public final class InferenceGate {
             final Result<T> result = Objects.requireNonNull(operation.get(), "operation result");
             logOperationFinished(result);
             return result;
-        } catch (InterruptedException interrupted) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             log.debug("Inference gate acquisition interrupted; cancellation will be returned");
             return cancelled();
-        } catch (Throwable failure) {
+        } catch (Exception failure) {
             log.error(
                     "Inference gate operation failed failureType={}",
                     failure.getClass().getSimpleName(),

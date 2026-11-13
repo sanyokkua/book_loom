@@ -13,7 +13,7 @@ mode pauses the run — so that the few segments the pipeline could not clear ar
 The Translating screen SHALL offer a `Review flagged (n)` control that opens a review panel listing every FLAGGED
 segment by its locator with a badge for its main finding, and SHALL have no separate review entry in the navigation.
 
-**Source**: FR-REVIEW-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`, `docs/specification/mockups/ui-mockup.html` (Review queue), ADR-0036. In plain words: review happens beside the run it belongs to, so a person never loses sight of progress; the badge and filters let them take the name problems first, or only the omissions. The badge shows the worst problem, and among equally bad ones the kind a reader notices first — a wrong name before a wrong language before a missing clause. A locator like `ch5 · p12` is what a reader can find in the book — chapter five, twelfth paragraph — where an internal id such as `ch05.xhtml:11` is not, and one rule keeps the panel, a toast and the report from naming the same paragraph three ways. The mockup draws review as a separate step; keeping it inside Translating is the owner's approved departure.
+**Source**: FR-REVIEW-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`, `docs/spec_baseline/specification/mockups/ui-mockup.html` (Review queue), ADR-0036. In plain words: review happens beside the run it belongs to, so a person never loses sight of progress; the badge and filters let them take the name problems first, or only the omissions. The badge shows the worst problem, and among equally bad ones the kind a reader notices first — a wrong name before a wrong language before a missing clause. A locator like `ch5 · p12` is what a reader can find in the book — chapter five, twelfth paragraph — where an internal id such as `ch05.xhtml:11` is not, and one rule keeps the panel, a toast and the report from naming the same paragraph three ways. The mockup draws review as a separate step; keeping it inside Translating is the owner's approved departure.
 
 #### Scenario: Three flagged segments are listed
 
@@ -34,7 +34,7 @@ list: `names` to segments with a glossary finding (a `terminology` finding from 
 `omissions` to segments with an omission finding, and `foreign · kept` to segments marked foreign or holding a kept
 foreign run.
 
-**Source**: FR-REVIEW-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`, ADR-0036. In plain words: the chips let a person take one kind of problem at a time, for example the name problems first.
+**Source**: FR-REVIEW-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`, ADR-0036. In plain words: the chips let a person take one kind of problem at a time, for example the name problems first.
 
 #### Scenario: A filter narrows the list
 
@@ -54,7 +54,7 @@ The review panel SHALL badge each listed segment with its main finding, the find
 SHALL go first to a glossary finding (badge `name`), then a language finding (`wrong lang?`), then an omission finding
 (`omission`), and any other finding, or a stored score with no finding, SHALL show `low score`.
 
-**Source**: FR-REVIEW-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, ADR-0036. In plain words: the badge shows the worst problem, and among equally bad ones the kind a reader notices first — a wrong name before a wrong language before a missing clause.
+**Source**: FR-REVIEW-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, ADR-0036. In plain words: the badge shows the worst problem, and among equally bad ones the kind a reader notices first — a wrong name before a wrong language before a missing clause.
 
 #### Scenario: The worst finding decides the badge
 
@@ -80,7 +80,7 @@ A segment's locator SHALL read `ch<n> · p<mm>`, where `n` is its unit's 1-based
 and `mm` is the segment's 1-based position within its unit, zero-padded to two digits, and SHALL name the segment the
 same way in the review panel, in messages and in the export's report.
 
-**Source**: FR-REVIEW-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, ADR-0036. In plain words: a locator like `ch5 · p12` is what a reader can find in the book — chapter five, twelfth paragraph — where an internal id such as `ch05.xhtml:11` is not, and one rule keeps the panel, a toast and the report from naming the same paragraph three ways.
+**Source**: FR-REVIEW-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, ADR-0036. In plain words: a locator like `ch5 · p12` is what a reader can find in the book — chapter five, twelfth paragraph — where an internal id such as `ch05.xhtml:11` is not, and one rule keeps the panel, a toast and the report from naming the same paragraph three ways.
 
 #### Scenario: Locators count from one and pad the paragraph
 
@@ -93,7 +93,7 @@ A segment of the auxiliary unit SHALL be located by its kind's label instead of 
 `· <kk>` where `kk` is its 1-based position among the auxiliary segments of that kind, zero-padded to two digits; the
 title takes no position.
 
-**Source**: FR-REVIEW-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, ADR-0036. In plain words: auxiliary text such as the table of contents or an image description belongs to no chapter, so it is named by what it is.
+**Source**: FR-REVIEW-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, ADR-0036. In plain words: auxiliary text such as the table of contents or an image description belongs to no chapter, so it is named by what it is.
 
 #### Scenario: Auxiliary segments read by kind
 
@@ -107,7 +107,7 @@ title takes no position.
 IF the review panel opens with no FLAGGED segment, THEN it SHALL show `Nothing flagged — every chunk cleared the
 checks` with a Back to progress action.
 
-**Source**: FR-REVIEW-Q4 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#empty-states`, ADR-0036. In plain words: an empty list must say that is good news, not look broken; and in the default mode, where nobody watched the run, the person may still want to read and correct segments that passed. Text the brief chose not to translate — for example the table of contents with its switch off (the translation-pipeline capability defines "kept as source by choice") — is neither a problem nor unfinished work, so it is out of the flagged list and out of the pending count, and only All segments shows it.
+**Source**: FR-REVIEW-Q4 (`docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#empty-states`, ADR-0036. In plain words: an empty list must say that is good news, not look broken; and in the default mode, where nobody watched the run, the person may still want to read and correct segments that passed. Text the brief chose not to translate — for example the table of contents with its switch off (the translation-pipeline capability defines "kept as source by choice") — is neither a problem nor unfinished work, so it is out of the flagged list and out of the pending count, and only All segments shows it.
 
 #### Scenario: The empty state
 
@@ -120,7 +120,7 @@ WHEN an Unattended run has finished, the review panel SHALL also offer All segme
 decided segment and every segment kept as source by choice, the latter marked `kept as source` and shown by no other
 list; the review counts SHALL report segments kept as source by choice on their own, never as pending.
 
-**Source**: FR-REVIEW-Q4 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#empty-states`, ADR-0036. In plain words: in the default mode nobody watched the run, so the person may still want to read and correct segments that passed; text the brief chose not to translate is neither a problem nor unfinished work, so only All segments shows it and it is never counted as pending.
+**Source**: FR-REVIEW-Q4 (`docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#empty-states`, ADR-0036. In plain words: in the default mode nobody watched the run, so the person may still want to read and correct segments that passed; text the brief chose not to translate is neither a problem nor unfinished work, so only All segments shows it and it is never counted as pending.
 
 #### Scenario: Browsing an accepted segment after an Unattended run
 
@@ -139,7 +139,7 @@ WHEN a segment is selected in the review panel, the application SHALL show its s
 editable and marked EDITABLE, with no inline diff, each `⟦gN⟧` placeholder of the book's markup shown where it stands
 and each locked name shown as its rendering.
 
-**Source**: FR-REVIEW-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#side-by-side-compare`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`. In plain words: two plain texts side by side are what a translator reads fastest; the findings say why the segment is here, and the context line says what the model knew when it translated it. The placeholders stay visible so the person keeps the bold, italics and links in place when they edit; a locked name reads as the name, because it is not markup the person has to protect. A segment whose every reply broke the formatting used to open on its English source in the pane labelled with the target language, which read as an untranslated segment although the model had translated it; showing the refused reply, labelled, lets the person fix the one token instead of retyping the paragraph.
+**Source**: FR-REVIEW-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#side-by-side-compare`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`. In plain words: two plain texts side by side are what a translator reads fastest; the findings say why the segment is here, and the context line says what the model knew when it translated it. The placeholders stay visible so the person keeps the bold, italics and links in place when they edit; a locked name reads as the name, because it is not markup the person has to protect. A segment whose every reply broke the formatting used to open on its English source in the pane labelled with the target language, which read as an untranslated segment although the model had translated it; showing the refused reply, labelled, lets the person fix the one token instead of retyping the paragraph.
 
 #### Scenario: A flagged segment in the compare
 
@@ -159,7 +159,7 @@ model's refused reply (its rejected target) under the note "No usable translatio
 below, but it broke the formatting.", else the segment's source under the note "No translation kept — showing the
 source."
 
-**Source**: FR-REVIEW-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#side-by-side-compare`. In plain words: the pane opens on the most useful text, and says so when it is not a translation. A segment whose every reply broke the formatting used to open on its English source in the pane labelled with the target language; showing the refused reply, labelled, lets the person fix the one token instead of retyping the paragraph.
+**Source**: FR-REVIEW-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#side-by-side-compare`. In plain words: the pane opens on the most useful text, and says so when it is not a translation. A segment whose every reply broke the formatting used to open on its English source in the pane labelled with the target language; showing the refused reply, labelled, lets the person fix the one token instead of retyping the paragraph.
 
 #### Scenario: A segment with only a refused reply shows it, labelled
 
@@ -184,7 +184,7 @@ criterion, the words it removed in the error colour and the words it put there i
 finding as its kind, severity, note and the check or reviewer that raised it — a badge with a stored score when the
 record has one, and a context line naming what the segment was translated with.
 
-**Source**: FR-REVIEW-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#side-by-side-compare`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`. In plain words: the findings say why the segment is here, and the context line says what the model knew when it translated it.
+**Source**: FR-REVIEW-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#side-by-side-compare`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`. In plain words: the findings say why the segment is here, and the context line says what the model knew when it translated it.
 
 #### Scenario: A flagged segment shows its score and context
 
@@ -211,7 +211,7 @@ The application SHALL start every segment as PENDING and move it only through th
 SHALL never return a segment to PENDING, SHALL never let a retry lower a segment's status, and SHALL keep a FLAGGED
 segment FLAGGED for the rest of its run unless the person acts on it.
 
-**Source**: FR-REVIEW-06, FR-REVIEW-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-status-state-machine`. In plain words: every segment's state is decided by a small, fixed set of moves, so progress counts, resume and export always agree about what is done; a flagged segment is not retried automatically, because it already used its repair budget. A retry on an accepted segment is the person asking for a better wording, so a worse attempt must not cost them the translation they already had. A segment a run has not decided yet is never accepted by a person: a run paused for review has always decided the segment it names before it pauses.
+**Source**: FR-REVIEW-06, FR-REVIEW-08 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-status-state-machine`. In plain words: every segment's state is decided by a small, fixed set of moves, so progress counts, resume and export always agree about what is done; a flagged segment is not retried automatically, because it already used its repair budget. A retry on an accepted segment is the person asking for a better wording, so a worse attempt must not cost them the translation they already had. A segment a run has not decided yet is never accepted by a person: a run paused for review has always decided the segment it names before it pauses.
 
 #### Scenario: The pipeline decides a pending segment
 
@@ -278,7 +278,7 @@ The application SHALL refuse with `ErrorCode.validation`, changing nothing, an a
 does not start from: Accept on a PENDING or REVISED segment, Save edit on a PENDING one, Revert on one that is not
 REVISED, and Retry on a PENDING or REVISED one.
 
-**Source**: FR-REVIEW-06, FR-REVIEW-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-status-state-machine`. In plain words: a segment a run has not decided yet is never accepted by a person, and a revert or retry makes sense only on a segment that has something to revert or retry.
+**Source**: FR-REVIEW-06, FR-REVIEW-08 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-status-state-machine`. In plain words: a segment a run has not decided yet is never accepted by a person, and a revert or retry makes sense only on a segment that has something to revert or retry.
 
 #### Scenario: A pending segment cannot be accepted
 
@@ -312,7 +312,7 @@ mark the segment ACCEPTED; WHEN they press Save edit, it SHALL store their text,
 and mark the segment REVISED while keeping the machine target, so the edit opens again exactly as it was saved; WHEN
 they press Revert to machine target, it SHALL clear the edit and mark the segment ACCEPTED.
 
-**Source**: FR-REVIEW-05, FR-REVIEW-08, FR-REVIEW-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`. In plain words: the machine target is never thrown away, so an edit can always be undone; and because Accept means "the machine was right", it cannot be pressed while the person's own typing is pending — they must keep or drop it explicitly. An edit that deletes a placeholder would break the book's markup, so it is refused. A saved edit keeps its placeholders, so the person can come back and edit it a second time without the formatting being lost. This replaces the reference's rule that Accept on a dirty editor saves the edit first. A segment can be flagged with no machine target at all — the model refused, answered nothing or overflowed its context — and Accept would then have nothing to keep, so it says what to do instead; the editor opens on the source so the person can write the translation themselves.
+**Source**: FR-REVIEW-05, FR-REVIEW-08, FR-REVIEW-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`. In plain words: the machine target is never thrown away, so an edit can always be undone; and because Accept means "the machine was right", it cannot be pressed while the person's own typing is pending — they must keep or drop it explicitly. An edit that deletes a placeholder would break the book's markup, so it is refused. A saved edit keeps its placeholders, so the person can come back and edit it a second time without the formatting being lost. This replaces the reference's rule that Accept on a dirty editor saves the edit first. A segment can be flagged with no machine target at all — the model refused, answered nothing or overflowed its context — and Accept would then have nothing to keep, so it says what to do instead; the editor opens on the source so the person can write the translation themselves.
 
 #### Scenario: Saving an edit keeps the machine target
 
@@ -334,7 +334,7 @@ they press Revert to machine target, it SHALL clear the edit and mark the segmen
 WHILE the target pane holds unsaved changes, Accept SHALL be disabled with the hint `Editing disables Accept until you
 Save or Revert.`, and re-reading the list or the segment SHALL NOT replace text the person has typed and not saved.
 
-**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`. In plain words: Accept means "the machine was right", so it cannot be pressed while the person's own typing is pending — they must keep or drop it explicitly, and a refresh must never eat what they typed. This replaces the reference's rule that Accept on a dirty editor saves the edit first.
+**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`. In plain words: Accept means "the machine was right", so it cannot be pressed while the person's own typing is pending — they must keep or drop it explicitly, and a refresh must never eat what they typed. This replaces the reference's rule that Accept on a dirty editor saves the edit first.
 
 #### Scenario: A dirty editor disables Accept
 
@@ -354,7 +354,7 @@ repair (document-round-trip, "Repair a refused target's placeholder tokens witho
 text; IF the tokens still do not restore, THEN it SHALL refuse the edit in place with the reason and keep the typed
 text.
 
-**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`. In plain words: an edit that deletes a placeholder would break the book's markup, so it is repaired when that is certain and refused when it is not, never saved broken.
+**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`. In plain words: an edit that deletes a placeholder would break the book's markup, so it is repaired when that is certain and refused when it is not, never saved broken.
 
 #### Scenario: An edit that drops its placeholders gets them back
 
@@ -374,7 +374,7 @@ text.
 WHEN a saved edit is refused for its placeholders, the review panel SHALL show beside the actions a banner naming the
 tokens the edit lacks and those it holds too often, the lacking ones as chips that insert their token at the cursor.
 
-**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`. In plain words: a refusal that does not say which token is wrong leaves the person guessing; a chip puts the missing token back with one click.
+**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`. In plain words: a refusal that does not say which token is wrong leaves the person guessing; a chip puts the missing token back with one click.
 
 #### Scenario: A refused edit offers the missing tokens as chips
 
@@ -388,7 +388,7 @@ tokens the edit lacks and those it holds too often, the lacking ones as chips th
 WHILE a run is translating or a retry is in flight, the target pane SHALL be read-only and a note beside the actions
 SHALL say why — "Review is available when the run pauses." — instead of leaving Save edit silently unavailable.
 
-**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`. In plain words: an edit made while the run decides the same segment would race it, so the pane waits for the pause and says so.
+**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`. In plain words: an edit made while the run decides the same segment would race it, so the pane waits for the pause and says so.
 
 #### Scenario: The target is read-only while a run translates
 
@@ -402,7 +402,7 @@ IF Accept is requested for a segment that holds no machine target, THEN the appl
 `ErrorCode.validation` and the message `There is no machine translation to accept — edit it or retry.` and SHALL change
 nothing.
 
-**Source**: FR-REVIEW-05, FR-REVIEW-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`. In plain words: a segment can be flagged with no machine target at all — the model refused, answered nothing or overflowed its context — and Accept would then have nothing to keep, so it says what to do instead; the editor opens on the source so the person can write the translation themselves.
+**Source**: FR-REVIEW-05, FR-REVIEW-08 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`. In plain words: a segment can be flagged with no machine target at all — the model refused, answered nothing or overflowed its context — and Accept would then have nothing to keep, so it says what to do instead; the editor opens on the source so the person can write the translation themselves.
 
 #### Scenario: Accept without a machine target is refused
 
@@ -417,7 +417,7 @@ nothing.
 Accept, Save edit, Revert, a passing retry and an accepted proposal SHALL mark the segment reviewed; Skip and a
 failing retry SHALL NOT.
 
-**Source**: FR-REVIEW-05, FR-REVIEW-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`. In plain words: "reviewed" counts the segments a person actually dealt with, so skipping a segment or a retry that failed must not inflate it.
+**Source**: FR-REVIEW-05, FR-REVIEW-08 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`. In plain words: "reviewed" counts the segments a person actually dealt with, so skipping a segment or a retry that failed must not inflate it.
 
 #### Scenario: Accept marks the segment reviewed
 
@@ -442,7 +442,7 @@ segment again with the same brief, glossary entries, recurring-term renderings, 
 text it first saw — as they read then, not as they read now — adding the note as an extra instruction and lowering the
 temperature when `Lower temperature for this retry` is checked.
 
-**Source**: FR-REVIEW-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-A1, FR-REVIEW-A2 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-retry-with-note`, ADR-0038. In plain words: a retry must be a fair second attempt at the same problem, not a translation with different context (the recurring-term renderings included); the note lets the person steer it ("keep it more formal"). The same gates, checks and reviewer decide it as decided the first draft (the quality-gates capability), but a retry is one attempt the person asked for, not a new round of automatic repairs — if it fails, the person sees why and chooses again. The temperature values are the inference capability's. When a retry may run at all is "Allow a retry whenever no run of the project is running".
+**Source**: FR-REVIEW-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-A1, FR-REVIEW-A2 (`docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-retry-with-note`, ADR-0038. In plain words: a retry must be a fair second attempt at the same problem, not a translation with different context (the recurring-term renderings included); the note lets the person steer it ("keep it more formal"). The same gates, checks and reviewer decide it as decided the first draft (the quality-gates capability), but a retry is one attempt the person asked for, not a new round of automatic repairs — if it fails, the person sees why and chooses again. The temperature values are the inference capability's. When a retry may run at all is "Allow a retry whenever no run of the project is running".
 
 #### Scenario: Retry with a note passes
 
@@ -472,7 +472,7 @@ The application SHALL pass a retried draft through the hard gates, the soft chec
 enables the reviewer, a reviewer call over that one pair, and SHALL decide it by the acceptance rule, making no repair
 rounds.
 
-**Source**: FR-REVIEW-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-A1, FR-REVIEW-A2 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`), ADR-0038. In plain words: the same gates, checks and reviewer decide a retry as decided the first draft (the quality-gates capability), but a retry is one attempt the person asked for, not a new round of automatic repairs — if it fails, the person sees why and chooses again.
+**Source**: FR-REVIEW-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-A1, FR-REVIEW-A2 (`docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`), ADR-0038. In plain words: the same gates, checks and reviewer decide a retry as decided the first draft (the quality-gates capability), but a retry is one attempt the person asked for, not a new round of automatic repairs — if it fails, the person sees why and chooses again.
 
 #### Scenario: A retry makes no repair rounds
 
@@ -487,7 +487,7 @@ WHEN a retried draft passes, the application SHALL mark the segment ACCEPTED wit
 drafted; WHEN it fails, the application SHALL leave a FLAGGED segment FLAGGED with the new findings and an ACCEPTED
 segment ACCEPTED with its previous target, reporting the new findings.
 
-**Source**: FR-REVIEW-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-A1, FR-REVIEW-A2 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`), ADR-0038. In plain words: a retry on an accepted segment is the person asking for a better wording, so a worse attempt must not cost them the translation they already had.
+**Source**: FR-REVIEW-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-A1, FR-REVIEW-A2 (`docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`), ADR-0038. In plain words: a retry on an accepted segment is the person asking for a better wording, so a worse attempt must not cost them the translation they already had.
 
 #### Scenario: A failing retry stays flagged with new findings
 
@@ -507,7 +507,7 @@ application SHALL allow Retry and Retry with note; IF a retry is requested while
 it SHALL refuse it with `ErrorCode.busy` and make no model call; and WHILE a retry is in flight, the Translating screen
 SHALL make Resume and the other review actions unavailable.
 
-**Source**: FR-REVIEW-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-INFER-06 (`#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#inference-gate`, ADR-0034, ADR-0036. In plain words: only one model call runs at a time. A running book is using the model, so a retry would only queue behind it; a paused run holds no place (the translation-pipeline capability's "Hold no model-call permit while paused"), so a retry during a review pause reaches the model at once — which is exactly when a person wants it. The run's recorded state (the resume capability's "Record whether a run is running, paused or ended") is what tells the two apart. While the retry runs, resuming the book would put two calls in line again.
+**Source**: FR-REVIEW-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-INFER-06 (`#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#inference-gate`, ADR-0034, ADR-0036. In plain words: only one model call runs at a time. A running book is using the model, so a retry would only queue behind it; a paused run holds no place (the translation-pipeline capability's "Hold no model-call permit while paused"), so a retry during a review pause reaches the model at once — which is exactly when a person wants it. The run's recorded state (the resume capability's "Record whether a run is running, paused or ended") is what tells the two apart. While the retry runs, resuming the book would put two calls in line again.
 
 #### Scenario: Retry during a review pause is allowed
 
@@ -535,7 +535,7 @@ WHEN a run pauses for review naming a segment, the Translating screen SHALL open
 selected in the compare; WHILE the review mode is Manual, the compare SHALL offer Accept & continue, which confirms the
 segment as Accept does and then resumes the run.
 
-**Source**: FR-REVIEW-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`, ADR-0036. In plain words: when the run stops for the person, the thing to look at is already in front of them. When each review mode pauses — Assisted on each flagged segment, Manual after every segment, Unattended never — and what an edit made during the pause feeds after the resume are the resume capability's "Pause for review as the review mode says" and "Continue after the person acts on the paused segment"; this requirement covers only what the panel does.
+**Source**: FR-REVIEW-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`, ADR-0036. In plain words: when the run stops for the person, the thing to look at is already in front of them. When each review mode pauses — Assisted on each flagged segment, Manual after every segment, Unattended never — and what an edit made during the pause feeds after the resume are the resume capability's "Pause for review as the review mode says" and "Continue after the person acts on the paused segment"; this requirement covers only what the panel does.
 
 #### Scenario: Assisted opens the flagged segment
 
@@ -555,7 +555,7 @@ when the person pauses it first — and, WHEN segments are still FLAGGED or PEND
 machine target, or its source when it has none, and each PENDING segment's source, and SHALL state how many of each were
 written.
 
-**Source**: FR-REVIEW-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-X1, FR-REVIEW-X2 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), ADR-0035. In plain words: review is optional, so it must never block getting the book out; the person is told how much of it is unreviewed or untranslated. While a run is translating, a book written would disagree with what the run decides a moment later, so export waits for a pause. A segment flagged because its markup never restored has no machine target, so its source is written rather than broken markup. How the file is written belongs to the export capability.
+**Source**: FR-REVIEW-07 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-X1, FR-REVIEW-X2 (`docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), ADR-0035. In plain words: review is optional, so it must never block getting the book out; the person is told how much of it is unreviewed or untranslated. While a run is translating, a book written would disagree with what the run decides a moment later, so export waits for a pause. A segment flagged because its markup never restored has no machine target, so its source is written rather than broken markup. How the file is written belongs to the export capability.
 
 #### Scenario: Exporting with flags and pending segments
 
@@ -575,7 +575,7 @@ WHEN backward revision proposes a change to a segment the person edited, the app
 the review panel beside the person's text and SHALL change that segment only when the person accepts the proposal,
 keeping the accepted proposal, like a saved edit, placeholders included.
 
-**Source**: FR-REVIEW-10 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-ALGO-D1, FR-ALGO-D3 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`). In plain words: a whole-book consistency pass may fix a pronoun once a character's gender is known, but a person's own edit is theirs — the pass may suggest, never overwrite. An accepted proposal becomes the person's text, so it can be edited again like any other edit.
+**Source**: FR-REVIEW-10 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-ALGO-D1, FR-ALGO-D3 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`). In plain words: a whole-book consistency pass may fix a pronoun once a character's gender is known, but a person's own edit is theirs — the pass may suggest, never overwrite. An accepted proposal becomes the person's text, so it can be edited again like any other edit.
 
 #### Scenario: A proposal waits for the person
 
@@ -603,7 +603,7 @@ keeping the accepted proposal, like a saved edit, placeholders included.
 The application SHALL keep every review action's result for the rest of the session and SHALL NOT keep it after the
 application closes.
 
-**Source**: FR-REVIEW-A3 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`), ADR-0034. In plain words: storage is in memory until the database arrives, so a review done today is lost on quitting; this is stated so nobody mistakes it for a bug, and it is what the persistence change will lift.
+**Source**: FR-REVIEW-A3 (`docs/spec_baseline/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`), ADR-0034. In plain words: storage is in memory until the database arrives, so a review done today is lost on quitting; this is stated so nobody mistakes it for a bug, and it is what the persistence change will lift.
 
 #### Scenario: A review survives navigation but not a restart
 

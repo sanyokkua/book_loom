@@ -4,6 +4,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.PauseReason;
 
@@ -21,10 +22,12 @@ final class JobPauseLogger {
 
     static void recoveryPause(final AppError error, final PauseReason reason, final JobProgress progress) {
         log.warn(
-                "Pausing translation job after recoverable error stage={} reason={} errorCode={} accepted={} flagged={} pending={}",
+                "Pausing translation job after recoverable error stage={} pauseReason={} errorCode={} reason={}"
+                        + " accepted={} flagged={} pending={}",
                 progress.stage(),
                 reason,
                 error.code(),
+                FailureReason.tokenIn(error.details()),
                 progress.accepted(),
                 progress.flagged(),
                 progress.pending());

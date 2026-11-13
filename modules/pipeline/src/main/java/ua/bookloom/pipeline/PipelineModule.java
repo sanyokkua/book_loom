@@ -2,6 +2,7 @@ package ua.bookloom.pipeline;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.google.inject.Singleton;
 import java.time.Clock;
 import java.time.ZoneId;
 import ua.bookloom.api.pipeline.DialProfiles;
@@ -11,12 +12,15 @@ import ua.bookloom.api.pipeline.LanguageSupport;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.NamesPass;
 import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ProofreadProgress;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.project.IdSource;
-import ua.bookloom.api.settings.GenerationOverrides;
 import ua.bookloom.pipeline.checks.WordValidator;
+import ua.bookloom.pipeline.context.BookRules;
+import ua.bookloom.pipeline.context.ContextBuilder;
+import ua.bookloom.pipeline.context.RunFrames;
 import ua.bookloom.pipeline.dial.DialParameterProfiles;
 import ua.bookloom.pipeline.export.ExportServiceImpl;
 import ua.bookloom.pipeline.glossary.GlossaryServiceImpl;
@@ -25,18 +29,18 @@ import ua.bookloom.pipeline.lexicon.LexiconServiceImpl;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
 import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
+import ua.bookloom.pipeline.proofread.ProofreadTallies;
 import ua.bookloom.pipeline.review.ReviewDeskImpl;
 import ua.bookloom.pipeline.setup.SetupAssistantImpl;
 
 /**
  * Guice bindings owned by {@code :pipeline}: the {@code TranslationEngine}, {@code ExportService},
  * {@code ProjectService}, {@code GlossaryService}, {@code LexiconService} and {@code ReviewDesk} ports bound to their implementations, the
- * language-rules map behind {@code LanguageSupport}, the
+ * bundled language-rules map behind {@code LanguageSupport}, the
  * clock a run times itself with, and the prompt
  * templates, loaded and slot-checked once at injector creation so a broken template fails the start, not a run.
  *
- * <p>The quality loop, the reviewer and the self-heal calls ({@code heal}, {@code reviewer}) need no binding: each carries
+ * <p>The quality loop and the repair ({@code heal}) need no binding: each carries
  * an {@code @Inject} constructor, so Guice builds them for the engine, which hands the quality loop to every run. The
  * deterministic checks in {@code qa} are static functions.
  *
@@ -52,14 +56,19 @@ public final class PipelineModule extends AbstractModule {
 
     @Override
     protected void configure() {
+        bind(LanguageRules.class).toInstance(LanguageRules.bundled());
+        bind(LanguageSupport.class).to(LanguageRules.class);
         bind(PromptTemplates.class).asEagerSingleton();
-        bind(LanguageSupport.class).toInstance(LanguageRules.bundled());
+        // The context builder and its frame (task 11.2); nothing in the run calls them until task 11.5.
+        bind(BookRules.class).in(Singleton.class);
+        bind(RunFrames.class).in(Singleton.class);
+        bind(ContextBuilder.class).in(Singleton.class);
         bind(DialProfiles.class).to(DialParameterProfiles.class);
-        bind(GenerationOverrides.class).to(RequestDefaultsSource.class);
         bind(IdSource.class).to(UuidIdSource.class);
         bind(TranslationEngine.class).to(TranslationEngineImpl.class);
         bind(ExportService.class).to(ExportServiceImpl.class);
         bind(ProjectService.class).to(ProjectServiceImpl.class);
+        bind(ProofreadProgress.class).to(ProofreadTallies.class);
         bind(GlossaryService.class).to(GlossaryServiceImpl.class);
         bind(LexiconService.class).to(LexiconServiceImpl.class);
         bind(NamesPass.class).to(NamesPassImpl.class);

@@ -10,11 +10,10 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.NamesPassReport;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.NamePolicy;
-import ua.bookloom.api.project.TargetOrigin;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 
 /**
@@ -63,10 +62,9 @@ class NamesPassImplTest extends NamesPassTestBase {
                         GlossaryEntry::gender,
                         GlossaryEntry::genderOrigin,
                         GlossaryEntry::target,
-                        GlossaryEntry::origin,
+                        GlossaryEntry::targetOrigin,
                         GlossaryEntry::locked)
-                .containsExactly(
-                        TermType.CHARACTER, Gender.MALE, GenderOrigin.VERIFIED, "Бранн", TargetOrigin.SUGGESTED, false);
+                .containsExactly(TermType.CHARACTER, Gender.MALE, Origin.BOOK, "Бранн", Origin.LIKELY, false);
         assertThat(held("Harrowgate"))
                 .extracting(GlossaryEntry::type, GlossaryEntry::gender, GlossaryEntry::target, GlossaryEntry::locked)
                 .containsExactly(TermType.PLACE, Gender.UNKNOWN, "Гарроугейт", false);
@@ -252,7 +250,7 @@ class NamesPassImplTest extends NamesPassTestBase {
         assertThat(fixture.lexiconNow()).contains(anvil);
         assertThat(held("Wren"))
                 .extracting(GlossaryEntry::type, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(TermType.CHARACTER, Gender.FEMALE, GenderOrigin.PERSON);
+                .containsExactly(TermType.CHARACTER, Gender.FEMALE, Origin.USER);
         assertThat(report.names().changed())
                 .extracting(change -> change.before().term())
                 .doesNotContain("Gatewarden", "Marrow Lane");
@@ -289,7 +287,7 @@ class NamesPassImplTest extends NamesPassTestBase {
 
         assertThat(held("Odo"))
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin, GlossaryEntry::noGenderEvidence)
-                .containsExactly(Gender.MALE, GenderOrigin.PERSON, false);
+                .containsExactly(Gender.MALE, Origin.USER, false);
     }
 
     private static List<String> odoLines() {

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.within;
 
 import java.util.List;
 import java.util.concurrent.TimeoutException;
+import javafx.css.Styleable;
 import javafx.geometry.Bounds;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
@@ -36,7 +37,7 @@ class ImportBrowserLayoutTest extends ImportBookTestBase {
         showAtSceneSize(1440, 900);
 
         final List<String> ids = ThemeTestSupport.onFx(
-                () -> browser().getItems().stream().map(item -> item.getId()).toList());
+                () -> browser().getItems().stream().map(Styleable::getId).toList());
         assertThat(ids).containsExactly("structure-card", "structure-segments-card", "structure-text-card");
         assertThat(ThemeTestSupport.onFx(() -> browser().getDividers().size())).isEqualTo(2);
         assertThat(boundsOf("structure-segments-card").getMinX())
@@ -53,8 +54,7 @@ class ImportBrowserLayoutTest extends ImportBookTestBase {
     void panes_everyone_haveTheirMinimumWidth(final String id, final double minimum) throws TimeoutException {
         openFactsBook();
 
-        assertThat(ThemeTestSupport.onFx(() -> ((Region) required(id)).getMinWidth()))
-                .isEqualTo(minimum);
+        assertThat(ThemeTestSupport.onFx(((Region) required(id))::getMinWidth)).isEqualTo(minimum);
     }
 
     // IF the text stayed beside the segments on a narrow window, THEN both would be squeezed below their minimums.

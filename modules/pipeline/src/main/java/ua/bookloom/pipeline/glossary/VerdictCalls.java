@@ -11,19 +11,18 @@ import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.glossary.ReadingCounts.Read;
 import ua.bookloom.pipeline.glossary.ReadingVerdict.Facts;
 import ua.bookloom.pipeline.glossary.ReadingVerdict.ReadCall;
 import ua.bookloom.pipeline.index.Window;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.JsonReplies;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
@@ -45,11 +44,11 @@ final class VerdictCalls {
     // A quote of a few words and one or two labels, and the braces besides; twice that as the cap.
     private static final OutputLimit LIMIT = new OutputLimit(60, 120);
 
-    private final PromptTemplates templates;
+    private final ContextBuilder builder;
     private final ObjectMapper mapper;
 
     VerdictCalls(final PromptTemplates templates, final ObjectMapper mapper) {
-        this.templates = Objects.requireNonNull(templates, "templates");
+        this.builder = new ContextBuilder(Objects.requireNonNull(templates, "templates"));
         this.mapper = Objects.requireNonNull(mapper, "mapper");
     }
 
@@ -103,15 +102,19 @@ final class VerdictCalls {
             final CallFrame frame,
             final ModelCalls calls) {
         final ChatRequest request = request(name, facts, slot, body, frame);
-        final Result<ChatResponse> reply =
-                calls.callAbout(CallKind.TERM_READING, List.of(), request, CallDescriptor.whole(name));
+        final Result<ChatResponse> reply = calls.callAbout(
+                CallKind.TERM_READING,
+                List.of(),
+                request,
+                CallDescriptor.asking(name, List.of(facts.entry().term())));
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
             log.warn(
-                    "{} call for entry {} failed code={}",
+                    "{} call for entry {} failed code={} reason={}",
                     name.responseFormatName(),
                     facts.entry().id(),
-                    error.code());
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return Result.err(error);
         }
         final String content = Objects.requireNonNull(reply.data(), "reply").content();
@@ -122,17 +125,14 @@ final class VerdictCalls {
 
     private ChatRequest request(
             final PromptName name, final Facts facts, final String slot, final String body, final CallFrame frame) {
-        final String user = templates.renderUser(name, Map.of("term", termLine(facts), slot, body));
-        final List<ChatMessage> messages = List.of(
-                new ChatMessage(
-                        ChatRole.SYSTEM, templates.renderSystem(name, frame).strip()),
-                new ChatMessage(ChatRole.USER, user.strip()));
+        final ChatRequest request =
+                builder.analysisRequest(name, frame, Map.of("term", termLine(facts), slot, body), LIMIT);
         log.trace(
                 "{} messages for {}: {}",
                 name.responseFormatName(),
                 facts.entry().term(),
-                messages);
-        return ChatRequests.build(name, messages, LIMIT, false, frame.requestDefaults());
+                request.messages());
+        return request;
     }
 
     // The count, the code's tally and the other spellings, as the reading's term line shows them.

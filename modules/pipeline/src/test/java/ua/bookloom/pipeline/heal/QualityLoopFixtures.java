@@ -8,6 +8,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
@@ -19,23 +20,21 @@ import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
+import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.TestDocuments;
+import ua.bookloom.pipeline.TestPlanners;
 import ua.bookloom.pipeline.WhitespaceRestoration;
 import ua.bookloom.pipeline.dial.DialParameters;
+import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.DraftReplyParser;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.qa.QaResult;
-import ua.bookloom.pipeline.reviewer.EditApplier;
-import ua.bookloom.pipeline.reviewer.EditVerifier;
-import ua.bookloom.pipeline.reviewer.ReviewReplyParser;
-import ua.bookloom.pipeline.reviewer.ReviewerCall;
 
 /**
  * Real collaborators and small builders shared by the {@code QualityLoopTest} theme classes: a real
- * {@link DocumentPort} (real placeholder gate), a real {@link QualityLoop} wired over the real self-heal calls, and
+ * {@link DocumentPort} (real placeholder gate), a real {@link QualityLoop}, and
  * a {@link DraftOutcome.Drafted} builder that replays what the draft step answers under design D3 rule 5: a reply
  * restored through the placeholder gate, or one whose markup still fails it and carries the gate's markup finding.
  */
@@ -60,13 +59,7 @@ final class QualityLoopFixtures {
             new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
 
     static QualityLoop loop() {
-        final ObjectMapper mapper = new ObjectMapper();
-        final PromptTemplates templates = new PromptTemplates();
-        final DraftReplyParser draftReplyParser = new DraftReplyParser(mapper);
-        return new QualityLoop(
-                new ReviewerCall(templates, new ReviewReplyParser(mapper)),
-                new EditApplier(new EditVerifier()),
-                new DirectedFix(templates, draftReplyParser));
+        return new QualityLoop();
     }
 
     static LoopSettings settings(final ReviewMode mode, final QualityDial dial) {
@@ -105,6 +98,29 @@ final class QualityLoopFixtures {
                 throw new IllegalStateException("fixture segment failed the gate unexpectedly: "
                         + stepError.error().code());
         };
+    }
+
+    /**
+     * The draft carrying the run's own repair call, built by a real draft step over the real gate and prompts with no
+     * context, so a test of the one repair sees the request a run sends.
+     */
+    static DraftOutcome.Drafted repairing(
+            final DraftOutcome.Drafted draft, final DocumentPort documents, final CallFrame frame) {
+        final ModelCalls noDraftCall = (kind, segmentId, request) ->
+                Result.err(AppError.of(ErrorCode.internal, "No draft call", "the fixture drafts nothing"));
+        final SegmentTranslator translator = new SegmentTranslator(
+                GateFunction.of(documents, BookFormat.MARKDOWN),
+                noDraftCall,
+                BookFormat.MARKDOWN,
+                TestPlanners.planner(frame.sourceLanguage(), frame.targetLanguage()),
+                new ObjectMapper());
+        final Segment segment = draft.segment();
+        return draft.withRepair(translator.repairCall(segment, null, ProtectedMask.none(segment.masked())));
+    }
+
+    /** The draft carrying the run's own repair call, over the fixtures' English to Ukrainian frame. */
+    static DraftOutcome.Drafted repairing(final DraftOutcome.Drafted draft) {
+        return repairing(draft, TestDocuments.documents(), FRAME);
     }
 
     /** A context-matched memory reuse already checked at full confidence, as the run hands it to the loop. */

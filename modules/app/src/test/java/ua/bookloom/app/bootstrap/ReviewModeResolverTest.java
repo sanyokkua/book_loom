@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.util.paths.NameLookup;
 
 class ReviewModeResolverTest {
 
@@ -42,7 +42,7 @@ class ReviewModeResolverTest {
         assertThat(resolved.rejectedValue()).isEqualTo(expectedRejected);
     }
 
-    private static Function<String, @Nullable String> lookup(String name, @Nullable String value) {
+    private static NameLookup lookup(String name, @Nullable String value) {
         final Map<String, String> values = new HashMap<>();
         values.put(name, value);
         return values::get;

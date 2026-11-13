@@ -4,12 +4,16 @@ import java.util.Objects;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -25,6 +29,7 @@ final class BriefCards {
 
     private static final double CARD_SPACING = 12;
     private static final double FIELD_SPACING = 5;
+    private static final double MARK_GAP = 6;
 
     static VBox card(final String id, final Messages messages, final MessageKey title, final Node... body) {
         return card(id, messages, title, false, body);
@@ -71,6 +76,29 @@ final class BriefCards {
         final Label name = new Label(messages.get(label));
         name.getStyleClass().add("muted");
         return new VBox(FIELD_SPACING, name, control);
+    }
+
+    /**
+     * A label above the control it names, with a mark beside the label; the label's words wrap below the mark when
+     * the column is narrow.
+     */
+    static VBox field(final String label, final String labelId, final Node control, final Label mark) {
+        final Label name = Wrapped.wholeWords(new Label(label));
+        name.setId(labelId);
+        name.getStyleClass().add("muted");
+        final FlowPane head = new FlowPane(MARK_GAP, 0, name, mark);
+        return new VBox(FIELD_SPACING, head, control);
+    }
+
+    /** The {@code (likely)} mark a field carries while the analysis filled it and the person has not decided. */
+    static Label likelyMark(final Messages messages, final String id) {
+        final Label mark = new Label(messages.get(MessageKey.BRIEF_LIKELY));
+        mark.setId(id);
+        mark.getStyleClass().add("hint");
+        mark.setMinWidth(Region.USE_PREF_SIZE);
+        Tips.install(messages, mark, MessageKey.BRIEF_LIKELY_TIP);
+        Visibility.show(mark, false);
+        return mark;
     }
 
     static Label hint(final Messages messages, final MessageKey key) {

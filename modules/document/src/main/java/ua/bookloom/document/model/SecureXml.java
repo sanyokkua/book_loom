@@ -120,13 +120,13 @@ public final class SecureXml {
             source.setSystemId(EMPTY_SYSTEM_ID);
             return source;
         }
-    }
 
-    private static InputSource bundledEntities() {
-        final InputStream in = Objects.requireNonNull(
-                SecureXml.class.getResourceAsStream(BUNDLED_ENTITIES), "bundled entity list is missing");
-        final InputSource source = new InputSource(new InputStreamReader(in, StandardCharsets.UTF_8));
-        source.setSystemId(BUNDLED_SYSTEM_ID);
-        return source;
+        private static InputSource bundledEntities() {
+            final InputStream in = Objects.requireNonNull(
+                    SecureXml.class.getResourceAsStream(BUNDLED_ENTITIES), "bundled entity list is missing");
+            final InputSource source = new InputSource(new InputStreamReader(in, StandardCharsets.UTF_8));
+            source.setSystemId(BUNDLED_SYSTEM_ID);
+            return source;
+        }
     }
 }

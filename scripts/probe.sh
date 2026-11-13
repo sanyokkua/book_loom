@@ -7,7 +7,7 @@
 # scripts/gradle-lock.sh; after that a run is a plain `java`, with the source resource directories FIRST on the classpath,
 # so editing a .prompt file or an eval JSON needs no build at all. Model calls take the same lock (one local model call
 # at a time across agents); --dry and --provider pseudo make no call and take none. Do not wrap this script in
-# gradle-lock.sh: the lock is not re-entrant. Details: docs/DEVELOPMENT.md, "The fast loop".
+# gradle-lock.sh: the lock is not re-entrant. Details: docs/evaluation/eval-suites.md.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PIPELINE="$ROOT/modules/pipeline"

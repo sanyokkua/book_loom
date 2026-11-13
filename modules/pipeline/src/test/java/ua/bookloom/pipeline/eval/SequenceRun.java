@@ -25,8 +25,9 @@ import ua.bookloom.api.project.SegmentPath;
  * @param hardGateFailuresRound0 the segments whose first evaluation failed a hard gate (a placeholder or a blocking
  *     text check)
  * @param hardGateKinds the findings that sent those segments to their first repair round, counted per kind
- * @param reviewerTruncated reviewer replies the provider cut off at the output cap
+ * @param proofreadTruncated proofread replies the provider cut off at the output cap
  * @param narrator the narrator mode the brief was written with
+ * @param summaryGate what the chapter-summary gate kept and dropped
  */
 record SequenceRun(
         JobReport report,
@@ -38,8 +39,37 @@ record SequenceRun(
         int editsRefused,
         int hardGateFailuresRound0,
         Map<String, Integer> hardGateKinds,
-        int reviewerTruncated,
-        SequenceNarratorMode narrator) {
+        int proofreadTruncated,
+        SequenceNarratorMode narrator,
+        SummaryGateTally summaryGate) {
+
+    /** A run whose log was not read for the chapter-summary gate. */
+    SequenceRun(
+            final JobReport report,
+            final Duration elapsed,
+            final List<ModelCallFinished> calls,
+            final List<Decided> segments,
+            final List<LexiconEntry> lexicon,
+            final Map<String, Integer> fallbackReasons,
+            final int editsRefused,
+            final int hardGateFailuresRound0,
+            final Map<String, Integer> hardGateKinds,
+            final int proofreadTruncated,
+            final SequenceNarratorMode narrator) {
+        this(
+                report,
+                elapsed,
+                calls,
+                segments,
+                lexicon,
+                fallbackReasons,
+                editsRefused,
+                hardGateFailuresRound0,
+                hardGateKinds,
+                proofreadTruncated,
+                narrator,
+                SummaryGateTally.NONE);
+    }
 
     /** Copies the lists. */
     SequenceRun {
@@ -51,6 +81,7 @@ record SequenceRun(
         fallbackReasons = Map.copyOf(fallbackReasons);
         hardGateKinds = Map.copyOf(hardGateKinds);
         Objects.requireNonNull(narrator, "narrator");
+        Objects.requireNonNull(summaryGate, "summaryGate");
     }
 
     /**
@@ -64,6 +95,7 @@ record SequenceRun(
      * @param status its final status
      * @param path how it was decided
      * @param editsApplied the reviewer edits that were applied to it
+     * @param proofread what the Proofread stage last decided for it, or null when no window read it
      */
     record Decided(
             String id,
@@ -73,7 +105,43 @@ record SequenceRun(
             @Nullable String target,
             SegmentStatus status,
             SegmentPath path,
-            int editsApplied) {}
+            int editsApplied,
+            @Nullable Proofread proofread) {
+
+        /** A segment no Proofread window read. */
+        Decided(
+                final String id,
+                final int chapter,
+                final NarratorPerson narrator,
+                final String source,
+                @Nullable final String target,
+                final SegmentStatus status,
+                final SegmentPath path,
+                final int editsApplied) {
+            this(id, chapter, narrator, source, target, status, path, editsApplied, null);
+        }
+    }
+
+    /**
+     * A segment's last proofread verdict, so an arm can judge a kept rewrite against the text it replaced (arm 7b).
+     *
+     * @param outcome the verdict's outcome name
+     * @param round the round of the window that decided it (1 marked, 2 Max's whole book), from its fingerprint
+     * @param before the masked text before a kept rewrite, tokens taken out, or null when none was kept
+     */
+    record Proofread(String outcome, int round, @Nullable String before) {
+
+        /**
+         * The round a verdict's fingerprint names: it starts with {@code r<round>:}.
+         *
+         * @param fingerprint the non-null stored fingerprint
+         * @return the round, or 0 when the fingerprint names none
+         */
+        static int roundOf(final String fingerprint) {
+            final int end = fingerprint.indexOf(':');
+            return fingerprint.startsWith("r") && end > 1 ? Integer.parseInt(fingerprint.substring(1, end)) : 0;
+        }
+    }
 
     /** What the job itself reported, before the stores and the log are read. */
     record Outcome(JobReport report, Duration elapsed, List<ModelCallFinished> calls, List<Decided> segments) {}

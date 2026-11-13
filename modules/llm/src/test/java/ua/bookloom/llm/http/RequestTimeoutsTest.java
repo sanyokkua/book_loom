@@ -18,7 +18,7 @@ import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.pipeline.CallKind;
 
 /**
- * Proves a chat call's timeout is chosen by its kind: the judge and the helper calls have their own bound, every other
+ * Proves a chat call's timeout is chosen by its kind: the helper calls have their own bound, every other
  * call scales with its expected output with the configured timeout as the floor.
  */
 class RequestTimeoutsTest {
@@ -52,25 +52,12 @@ class RequestTimeoutsTest {
         assertThat(scaled).isSameAs(config);
     }
 
-    // The judge's reply is capped, so a judge still running after ninety seconds is stuck, not slow.
-    @ParameterizedTest
-    @CsvSource({"180,", "180,512", "600,1024", "30,"})
-    void forChat_judge_isNinetySecondsWhateverTheConfigAndExpectedOutput(
-            long configuredSeconds, @Nullable Integer expectedOutputTokens) {
-        final ProviderConfig judged = RequestTimeouts.forChat(
-                config(Duration.ofSeconds(configuredSeconds)), request(CallKind.REVIEW, expectedOutputTokens));
-
-        assertThat(judged.requestTimeout()).isEqualTo(Duration.ofSeconds(90));
-    }
-
     // The window shows CallLimits, so the client must read its bounds from there and nowhere else.
     @Test
-    void forChat_reviewAndHelper_useCallLimits() {
+    void forChat_helper_useCallLimits() {
         final ProviderConfig base = config(Duration.ofMinutes(3));
 
-        assertThat(RequestTimeouts.forChat(base, request(CallKind.REVIEW, null)).requestTimeout())
-                .isEqualTo(CallLimits.REVIEW_TIMEOUT);
-        assertThat(RequestTimeouts.forChat(base, request(CallKind.SUMMARY, null))
+        assertThat(RequestTimeouts.forChat(base, request(CallKind.CHAPTER_SUMMARY, null))
                         .requestTimeout())
                 .isEqualTo(CallLimits.HELPER_TIMEOUT);
         assertThat(RequestTimeouts.forChat(base, request(CallKind.DRAFT, 100_000))
@@ -79,7 +66,7 @@ class RequestTimeoutsTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"PRESCAN", "REVIEW_TERMS", "SUGGEST_TARGETS", "SUMMARY", "TERM_CHOICE"})
+    @CsvSource({"PRESCAN", "REVIEW_TERMS", "SUGGEST_TARGETS", "CHAPTER_SUMMARY", "TERM_CHOICE"})
     void forChat_prescanOrSummary_isTwoMinutes(CallKind kind) {
         final ProviderConfig bounded = RequestTimeouts.forChat(config(Duration.ofMinutes(3)), request(kind, null));
 
@@ -95,7 +82,11 @@ class RequestTimeoutsTest {
         "BRIEF_SUGGESTION,",
         "FILE_NAME,48",
         "BRIEF_SYNTHESIS,",
-        "BRIEF_SYNTHESIS,160"
+        "BRIEF_SYNTHESIS,160",
+        // 15i.N4: a term reading is a small helper call like the name review, whatever its windows expect.
+        "TERM_READING,",
+        "TERM_READING,520",
+        "TERM_READING,120"
     })
     void forChat_setupCall_isTwoMinutesWhateverTheConfigAndExpectedOutput(
             CallKind kind, @Nullable Integer expectedOutputTokens) {
@@ -105,15 +96,28 @@ class RequestTimeoutsTest {
         assertThat(bounded.requestTimeout()).isEqualTo(Duration.ofMinutes(2));
     }
 
-    // 15i.N4: a term reading is a small helper call like the name review: two minutes, whatever its windows expect.
+    // A model that thinks on every call writes its reasoning first, so a fixed bound becomes the longer of itself and
+    // 60 ms per expected token, the reserve included: 2,600 tokens is 156 s; a prescan keeps its two minutes until its
+    // reasoning needs more; a draft still scales at 0.5 s per token.
     @ParameterizedTest
-    @CsvSource({"TERM_READING,", "TERM_READING,520", "TERM_READING,120"})
-    void forChat_termReading_isTwoMinutesWhateverTheConfigAndExpectedOutput(
-            CallKind kind, @Nullable Integer expectedOutputTokens) {
-        final ProviderConfig bounded =
-                RequestTimeouts.forChat(config(Duration.ofSeconds(30)), request(kind, expectedOutputTokens));
+    @CsvSource({"PRESCAN,2600,156", "PRESCAN,1000,120", "DRAFT,800,400"})
+    void timeout_alwaysThinkingModel_isTheLongerOfTheFixedBoundAndSixtyMsPerToken(
+            CallKind kind, int expectedOutputTokens, long effectiveSeconds) {
+        final ChatRequest thinking = new ChatRequest(
+                        List.of(new ChatMessage(ChatRole.USER, "hello")),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        kind)
+                .withReasoning(null, expectedOutputTokens);
 
-        assertThat(bounded.requestTimeout()).isEqualTo(Duration.ofMinutes(2));
+        final ProviderConfig bounded = RequestTimeouts.forChat(config(Duration.ofMinutes(3)), thinking);
+
+        assertThat(bounded.requestTimeout()).isEqualTo(Duration.ofSeconds(effectiveSeconds));
     }
 
     @ParameterizedTest

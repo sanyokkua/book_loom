@@ -90,10 +90,9 @@ final class PluralNouns {
     }
 
     private static NameCandidate withAlias(final NameCandidate base, final NameCandidate plural) {
-        final List<String> aliases = new ArrayList<>(base.aliases());
+        final List<String> aliases = new ArrayList<>();
         aliases.add(plural.term());
         aliases.addAll(plural.aliases());
-        return new NameCandidate(
-                base.term(), base.count() + plural.count(), base.firstSentence(), aliases, base.readingOnly());
+        return base.withAliases(aliases, plural.count());
     }
 }

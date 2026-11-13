@@ -2,7 +2,7 @@
 name: javafx-ui-designer
 description: >-
   Use when building or editing a JavaFX screen or dialog for BookLoom so it
-  matches `docs/specification/mockups/ui-mockup.html`. Covers FXML views with a Guice
+  matches `docs/spec_baseline/specification/mockups/ui-mockup.html`. Covers FXML views with a Guice
   controller factory, the `ViewNames` enum + `Navigator`, token-only theming (the fixed
   palette), the observable state mirror and `Platform.runLater`, mapping mockup widgets
   to real JavaFX/ControlsFX controls (SegmentedButton, TableView, TreeView, ToggleSwitch,
@@ -14,13 +14,13 @@ allowed-tools: Read, Write, Bash, Glob, Grep
 
 `:ui` (with `:app`) is the only module that `requires javafx.*`. It is an MVVM front-end
 over the FX-free core, driven by an observable state mirror. The mockup at
-`docs/specification/mockups/ui-mockup.html` is the binding visual acceptance reference
+`docs/spec_baseline/specification/mockups/ui-mockup.html` is the binding visual acceptance reference
 (pattern P6): every screen, state, and dialog must map to it.
 
 ## When to use
 
 - Building a new screen or dialog listed in
-  `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md` and the mockup.
+  `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md` and the mockup.
 - Adding a state to an existing screen (e.g. Import `language-mismatch`, Translating
   `paused`, `provider-error`).
 - Wiring a view to core progress/state through the state mirror.
@@ -38,10 +38,10 @@ over the FX-free core, driven by an observable state mirror. The mockup at
 
 ## Workflow
 
-1. **Read the mockup and the spec screen.** Open `docs/specification/mockups/ui-mockup.html`
+1. **Read the mockup and the spec screen.** Open `docs/spec_baseline/specification/mockups/ui-mockup.html`
    for the target screen/state, and its clause in
-   `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md` plus the UI architecture in
-   `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md`.
+   `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md` plus the UI architecture in
+   `docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md`.
 2. **Create the View (FXML + thin controller).** The controller holds node references and
    forwards gestures only — no business logic. It binds nodes to the ViewModel's
    observable properties.
@@ -67,7 +67,7 @@ over the FX-free core, driven by an observable state mirror. The mockup at
    `SegmentedButton`, and `Notifications`; Ikonli for icons.
 8. **Theme with tokens only.** Apply token-only CSS at the Scene level: **one set of token
    roles with two value blocks** (light + dark) swapped at `.root`, per the full published
-   token catalogue in `docs/specification/01_Product/09_THEMING.md#token-catalog` (never
+   token catalogue in `docs/spec_baseline/specification/01_Product/09_THEMING.md#token-catalog` (never
    invent a token); JavaFX 25 reads OS `prefers-color-scheme`. The accent is **fixed to
    Cognac** (FR-THEME-4, not user-selectable) and there is **no density/compact mode** in
    v1. AtlantaFX supplies the base control theme; app tokens override brand colors.
@@ -106,15 +106,15 @@ over the FX-free core, driven by an observable state mirror. The mockup at
 
 The brand hexes above are the light-block anchors; the normative per-role light AND dark
 values (incl. surface, nav-*, status `-bg`/`-bd`, shadow, `focus`) are the token catalogue:
-`docs/specification/01_Product/09_THEMING.md#token-catalog`.
+`docs/spec_baseline/specification/01_Product/09_THEMING.md#token-catalog`.
 
 ## Reference index
 
-- In-repo authorities: `docs/specification/mockups/ui-mockup.html` (visual truth),
-  `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md`,
-  `docs/specification/01_Product/09_THEMING.md`,
-  `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md`,
-  `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md`.
+- In-repo authorities: `docs/spec_baseline/specification/mockups/ui-mockup.html` (visual truth),
+  `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md`,
+  `docs/spec_baseline/specification/01_Product/09_THEMING.md`,
+  `docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md`,
+  `docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md`.
 - Supporting skill files (this skill's own reference material): `css-control-patterns.md`
   (layout-pane selection, the `Region` box model, CSS property/pseudo-class reference,
   `derive()`/`ladder()` color functions, the layered-background depth trick, per-control
@@ -145,7 +145,7 @@ values (incl. surface, nav-*, status `-bg`/`-bd`, shadow, `focus`) are the token
 - Provider errors surface as an error-with-details dialog (expandable typed
   `AppError.details`) plus a toast — do not swallow them into a label.
 - The add/edit-provider dialog's Test connection/models/inference trio maps to the
-  three-stage verification in `docs/specification/02_Architecture/04_LLM_INTEGRATION.md`;
+  three-stage verification in `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md`;
   run it against the DRAFT config, not the saved one.
 - Screen states are view state, not separate FXML — reuse one FXML with a state property.
 - A ViewModel that imports a `javafx.scene.*` node type defeats headless unit testing;

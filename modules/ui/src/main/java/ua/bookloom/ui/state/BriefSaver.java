@@ -1,11 +1,14 @@
 package ua.bookloom.ui.state;
 
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.UnaryOperator;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyIntegerProperty;
+import javafx.beans.property.ReadOnlyIntegerWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -30,6 +33,7 @@ final class BriefSaver {
     private final ExecutorService executor;
     private final BriefSaveOutcomes outcomes;
     private final ReadOnlyBooleanWrapper saving = new ReadOnlyBooleanWrapper(false);
+    private final ReadOnlyIntegerWrapper rechecked = new ReadOnlyIntegerWrapper(0);
     private @Nullable Save waiting;
 
     BriefSaver(final ProjectService projects, final ExecutorService executor, final BriefSaveOutcomes outcomes) {
@@ -42,7 +46,23 @@ final class BriefSaver {
         return saving.getReadOnlyProperty();
     }
 
+    void clearRechecked() {
+        rechecked.set(0);
+    }
+
+    ReadOnlyIntegerProperty rechecked() {
+        return rechecked.getReadOnlyProperty();
+    }
+
     void enqueue(final String projectId, final BookBrief brief) {
+        // A same-language pair is shown but never stored, so the project keeps its pair and name until they differ.
+        if (brief.targetLanguage() != null && Objects.equals(brief.sourceLanguage(), brief.targetLanguage())) {
+            log.debug(
+                    "the brief of project {} is not saved: source and target are both {}",
+                    projectId,
+                    brief.targetLanguage());
+            return;
+        }
         final Save save = new Save(projectId, brief);
         if (saving.get()) {
             log.debug("a save is in flight; the newest brief waits");
@@ -79,12 +99,15 @@ final class BriefSaver {
         final @Nullable AppError error = saved == null ? null : saved.error();
         final @Nullable ProjectChange change = saved == null ? null : saved.data();
         if (saved == null) {
-            return waiting -> waiting;
+            return UnaryOperator.identity();
         }
         if (error != null) {
             log.warn("the brief was not saved: code {}", error.code());
-        } else if (change instanceof ProjectChange.Saved) {
-            log.debug("the brief was saved");
+        } else if (change instanceof ProjectChange.Saved stored) {
+            final int count = stored.rechecked();
+            log.debug("the brief was saved, {} decided segments re-checked", count);
+            // Every save answers its own count, so a key set back to what it was clears the banner with its 0.
+            rechecked.set(count);
             outcomes.stored(save.projectId(), save.brief());
         } else if (change != null) {
             log.warn(
@@ -93,7 +116,7 @@ final class BriefSaver {
                     change.getClass().getSimpleName());
             return outcomes.refused(save.projectId(), save.brief(), change);
         }
-        return waiting -> waiting;
+        return UnaryOperator.identity();
     }
 
     private void saved(final Save save, final @Nullable Result<ProjectChange> answer) {

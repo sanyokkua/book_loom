@@ -163,6 +163,9 @@ class RecurringTermsScreenTest extends TranslatingScreenTestBase {
         awaitFx(() -> lexicon.calls().contains("add(pentacle)"));
         awaitFx(() -> table().getItems().size() == 1);
         awaitFx(() -> optional("recurring-add-card") == null);
+        assertThat(lexicon.calls()).contains("add(pentacle)");
+        assertThat(table().getItems()).hasSize(1);
+        assertThat(optional("recurring-add-card")).isNull();
     }
 
     @Test

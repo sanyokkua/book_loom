@@ -11,6 +11,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.document.DocumentModule;
@@ -42,8 +43,8 @@ class SegmentTranslatorRequestSettingsTest {
                 .translate(segment);
 
         assertThat(model.requests())
-                .extracting(request -> request.contextWindow(), request -> request.expectedOutputTokens())
+                .extracting(ChatRequest::contextWindow, ChatRequest::expectedOutputTokens)
                 .containsExactly(
-                        org.assertj.core.groups.Tuple.tuple(16384, 16), org.assertj.core.groups.Tuple.tuple(16384, 16));
+                        org.assertj.core.groups.Tuple.tuple(16384, 31), org.assertj.core.groups.Tuple.tuple(16384, 31));
     }
 }

@@ -14,9 +14,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.CsvProblem;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
-import ua.bookloom.api.project.TargetOrigin;
+import ua.bookloom.api.project.Origin;
+import ua.bookloom.api.project.TargetState;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.CsvRecords.CsvRecord;
 
@@ -34,7 +34,7 @@ public final class GlossaryCsv {
 
     private static final String RECORD_END = "\r\n";
     private static final int FIELD_COUNT = 5;
-    private static final char BYTE_ORDER_MARK = '﻿';
+    private static final char BYTE_ORDER_MARK = '\uFEFF';
     private static final List<String> COLUMNS = List.of(HEADER.split(","));
     private static final int TERM = 0;
     private static final int TARGET = 1;
@@ -235,6 +235,32 @@ public final class GlossaryCsv {
     static GlossaryEntry replaced(final GlossaryEntry existing, final Row row) {
         final TermType type = isGeneric(row.type()) && !isGeneric(existing.type()) ? existing.type() : row.type();
         final Gender gender = row.gender() == Gender.UNKNOWN ? existing.gender() : row.gender();
+        logKept(existing, row, type, gender);
+        final GlossaryEntry result = new GlossaryEntry(
+                existing.id(),
+                existing.projectId(),
+                existing.term(),
+                existing.forms(),
+                existing.lemmaInferred(),
+                row.target(),
+                row.locked() ? TargetState.LOCKED : TargetState.PINNED,
+                Origin.USER,
+                type,
+                existing.placeKind(),
+                type == row.type() ? Origin.USER : existing.typeOrigin(),
+                gender,
+                row.gender() == Gender.UNKNOWN ? existing.genderOrigin() : Origin.USER,
+                existing.genderSeedTried(),
+                row.gender() == Gender.UNKNOWN && existing.noGenderEvidence(),
+                existing.meaning(),
+                existing.meaningChoice(),
+                existing.knowledge(),
+                existing.unsureMentions());
+        logOrigin(existing, result);
+        return result;
+    }
+
+    private static void logKept(final GlossaryEntry existing, final Row row, final TermType type, final Gender gender) {
         if (type != row.type() || gender != row.gender()) {
             log.debug(
                     "Glossary import keeps entry {} type={} gender={} over the row's {} / {}",
@@ -244,21 +270,6 @@ public final class GlossaryCsv {
                     row.type(),
                     row.gender());
         }
-        final GlossaryEntry result = new GlossaryEntry(
-                existing.id(),
-                existing.projectId(),
-                existing.term(),
-                row.target(),
-                type,
-                gender,
-                row.locked(),
-                TargetOrigin.PERSON,
-                row.gender() == Gender.UNKNOWN ? existing.genderOrigin() : GenderOrigin.PERSON,
-                existing.genderSeedTried(),
-                existing.aliases(),
-                row.gender() == Gender.UNKNOWN && existing.noGenderEvidence());
-        logOrigin(existing, result);
-        return result;
     }
 
     private static void logOrigin(final GlossaryEntry existing, final GlossaryEntry result) {

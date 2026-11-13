@@ -200,7 +200,7 @@ class FrequencyScanTest {
                 .data();
 
         assertThat(entries)
-                .extracting(GlossaryEntry::term, GlossaryEntry::aliases)
+                .extracting(GlossaryEntry::term, GlossaryEntry::forms)
                 .containsExactly(tuple("Ember", List.of("Embers")));
     }
 

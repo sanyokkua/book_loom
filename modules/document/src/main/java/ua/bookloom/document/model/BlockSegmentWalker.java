@@ -124,20 +124,19 @@ public final class BlockSegmentWalker {
             // Matched on the local name, because a prefixed <m:math> is still block-level MathML: measured, jsoup
             // reports tagName() as `m:math` for the form real EPUB2 and DAISY-derived books write, and matching the
             // qualified name would descend into it and make a mathematical identifier a segment.
-            if (isExcluded(localNameOf(tag), dialect)) {
-                continue;
+            if (!isExcluded(localNameOf(tag), dialect)) {
+                path.add(index);
+                final String childLanguage = declaredLanguageOf(child);
+                descendOrEmit(
+                        child,
+                        tag,
+                        path,
+                        ancestors,
+                        drafts,
+                        dialect,
+                        childLanguage != null ? childLanguage : inheritedLanguage);
+                path.removeLast();
             }
-            path.add(index);
-            final String childLanguage = declaredLanguageOf(child);
-            descendOrEmit(
-                    child,
-                    tag,
-                    path,
-                    ancestors,
-                    drafts,
-                    dialect,
-                    childLanguage != null ? childLanguage : inheritedLanguage);
-            path.removeLast();
         }
     }
 

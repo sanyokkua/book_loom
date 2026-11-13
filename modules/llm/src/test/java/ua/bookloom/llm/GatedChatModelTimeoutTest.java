@@ -25,6 +25,7 @@ import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
@@ -34,10 +35,11 @@ import ua.bookloom.llm.retry.RetryPolicy;
 /** Proves a capability-downgraded retry keeps the expected-output-scaled timeout of the original request. */
 class GatedChatModelTimeoutTest {
 
-    private static final String CHAT_PATH = "/v1/chat/completions";
-    private static final String MODEL_ID = "test-model";
+    // LM Studio's own route, where its chat goes first.
+    private static final String CHAT_PATH = "/api/v0/chat/completions";
+    private static final String MODEL_ID = "mistral-small3.2:24b";
     private static final String REPLY =
-            "{\"model\":\"test-model\",\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"translated\"},\"finish_reason\":\"stop\"}]}";
+            "{\"model\":\"mistral-small3.2:24b\",\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"translated\"},\"finish_reason\":\"stop\"}]}";
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-09-22T12:00:00Z"), ZoneOffset.UTC);
 
     private final WireMockServer server =
@@ -81,11 +83,12 @@ class GatedChatModelTimeoutTest {
 
     private GatedChatModel model(Duration requestTimeout) {
         final ProviderConfig config = new ProviderConfig(
-                "test",
-                ProviderKind.OPENAI_COMPATIBLE,
-                URI.create(server.baseUrl() + "/v1"),
-                Duration.ofSeconds(2),
-                requestTimeout);
+                        "test",
+                        ProviderKind.OPENAI_COMPATIBLE,
+                        URI.create(server.baseUrl() + "/v1"),
+                        Duration.ofSeconds(2),
+                        requestTimeout)
+                .withEngine(ServerEngine.LM_STUDIO);
         final ProviderClientFactory clients = new ProviderClientFactory(
                 new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
         final RetryPolicy retryPolicy = new RetryPolicy(CLOCK, () -> 0.5, ignored -> {});

@@ -14,8 +14,9 @@ import ua.bookloom.api.pipeline.StepResult;
  *
  * <p>A dialog is handed the log of its steps, not the moment each step ended, so the time a step took is the time
  * between the reads that saw it end, shared among the steps seen to end in one read. One reader serves one piece of
- * work: its first read starts the clock. When the log changes what it counts (stages, then requests) the ledger starts
- * again, since the two counts must not be added. FX thread only.
+ * work: its first read starts the clock. When the log changes what it times (stages, then requests) the ledger starts
+ * again, since the two counts must not be added; work that plans both is counted by its stages and timed by its
+ * requests. FX thread only.
  */
 @Slf4j
 public final class LedgerFigures implements ProgressFigures {
@@ -35,21 +36,38 @@ public final class LedgerFigures implements ProgressFigures {
         }
         final StepKind kind = steps.planned() == 0 ? StepKind.STAGE : StepKind.REQUEST;
         final ProgressLedger current = ledgerFor(kind, now);
-        final int newlyPlanned = steps.total() - planned.getOrDefault(kind, 0);
+        final int newlyPlanned =
+                (kind == StepKind.STAGE ? steps.total() : steps.timedTotal()) - planned.getOrDefault(kind, 0);
         if (newlyPlanned > 0) {
             current.planned(kind, newlyPlanned);
             planned.merge(kind, newlyPlanned, Integer::sum);
         }
-        final int newlyDone = steps.done() - done.getOrDefault(kind, 0);
+        final int newlyDone = (kind == StepKind.STAGE ? steps.done() : steps.timedDone()) - done.getOrDefault(kind, 0);
         if (newlyDone > 0) {
             current.ended(kind, StepResult.DONE, newlyDone, now);
             done.merge(kind, newlyDone, Integer::sum);
         }
-        final Figures read = current.read(now);
+        final Figures read = countedByStages(steps, current.read(now));
         heldFraction = Math.max(heldFraction, read.fraction());
         return read.fraction() >= heldFraction
                 ? read
                 : read.holding(Figures.percentOf(heldFraction, false), heldFraction);
+    }
+
+    // Work that plans stages and requests (the names pass) is counted by its stages, which the person sees as rows, and
+    // timed by its requests, whose seconds the ledger measures; the stages differ too much for a mean.
+    private static Figures countedByStages(final StepLog steps, final Figures requests) {
+        if (steps.stages() == 0 || steps.planned() == 0) {
+            return requests;
+        }
+        final Figures stages = Figures.ofCount(steps.done(), steps.total());
+        log.trace(
+                "progress figures: {} of {} stages, time left {} from the requests",
+                stages.done(),
+                stages.total(),
+                requests.left());
+        return new Figures(
+                stages.percent(), stages.done(), stages.total(), requests.left(), stages.fraction(), requests.kinds());
     }
 
     private ProgressLedger ledgerFor(final StepKind kind, final Instant now) {

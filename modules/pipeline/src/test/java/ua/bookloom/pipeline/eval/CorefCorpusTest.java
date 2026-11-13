@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.eval;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
@@ -93,10 +94,8 @@ class CorefCorpusTest {
     @ParameterizedTest
     @MethodSource("windows")
     void window_goldPronoun_inSpeechFlagFollowsTheQuoteMarksOfTheText(final CorefWindow window) {
-        final List<String> spoken = SPEECH.matcher(window.text())
-                .results()
-                .map(match -> match.group())
-                .toList();
+        final List<String> spoken =
+                SPEECH.matcher(window.text()).results().map(MatchResult::group).toList();
 
         assertThat(window.pronouns())
                 .allSatisfy(pronoun -> assertThat(spoken.stream().anyMatch(span -> span.contains(pronoun.quote())))
@@ -157,7 +156,7 @@ class CorefCorpusTest {
     @ParameterizedTest
     @MethodSource("speechWindows")
     void speechWindow_hasAPronounInsideQuotedSpeech(final CorefWindow window) {
-        assertThat(window.pronouns()).anyMatch(pronoun -> pronoun.inSpeech());
+        assertThat(window.pronouns()).anyMatch(CorefWindow.Pronoun::inSpeech);
     }
 
     @ParameterizedTest

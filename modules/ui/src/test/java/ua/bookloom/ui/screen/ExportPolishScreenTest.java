@@ -5,18 +5,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
-import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
 import javafx.scene.text.Text;
-import org.controlsfx.control.ToggleSwitch;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ScriptedExportService;
 import ua.bookloom.ui.ThemeTestSupport;
@@ -54,7 +52,7 @@ class ExportPolishScreenTest extends TranslatingScreenTestBase {
                         0,
                         List.of(),
                         10,
-                        ConsistencySummary.NOT_RUN,
+                        ProofreadSummary.NONE,
                         0));
         onFx(() -> button("export-run").fire());
         awaitFx(() -> injector.getInstance(ExportViewModel.class).outcome().get() != null);
@@ -87,15 +85,5 @@ class ExportPolishScreenTest extends TranslatingScreenTestBase {
         assertThat(box.isWrapText()).isTrue();
         assertThat(String.join("", shown).replace("\n", " ").strip())
                 .isEqualTo("Bilingual copy (original and translation side by side)");
-    }
-
-    // IF the switch stood alone under its card's heading, THEN it would not say what turning it on does.
-    @Test
-    void consistencySwitch_shown_namesItselfBesideTheSwitch() throws TimeoutException {
-        openEpubAndShowExport();
-
-        final Node node = required("export-aux-consistency");
-
-        assertThat(((ToggleSwitch) node).getText()).isEqualTo("Check the uncertain places again");
     }
 }

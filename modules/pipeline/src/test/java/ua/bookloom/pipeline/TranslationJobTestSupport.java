@@ -1,12 +1,10 @@
 package ua.bookloom.pipeline;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.nio.file.Path;
 import java.time.Clock;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
@@ -22,6 +20,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.SentenceSplitter;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
@@ -31,6 +30,7 @@ import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.PromptFrameRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SummaryRepository;
@@ -54,7 +54,6 @@ import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.run.RunStores;
 
 /** Shared real-document and controlled-model setup for job acceptance tests. */
@@ -63,7 +62,6 @@ import ua.bookloom.pipeline.run.RunStores;
 final class TranslationJobTestSupport {
 
     private static final long WAIT_SECONDS = 5;
-    private static final ObjectMapper MAPPER = new ObjectMapper();
     static final SentenceSplitter SPLITTER =
             Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class);
     private static final ConcurrentLinkedQueue<ExecutorService> EXECUTORS = new ConcurrentLinkedQueue<>();
@@ -97,7 +95,8 @@ final class TranslationJobTestSupport {
                 injector.getInstance(GlossaryRepository.class),
                 injector.getInstance(TmRepository.class),
                 injector.getInstance(SummaryRepository.class),
-                injector.getInstance(LexiconRepository.class));
+                injector.getInstance(LexiconRepository.class),
+                injector.getInstance(PromptFrameRepository.class));
         final ProjectServiceImpl service = ProjectServices.service(
                 injector, documents, stores.projects(), stores.segments(), stores.openProjects());
         final Result<ImportedBook> importResult = service.create(book);
@@ -215,22 +214,17 @@ final class TranslationJobTestSupport {
     private static TranslationJobImpl job(
             final TestProject project, final String projectId, final ChatModel model, final ReviewMode mode) {
         return new TranslationJobImpl(
-                project.documents(),
                 new RunRequest(projectId, mode, null, MODEL_NAME, new ModelSelection("scripted-provider", MODEL_NAME)),
-                model,
-                new ObjectMapper(),
-                new PromptTemplates(),
+                new JobTools(project.documents(), model, new ObjectMapper(), new PromptTemplates()),
                 project.stores(),
-                qualityLoop(),
-                SPLITTER,
-                ConsistencyPassFixture.over(project),
-                Clock.systemUTC(),
-                new UuidIdSource(),
-                RecoveryTimer.REAL,
-                RunTicks.DAEMON,
-                BatchDrafter.NO_BATCHING,
-                WordValidator.none(),
-                RequestDefaultsSource.environmentOnly());
+                new RunChecks(qualityLoop(), SPLITTER, ProofreadFixture.over(project), WordValidator.none()),
+                new RunPacing(
+                        Clock.systemUTC(),
+                        new UuidIdSource(),
+                        RecoveryTimer.REAL,
+                        RunTicks.DAEMON,
+                        BatchDrafter.NO_BATCHING),
+                new RunLogFacts(CallLedger.none(), "unknown"));
     }
 
     /** The real quality loop over the real judge and self-heal calls, as Guice builds it for a run. */
@@ -274,17 +268,22 @@ final class TranslationJobTestSupport {
         return model;
     }
 
+    /**
+     * A Balanced run's answers for one segment that earns the one repair: the draft, the reviewer's answer of no edit
+     * when it reads the chunk, and the repair. Fast makes no repair, so a test of the repair runs at Balanced.
+     */
+    static ScriptedChatModel draftThenRepair(final String draft, final String repair) {
+        return replies(draft).answerTo(ChunkRunFixtures.REPAIR, ChunkRunFixtures.target(repair));
+    }
+
     /** A reply cut off by the length limit, which the run flags as {@code validation} without a repair call. */
     static Result<ChatResponse> cutOffReply() {
         return Result.ok(new ChatResponse(targetReply("HE OPENED"), FinishReason.LENGTH));
     }
 
+    /** A translate-family reply of one item; see {@link TestReplies#targetReply(String)}. */
     static String targetReply(final String target) {
-        try {
-            return MAPPER.writeValueAsString(Map.of("target", target));
-        } catch (JsonProcessingException cause) {
-            throw new AssertionError("could not encode scripted target", cause);
-        }
+        return TestReplies.targetReply(target);
     }
 
     static JobReport report(final Result<JobReport> result) {
@@ -378,7 +377,7 @@ final class TranslationJobTestSupport {
                 }
                 try {
                     latch.await(left, TimeUnit.NANOSECONDS);
-                } catch (InterruptedException cause) {
+                } catch (InterruptedException _) {
                     interrupted = true;
                 }
             }

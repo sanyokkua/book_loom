@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 
 /** The stored result of an export keeps coherent counts and its own copy of the side files. */
 class ExportRecordTest {
@@ -17,7 +18,8 @@ class ExportRecordTest {
     @Test
     void new_sideFiles_areCopied() {
         final List<Path> sides = new ArrayList<>(List.of(Path.of("a.report.md")));
-        final ExportRecord record = new ExportRecord(AT, Path.of("a.epub"), 74, 2, 50, 6, 70, 1, 142, sides);
+        final ExportRecord record =
+                new ExportRecord(AT, Path.of("a.epub"), 74, 2, 50, 6, 70, 1, new ProofreadSummary(12, 3), sides);
         sides.clear();
 
         assertThat(record.sideFiles()).containsExactly(Path.of("a.report.md"));
@@ -26,6 +28,7 @@ class ExportRecordTest {
     @Test
     void new_negativeCount_isRejected() {
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> new ExportRecord(AT, Path.of("a.epub"), -1, 0, 0, 0, 0, 0, 0, List.of()));
+                .isThrownBy(() ->
+                        new ExportRecord(AT, Path.of("a.epub"), -1, 0, 0, 0, 0, 0, ProofreadSummary.NONE, List.of()));
     }
 }

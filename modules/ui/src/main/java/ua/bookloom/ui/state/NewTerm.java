@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.Optional;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.TargetState;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -17,9 +18,9 @@ import ua.bookloom.util.text.GlossaryKeys;
  * @param target the chosen rendering as typed, blank when none was given
  * @param type the chosen type
  * @param gender the chosen gender
- * @param locked whether the term is to be locked
+ * @param state how firmly the target holds, pinned or locked; a typed target is the person's either way
  */
-public record NewTerm(String term, String target, TermType type, Gender gender, boolean locked) {
+public record NewTerm(String term, String target, TermType type, Gender gender, TargetState state) {
 
     /** Validates the invariants a caller is entitled to assume. */
     public NewTerm {
@@ -27,6 +28,12 @@ public record NewTerm(String term, String target, TermType type, Gender gender, 
         Objects.requireNonNull(target, "target");
         Objects.requireNonNull(type, "type");
         Objects.requireNonNull(gender, "gender");
+        Objects.requireNonNull(state, "state");
+    }
+
+    /** {@return whether the term is to be locked} */
+    boolean isLocked() {
+        return state == TargetState.LOCKED;
     }
 
     /**
@@ -35,7 +42,8 @@ public record NewTerm(String term, String target, TermType type, Gender gender, 
      * @param held the entries the glossary already has
      * @param messages the catalogue the reason is worded from
      * @return the reason in the display language, or empty if the term may be added; checked in the order a blank
-     *     source, a duplicate by its {@link GlossaryKeys} key, then a lock with no target
+     *     source, a duplicate by its {@link GlossaryKeys} key (an entry's lemma, then any of its forms, which names the
+     *     entry), then a lock with no target
      */
     Optional<String> refusal(final List<GlossaryEntry> held, final Messages messages) {
         final String source = term.strip();
@@ -46,7 +54,15 @@ public record NewTerm(String term, String target, TermType type, Gender gender, 
         if (held.stream().anyMatch(row -> GlossaryKeys.of(row.term()).equals(key))) {
             return Optional.of(messages.get(MessageKey.NAMES_STYLE_DUPLICATE, source));
         }
-        if (locked && target.isBlank()) {
+        final Optional<GlossaryEntry> holder = held.stream()
+                .filter(row -> row.forms().stream()
+                        .anyMatch(form -> GlossaryKeys.of(form).equals(key)))
+                .findFirst();
+        if (holder.isPresent()) {
+            return Optional.of(messages.get(
+                    MessageKey.NAMES_STYLE_DUPLICATE_FORM, source, holder.get().term()));
+        }
+        if (isLocked() && target.isBlank()) {
             return Optional.of(messages.get(MessageKey.NAMES_STYLE_LOCK_NEEDS_TARGET));
         }
         return Optional.empty();

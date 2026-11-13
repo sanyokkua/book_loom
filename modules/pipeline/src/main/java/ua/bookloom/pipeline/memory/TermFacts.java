@@ -5,14 +5,15 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
-import ua.bookloom.pipeline.checks.CharacterNames;
 
 /**
- * The facts a prompt line states about a glossary term, worded once so the glossary lines and the rolling summary tell
- * a model the same thing: the type, and for a character only its gender, called {@code likely} when nobody confirmed it
- * (15i.T1). A place, a term or a title has no gender line.
+ * The facts a prompt line states about a glossary term, worded once so every glossary line tells a model the same
+ * thing: the type, and for a character its gender when the person set it, the book proved it or a
+ * rule gave it. A gender the model only guessed is not stated, so a wrong guess is not spread over the book (design
+ * D5; translation-pipeline "Write each injected map item as one line of its target, type and settled gender"). A
+ * place, a term or a title has no gender.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -24,14 +25,15 @@ public final class TermFacts {
      * @param type the term's type; never null
      * @param gender the term's gender; never null
      * @param origin who decided the gender; null when it is unknown
-     * @return {@code character, likely female} or {@code place}; never null
+     * @return {@code character, female}, {@code character} for a likely gender, or {@code place}; never null
      */
-    public static String of(final TermType type, final Gender gender, @Nullable final GenderOrigin origin) {
+    public static String of(final TermType type, final Gender gender, @Nullable final Origin origin) {
         final String name = type.name().toLowerCase(Locale.ROOT);
-        if (type != TermType.CHARACTER) {
+        // The one place a glossary line decides whether a likely gender reaches a prompt: not by default; arm 4b
+        // (task 7.8) decides whether it ever may.
+        if (type != TermType.CHARACTER || origin == Origin.LIKELY) {
             return name;
         }
-        final String likely = origin == GenderOrigin.SUGGESTED ? CharacterNames.LIKELY + " " : "";
-        return name + ", " + likely + gender.name().toLowerCase(Locale.ROOT);
+        return name + ", " + gender.name().toLowerCase(Locale.ROOT);
     }
 }

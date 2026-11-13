@@ -159,7 +159,7 @@ abstract class ImportBookTestBase extends StructureScreenTestBase {
     }
 
     private static String cellText(final Node cell, final String selector) {
-        return ThemeTestSupport.onFx(() -> ((Label) cell.lookup(selector)).getText());
+        return ThemeTestSupport.onFx(((Label) cell.lookup(selector))::getText);
     }
 
     void pickSegment(final int index) {

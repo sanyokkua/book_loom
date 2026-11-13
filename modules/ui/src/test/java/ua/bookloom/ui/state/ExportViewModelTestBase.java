@@ -7,6 +7,7 @@ import java.time.Clock;
 import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
+import javafx.collections.FXCollections;
 import javafx.stage.Stage;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,12 +27,14 @@ import ua.bookloom.ui.ScriptedExportService;
 import ua.bookloom.ui.ScriptedModelCatalog;
 import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.ScriptedProjectService;
+import ua.bookloom.ui.ScriptedProofreadProgress;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.ScriptedReviewDesk;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.dialog.RecordingConfirmPrompt;
 import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.notify.Voice;
 
 /**
  * What the export view model tests share: a real {@link ImportViewModel} over the scripted project service and a
@@ -92,22 +95,24 @@ abstract class ExportViewModelTestBase extends FxTestBase {
 
     private SettingsViewModel newSettings() {
         return new SettingsViewModel(
-                new FakeProviderConfigs(),
-                ScriptedProviderVerifier.idle(),
-                new ModelListing(
-                        ScriptedModelCatalog.idle(),
-                        new RecordingToasts(),
-                        new RecordingErrorPresenter(),
-                        new DirectExecutor(),
-                        activities,
-                        messages),
-                new RecordingErrorPresenter(),
+                new ProviderStore(new FakeProviderConfigs(), new MemorySettings()),
+                new ProviderChecks(
+                        ScriptedProviderVerifier.idle(),
+                        new ModelListing(
+                                ScriptedModelCatalog.idle(),
+                                new RecordingToasts(),
+                                new RecordingErrorPresenter(),
+                                new DirectExecutor(),
+                                activities,
+                                messages),
+                        QuantChipsFixture.idle()),
+                new Voice(messages, new RecordingErrorPresenter()),
                 new DirectExecutor(),
                 activities,
-                new MemorySettings(),
-                messages,
-                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
-                new StructuredAnswers());
+                new InferenceMemory(
+                        new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
+                        new StructuredAnswers()),
+                java.time.Clock.systemUTC());
     }
 
     /** Builds an export view model over this test's collaborators and the given executor. */
@@ -118,22 +123,24 @@ abstract class ExportViewModelTestBase extends FxTestBase {
     /** Builds an export view model with a setup helper, or none. FX thread only. */
     ExportViewModel newExports(final ExecutorService executor, final @Nullable SetupHelper setup) {
         return new ExportViewModel(
-                current,
-                desk,
-                projects,
-                messages,
-                exportService,
-                models,
-                settings,
-                progress,
+                new ExportBook(current, desk, projects, standing()),
+                new ExportEngine(exportService),
+                new ExportWork(progress, activities),
                 executor,
-                activities,
                 setup,
-                storedSettings,
-                store,
-                new RecordingConfirmPrompt(),
-                (ExportOutcome outcome) -> {},
-                Clock.fixed(UiTestInjector.NOW, ZoneOffset.UTC));
+                new ExportStorage(storedSettings, store, Clock.fixed(UiTestInjector.NOW, ZoneOffset.UTC)),
+                new ExportDialogs(messages, new RecordingConfirmPrompt(), (ExportOutcome outcome) -> {}));
+    }
+
+    private ProofreadStanding standing() {
+        return new ProofreadStanding(
+                new ProofreadStanding.Ports(new ScriptedProofreadProgress(), new ModelBatchSize(models, settings)),
+                settings,
+                current,
+                mirror,
+                new DirectExecutor(),
+                Runnable::run,
+                FXCollections.observableArrayList());
     }
 
     /** Replaces the export view model with a new one over the same current project, as a later first visit would. */

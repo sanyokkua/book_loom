@@ -65,7 +65,7 @@ class NamesStyleChangeResultsTest extends FxTestBase {
     }
 
     private static GlossaryEntry entry(final String id, final String term, final TermType type, final Gender gender) {
-        return new GlossaryEntry(id, PROJECT, term, null, type, gender, false);
+        return GlossaryEntry.of(id, PROJECT, term, null, type, gender, false);
     }
 
     private ChangeResults results() {
@@ -164,11 +164,8 @@ class NamesStyleChangeResultsTest extends FxTestBase {
 
     private NamesStyleViewModel newViewModel(final ExecutorService executor) {
         return onFx(() -> new NamesStyleViewModel(
-                glossary,
-                lexicon,
-                new ScriptedNamesPass(),
-                ScriptedChatModelFactory.ok(),
-                settings,
+                new NamesServices(glossary, lexicon, new ScriptedNamesPass()),
+                new ModelAccess(ScriptedChatModelFactory.ok(), settings),
                 executor,
                 messages,
                 tracker,
@@ -242,7 +239,7 @@ class NamesStyleChangeResultsTest extends FxTestBase {
         run(vm::review);
         final GlossaryEntry byHand = entry("e1", "Well", TermType.CHARACTER, Gender.MALE);
         glossary.willAnswer(Result.ok(byHand));
-        run(() -> vm.setGender("e1", Gender.MALE));
+        run(() -> vm.rowChanges().setGender("e1", Gender.MALE));
 
         run(() -> results().revert(1));
 

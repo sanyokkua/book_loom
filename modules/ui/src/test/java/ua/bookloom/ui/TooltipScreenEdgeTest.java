@@ -32,7 +32,7 @@ class TooltipScreenEdgeTest extends ShellTestBase {
             window.setX(screen.getMaxX() - window.getWidth());
         });
         final Node about = required("shell-about");
-        final Tooltip tip = ThemeTestSupport.onFx(() -> ((Control) about).getTooltip());
+        final Tooltip tip = ThemeTestSupport.onFx(((Control) about)::getTooltip);
 
         onFx(() -> {
             final Bounds at = about.localToScreen(about.getLayoutBounds());

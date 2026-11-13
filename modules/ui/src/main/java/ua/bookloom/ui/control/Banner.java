@@ -49,7 +49,7 @@ public final class Banner extends HBox {
         this.title.setId(id + "-title");
         this.text.setId(id + "-text");
         setAlignment(Pos.TOP_LEFT);
-        getStyleClass().addAll("banner", role.styleClass(FAMILY));
+        getStyleClass().addAll(FAMILY, role.styleClass(FAMILY));
         // The words take the width the banner has and wrap in it, so a long line grows the banner instead of being cut.
         HBox.setHgrow(column, Priority.ALWAYS);
         column.setMinWidth(0);

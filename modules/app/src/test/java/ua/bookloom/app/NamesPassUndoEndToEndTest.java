@@ -120,7 +120,7 @@ class NamesPassUndoEndToEndTest extends WorkspaceTestBase {
 
         @Override
         public Result<ChatModel> create(final ModelSelection selection) {
-            return real.create(selection).map(pseudo -> new TargetingPseudo(pseudo));
+            return real.create(selection).map(TargetingPseudo::new);
         }
     }
 
@@ -170,16 +170,16 @@ class NamesPassUndoEndToEndTest extends WorkspaceTestBase {
 
     private void seedThePersonsWork(final String projectId) {
         final GlossaryService glossary = injector.getInstance(GlossaryService.class);
-        assertThat(glossary.add(new GlossaryEntry(
+        assertThat(glossary.add(GlossaryEntry.of(
                                 WREN_ID, projectId, "Wren", null, TermType.CHARACTER, Gender.FEMALE, false))
                         .isOk())
                 .isTrue();
-        assertThat(glossary.add(new GlossaryEntry(
+        assertThat(glossary.add(GlossaryEntry.of(
                                 GATE_ID, projectId, "Gatewarden", "Брамник", TermType.TERM, Gender.UNKNOWN, true))
                         .isOk())
                 .isTrue();
         Stream.of("Brann", "Harrowgate", "Overture")
-                .forEach(term -> assertThat(glossary.add(new GlossaryEntry(
+                .forEach(term -> assertThat(glossary.add(GlossaryEntry.of(
                                         "seed-" + term, projectId, term, null, TermType.OTHER, Gender.UNKNOWN, false))
                                 .isOk())
                         .isTrue());

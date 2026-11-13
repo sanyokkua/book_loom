@@ -72,24 +72,27 @@ class JobEventContractsTest {
     /** Exhaustively switches over every {@link JobEvent} permitted type; a missing case fails compilation. */
     private static String describe(final JobEvent event) {
         return switch (event) {
-            case StageStarted started -> "StageStarted";
-            case ModelCallStarted started -> "ModelCallStarted";
-            case SegmentDecided decided -> "SegmentDecided";
-            case Paused paused -> "Paused";
-            case Resumed resumed -> "Resumed";
-            case Finished finished -> "Finished";
-            case SegmentStarted started -> "SegmentStarted";
-            case SegmentDrafted drafted -> "SegmentDrafted";
-            case ModelCallFinished finished -> "ModelCallFinished";
-            case MemoryUpdated updated -> "MemoryUpdated";
-            case ContextAssembled assembled -> "ContextAssembled";
-            case RoundStarted round -> "RoundStarted";
-            case RecoveryWaiting waiting -> "RecoveryWaiting";
-            case BatchStarted batch -> "BatchStarted";
-            case CallSnapshotUpdated updated -> "CallSnapshotUpdated";
-            case StepsPlanned planned -> "StepsPlanned";
-            case StepChanged changed -> "StepChanged";
-            case BriefSampleRead read -> "BriefSampleRead";
+            case StageStarted _ -> "StageStarted";
+            case ModelCallStarted _ -> "ModelCallStarted";
+            case SegmentDecided _ -> "SegmentDecided";
+            case Paused _ -> "Paused";
+            case Resumed _ -> "Resumed";
+            case Finished _ -> "Finished";
+            case SegmentStarted _ -> "SegmentStarted";
+            case SegmentDrafted _ -> "SegmentDrafted";
+            case ModelCallFinished _ -> "ModelCallFinished";
+            case MemoryUpdated _ -> "MemoryUpdated";
+            case ContextAssembled _ -> "ContextAssembled";
+            case RecoveryWaiting _ -> "RecoveryWaiting";
+            case BatchStarted _ -> "BatchStarted";
+            case CallSnapshotUpdated _ -> "CallSnapshotUpdated";
+            case StepsPlanned _ -> "StepsPlanned";
+            case StepChanged _ -> "StepChanged";
+            case BriefSampleRead _ -> "BriefSampleRead";
+            case ChapterSummaryKept _ -> "ChapterSummaryKept";
+            case ProofreadForecast _ -> "ProofreadForecast";
+            case ProofreadRoundStarted _ -> "ProofreadRoundStarted";
+            case ProofreadWindowRead _ -> "ProofreadWindowRead";
         };
     }
 
@@ -104,7 +107,7 @@ class JobEventContractsTest {
 
     @Test
     void stepsPlanned_negativeCount_isRejected() {
-        assertThatIllegalArgumentException().isThrownBy(() -> new StepsPlanned(StepKind.CHECK, -1, false));
+        assertThatIllegalArgumentException().isThrownBy(() -> new StepsPlanned(StepKind.REPAIR, -1, false));
     }
 
     @Test
@@ -121,13 +124,13 @@ class JobEventContractsTest {
     void stepChanged_startedWithResult_isRejected() {
         assertThatIllegalArgumentException()
                 .isThrownBy(
-                        () -> new StepChanged(StepKind.CHECK, "Check", 0, StepState.STARTED, null, StepResult.DONE));
+                        () -> new StepChanged(StepKind.REPAIR, "Check", 0, StepState.STARTED, null, StepResult.DONE));
     }
 
     @Test
     void stepChanged_negativeIndex_isRejected() {
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> new StepChanged(StepKind.CHECK, "Check", -1, StepState.STARTED, null, null));
+                .isThrownBy(() -> new StepChanged(StepKind.REPAIR, "Check", -1, StepState.STARTED, null, null));
     }
 
     @ParameterizedTest
@@ -149,7 +152,7 @@ class JobEventContractsTest {
 
     @Test
     void modelCallStarted_twoArgConstructor_isAFirstAttemptAboutItsSegment() {
-        final ModelCallStarted started = new ModelCallStarted("s-1", CallKind.REVIEW);
+        final ModelCallStarted started = new ModelCallStarted("s-1", CallKind.PROOFREAD);
 
         assertThat(started.segmentIds()).containsExactly("s-1");
         assertThat(started.attempt()).isEqualTo(1);
@@ -160,7 +163,7 @@ class JobEventContractsTest {
 
     @Test
     void modelCallStarted_attemptBeyondItsMaximum_isRejected() {
-        assertThatThrownBy(() -> new ModelCallStarted(null, CallKind.REVIEW, List.of(), 3, 2, null, null))
+        assertThatThrownBy(() -> new ModelCallStarted(null, CallKind.PROOFREAD, List.of(), 3, 2, null, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -168,7 +171,7 @@ class JobEventContractsTest {
     void modelCallStarted_segmentIds_areCopied() {
         final List<String> ids = new ArrayList<>(List.of("s-1", "s-2"));
         final ModelCallStarted started = new ModelCallStarted(
-                null, CallKind.REVIEW, ids, 2, 2, Duration.ofSeconds(90), new RequestSummary(4_600, 8192, 1024));
+                null, CallKind.PROOFREAD, ids, 2, 2, Duration.ofSeconds(90), new RequestSummary(4_600, 8192, 1024));
         ids.clear();
 
         assertThat(started.segmentIds()).containsExactly("s-1", "s-2");
@@ -178,7 +181,15 @@ class JobEventContractsTest {
     @Test
     void modelCallFinished_failedAttempt_isNotAnswered() {
         final ModelCallFinished failed = new ModelCallFinished(
-                "s-1", CallKind.REVIEW, Duration.ofSeconds(90), null, 0, false, List.of("s-1"), 2, ErrorCode.timeout);
+                "s-1",
+                CallKind.PROOFREAD,
+                Duration.ofSeconds(90),
+                null,
+                0,
+                false,
+                List.of("s-1"),
+                2,
+                ErrorCode.timeout);
 
         assertThat(failed.isAnswered()).isFalse();
         assertThat(failed.attempt()).isEqualTo(2);
@@ -192,12 +203,6 @@ class JobEventContractsTest {
         assertThat(finished.isAnswered()).isTrue();
         assertThat(finished.attempt()).isEqualTo(1);
         assertThat(finished.segmentIds()).containsExactly("s-1");
-    }
-
-    @Test
-    void roundStarted_roundBeyondTheBudget_isRejected() {
-        assertThatThrownBy(() -> new RoundStarted("s-1", 3, 2, 0.8, "meaning"))
-                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -217,7 +222,7 @@ class JobEventContractsTest {
         given.clear();
 
         assertThat(read.answers()).containsOnlyKeys(BriefField.GENRE);
-        assertThat(read.answers().get(BriefField.GENRE)).isEqualTo(new SampleAnswer("crime", "He left."));
+        assertThat(read.answers()).containsEntry(BriefField.GENRE, new SampleAnswer("crime", "He left."));
         assertThat(read.sample()).isEqualTo(2);
     }
 
@@ -244,5 +249,22 @@ class JobEventContractsTest {
     void briefSampleRead_sampleOutsideTheWindows_isRejected(final int sample, final int samples) {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> new BriefSampleRead(sample, samples, java.util.Map.of(), "", ""));
+    }
+
+    @Test
+    void chapterSummaryKept_toString_holdsNoSummaryText() {
+        final ChapterSummaryKept kept = new ChapterSummaryKept("ch1.xhtml:0", 1, 2, "Оповідачка вирушає до перевалу.");
+
+        assertThat(kept.text()).isEqualTo("Оповідачка вирушає до перевалу.");
+        assertThat(kept.toString())
+                .contains("ch1.xhtml:0", "chapter=1", "sentences=2")
+                .doesNotContain("Оповідачка");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,1,Text.", "1,0,Text.", "1,4,Text.", "1,2,' '"})
+    void chapterSummaryKept_outOfRange_isRejected(final int chapter, final int sentences, final String text) {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new ChapterSummaryKept("ch1.xhtml:0", chapter, sentences, text));
     }
 }

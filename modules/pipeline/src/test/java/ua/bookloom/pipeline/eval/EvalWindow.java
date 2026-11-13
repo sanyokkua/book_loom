@@ -5,14 +5,16 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.llm.ContextPolicy;
 import ua.bookloom.api.llm.ModelCapabilities;
+import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.llm.ModelSelection;
-import ua.bookloom.pipeline.context.ContextBudget;
+import ua.bookloom.api.llm.ModelWindow;
 
 /**
  * The window an eval sizes its requests against, chosen the way a run chooses it: the context length the provider
  * reports for the model, limited to the run's default, unless {@code BOOKLOOM_EVAL_WINDOW} says otherwise. The
- * detection is the run's own {@link ModelCapabilities#detectedTokens} and {@link ContextBudget#windowFor}; it asks the
+ * detection is the run's own {@link ModelCapabilities#detectedTokens} and {@link ModelWindow#of}; it asks the
  * provider once per process, and only when the eval's endpoint is set, so an offline unit test never touches a network.
  */
 @Slf4j
@@ -51,7 +53,9 @@ final class EvalWindow {
      */
     static int resolve(@Nullable final String asked, @Nullable final Integer detected) {
         final Integer override = asked == null || asked.isBlank() ? null : Integer.valueOf(asked.strip());
-        return ContextBudget.windowFor(detected, override);
+        return ModelWindow.of(
+                new ContextPolicy(ModelWindow.DEFAULT_WINDOW, ModelProfile.DEFAULT_OUTPUT_MAX, detected, null),
+                override);
     }
 
     /** What the provider reports for the model, or null when the eval has no endpoint or the provider says nothing. */

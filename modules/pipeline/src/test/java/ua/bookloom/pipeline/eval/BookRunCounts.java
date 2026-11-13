@@ -13,9 +13,9 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.document.DocumentPort;
-import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.GenderWait;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Narrator;
@@ -91,7 +91,7 @@ final class BookRunCounts {
                 latin,
                 alphabet,
                 report.flaggedWritten(),
-                awaiting(report.consistency()),
+                awaiting(report.proofread()),
                 detectors);
     }
 
@@ -120,7 +120,7 @@ final class BookRunCounts {
         return !NON_LATIN_TARGETS.contains(primary);
     }
 
-    private static int awaiting(final ConsistencySummary summary) {
+    private static int awaiting(final ProofreadSummary summary) {
         return summary.awaitingGender().stream().mapToInt(GenderWait::segments).sum();
     }
 

@@ -83,6 +83,18 @@ public interface GlossaryRepository {
     Result<Boolean> remove(String projectId, String entryId);
 
     /**
+     * Folds one entry into another in one atomic step: the folded entry goes and the kept entry, which lists its term
+     * as a form, is stored. Unlike {@link #remove} this does not remember the folded term as removed, because the
+     * person did not remove it.
+     *
+     * @param projectId the non-null project id
+     * @param foldedId the non-null id of the entry that goes
+     * @param kept the non-null replacement for the entry that stays, matched by id
+     * @return the stored kept entry, or {@code validation} when either entry is not held; nothing changes then
+     */
+    Result<GlossaryEntry> fold(String projectId, String foldedId, GlossaryEntry kept);
+
+    /**
      * Lists a project's glossary entries.
      *
      * @param projectId the non-null project id

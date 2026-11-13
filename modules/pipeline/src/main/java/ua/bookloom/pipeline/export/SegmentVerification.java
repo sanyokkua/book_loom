@@ -36,7 +36,6 @@ final class SegmentVerification {
     private static final Pattern MARKDOWN_ALT = Pattern.compile("!\\[.*?]\\(", Pattern.DOTALL);
     private static final String EMPTY_MARKDOWN_ALT = "![](";
     private static final int SHORT_MARKUP = 3;
-    private static final Pattern TAG = Pattern.compile("<(/?)([A-Za-z][\\w:.-]*)[^>]*>(?s:.*)");
 
     /**
      * Checks a re-opened book against the one written, naming every segment whose markup came back different.
@@ -163,15 +162,36 @@ final class SegmentVerification {
         return fragments.stream().map(SegmentVerification::tagOf).toList();
     }
 
-    private static String tagOf(@Nullable final String fragment) {
+    static String tagOf(@Nullable final String fragment) {
         if (fragment == null) {
             return "?";
         }
-        final Matcher tag = TAG.matcher(fragment);
-        if (tag.matches()) {
-            return "<" + tag.group(1) + tag.group(2) + ">";
+        final String tag = tagStart(fragment);
+        if (!tag.isEmpty()) {
+            return tag;
         }
         return fragment.length() <= SHORT_MARKUP ? fragment : "#" + fragment.length();
+    }
+
+    // "<", an optional slash and a name, closed by ">" with anything between; empty when the fragment opens no tag.
+    private static String tagStart(final String fragment) {
+        final int nameStart = fragment.startsWith("</") ? 2 : 1;
+        if (!fragment.startsWith("<") || nameStart >= fragment.length() || !isAsciiLetter(fragment.charAt(nameStart))) {
+            return "";
+        }
+        int end = nameStart + 1;
+        while (end < fragment.length() && isNameChar(fragment.charAt(end))) {
+            end++;
+        }
+        return fragment.indexOf('>', end) < 0 ? "" : "<" + fragment.substring(1, end) + ">";
+    }
+
+    private static boolean isAsciiLetter(final char c) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+    }
+
+    private static boolean isNameChar(final char c) {
+        return isAsciiLetter(c) || (c >= '0' && c <= '9') || c == '_' || c == ':' || c == '.' || c == '-';
     }
 
     private static List<Segment> bodySegments(final Document document) {

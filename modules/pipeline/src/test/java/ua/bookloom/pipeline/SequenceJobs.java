@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Guice;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.List;
@@ -12,7 +13,9 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobListener;
@@ -26,21 +29,23 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.document.DocumentModule;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.export.ExportServiceImpl;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
 import ua.bookloom.pipeline.glossary.GlossaryServiceImpl;
 import ua.bookloom.pipeline.glossary.LexiconReading;
+import ua.bookloom.pipeline.glossary.NameServices;
 import ua.bookloom.pipeline.glossary.NamesPassImpl;
 import ua.bookloom.pipeline.glossary.PreScan;
 import ua.bookloom.pipeline.glossary.SuggestTargets;
 import ua.bookloom.pipeline.glossary.TermChoice;
 import ua.bookloom.pipeline.glossary.TermReview;
+import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.lexicon.LexiconServiceImpl;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.review.RetryDraft;
-import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.run.RunStores;
 
 /**
@@ -63,6 +68,11 @@ public final class SequenceJobs {
         /** The stored project's id. */
         public String projectId() {
             return project.id();
+        }
+
+        /** The deferrals of the stored project, as the review desk and the Proofread stage read them. */
+        public DeferralRepository deferrals() {
+            return project.deferrals();
         }
 
         /** The stores the run reads and writes. */
@@ -125,23 +135,10 @@ public final class SequenceJobs {
         return new Prepared(TranslationJobTestSupport.project(book, brief));
     }
 
-    /** The consistency pass over the prepared book's own stores (the eval's stage runners reach it from here). */
-    public static ConsistencyPass consistencyPass(final Prepared prepared) {
-        return ConsistencyPassFixture.over(prepared.project);
-    }
-
     /** The production export service over the prepared book's own stores, as the Export screen reaches it. */
     public static ExportService exportService(final Prepared prepared) {
         final TestProject project = prepared.project;
-        return new ExportServiceImpl(
-                project.stores().projects(),
-                project.stores().segments(),
-                project.stores().openProjects(),
-                project.documents(),
-                consistencyPass(prepared),
-                project.stores().glossary(),
-                project.stores().runs(),
-                Clock.systemUTC());
+        return new ExportServiceImpl(project.stores(), project.documents(), project.deferrals());
     }
 
     /** The brief stored for the prepared book, as the window shows it. */
@@ -163,7 +160,23 @@ public final class SequenceJobs {
 
     /** The review desk's retry over the prepared book's own stores. */
     public static RetryDraft retryDraft(final Prepared prepared) {
-        return ConsistencyPassFixture.retryDraft(prepared.project);
+        final TestProject project = prepared.project;
+        return new RetryDraft(
+                project.documents(),
+                project.stores().openProjects(),
+                project.stores().projects(),
+                project.stores().segments(),
+                project.stores().glossary(),
+                project.stores().lexicon(),
+                project.stores().promptFrames(),
+                project.stores().runs(),
+                project.stores().summaries(),
+                new PromptTemplates(),
+                new ObjectMapper(),
+                Guice.createInjector().getInstance(QualityLoop.class),
+                Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),
+                () -> ReviewMode.UNATTENDED,
+                Clock.systemUTC());
     }
 
     /**
@@ -196,7 +209,8 @@ public final class SequenceJobs {
                         prepared.project.deferrals(),
                         stores.projects(),
                         stores.openProjects(),
-                        scans),
+                        scans,
+                        stores.summaries()),
                 new LexiconServiceImpl(
                         stores.lexicon(), stores.glossary(), stores.projects(), stores.openProjects(), scans));
     }
@@ -209,18 +223,20 @@ public final class SequenceJobs {
         final SuggestTargets suggest = new SuggestTargets(templates, mapper);
         final TermReview review = new TermReview(templates, mapper, stores.glossary(), suggest);
         return new NamesPassImpl(
-                stores.glossary(),
-                stores.lexicon(),
-                stores.segments(),
+                stores,
                 prepared.project.deferrals(),
-                stores.projects(),
-                stores.openProjects(),
-                new PreScan(templates, mapper, stores.glossary(), review, suggest),
+                new NameServices(
+                        new PreScan(templates, mapper, stores.glossary(), review, suggest),
+                        suggest,
+                        new LexiconReading(templates, mapper, new TermChoice(templates, mapper))),
                 templates,
                 mapper,
-                suggest,
-                new LexiconReading(templates, mapper, new TermChoice(templates, mapper)),
                 Clock.systemUTC());
+    }
+
+    /** Runs the unattended job that drafts every segment alone over the prepared book to its end. */
+    public static Result<JobReport> runAlone(final Prepared prepared, final ChatModel model) {
+        return TranslationJobTestSupport.job(prepared.project, model).run();
     }
 
     /**
@@ -234,8 +250,9 @@ public final class SequenceJobs {
             final ReviewMode mode,
             @Nullable final Integer window,
             final JobListener listener) {
-        final TranslationJobImpl job =
-                BatchedJobs.batchedJob(prepared.project, model, new RunRequest(prepared.project.id(), mode, window));
+        // The eval's variants reach the run frame and the context builder through the job's templates.
+        final TranslationJobImpl job = BatchedJobs.batchedJob(
+                prepared.project, model, new RunRequest(prepared.project.id(), mode, window), new PromptTemplates());
         job.subscribe(listener);
         return job.run();
     }

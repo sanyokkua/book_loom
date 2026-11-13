@@ -62,7 +62,7 @@ class TranslateCommandTest {
         final int exit = command().run(List.of(source.toString()), printStream(console));
 
         final Path destination = tempDir.resolve("Book.uk.md");
-        assertThat(exit).isEqualTo(0);
+        assertThat(exit).isZero();
         assertThat(Files.readString(destination)).isEqualTo("HE OPENED THE *OLD* DOOR.\n");
         assertThat(consoleText(console).lines())
                 .containsExactly("Completed: " + destination + " (accepted=0, flagged=1)");
@@ -79,7 +79,7 @@ class TranslateCommandTest {
         final int exit = command(configs, verifier, models)
                 .run(List.of(writeMarkdown(tempDir.resolve("Book.md")).toString()), printStream(console));
 
-        assertThat(exit).isEqualTo(0);
+        assertThat(exit).isZero();
         assertThat(consoleText(console).lines()).hasSize(1);
         assertThat(configs.registered()).isEmpty();
         assertThat(verifier.selections()).isEmpty();
@@ -100,7 +100,7 @@ class TranslateCommandTest {
                         List.of(source.toString(), "--provider", "ollama", "--model", "gemma4:e4b-mlx"),
                         printStream(console));
 
-        assertThat(exit).isEqualTo(0);
+        assertThat(exit).isZero();
         assertThat(configs.registered()).containsExactly(configs.ollama());
         assertThat(verifier.selections()).containsExactly(new ModelSelection("ollama", "gemma4:e4b-mlx"));
         assertThat(verifier.policies()).containsExactly(VerificationPolicy.PREFLIGHT);
@@ -133,7 +133,7 @@ class TranslateCommandTest {
                                 "30"),
                         printStream(new ByteArrayOutputStream()));
 
-        assertThat(exit).isEqualTo(0);
+        assertThat(exit).isZero();
         assertThat(configs.registered().getFirst().baseUrl()).isEqualTo(URI.create("http://10.0.0.5:11434"));
         assertThat(configs.registered().getFirst().requestTimeout()).isEqualTo(Duration.ofSeconds(30));
     }
@@ -157,7 +157,7 @@ class TranslateCommandTest {
                                 "qwen3"),
                         printStream(new ByteArrayOutputStream()));
 
-        assertThat(exit).isEqualTo(0);
+        assertThat(exit).isZero();
         assertThat(configs.registered()).singleElement().satisfies(config -> {
             assertThat(config.id()).isEqualTo("openai-compatible");
             assertThat(config.kind()).isEqualTo(ProviderKind.OPENAI_COMPATIBLE);
@@ -220,7 +220,7 @@ class TranslateCommandTest {
 
         final int exit = command().run(List.of(source.toString()), printStream(new ByteArrayOutputStream()));
 
-        assertThat(exit).isEqualTo(0);
+        assertThat(exit).isZero();
         assertThat(tempDir.resolve("Book.uk.fb2.zip")).isRegularFile();
         assertThat(tempDir.resolve("Book.uk.fb2")).doesNotExist();
     }

@@ -9,7 +9,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -22,17 +21,11 @@ import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.llm.ChatModelFactory;
-import ua.bookloom.api.persistence.ProjectRepository;
-import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.pipeline.ExportRequest;
-import ua.bookloom.api.pipeline.ExportService;
-import ua.bookloom.api.pipeline.ProjectService;
-import ua.bookloom.api.pipeline.ReviewDesk;
+import ua.bookloom.api.pipeline.ProofreadTally;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BackgroundExecutor;
-import ua.bookloom.ui.dialog.ConfirmPrompt;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.util.paths.DestinationPath;
 
@@ -65,9 +58,9 @@ public final class ExportViewModel {
     private final ReadOnlyBooleanWrapper exportAvailable = new ReadOnlyBooleanWrapper(false);
     private final ExportProposals proposals;
     private final ExportStatement statement;
+    private final ProofreadStanding proofread;
     private final ExportOccupancy occupancy;
     private final ExportRun run;
-    private final LastCheckChoice lastCheck;
     public final NameSuggestion nameSuggestion; // the model's proposal of the translated book's file name
     private final ReadOnlyStringWrapper destination = new ReadOnlyStringWrapper("");
     private final ReadOnlyBooleanWrapper destinationExists = new ReadOnlyBooleanWrapper(false);
@@ -76,50 +69,36 @@ public final class ExportViewModel {
 
     /**
      * Follows the open book and its brief and proposes a destination for a book already open. Reads and the export run
-     * on {@code executor}; {@code setup} is null for a window with no model proposals; {@code stored} is only read and
-     * {@code store} keeps the last written export; {@code announcer} says when a book was written.
+     * on {@code executor}; {@code setup} is null for a window with no model proposals; {@code storage} keeps the last
+     * written export; {@code dialogs} say when a book was written and ask before a file is replaced.
      */
     @Inject
     public ExportViewModel(
-            final CurrentProject project,
-            final ReviewDesk desk,
-            final ProjectService projects,
-            final Messages messages,
-            final ExportService exports,
-            final ChatModelFactory models,
-            final SettingsViewModel settings,
-            final WorkflowProgress progress,
+            final ExportBook book,
+            final ExportEngine engine,
+            final ExportWork work,
             @BackgroundExecutor final ExecutorService executor,
-            final ActivityTracker activities,
             final @Nullable SetupHelper setup,
-            final SettingsRepository stored,
-            final ProjectRepository store,
-            final ConfirmPrompt confirm,
-            final ExportAnnouncer announcer,
-            final Clock clock) {
-        this.project = Objects.requireNonNull(project, "project");
-        this.messages = Objects.requireNonNull(messages, "messages");
-        this.clock = Objects.requireNonNull(clock, "clock");
-        this.announcer = Objects.requireNonNull(announcer, "announcer");
-        this.proposals = new ExportProposals(projects, executor, project.book()::get);
+            final ExportStorage storage,
+            final ExportDialogs dialogs) {
+        this.project = Objects.requireNonNull(book, "book").project();
+        this.messages = Objects.requireNonNull(dialogs, "dialogs").messages();
+        this.clock = Objects.requireNonNull(storage, "storage").clock();
+        this.announcer = dialogs.announcer();
+        this.proposals = new ExportProposals(book.projects(), executor, project.book()::get);
         this.nameSuggestion = new NameSuggestion(project, messages, setup, this);
-        this.statement = new ExportStatement(desk, store, messages, executor);
+        this.statement = new ExportStatement(book.desk(), storage.store(), engine.exports(), messages, executor);
+        this.proofread = book.proofread();
         this.occupancy = new ExportOccupancy(executor, this::onOccupancyAnswered);
         this.run = new ExportRun(
-                exports,
-                models,
-                settings,
-                progress,
+                engine,
+                work,
                 executor,
-                activities,
                 messages,
-                new ExportRecorder(store, clock::instant),
-                new ReplaceCheck(confirm));
-        this.lastCheck = new LastCheckChoice(stored, executor);
-        this.blocker = activities.blocker(ActivityKind.EXPORT);
+                new ExportRecorder(storage.store(), clock::instant),
+                new ReplaceCheck(dialogs.confirm()));
+        this.blocker = work.activities().blocker(ActivityKind.EXPORT);
         wire();
-        lastCheck.followBrief(project.brief().get());
-        lastCheck.reload();
         log.debug("export view model created, book open {}", project.book().get() != null);
         propose();
         refreshExists();
@@ -131,7 +110,6 @@ public final class ExportViewModel {
         run.running().addListener((observed, was, now) -> recompute());
         run.outcome().addListener((observed, was, now) -> onOutcomeChanged());
         destination.addListener((observed, was, now) -> run.forgetStale("the destination"));
-        lastCheck.shown().addListener((observed, was, now) -> run.forgetStale("the last check"));
         sideFiles.addListener((SetChangeListener<SideFile>) change -> run.forgetStale("the side files"));
         statement.figures().addListener((observed, was, now) -> onFigures(now));
         project.book().addListener((observed, was, now) -> onBookChanged(now));
@@ -165,24 +143,14 @@ public final class ExportViewModel {
         refreshExists();
     }
 
-    /** Takes the person's last-check toggle; the saved setting is left as it is. */
-    public void setConsistencyPass(final boolean on) {
-        lastCheck.choose(on);
-    }
-
-    /** Whether the last check runs if the book is exported now: off while the book is partial. */
-    public BooleanBinding lastCheckShown() {
-        return lastCheck.shown();
-    }
-
-    /** Whether the last-check switch is locked off because the book is partial. */
-    public BooleanBinding lastCheckLocked() {
-        return lastCheck.locked();
-    }
-
     /** The project's counts and last written export, or null while they are not known. */
     public ReadOnlyObjectProperty<@Nullable ExportFigures> figures() {
         return statement.figures();
+    }
+
+    /** Where the Proofread stage stands: null at Fast, with segments still to draft, while a run works or all is read. */
+    public ReadOnlyObjectProperty<@Nullable ProofreadTally> proofreadLeft() {
+        return proofread.tally();
     }
 
     /** The running work that rules an export out, or null when none does. */
@@ -238,23 +206,9 @@ public final class ExportViewModel {
         }
         final Set<SideFile> chosen = Set.copyOf(sideFiles);
         run.start(
-                new ExportRequest(
-                        book.projectId(),
-                        path.get(),
-                        false,
-                        chosen,
-                        lastCheck.shown().get()),
+                new ExportRequest(book.projectId(), path.get(), false, chosen),
                 ExportPathRules.writtenPaths(
                         path.get(), Objects.requireNonNull(book.inspection().format(), "format"), chosen));
-    }
-
-    /** Ends the running export's last check and writes the file with the fixes made so far. */
-    public void writeNow() {
-        run.writeNow();
-    }
-
-    ExportActivity.RereadTally rereadTally() {
-        return run.rereadTally();
     }
 
     /** The lines stating what a book written now would contain, as last refreshed by {@link #refreshStatement()}. */
@@ -302,14 +256,12 @@ public final class ExportViewModel {
                 book == null ? null : book.projectId());
         destinationEdited = false;
         run.clear();
-        lastCheck.reload();
         propose();
         refreshExists();
         refreshStatement();
     }
 
     private void onBriefChanged(final @Nullable BookBrief brief) {
-        lastCheck.followBrief(brief);
         final String target = brief == null ? null : brief.targetLanguage();
         if (proposals.isProposedFor(target)) {
             return;
@@ -363,7 +315,6 @@ public final class ExportViewModel {
 
     private void onFigures(final @Nullable ExportFigures figures) {
         log.debug("export figures now known {}, partial {}", figures != null, figures != null && figures.isPartial());
-        lastCheck.figures(figures);
         recompute();
     }
 

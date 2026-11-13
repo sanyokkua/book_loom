@@ -12,6 +12,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.ui.ShellTestBase;
+import ua.bookloom.ui.ThemeTestSupport;
 
 /** The card that asks which of several found models to use: its words, its radio list and its two answers. */
 class ModelPickDialogTest extends ShellTestBase {
@@ -19,10 +20,14 @@ class ModelPickDialogTest extends ShellTestBase {
     private final List<String> answers = new ArrayList<>();
 
     private void ask() {
+        ask(List.of("gemma4:e4b", "qwen3:8b"));
+    }
+
+    private void ask(final List<String> models) {
         onFx(() -> injector.getInstance(ModelPickDialog.class)
                 .ask(
-                        "ollama",
-                        List.of("gemma4:e4b", "qwen3:8b"),
+                        ModelPickProviders.ollama(),
+                        models,
                         model -> answers.add("use " + model),
                         () -> answers.add("notNow")));
     }
@@ -57,6 +62,21 @@ class ModelPickDialogTest extends ShellTestBase {
         assertThat(button("model-pick-use").isDisabled()).isTrue();
         assertThat(button("model-pick-use").getStyleClass()).contains("btn-primary");
         assertThat(button("model-pick-not-now").getStyleClass()).contains("btn-secondary");
+    }
+
+    // IF the radio read its text as a mnemonic, THEN "my_model_q4" would be drawn "mymodel_q4" and the person would
+    // pick or type a name that does not exist.
+    @Test
+    void ask_modelIdWithUnderscores_isDrawnWithEveryUnderscore() {
+        ask(List.of("my_model_q4", "qwen3:8b"));
+
+        final List<String> drawn =
+                ThemeTestSupport.onFx(() -> required("model-pick-card").lookupAll(".radio-button").stream()
+                        .flatMap(radio -> radio.lookupAll(".text").stream())
+                        .map(text -> ((javafx.scene.text.Text) text).getText())
+                        .toList());
+
+        assertThat(drawn).contains("my_model_q4");
     }
 
     // IF the first model were preselected, THEN pressing Enter would choose a model the person never looked at.

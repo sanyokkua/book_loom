@@ -128,7 +128,7 @@ class OllamaClientAuthTest {
                         okJson("{\"model_info\":{\"general.architecture\":\"llama\",\"llama.context_length\":8192}}")));
         final ProviderConfig config = base().withAuth(ProviderAuth.BEARER).withCredentialRef(KEY_VARIABLE);
 
-        client(config, Map.of(KEY_VARIABLE, KEY_VALUE)).contextLength("model-a");
+        client(config, Map.of(KEY_VARIABLE, KEY_VALUE)).facts("model-a");
 
         server.verify(
                 postRequestedFor(urlEqualTo("/api/show")).withHeader("Authorization", equalTo("Bearer " + KEY_VALUE)));

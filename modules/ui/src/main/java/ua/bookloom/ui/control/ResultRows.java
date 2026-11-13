@@ -1,7 +1,11 @@
 package ua.bookloom.ui.control;
 
+import static ua.bookloom.ui.theme.StyleClasses.MUTED;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -9,6 +13,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -20,6 +25,8 @@ import ua.bookloom.ui.state.ChangeOrigin;
 import ua.bookloom.ui.state.ChangeResults;
 import ua.bookloom.ui.state.ChangeRow;
 import ua.bookloom.ui.state.ChangeSection;
+import ua.bookloom.ui.state.EditableTarget;
+import ua.bookloom.ui.state.TargetEdits;
 
 /**
  * The lines of the results list and the cells that draw them: a heading per kind of change with its count, then that
@@ -28,8 +35,9 @@ import ua.bookloom.ui.state.ChangeSection;
  */
 final class ResultRows {
 
+    private static final String RESULTS_HEAD = "results-head";
+
     static final double ROW_HEIGHT = 40;
-    static final double WIDTH = 940;
 
     private static final double TERM_WIDTH = 150;
     private static final double BADGE_WIDTH = 100;
@@ -37,6 +45,8 @@ final class ResultRows {
     private static final double WHY_WIDTH = 170;
     private static final double ACTION_WIDTH = 100;
     private static final double SPACING = 8;
+    private static final double TARGET_MIN_WIDTH = 80;
+    private static final double REST_GAP = 4;
     // A text column gives up to this share of its width in a narrow window; its whole text is its tooltip.
     private static final double MIN_SHARE = 0.6;
     private static final String NO_REASON = "—";
@@ -48,16 +58,26 @@ final class ResultRows {
 
     private final Messages messages;
     private final ChangeResults results;
+    private final TargetEdits edits;
     private final boolean hasReasons;
+    // What the person typed, by row, so a cell scrolled away and back shows it again.
+    private final Map<Long, String> typed = new HashMap<>();
 
-    ResultRows(final Messages messages, final ChangeResults results) {
+    ResultRows(final Messages messages, final ChangeResults results, final TargetEdits edits) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.results = Objects.requireNonNull(results, "results");
+        this.edits = Objects.requireNonNull(edits, "edits");
         this.hasReasons = results.rows().stream().anyMatch(row -> row.reason() != null);
     }
 
     List<Object> items() {
-        return results.operation().isSectioned() ? bySection() : byKind();
+        final List<Object> items = results.operation().isSectioned() ? bySection() : byKind();
+        if (!results.untargeted().isEmpty()) {
+            items.add(new Heading(
+                    MessageKey.RESULTS_UNTARGETED, results.untargeted().size()));
+            items.addAll(results.untargeted());
+        }
+        return items;
     }
 
     // One operation changed both tables: a heading per table, its rows below (added, removed, then changed).
@@ -111,6 +131,8 @@ final class ResultRows {
             case ADDED -> MessageKey.RESULTS_ADDED;
             case REMOVED -> MessageKey.RESULTS_REMOVED;
             case CHANGED -> MessageKey.RESULTS_CHANGED;
+            case LEFT -> MessageKey.RESULTS_LEFT;
+            case UNTARGETED -> MessageKey.RESULTS_UNTARGETED;
         };
     }
 
@@ -119,6 +141,8 @@ final class ResultRows {
             case ADDED -> MessageKey.PROGRESS_RESULTS_BADGE_ADDED;
             case REMOVED -> MessageKey.PROGRESS_RESULTS_BADGE_REMOVED;
             case CHANGED -> MessageKey.PROGRESS_RESULTS_BADGE_CHANGED;
+            case LEFT -> MessageKey.PROGRESS_RESULTS_BADGE_LEFT;
+            case UNTARGETED -> MessageKey.PROGRESS_RESULTS_BADGE_UNTARGETED;
         };
     }
 
@@ -127,6 +151,7 @@ final class ResultRows {
             case ADDED -> "chip-ok";
             case REMOVED -> "chip-err";
             case CHANGED -> "chip-info";
+            case LEFT, UNTARGETED -> "chip-warn";
         };
     }
 
@@ -134,22 +159,23 @@ final class ResultRows {
         final HBox heads = new HBox(SPACING);
         heads.setId("results-columns");
         heads.setPadding(new Insets(0, SPACING, 0, SPACING));
-        heads.getChildren().add(text(messages.get(MessageKey.RESULTS_COLUMN_TERM), TERM_WIDTH, "results-head"));
-        final Label change = text(messages.get(MessageKey.PROGRESS_RESULTS_COLUMN_CHANGE), BADGE_WIDTH, "results-head");
+        heads.getChildren().add(flexible(text(messages.get(MessageKey.RESULTS_COLUMN_TERM), TERM_WIDTH, RESULTS_HEAD)));
+        final Label change = text(messages.get(MessageKey.PROGRESS_RESULTS_COLUMN_CHANGE), BADGE_WIDTH, RESULTS_HEAD);
         change.setMinWidth(BADGE_WIDTH);
         heads.getChildren().add(change);
-        heads.getChildren().add(text(messages.get(MessageKey.RESULTS_COLUMN_BEFORE), VALUE_WIDTH, "results-head"));
-        heads.getChildren().add(text(messages.get(MessageKey.RESULTS_COLUMN_AFTER), VALUE_WIDTH, "results-head"));
+        heads.getChildren()
+                .add(flexible(text(messages.get(MessageKey.RESULTS_COLUMN_BEFORE), VALUE_WIDTH, RESULTS_HEAD)));
+        heads.getChildren()
+                .add(flexible(text(messages.get(MessageKey.RESULTS_COLUMN_AFTER), VALUE_WIDTH, RESULTS_HEAD)));
         if (hasReasons) {
-            heads.getChildren().add(text(messages.get(MessageKey.RESULTS_COLUMN_WHY), WHY_WIDTH, "results-head"));
+            heads.getChildren()
+                    .add(flexible(text(messages.get(MessageKey.RESULTS_COLUMN_WHY), WHY_WIDTH, RESULTS_HEAD)));
         }
-        // The same spacer and action room as a row, so headings and rows shrink alike and stay aligned.
-        final Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
+        // The same action room as a row, so headings and rows share the width alike and stay aligned.
         final Region action = new Region();
         action.setPrefWidth(ACTION_WIDTH);
         action.setMinWidth(Region.USE_PREF_SIZE);
-        heads.getChildren().addAll(spacer, action);
+        heads.getChildren().add(action);
         return heads;
     }
 
@@ -166,6 +192,13 @@ final class ResultRows {
         return label;
     }
 
+    // A text column keeps its starting width as the least it asks for and takes its share of any room left.
+    private static <T extends Region> T flexible(final T column) {
+        column.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(column, Priority.ALWAYS);
+        return column;
+    }
+
     private static void show(final Label label, final String text) {
         label.setText(text);
         Tips.install(label, text);
@@ -174,12 +207,15 @@ final class ResultRows {
     private final class ResultCell extends ListCell<Object> {
 
         private final Label heading = new Label();
-        private final Label term = text("", TERM_WIDTH, "glossary-term");
+        private final Label term = flexible(text("", TERM_WIDTH, "glossary-term"));
         private final Label badge = new Label();
         private final HBox badgeBox = new HBox(badge);
-        private final Label before = text("", VALUE_WIDTH, "kv-value");
-        private final Label after = text("", VALUE_WIDTH, "kv-value");
-        private final Label why = text("", WHY_WIDTH, "muted");
+        private final Label before = flexible(text("", VALUE_WIDTH, "kv-value"));
+        private final Label after = flexible(text("", VALUE_WIDTH, "kv-value"));
+        private final TextField target = new TextField();
+        private final Label rest = new Label();
+        private final HBox afterBox = new HBox(REST_GAP, after, target, rest);
+        private final Label why = flexible(text("", WHY_WIDTH, MUTED));
         private final Label reverted = new Label(messages.get(MessageKey.RESULTS_REVERTED));
         private final Button revert = Tips.installOnHover(
                 messages, new Button(messages.get(MessageKey.RESULTS_REVERT)), MessageKey.RESULTS_REVERT_TIP);
@@ -187,7 +223,7 @@ final class ResultRows {
 
         ResultCell() {
             heading.getStyleClass().add("card-title");
-            reverted.getStyleClass().add("muted");
+            reverted.getStyleClass().add(MUTED);
             revert.getStyleClass().add("btn-ghost");
             revert.setMinWidth(Region.USE_PREF_SIZE);
             revert.setOnAction(event -> {
@@ -195,8 +231,7 @@ final class ResultRows {
                     results.revert(shown.id());
                 }
             });
-            final Region spacer = new Region();
-            HBox.setHgrow(spacer, Priority.ALWAYS);
+            buildTarget();
             final HBox action = new HBox(revert, reverted);
             action.setAlignment(Pos.CENTER_RIGHT);
             action.setPrefWidth(ACTION_WIDTH);
@@ -206,13 +241,52 @@ final class ResultRows {
             badgeBox.setPrefWidth(BADGE_WIDTH);
             badgeBox.setMinWidth(BADGE_WIDTH);
             badgeBox.setMaxWidth(BADGE_WIDTH);
-            row.getChildren().addAll(term, badgeBox, before, after);
+            row.getChildren().addAll(term, badgeBox, before, afterBox);
             if (hasReasons) {
                 row.getChildren().add(why);
             }
-            row.getChildren().addAll(spacer, action);
+            row.getChildren().add(action);
             row.setPadding(new Insets(0, SPACING, 0, SPACING));
             setText(null);
+        }
+
+        // The After column is one box: the value as words, or, for a row that has a target to give, the field with
+        // the row's other words beside it.
+        private void buildTarget() {
+            afterBox.setAlignment(Pos.CENTER_LEFT);
+            afterBox.setPrefWidth(VALUE_WIDTH);
+            afterBox.setMinWidth(VALUE_WIDTH * MIN_SHARE);
+            flexible(afterBox);
+            HBox.setHgrow(after, Priority.ALWAYS);
+            HBox.setHgrow(target, Priority.ALWAYS);
+            target.setId("results-target");
+            target.setPromptText(messages.get(MessageKey.RESULTS_TARGET));
+            target.setMinWidth(TARGET_MIN_WIDTH);
+            Tips.install(messages, target, MessageKey.RESULTS_TARGET_TIP);
+            rest.getStyleClass().add(MUTED);
+            target.setOnAction(event -> {
+                commit();
+                event.consume();
+            });
+            target.focusedProperty().addListener((observed, was, now) -> {
+                if (!now) {
+                    commit();
+                }
+            });
+        }
+
+        // Only a changed text is written, and only to the row the cell holds now.
+        private void commit() {
+            if (!(getItem() instanceof ChangeRow shown) || shown.editable() == null) {
+                return;
+            }
+            final EditableTarget edit = shown.editable();
+            final String text = target.getText().strip();
+            if (text.equals(typed.getOrDefault(shown.id(), edit.target()))) {
+                return;
+            }
+            typed.put(shown.id(), text);
+            edits.set(shown.section(), edit.key(), text);
         }
 
         @Override
@@ -220,8 +294,8 @@ final class ResultRows {
             super.updateItem(item, empty);
             if (empty || item == null) {
                 setGraphic(null);
-            } else if (item instanceof Heading head) {
-                heading.setText(messages.get(head.title(), head.count()));
+            } else if (item instanceof Heading(var title, var count)) {
+                heading.setText(messages.get(title, count));
                 setGraphic(heading);
             } else if (item instanceof ChangeRow shown) {
                 fill(shown);
@@ -238,7 +312,7 @@ final class ResultRows {
             badge.getStyleClass().removeIf(name -> name.startsWith("chip-"));
             badge.getStyleClass().add(done ? REVERTED_CHIP : badgeStyle(shown.kind()));
             show(before, shown.before());
-            show(after, done ? shown.before() : shown.after());
+            showAfter(shown, done);
             show(why, shown.reason() == null ? NO_REASON : shown.reason());
             row.getStyleClass().remove(REVERTED_ROW);
             if (done) {
@@ -246,10 +320,34 @@ final class ResultRows {
             }
             reverted.setVisible(done);
             reverted.setManaged(done);
-            revert.setVisible(!done);
-            revert.setManaged(!done);
+            // A row the operation left as it was has nothing to put back.
+            final boolean revertible = shown.kind().isRevertible();
+            revert.setVisible(!done && revertible);
+            revert.setManaged(!done && revertible);
             revert.setDisable(results.working().get());
             revert.setAccessibleText(messages.get(MessageKey.RESULTS_REVERT_FOR, shown.term()));
+        }
+
+        private void showAfter(final ChangeRow shown, final boolean done) {
+            final EditableTarget edit = done ? null : shown.editable();
+            setEditing(edit != null);
+            if (edit == null) {
+                show(after, done ? shown.before() : shown.after());
+                return;
+            }
+            target.setText(typed.getOrDefault(shown.id(), edit.target()));
+            rest.setText(edit.rest().isEmpty() ? "" : "· " + edit.rest());
+            rest.setVisible(!edit.rest().isEmpty());
+            rest.setManaged(rest.isVisible());
+        }
+
+        private void setEditing(final boolean editing) {
+            after.setVisible(!editing);
+            after.setManaged(!editing);
+            target.setVisible(editing);
+            target.setManaged(editing);
+            rest.setVisible(editing);
+            rest.setManaged(editing);
         }
     }
 }

@@ -9,37 +9,33 @@ import ua.bookloom.pipeline.checks.TextChecks;
 
 /**
  * The deterministic text checks against the regression corpus, with no model: recall on the defect families code can
- * decide must be total and no faithful candidate may be flagged — the number the later reviewer work has to keep.
+ * decide must be total and no faithful candidate may be flagged.
  */
 class TextChecksCorpusTest {
 
     private static final Set<String> DECIDABLE_KINDS =
             Set.of("mixed-script", "quotes", "leftover-language", "duplicate", "spacing");
 
-    private static List<DefectRow> rows() {
+    private static List<DefectCase> decidable() {
         return EvalCorpus.defects().stream()
                 .filter(corpusCase -> DECIDABLE_KINDS.contains(corpusCase.kind()))
-                .map(corpusCase -> new DefectRow(
-                        corpusCase.id(),
-                        corpusCase.kind(),
-                        corpusCase.defective(),
-                        !TextChecks.run(corpusCase.source(), corpusCase.candidate(), "en", "uk", List.of(), List.of())
-                                .isEmpty(),
-                        true,
-                        true,
-                        1,
-                        0))
                 .toList();
+    }
+
+    private static boolean flags(final DefectCase corpusCase) {
+        return !TextChecks.run(corpusCase.source(), corpusCase.candidate(), "en", "uk", List.of(), List.of())
+                .isEmpty();
     }
 
     @Test
     void textChecks_decidableCorpusFamilies_haveFullRecall() {
-        assertThat(rows()).hasSizeGreaterThanOrEqualTo(15);
-        assertThat(EvalMetrics.falseNegativeRate(rows())).isZero();
+        assertThat(decidable()).hasSizeGreaterThanOrEqualTo(15);
+        assertThat(decidable().stream().filter(DefectCase::defective)).allMatch(TextChecksCorpusTest::flags);
     }
 
     @Test
     void textChecks_decidableCorpusFamilies_flagNoFaithfulCandidate() {
-        assertThat(EvalMetrics.falsePositiveRate(rows())).isZero();
+        assertThat(decidable().stream().filter(corpusCase -> !corpusCase.defective()))
+                .noneMatch(TextChecksCorpusTest::flags);
     }
 }

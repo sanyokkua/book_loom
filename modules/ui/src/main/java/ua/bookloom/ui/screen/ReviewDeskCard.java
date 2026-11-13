@@ -25,6 +25,7 @@ import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.dialog.ModalCard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.LiveSection;
 import ua.bookloom.ui.state.ReviewMainAction;
 import ua.bookloom.ui.state.ReviewViewModel;
 
@@ -55,7 +56,7 @@ final class ReviewDeskCard extends ModalCard {
      * @param sourceName the heading of the source pane
      * @param targetName the heading of the target pane
      * @param acceptContinues whether a decision resumes a paused run, which words the main button "& continue"
-     * @param suspicious the count of Worth a second look
+     * @param lists the counts of the desk's own lists: Worth a second look, Changed by proofread, Waiting on a gender
      * @param technical the shared technical-details switch
      * @param pause pauses the run, from the read-only banner
      */
@@ -63,23 +64,23 @@ final class ReviewDeskCard extends ModalCard {
             ObservableValue<String> sourceName,
             ObservableValue<String> targetName,
             ObservableValue<Boolean> acceptContinues,
-            javafx.beans.value.ObservableIntegerValue suspicious,
+            LiveSection lists,
             javafx.beans.property.BooleanProperty technical,
             Runnable pause) {}
 
     ReviewDeskCard(
             final ReviewViewModel viewModel, final Parts parts, final Messages messages, final Runnable onClose) {
+        Objects.requireNonNull(parts, "parts");
         super(Size.XL);
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.onClose = Objects.requireNonNull(onClose, "onClose");
-        Objects.requireNonNull(parts, "parts");
         inline = new ReviewInlinePanels(messages, (note, lower) -> guard(() -> viewModel.retry(note, lower)));
         setId("review-desk");
         getStyleClass().add("review-desk");
         setEnterNeedsShortcut(true);
         setOnEscape(this::closeAsked);
-        buildHeader();
+        buildHeader(parts.lists());
         setContent(body(parts));
         if (getContent() instanceof ScrollPane scroll) {
             scroll.setFitToHeight(true);
@@ -89,27 +90,35 @@ final class ReviewDeskCard extends ModalCard {
         log.debug("review desk built");
     }
 
-    private void buildHeader() {
+    private void buildHeader(final LiveSection lists) {
         final Label left = Wrapped.label("", "dialog-sub");
         left.setId("review-desk-left");
         left.textProperty()
                 .bind(Bindings.createStringBinding(
-                        () -> messages.get(
-                                viewModel.translating().get()
-                                        ? MessageKey.REVIEW_DESK_LEFT_READ_ONLY
-                                        : MessageKey.REVIEW_DESK_LEFT,
-                                viewModel.flaggedCount().get(),
-                                Math.max(
-                                        viewModel.deskTotal().get(),
-                                        viewModel.flaggedCount().get())),
+                        () -> headerLine(lists),
                         viewModel.translating(),
                         viewModel.flaggedCount(),
-                        viewModel.deskTotal()));
+                        viewModel.deskTotal(),
+                        lists.suspicious()));
         header(title(messages.get(MessageKey.REVIEW_DESK_TITLE)), left);
     }
 
+    // "x of y left" counts the segments to review; with none to review now or when the desk opened, it would read
+    // "0 of 0" over a list of segments worth a second look, so the line says that instead.
+    private String headerLine(final LiveSection lists) {
+        final int flagged = viewModel.flaggedCount().get();
+        final int total = Math.max(viewModel.deskTotal().get(), flagged);
+        if (viewModel.translating().get()) {
+            return messages.get(MessageKey.REVIEW_DESK_LEFT_READ_ONLY, flagged, total);
+        }
+        return total == 0
+                ? messages.get(
+                        MessageKey.REVIEW_DESK_NONE_LEFT, lists.suspicious().get())
+                : messages.get(MessageKey.REVIEW_DESK_LEFT, flagged, total);
+    }
+
     private Node body(final Parts parts) {
-        final ReviewListPane list = new ReviewListPane(viewModel, parts.suspicious(), this::guard, messages);
+        final ReviewListPane list = new ReviewListPane(viewModel, parts.lists(), this::guard, messages);
         list.setMinWidth(LIST_MIN);
         list.setPrefWidth(LIST_PREF);
         list.maxWidthProperty().bind(widthProperty().multiply(LIST_SHARE));
@@ -204,10 +213,10 @@ final class ReviewDeskCard extends ModalCard {
                 viewModel,
                 new ReviewMoreMenu.Asks(inline::openNote, this::askUndo, this::guard),
                 messages);
-        main((Button) lookupButton(mainType), parts.acceptContinues());
+        styleMain((Button) lookupButton(mainType), parts.acceptContinues());
     }
 
-    private void main(final Button main, final ObservableValue<Boolean> continues) {
+    private void styleMain(final Button main, final ObservableValue<Boolean> continues) {
         main.setId("review-main");
         main.getStyleClass().add("btn-primary");
         Tips.install(main, messages.get(MessageKey.REVIEW_MAIN_ACCEPT_TIP, ReviewListPane.MAIN.getDisplayText()));
@@ -240,7 +249,7 @@ final class ReviewDeskCard extends ModalCard {
 
     // Ctrl+Alt+↓/↑ move between rows; every other key is left alone and not logged.
     private void moveKeys(final KeyEvent event) {
-        final int delta = ReviewListPane.NEXT.match(event) ? 1 : ReviewListPane.PREVIOUS.match(event) ? -1 : 0;
+        final int delta = rowStep(event);
         if (delta != 0) {
             event.consume();
             log.debug("review desk shortcut: move {}", delta);
@@ -291,5 +300,12 @@ final class ReviewDeskCard extends ModalCard {
             inline.closeQuestion();
             onClose.run();
         });
+    }
+
+    private static int rowStep(final KeyEvent event) {
+        if (ReviewListPane.NEXT.match(event)) {
+            return 1;
+        }
+        return ReviewListPane.PREVIOUS.match(event) ? -1 : 0;
     }
 }

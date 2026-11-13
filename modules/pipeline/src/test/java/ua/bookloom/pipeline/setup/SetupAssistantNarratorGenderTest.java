@@ -76,7 +76,7 @@ class SetupAssistantNarratorGenderTest {
 
     private void glossaryHoldsRay() {
         assertThat(desk.glossary()
-                        .add(new GlossaryEntry(
+                        .add(GlossaryEntry.of(
                                 "ray", desk.projectId(), "Ray", null, TermType.CHARACTER, Gender.MALE, false))
                         .isOk())
                 .isTrue();

@@ -1,12 +1,15 @@
 package ua.bookloom.pipeline.review;
 
 import com.google.inject.Inject;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -18,22 +21,39 @@ import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.persistence.DeferralRepository;
+import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.PromptFrameRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.pipeline.PromptSection;
+import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewFilter;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Deferral;
+import ua.bookloom.api.project.DeferralReason;
+import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.api.project.PromptFrame;
+import ua.bookloom.api.project.ProofreadVerdict;
+import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.audit.AuditFindings;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.memory.ProtectedSpans;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.SegmentLocators;
+import ua.bookloom.pipeline.proofread.GenderNowKnown;
+import ua.bookloom.pipeline.proofread.MarkList;
+import ua.bookloom.pipeline.qa.CheckLevel;
+import ua.bookloom.pipeline.qa.CheckLevels;
 import ua.bookloom.pipeline.qa.CheckName;
 import ua.bookloom.pipeline.qa.ForeignMarking;
 
@@ -45,6 +65,7 @@ import ua.bookloom.pipeline.qa.ForeignMarking;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class ReviewQueries {
 
+    private static final String PROJECT_ID = "projectId";
     private static final String GLOSSARY_KIND = "glossary";
     private static final String OMISSION_KIND = "omission";
 
@@ -52,6 +73,9 @@ public final class ReviewQueries {
     private final ProjectRepository projects;
     private final SegmentRepository segments;
     private final DeferralRepository deferrals;
+    private final PromptFrameRepository frames;
+    private final GlossaryRepository glossary;
+    private final LexiconRepository lexicon;
 
     /**
      * Lists the segments behind a filter chip.
@@ -62,13 +86,34 @@ public final class ReviewQueries {
      *     book; never null, empty when nothing matches
      */
     public Result<List<SegmentView>> queue(final String projectId, final ReviewFilter filter) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(filter, "filter");
         return read(projectId)
                 .map(reading -> reading.records().stream()
                         .filter(record -> reading.matches(record, filter))
                         .map(reading::view)
                         .toList());
+    }
+
+    /**
+     * Counts the desk's own lists into a project's counts: Worth a second look, Changed by proofread and Waiting on a
+     * gender, each by the rule {@link #queue} lists it by, so a filter's label never disagrees with its list.
+     *
+     * @param projectId the non-null project id
+     * @param counts the non-null counts of the stored records
+     * @return the counts with those three lists counted; {@code counts} as they are when the book is not open
+     */
+    public ReviewCounts withDeskLists(final String projectId, final ReviewCounts counts) {
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(counts, "counts");
+        final Reading reading = read(projectId).data();
+        if (reading == null) {
+            return counts;
+        }
+        return counts.withDeskLists(
+                reading.count(ReviewFilter.SUSPICIOUS),
+                reading.count(ReviewFilter.CHANGED_BY_PROOFREAD),
+                reading.count(ReviewFilter.WAITING_ON_GENDER));
     }
 
     /**
@@ -80,7 +125,7 @@ public final class ReviewQueries {
      *     such segment
      */
     public Result<SegmentView> segment(final String projectId, final String segmentId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(segmentId, "segmentId");
         return read(projectId)
                 .flatMap(reading -> reading.records().stream()
@@ -105,14 +150,71 @@ public final class ReviewQueries {
         if (records.isErr() || open.isErr()) {
             return Result.err(Objects.requireNonNull(records.isErr() ? records.error() : open.error()));
         }
+        final List<SegmentRecord> stored = Objects.requireNonNull(records.data());
+        final Result<Map<String, List<PromptSection>>> joined = framesOf(projectId, stored);
+        if (joined.isErr()) {
+            return Result.err(Objects.requireNonNull(joined.error()));
+        }
+        final Stored held =
+                new Stored(found.get().brief(), document, stored, Objects.requireNonNull(open.data()), joined.data());
+        return glossary.all(projectId)
+                .flatMap(entries -> lexicon.all(projectId).map(terms -> reading(projectId, held, entries, terms)));
+    }
+
+    /** What a read found stored, before the glossary is read. */
+    private record Stored(
+            BookBrief brief,
+            Document document,
+            List<SegmentRecord> records,
+            List<Deferral> open,
+            @Nullable Map<String, List<PromptSection>> frames) {}
+
+    private Reading reading(
+            final String projectId,
+            final Stored held,
+            final List<GlossaryEntry> entries,
+            final List<LexiconEntry> terms) {
         final BookIndex index = openProjects.index(projectId);
-        return Result.ok(new Reading(
-                found.get().brief(),
-                Objects.requireNonNull(records.data()),
-                Objects.requireNonNull(open.data()),
-                sourcesOf(document),
-                SegmentLocators.of(document),
-                index == null ? null : index.majorityScript().orElse(null)));
+        return new Reading(
+                held.brief(),
+                held.records(),
+                held.open(),
+                genderKnown(held.brief(), held.records(), held.open(), entries),
+                MarkList.openMarks(
+                        new MarkList.Book(held.brief(), held.document(), entries, terms), held.records(), held.open()),
+                sourcesOf(held.document()),
+                SegmentLocators.of(held.document()),
+                index == null ? null : index.majorityScript().orElse(null),
+                Objects.requireNonNull(held.frames()));
+    }
+
+    // A project holds a frame per run that changed it, so the few distinct frames the records name are read once each;
+    // a frame that is not stored is left out, and its segments show their own sections alone.
+    private Result<Map<String, List<PromptSection>>> framesOf(
+            final String projectId, final List<SegmentRecord> stored) {
+        final Map<String, List<PromptSection>> byHash = new HashMap<>();
+        final Set<String> hashes = stored.stream()
+                .map(SegmentRecord::context)
+                .flatMap(context -> context == null ? Stream.empty() : Stream.of(context.frameHash()))
+                .filter(hash -> !hash.isEmpty())
+                .collect(Collectors.toSet());
+        for (final String hash : hashes) {
+            final Result<Optional<PromptFrame>> frame = frames.find(projectId, hash);
+            if (frame.isErr()) {
+                return Result.err(Objects.requireNonNull(frame.error()));
+            }
+            Objects.requireNonNull(frame.data()).ifPresent(found -> byHash.put(hash, found.sections()));
+        }
+        return Result.ok(byHash);
+    }
+
+    private static Map<String, String> genderKnown(
+            final BookBrief brief,
+            final List<SegmentRecord> stored,
+            final List<Deferral> open,
+            final List<GlossaryEntry> entries) {
+        final String target = brief.targetLanguage();
+        return target == null ? Map.of() : GenderNowKnown.of(stored, open, entries, brief.narrator(), target);
     }
 
     private static Map<String, Segment> sourcesOf(final Document document) {
@@ -127,16 +229,26 @@ public final class ReviewQueries {
         return AppError.of(ErrorCode.validation, "Nothing to review", message);
     }
 
-    /** What one read sees: the stored records, the opened book they came from and the brief's current switches. */
+    /**
+     * What one read sees: the stored records, the opened book they came from, the brief's current switches and the
+     * stored frames the records name, by hash.
+     */
     private record Reading(
             BookBrief brief,
             List<SegmentRecord> records,
             List<Deferral> open,
+            Map<String, String> genderKnown,
+            Set<String> openMarks,
             Map<String, Segment> sources,
             Map<String, SegmentLocator> locators,
-            Character.@Nullable UnicodeScript bookScript) {
+            Character.@Nullable UnicodeScript bookScript,
+            Map<String, List<PromptSection>> frames) {
 
         private static final String MISSING = "The stored segment is not in the opened book: ";
+        private static final String GENDER_KIND = "gender";
+        // Raised as the audit raises its doubts, so the desk names it as a doubt and keeps it under Worth a second
+        // look.
+        private static final String GENDER_NOW_KNOWN = AuditFindings.PREFIX + "gender-now-known";
 
         boolean matches(final SegmentRecord record, final ReviewFilter filter) {
             final boolean kept = record.isKeptAsSource(keptKinds());
@@ -144,11 +256,76 @@ public final class ReviewQueries {
             return switch (filter) {
                 case ALL_SEGMENTS -> kept || record.status() != SegmentStatus.PENDING;
                 case ALL_FLAGGED -> listed;
-                case SUSPICIOUS -> !kept && AuditFindings.isSuspicious(record);
+                case SUSPICIOUS -> !kept && isSecondLook(record);
+                case CHANGED_BY_PROOFREAD -> !kept && isChangedByProofread(record);
+                case WAITING_ON_GENDER -> !kept && isWaitingOnGender(record);
                 case NAMES -> listed && hasFinding(record, GLOSSARY_KIND);
                 case OMISSIONS -> listed && hasFinding(record, OMISSION_KIND);
                 case FOREIGN_KEPT -> listed && holdsForeignText(record);
             };
+        }
+
+        int count(final ReviewFilter filter) {
+            return (int)
+                    records.stream().filter(record -> matches(record, filter)).count();
+        }
+
+        // The audit's doubts, a repair-level finding the Proofread stage left, a gender now known that the text
+        // disagrees with, and any other mark of the mark list no window has dealt with — what Fast's Proofread leaves
+        // for the person, as it makes no model call, and what the export counts as waiting. A flagged segment is
+        // listed under the flagged filters and one waiting on a gender under its own list, where the gender rule
+        // decides whether it is a second look too, so the lists together hold what the export counts.
+        private boolean isSecondLook(final SegmentRecord record) {
+            final boolean unreviewedAccept = record.status() == SegmentStatus.ACCEPTED && !record.reviewed();
+            return AuditFindings.isSuspicious(record)
+                    || (unreviewedAccept && (genderKnown.containsKey(record.segmentId()) || holdsOpenMark(record)))
+                    || isOpenMark(record);
+        }
+
+        private boolean isOpenMark(final SegmentRecord record) {
+            return record.status() != SegmentStatus.FLAGGED
+                    && openMarks.contains(record.segmentId())
+                    && !isWaitingOnGender(record);
+        }
+
+        private static boolean holdsOpenMark(final SegmentRecord record) {
+            return record.findings().stream().anyMatch(finding -> CheckLevels.of(finding) == CheckLevel.REPAIR);
+        }
+
+        // A kept rewrite while it is still the text in place, and a proposal while it still waits: once the person
+        // writes over the one or applies the other, it is their decision.
+        private boolean isChangedByProofread(final SegmentRecord record) {
+            final @Nullable ProofreadVerdict verdict = record.proofread();
+            if (verdict == null) {
+                return false;
+            }
+            return switch (verdict.outcome()) {
+                case KEPT -> record.maskedUserTarget() == null;
+                case PROPOSED ->
+                    open.stream()
+                            .anyMatch(deferral -> deferral.segmentId().equals(record.segmentId())
+                                    && deferral.reason() == DeferralReason.PROOFREAD
+                                    && deferral.maskedProposal() != null);
+                case UNCHANGED, REJECTED -> false;
+            };
+        }
+
+        private boolean isWaitingOnGender(final SegmentRecord record) {
+            return open.stream()
+                    .anyMatch(deferral -> deferral.segmentId().equals(record.segmentId())
+                            && (deferral.reason() == DeferralReason.GENDER_UNKNOWN
+                                    || deferral.reason() == DeferralReason.GENDER_CHANGED));
+        }
+
+        // A gender now known that the text disagrees with is shown as a doubt of its own, with the name and gender.
+        private List<QaFinding> findingsOf(final SegmentRecord record) {
+            final String reason = genderKnown.get(record.segmentId());
+            if (reason == null) {
+                return record.findings();
+            }
+            final List<QaFinding> findings = new ArrayList<>(record.findings());
+            findings.add(new QaFinding(GENDER_KIND, Severity.MEDIUM, reason, GENDER_NOW_KNOWN));
+            return findings;
         }
 
         SegmentView view(final SegmentRecord record) {
@@ -166,7 +343,7 @@ public final class ReviewQueries {
                     record.maskedMachineTarget(),
                     record.userTarget(),
                     record.maskedUserTarget(),
-                    record.findings(),
+                    findingsOf(record),
                     record.judgeScore(),
                     record.isKeptAsSource(keptKinds()) ? SegmentPath.SOURCE_KEPT : record.path(),
                     record.reviewed(),
@@ -174,7 +351,14 @@ public final class ReviewQueries {
                     Proposals.waitingOn(open, record.segmentId())
                             .map(Deferral::proposal)
                             .orElse(null),
-                    record.rejectedTarget());
+                    record.rejectedTarget(),
+                    frameOf(record),
+                    record.proofread());
+        }
+
+        private List<PromptSection> frameOf(final SegmentRecord record) {
+            final ContextSnapshot context = record.context();
+            return context == null ? List.of() : frames.getOrDefault(context.frameHash(), List.of());
         }
 
         private boolean holdsForeignText(final SegmentRecord record) {

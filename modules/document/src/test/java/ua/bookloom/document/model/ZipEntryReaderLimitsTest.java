@@ -66,7 +66,8 @@ class ZipEntryReaderLimitsTest {
     // an implausible entry count is refused through the ordinary entry point too.
     @Test
     void readAll_implausibleEntryCount_isRefusedUnderTheProductionLimits() {
-        assertThatThrownBy(() -> ZipEntryReader.readAll(manyEmptyEntries()))
+        final var archive = manyEmptyEntries();
+        assertThatThrownBy(() -> ZipEntryReader.readAll(archive))
                 .isInstanceOf(CorruptContainerException.class)
                 .hasMessageContaining("entries");
     }
@@ -97,13 +98,14 @@ class ZipEntryReaderLimitsTest {
 
     @Test
     void readAll_emptyArchive_isRefused() {
-        assertThatThrownBy(() -> ZipEntryReader.readAll(zipOf())).isInstanceOf(CorruptContainerException.class);
+        final var archive = zipOf();
+        assertThatThrownBy(() -> ZipEntryReader.readAll(archive)).isInstanceOf(CorruptContainerException.class);
     }
 
     @Test
     void readAll_notAZipAtAll_isRefused() {
-        assertThatThrownBy(() -> ZipEntryReader.readAll("plain text, not a container".getBytes(StandardCharsets.UTF_8)))
-                .isInstanceOf(CorruptContainerException.class);
+        final var arg = "plain text, not a container".getBytes(StandardCharsets.UTF_8);
+        assertThatThrownBy(() -> ZipEntryReader.readAll(arg)).isInstanceOf(CorruptContainerException.class);
     }
 
     @SuppressWarnings("ArrayRecordComponent") // deliberate: a test-only carrier for raw entry bytes; nothing

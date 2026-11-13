@@ -51,6 +51,19 @@ class LedgerFiguresTest {
                 .isEqualTo("53 % · 26 of about 49 steps · Left about 1 min");
     }
 
+    // IF the line left the time out for the names pass, THEN the person could not tell a two-minute wait from ten.
+    @Test
+    void of_twentySixOf49StepsEveryFourSeconds_readsLeftAboutTwoMinutes() {
+        figures.of(log, T0);
+        finish(0, 26);
+
+        final Figures read = figures.of(log, T0.plusSeconds(104));
+
+        // 23 left at 4 s each is 92 s, which reads as two minutes.
+        assertThat(read.line(new ua.bookloom.ui.i18n.Messages(() -> java.util.Locale.ENGLISH)))
+                .isEqualTo("53 % · 26 of about 49 steps · Left about 2 min");
+    }
+
     // IF the stage rows were timed, THEN a names pass would promise a time from stages that differ by hours.
     @Test
     void of_stageCountedWork_showsNoTimeLeft() {
@@ -63,5 +76,33 @@ class LedgerFiguresTest {
 
         assertThat(read.done()).isEqualTo(1);
         assertThat(read.left()).isNull();
+    }
+
+    // IF the names pass counted its requests, THEN the line would read "0 of about 8 steps" while its ten stages filled
+    // the bar, and the results "2 steps" beside a Steps tab of ten.
+    @Test
+    void of_namesPassThreeOfTenStagesTwoRequests_countsTheStagesAndTimesTheRequests() {
+        log = StepLog.EMPTY
+                .apply(new StepsPlanned(StepKind.STAGE, 10, false))
+                .apply(new StepsPlanned(StepKind.REQUEST, 8, true));
+        figures.of(log, T0);
+        stage(0, StepResult.NO_CALL);
+        finish(0, 2);
+        stage(1, StepResult.DONE);
+        stage(2, StepResult.NO_CALL);
+
+        final Figures read = figures.of(log, T0.plusSeconds(20));
+
+        assertThat(log.done()).isEqualTo(3);
+        assertThat(log.total()).isEqualTo(10);
+        // 6 requests left at 10 s each is one minute.
+        assertThat(read.line(new ua.bookloom.ui.i18n.Messages(() -> java.util.Locale.ENGLISH)))
+                .isEqualTo("30 % · 3 of about 10 steps · Left about 1 min");
+        assertThat(read.fraction()).isEqualTo(0.3);
+    }
+
+    private void stage(final int index, final StepResult result) {
+        log = log.apply(new StepChanged(StepKind.STAGE, "s" + index, index, StepState.STARTED, null, null));
+        log = log.apply(new StepChanged(StepKind.STAGE, "s" + index, index, StepState.ENDED, null, result));
     }
 }

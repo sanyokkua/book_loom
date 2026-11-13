@@ -22,6 +22,7 @@ import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.PromptFrameRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SummaryRepository;
@@ -62,7 +63,8 @@ class RunStartTest {
                 injector.getInstance(GlossaryRepository.class),
                 injector.getInstance(TmRepository.class),
                 injector.getInstance(SummaryRepository.class),
-                injector.getInstance(LexiconRepository.class));
+                injector.getInstance(LexiconRepository.class),
+                injector.getInstance(PromptFrameRepository.class));
         final Path book = Files.writeString(tempDir.resolve("Book.md"), "Hello.");
         projectId = Objects.requireNonNull(
                 Objects.requireNonNull(service.create(book).data()).projectId());

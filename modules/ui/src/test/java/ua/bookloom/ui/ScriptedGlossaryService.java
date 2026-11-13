@@ -2,23 +2,29 @@ package ua.bookloom.ui;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.pipeline.AcceptReport;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.TargetIssue;
 import ua.bookloom.api.pipeline.UnknownGender;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.MeaningChoice;
 
 /**
  * A hand-written {@link GlossaryService} that records each call and answers with what a test queued, in order; a call
@@ -35,7 +41,12 @@ public final class ScriptedGlossaryService implements GlossaryService {
     private final Queue<JobEvent> events = new ConcurrentLinkedQueue<>();
     private final CountDownLatch release = new CountDownLatch(1);
     private final List<String> unknownGenderCalls = new CopyOnWriteArrayList<>();
+    private final List<Map<String, MeaningChoice>> meaningAnswers = new CopyOnWriteArrayList<>();
+    private final List<Map<String, Gender>> genderAnswers = new CopyOnWriteArrayList<>();
     private volatile List<UnknownGender> unknownGenders = List.of();
+    private volatile List<GlossaryEntry> meaningQuestions = List.of();
+    private volatile @Nullable AppError meaningFailure;
+    private volatile Map<String, List<TargetIssue>> reviewFlags = Map.of();
     private volatile boolean holding;
 
     /** Queues the answer the next call gets, whatever the method; the caller states the matching result type. */
@@ -104,7 +115,7 @@ public final class ScriptedGlossaryService implements GlossaryService {
         }
         try {
             release.await(HOLD_SECONDS, TimeUnit.SECONDS);
-        } catch (InterruptedException interrupted) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
         }
     }
@@ -152,6 +163,63 @@ public final class ScriptedGlossaryService implements GlossaryService {
             progress.accept(event);
             event = events.poll();
         }
+    }
+
+    @Override
+    public Result<AcceptReport> acceptSuggested(final String projectId) {
+        return answer("acceptSuggested(" + projectId + ")");
+    }
+
+    /** Sets the review flags {@code reviewFlags} answers with; none until a test says so. */
+    public void willFlag(final Map<String, List<TargetIssue>> flagged) {
+        reviewFlags = Map.copyOf(flagged);
+    }
+
+    // Kept apart from the queued answers, as unknownGenders is: the table asks after every load and edit.
+    @Override
+    public Result<Map<String, List<TargetIssue>>> reviewFlags(final String projectId) {
+        return Result.ok(reviewFlags);
+    }
+
+    /** Sets the names {@code meaningQuestions} answers with; none until a test says so. */
+    public void willAskMeanings(final List<GlossaryEntry> pending) {
+        meaningQuestions = List.copyOf(pending);
+    }
+
+    /** Makes {@code meaningQuestions} fail with {@code failure}, as a glossary that cannot be read would. */
+    public void willFailMeanings(final AppError failure) {
+        meaningFailure = failure;
+    }
+
+    // Kept apart from the queued answers, as unknownGenders is, so every Start does not consume a scripted answer.
+    @Override
+    public Result<List<GlossaryEntry>> meaningQuestions(final String projectId) {
+        final AppError failure = meaningFailure;
+        return failure == null ? Result.ok(meaningQuestions) : Result.err(failure);
+    }
+
+    /** Every {@code answerMeaning} call's answers, in order. */
+    public List<Map<String, MeaningChoice>> meaningAnswers() {
+        return List.copyOf(meaningAnswers);
+    }
+
+    // Answered at once, so a test of the question needs to script nothing: the answers are what it checks.
+    @Override
+    public Result<List<GlossaryEntry>> answerMeaning(final String projectId, final Map<String, MeaningChoice> answers) {
+        meaningAnswers.add(Map.copyOf(answers));
+        return Result.ok(List.of());
+    }
+
+    /** Every {@code answerGenders} call's answers, in order. */
+    public List<Map<String, Gender>> genderAnswers() {
+        return List.copyOf(genderAnswers);
+    }
+
+    // Answered at once, like the meaning question: the answers are what a test of the Start question checks.
+    @Override
+    public Result<List<GlossaryEntry>> answerGenders(final String projectId, final Map<String, Gender> answers) {
+        genderAnswers.add(Map.copyOf(answers));
+        return Result.ok(List.of());
     }
 
     @Override

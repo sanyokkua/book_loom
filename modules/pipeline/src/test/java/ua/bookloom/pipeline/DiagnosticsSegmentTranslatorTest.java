@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -26,9 +25,6 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.pipeline.heal.GateFunction;
-import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
-import ua.bookloom.pipeline.prompt.DraftReplyParser;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /** Verifies diagnostics from the per-segment decision boundary. */
 class DiagnosticsSegmentTranslatorTest {
@@ -61,9 +57,8 @@ class DiagnosticsSegmentTranslatorTest {
         final String log = testLogSince(offset);
         assertThat(log)
                 .contains("Translating segment id=" + segment.id() + " format=MARKDOWN")
-                .contains("Building draft prompt sourceLanguage=English (en) targetLanguage=Ukrainian (uk) segmentId="
-                        + segment.id())
-                .contains("Built chat request segmentId=" + segment.id() + " maskedLength=31 messageCount=2")
+                .contains("Translate request segmentId=" + segment.id() + " step=DRAFT")
+                .contains("Built chat request segmentId=" + segment.id() + " step=DRAFT maskedLength=31 messageCount=2")
                 .contains("Calling chat model segmentId=" + segment.id() + " messageCount=2")
                 .contains("Chat model completed segmentId=" + segment.id() + " result=success")
                 .contains("Model reply segment=" + segment.id() + " kind=STRUCTURED finish=STOP empty=false")
@@ -96,8 +91,12 @@ class DiagnosticsSegmentTranslatorTest {
         final String log = testLogSince(offset);
         assertThat(log)
                 .contains(
-                        "TRACE", "Draft prompt system=You are a literary translator", "<Text>\n" + source + "\n</Text>")
-                .contains("Segment reply raw={\"target\":\"" + reply + "\"}", "trimmed=" + reply)
+                        "TRACE",
+                        "Plan DRAFT block role: You are a literary translator",
+                        "<s id=\"1\">" + source + "</s>")
+                .contains(
+                        "Segment reply raw={\"items\":[{\"id\":\"1\",\"target\":\"" + reply + "\"}]}",
+                        "trimmed=" + reply)
                 .contains("Segment reply restored=  SENSITIVE MANUSCRIPT SENTENCE.  ")
                 .contains("Segment unmask input=  SENSITIVE MANUSCRIPT SENTENCE.  ");
         assertSensitiveTextOnlyAtTrace(log, "Sensitive manuscript sentence.", "SENSITIVE MANUSCRIPT SENTENCE.");
@@ -159,19 +158,12 @@ class DiagnosticsSegmentTranslatorTest {
             final BookFormat format,
             final String targetLanguage,
             final String sourceLanguage) {
-        return new SegmentTranslator(
+        return DraftStepFixtures.segmentTranslator(
                 GateFunction.of(documents, format),
                 (kind, segmentId, request) -> model.chat(request),
                 format,
-                new DraftPromptBuilder(
-                        new PromptTemplates(),
-                        new ua.bookloom.pipeline.prompt.CallFrame(
-                                sourceLanguage,
-                                targetLanguage,
-                                ua.bookloom.pipeline.prompt.StyleSheet.from(
-                                        ua.bookloom.api.project.BookBrief.defaults(sourceLanguage)),
-                                ua.bookloom.api.project.ForeignPassagePolicy.KEEP)),
-                new DraftReplyParser(new ObjectMapper()));
+                targetLanguage,
+                sourceLanguage);
     }
 
     private static ScriptedChatModel response(final String content) {

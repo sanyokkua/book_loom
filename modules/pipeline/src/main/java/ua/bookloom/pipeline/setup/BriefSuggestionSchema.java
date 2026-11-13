@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class BriefSuggestionSchema {
 
+    private static final String STRING_TYPE = "{\"type\":\"string\"}";
+
     /**
      * An object holding the six fields the brief suggestion of one passage answers with. Each field is a short chain of
      * thought, the quote first and the label after it, then a confidence; the narrator's gender also carries the name
@@ -33,10 +35,10 @@ public final class BriefSuggestionSchema {
                 "required":[%s"genre","register","voice","audience","narrator","narratorGender"],\
                 "additionalProperties":false}""".formatted(
                         languageProperty,
-                        field("{\"type\":\"string\"}"),
+                        field(STRING_TYPE),
                         field("{\"type\":\"string\",\"enum\":[\"formal\",\"neutral\",\"casual\"]}"),
-                        field("{\"type\":\"string\"}"),
-                        field("{\"type\":\"string\"}"),
+                        field(STRING_TYPE),
+                        field(STRING_TYPE),
                         field("{\"type\":\"string\",\"enum\":[\"first\",\"third\",\"unspecified\"]}"),
                         namedField("{\"type\":\"string\",\"enum\":[\"male\",\"female\",\"unknown\"]}"),
                         languageProperty.isEmpty() ? "" : "\"language\",");

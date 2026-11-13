@@ -9,7 +9,7 @@ public enum Severity {
     /** A minor issue that does not by itself flag the segment. */
     LOW,
 
-    /** A notable issue worth a reviewer's attention. */
+    /** A notable issue worth a person's attention. */
     MEDIUM,
 
     /** A serious issue that typically flags the segment. */

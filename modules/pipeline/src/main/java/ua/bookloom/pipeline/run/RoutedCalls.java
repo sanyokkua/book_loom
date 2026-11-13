@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobState;
@@ -18,13 +19,13 @@ import ua.bookloom.api.pipeline.JobState;
 /**
  * Makes a run's calls until they answer, routing each error they answer by design D3: a stop or a pause aborting a
  * call, and a provider error the run pauses on, are answered by the job's boundaries, which either end the run or send
- * the call again once the person resumes. A draft, the reviewer and a unit's summary are all routed here, so they pause
- * and fail alike.
+ * the call again once the person resumes. A draft, a unit's summary and a proofread window are all routed
+ * here, so they pause and fail alike.
  *
  * <p>Used from the job thread only.
  */
 @Slf4j
-final class RoutedCalls {
+public final class RoutedCalls {
 
     // The answer a step skipped while its call waited is flagged with: the person left it, so it has no other error.
     private static final AppError SKIPPED = AppError.of(
@@ -41,7 +42,7 @@ final class RoutedCalls {
      *
      * @param boundaries the non-null job boundaries that answer a routed error
      */
-    RoutedCalls(final RunBoundaries boundaries) {
+    public RoutedCalls(final RunBoundaries boundaries) {
         this.boundaries = Objects.requireNonNull(boundaries, "boundaries");
     }
 
@@ -66,7 +67,7 @@ final class RoutedCalls {
      * @param call the call
      * @return the answer, or how the run ended while the call was routed
      */
-    <T> Step<T> untilAnswered(
+    public <T> Step<T> untilAnswered(
             final Supplier<JobProgress> progress, @Nullable final String segmentId, final Supplier<Result<T>> call) {
         return route(progress, segmentId, call, null);
     }
@@ -81,7 +82,7 @@ final class RoutedCalls {
      * @param segmentId the segment the call is for, put into the log context, or {@code null} for a call of no single
      *     segment
      * @param step names the step for the pause count and for the person: its kind and the segment it is for (a
-     *     chunk's reviewer call is named by the chunk's first segment)
+     *     chunk-wide call is named by the chunk's first segment)
      * @param call the call
      * @param flag turns the error the step last answered into its flagged answer
      * @return the answer, the flagged answer, or how the run ended while the call was routed
@@ -97,9 +98,9 @@ final class RoutedCalls {
 
     /**
      * As {@link #untilAnsweredOrFlagged(WorkList, String, StepName, Supplier, Function)}, a pause reporting the
-     * progress {@code progress} gives.
+     * progress {@code progress} gives: a step of no translation chunk, such as a proofread window.
      */
-    <T> Step<T> untilAnsweredOrFlagged(
+    public <T> Step<T> untilAnsweredOrFlagged(
             final Supplier<JobProgress> progress,
             @Nullable final String segmentId,
             final StepName step,
@@ -195,7 +196,7 @@ final class RoutedCalls {
             final JobProgress progress,
             @Nullable final GiveUp<T> giveUp,
             final Map<PauseDecider.Recovery, Integer> unnamedPauses) {
-        return switch (PauseDecider.route(error.code())) {
+        return switch (PauseDecider.route(error)) {
             case CANCELLED -> afterAbortedCall(progress, giveUp);
             case PAUSE_OR_FAIL -> afterProviderError(error, progress, giveUp, unnamedPauses);
             case FLAG_AT_ONCE, FAIL -> Optional.of(new Step.Stopped<>(failedBy(endingError(error))));
@@ -222,18 +223,19 @@ final class RoutedCalls {
             final JobProgress progress,
             @Nullable final GiveUp<T> giveUp,
             final Map<PauseDecider.Recovery, Integer> unnamedPauses) {
-        final PauseDecider.Recovery recovery = PauseDecider.recovery(error.code());
+        final PauseDecider.Recovery recovery = PauseDecider.recovery(error);
         final int budget = recovery.pausesBeforeFlagging();
         final int pausedBefore = giveUp == null
                 ? unnamedPauses.getOrDefault(recovery, 0)
                 : pauses.getOrDefault(countKey(giveUp, recovery), 0);
         if (giveUp != null && pausedBefore >= budget) {
             log.warn(
-                    "Flagging step={} after {} pauses for it recovery={} code={}; the run goes on",
+                    "Flagging step={} after {} pauses for it recovery={} code={} reason={}; the run goes on",
                     giveUp.step(),
                     budget,
                     recovery,
-                    error.code());
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return Optional.of(new Step.Done<>(giveUp.flag().apply(error)));
         }
         final Optional<RunEnd> end =
@@ -298,9 +300,7 @@ final class RoutedCalls {
     private static <T> Result<T> guarded(@Nullable final String segmentId, final Supplier<Result<T>> call) {
         try {
             return Objects.requireNonNull(call.get(), "call result");
-        } catch (VirtualMachineError fatal) {
-            throw fatal;
-        } catch (RuntimeException | Error thrown) {
+        } catch (RuntimeException thrown) {
             log.error(
                     "A run step threw instead of answering segmentId={}; it is retried as an internal error",
                     segmentId,
@@ -322,7 +322,11 @@ final class RoutedCalls {
         }
         final IllegalStateException cause = new IllegalStateException(
                 "A model call answered " + error.code() + ", which a run cannot recover from");
-        log.error("Translation job stopped by a model error it cannot recover from code={}", error.code(), cause);
+        log.error(
+                "Translation job stopped by a model error it cannot recover from code={} reason={}",
+                error.code(),
+                FailureReason.tokenIn(error.details()),
+                cause);
         return AppError.of(
                 ErrorCode.internal,
                 "Translation job failed",
@@ -334,13 +338,13 @@ final class RoutedCalls {
     /**
      * A step the run may give up on: what kind of step it is and the segment it is for.
      *
-     * @param kind the step's kind, such as {@code draft}, {@code review} or {@code decide}
-     * @param segmentId the segment the step is for, the first of its chunk for a chunk's reviewer call
+     * @param kind the step's kind, such as {@code draft}, {@code repair} or {@code decide}
+     * @param segmentId the segment the step is for, the first of its chunk for a chunk-wide call
      */
-    record StepName(String kind, String segmentId) {
+    public record StepName(String kind, String segmentId) {
 
         /** Rejects a missing part. */
-        StepName {
+        public StepName {
             Objects.requireNonNull(kind, "kind");
             Objects.requireNonNull(segmentId, "segmentId");
         }

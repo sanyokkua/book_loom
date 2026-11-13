@@ -11,6 +11,7 @@ import ua.bookloom.api.llm.CallAttemptListener;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.ModelProfile;
 
 /**
  * Lets Pause and Stop reach a model call that is already waiting on the provider.
@@ -49,6 +50,11 @@ final class CancellableChatModel implements ChatModel {
     @Override
     public @Nullable Integer contextWindowOverride() {
         return delegate.contextWindowOverride();
+    }
+
+    @Override
+    public ModelProfile profile() {
+        return delegate.profile();
     }
 
     @Override

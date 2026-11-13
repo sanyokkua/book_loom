@@ -5,7 +5,7 @@ package ua.bookloom.api;
  *
  * <p>One closed set for the whole application: callers branch on the code, never on a message string or an HTTP
  * status. The constants are lowercase because they are a vocabulary fixed verbatim by
- * {@code docs/specification/02_Architecture/09_ERROR_HANDLING.md#error-code}, not ordinary Java constants.
+ * {@code docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#error-code}, not ordinary Java constants.
  *
  * <p>Most of these cannot be produced yet. Ten of the fifteen describe failures of I/O that does not exist until the
  * provider client lands; they ship now because seam F2 is a <em>contract</em>, and a contract that grows a constant

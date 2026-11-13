@@ -129,11 +129,6 @@
     "firstSentence" : "Weight describes the gravitational force acting on that mass.",
     "aliases" : [ ]
   }, {
-    "term" : "toward",
-    "count" : 8,
-    "firstSentence" : "Summary: Gravity is the force that attracts objects with mass toward one another.",
-    "aliases" : [ ]
-  }, {
     "term" : "centre",
     "count" : 7,
     "firstSentence" : "Earth attracts objects toward its centre of mass .",

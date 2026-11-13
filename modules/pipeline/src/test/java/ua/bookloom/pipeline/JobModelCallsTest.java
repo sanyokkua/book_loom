@@ -13,6 +13,8 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -46,7 +48,7 @@ class JobModelCallsTest {
     private final ScriptedChatModel model = TranslationJobTestSupport.replies("ONE.", "TWO.");
     private final List<JobEvent> events = new CopyOnWriteArrayList<>();
     private final JobModelCalls calls = new JobModelCalls(
-            onSent -> new CancellableChatModel(model, control, onSent), events::add, new StepClock(), "uk");
+            onSent -> new CancellableChatModel(model, control, onSent), events::add, new StepClock(), "uk", 16384);
 
     @AfterEach
     void clearInterrupt() {
@@ -67,10 +69,10 @@ class JobModelCallsTest {
         assertThat(model.requests()).hasSize(1);
     }
 
-    // A judge call scores a whole chunk, so it names no single segment but lists every segment it judges.
+    // A proofread call reads a window of segments, so it names no single segment but lists every segment it reads.
     @Test
-    void callAbout_judgeOfTwoSegments_announcesBothSegmentsAndNoSoleSegment() {
-        calls.callAbout(CallKind.REVIEW, List.of("Book.md:0", "Book.md:1"), REQUEST);
+    void callAbout_proofreadOfTwoSegments_announcesBothSegmentsAndNoSoleSegment() {
+        calls.callAbout(CallKind.PROOFREAD, List.of("Book.md:0", "Book.md:1"), REQUEST);
 
         assertThat(events)
                 .filteredOn(ModelCallStarted.class::isInstance)
@@ -117,12 +119,34 @@ class JobModelCallsTest {
                         .containsExactly(4096, 2048));
     }
 
-    // A call that states no window (a verification probe) is the provider's own business and stays as built.
-    @Test
-    void call_requestWithoutAWindow_isSentAsBuilt() {
-        calls.call(CallKind.DRAFT, "Book.md:0", REQUEST);
+    // One size for every call to a model: a server that sets its window per request would otherwise reload the model
+    // between call kinds, and a call built with no window would get the server's small default.
+    @ParameterizedTest
+    @EnumSource(CallKind.class)
+    void everyCallKind_carriesTheSameNumCtx(final CallKind kind) {
+        final ScriptedChatModel echo = TranslationJobTestSupport.replies("ONE.", "TWO.");
+        final JobModelCalls sized = new JobModelCalls(
+                onSent -> new CancellableChatModel(echo, control, onSent), events::add, new StepClock(), "uk", 12288);
+        final ChatRequest stated =
+                new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "Hello.")), null, null, null, 16384, null, 256);
 
-        assertThat(model.requests().getFirst().contextWindow()).isNull();
+        sized.call(kind, "Book.md:0", REQUEST);
+        sized.call(kind, "Book.md:0", stated);
+
+        assertThat(echo.requests()).extracting(ChatRequest::contextWindow).containsExactly(12288, 12288);
+    }
+
+    // Only a run's own calls ask Ollama to keep the model loaded; a names pass or a brief leaves its settings alone.
+    @Test
+    void call_inRun_keepsTheModelLoadedAndOtherwiseNot() {
+        final ScriptedChatModel echo = TranslationJobTestSupport.replies("ONE.", "TWO.");
+        final JobModelCalls outside = new JobModelCalls(
+                onSent -> new CancellableChatModel(echo, control, onSent), events::add, new StepClock(), "uk", 8192);
+
+        outside.inRun().call(CallKind.DRAFT, "Book.md:0", REQUEST);
+        outside.call(CallKind.PRESCAN, null, REQUEST);
+
+        assertThat(echo.requests()).extracting(ChatRequest::keepLoaded).containsExactly(true, false);
     }
 
     // The start and the finish bracket one call, timed by the job's clock from the moment the request leaves.
@@ -148,7 +172,11 @@ class JobModelCallsTest {
         final ScriptedChatModel failing = new ScriptedChatModel()
                 .answer(Result.err(AppError.of(ErrorCode.unreachable, "Offline", "The model is unreachable.")));
         final JobModelCalls failingCalls = new JobModelCalls(
-                onSent -> new CancellableChatModel(failing, control, onSent), events::add, new StepClock(), "uk");
+                onSent -> new CancellableChatModel(failing, control, onSent),
+                events::add,
+                new StepClock(),
+                "uk",
+                16384);
 
         failingCalls.call(CallKind.DRAFT, "Book.md:0", REQUEST);
 
@@ -181,7 +209,7 @@ class JobModelCallsTest {
     @Test
     void send_secondAttemptAfterTimeout_addsOneResendStep() {
         final ChatModel retrying = new RetryingModel(true);
-        final JobModelCalls stepped = new JobModelCalls(onSent -> retrying, events::add, new StepClock(), "uk")
+        final JobModelCalls stepped = new JobModelCalls(onSent -> retrying, events::add, new StepClock(), "uk", 16384)
                 .withSteps(StepAnnouncer.over(events::add));
 
         stepped.call(CallKind.DRAFT, "Book.md:0", REQUEST);
@@ -198,7 +226,7 @@ class JobModelCallsTest {
     @Test
     void send_seamWithoutSteps_announcesNoStepEvent() {
         final JobModelCalls plain =
-                new JobModelCalls(onSent -> new RetryingModel(true), events::add, new StepClock(), "uk");
+                new JobModelCalls(onSent -> new RetryingModel(true), events::add, new StepClock(), "uk", 16384);
 
         plain.call(CallKind.DRAFT, "Book.md:0", REQUEST);
 
@@ -209,7 +237,7 @@ class JobModelCallsTest {
     @Test
     void send_secondAttemptFailsToo_endsTheResendStepFailed() {
         final ChatModel failing = new RetryingModel(false);
-        final JobModelCalls stepped = new JobModelCalls(onSent -> failing, events::add, new StepClock(), "uk")
+        final JobModelCalls stepped = new JobModelCalls(onSent -> failing, events::add, new StepClock(), "uk", 16384)
                 .withSteps(StepAnnouncer.over(events::add));
 
         stepped.call(CallKind.DRAFT, "Book.md:0", REQUEST);

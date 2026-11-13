@@ -1,5 +1,7 @@
 package ua.bookloom.document.md;
 
+import static ua.bookloom.util.contract.ArgNames.DOCUMENT;
+
 import com.google.inject.Inject;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -83,7 +85,7 @@ public final class MarkdownInspection implements FormatInspection {
      */
     @Override
     public Optional<CoverImage> cover(Document document) {
-        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(document, DOCUMENT);
         log.debug("Markdown declares no cover rule documentId={}", document.id());
         return Optional.empty();
     }
@@ -95,7 +97,7 @@ public final class MarkdownInspection implements FormatInspection {
      */
     @Override
     public List<StructureNode> structure(Document document) {
-        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(document, DOCUMENT);
         final Optional<ParsedMarkdown> parsed = registry.find(document.id());
         if (parsed.isEmpty()) {
             log.debug("No open Markdown state for structure lookup documentId={}", document.id());
@@ -138,7 +140,7 @@ public final class MarkdownInspection implements FormatInspection {
      */
     @Override
     public BookStats stats(Document document) {
-        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(document, DOCUMENT);
         final ParsedMarkdown parsed = requireOpen(document);
         final Node root = astOf(parsed);
         final List<Segment> bodySegments = BodySegments.of(document);
@@ -205,7 +207,7 @@ public final class MarkdownInspection implements FormatInspection {
      */
     @Override
     public Set<String> resourceIds(Document document) {
-        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(document, DOCUMENT);
         final ParsedMarkdown parsed = requireOpen(document);
         final Node root = astOf(parsed);
         final Set<String> destinations = new LinkedHashSet<>();

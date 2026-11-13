@@ -10,6 +10,10 @@ import javafx.scene.control.TextField;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.ThemeTestSupport;
 
 /** The columns and cells of the two term tables (15i.U5): what each shows, where the remove cross sits, what is gone. */
@@ -20,18 +24,19 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
     // IF the glossary kept its Check column or hid the remove cross inside the Term cell, THEN the table would not
     // match the Recurring terms table beside it.
     @ParameterizedTest
-    @CsvSource({"en, Term, Kind, Translation, Gender, Locked", "uk, Термін, Вид, Переклад, Рід, Закріплено"})
-    void glossaryColumns_shown_areTermKindTranslationGenderLockedThenAnUnnamedRemoveColumn(
+    @CsvSource({"en, Term, Kind, Forms, Translation, State, Gender", "uk, Термін, Вид, Форми, Переклад, Стан, Рід"})
+    void glossaryColumns_shown_areTermKindFormsTranslationStateGenderThenAnUnnamedRemoveColumn(
             final String tag,
             final String term,
             final String type,
+            final String forms,
             final String target,
-            final String gender,
-            final String locked)
+            final String state,
+            final String gender)
             throws Exception {
         showScreen(tag, 1024, 700, ROSALIND);
 
-        assertThat(headers("names-style")).containsExactly(term, type, target, gender, locked, "");
+        assertThat(headers("names-style")).containsExactly(term, type, forms, target, state, gender, "");
     }
 
     // IF a column were squeezed below its header, THEN "Закріплено" would read "Закріпл..." at the smallest window.
@@ -65,7 +70,8 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
     @CsvSource({"names-style", "recurring"})
     void removeCross_eachRow_sitsInTheLastColumnOnly(final String card) throws Exception {
         lexicon.holds(MASTER);
-        showScreen("en", 1024, 700, ROSALIND);
+        // Wide enough that the glossary's seven columns all fit, so its last cell is laid out.
+        showScreen("en", 1400, 700, ROSALIND);
         awaitFx(() -> !firstRowCells(card).isEmpty());
 
         final List<TableCell<?, ?>> cells = firstRowCells(card);
@@ -91,7 +97,7 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
 
         final TableCell<?, ?> promote = firstRowCells("recurring").get(3);
 
-        assertThat(ThemeTestSupport.onFx(() -> ((Button) promote.lookup(".button")).getText()))
+        assertThat(ThemeTestSupport.onFx(((Button) promote.lookup(".button"))::getText))
                 .startsWith(start);
     }
 
@@ -121,12 +127,12 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
         showScreen(tag, 1024, 700, HALE, ROSALIND);
 
         final TextField empty =
-                (TextField) ThemeTestSupport.onFx(() -> glossaryCell("Hale", 2).lookup(".text-field"));
+                (TextField) ThemeTestSupport.onFx(() -> glossaryCell("Hale", 3).lookup(".text-field"));
         final TextField filled = (TextField)
-                ThemeTestSupport.onFx(() -> glossaryCell("Rosalind", 2).lookup(".text-field"));
+                ThemeTestSupport.onFx(() -> glossaryCell("Rosalind", 3).lookup(".text-field"));
 
-        assertThat(ThemeTestSupport.<String>onFx(() -> empty.getPromptText())).isEqualTo(placeholder);
-        assertThat(ThemeTestSupport.<String>onFx(() -> filled.getText())).isEqualTo("Розалінда");
+        assertThat(ThemeTestSupport.<String>onFx(empty::getPromptText)).isEqualTo(placeholder);
+        assertThat(ThemeTestSupport.<String>onFx(filled::getText)).isEqualTo("Розалінда");
     }
 
     // IF a place or a term showed "unknown" as its gender, THEN the person would try to settle something that has none.
@@ -134,10 +140,11 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
     void genderCell_nonCharacters_showADashAndCharactersTheirGender() throws Exception {
         showScreen("en", 1024, 700, ROSALIND, HALE, BROOK, WAND);
 
-        assertThat(shownText(glossaryCell("Brook", 3))).isEqualTo("—");
-        assertThat(shownText(glossaryCell("Wand", 3))).isEqualTo("—");
-        assertThat(shownText(glossaryCell("Rosalind", 3))).isEqualTo("female");
-        assertThat(shownText(glossaryCell("Hale", 3))).isEqualTo("unknown");
+        assertThat(shownText(glossaryCell("Brook", 5))).isEqualTo("—");
+        assertThat(shownText(glossaryCell("Wand", 5))).isEqualTo("—");
+        assertThat(shownText(glossaryCell("Rosalind", 5))).isEqualTo("female · person");
+        // Nobody read the book for Hale, so it does not claim the book holds no evidence.
+        assertThat(shownText(glossaryCell("Hale", 5))).isEqualTo("not specified");
     }
 
     // IF a guess were drawn like a decision, THEN the person would not know what still wants a look; only the
@@ -146,7 +153,29 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
     void genderCell_suggestedCharacter_isMarkedAndAConfirmedOneIsNot() throws Exception {
         showScreen("en", 1024, 700, JOHN, ROSALIND);
 
-        assertThat(shownText(glossaryCell("John", 3))).isEqualTo("male (suggested)");
-        assertThat(shownText(glossaryCell("Rosalind", 3))).isEqualTo("female");
+        assertThat(shownText(glossaryCell("John", 5))).isEqualTo("male · likely");
+        assertThat(shownText(glossaryCell("Rosalind", 5))).isEqualTo("female · person");
     }
+
+    // IF the Kind cell ended "character · person" in an ellipsis, THEN the origin would be lost at the window sizes the
+    // person uses most; the origin goes to a second line instead.
+    @ParameterizedTest
+    @CsvSource({"en, 960", "en, 1280", "uk, 960", "uk, 1280"})
+    void kindCell_smallWindow_showsTheKindAndItsOriginWhole(final String tag, final double width) throws Exception {
+        showScreen(tag, width, 700, ROSALIND, BROOK, WAND, ACME);
+
+        assertThat(ThemeTestSupport.onFx(() -> List.of("Rosalind", "Brook", "Wand", "Acme").stream()
+                        .map(term -> glossaryCell(term, 1))
+                        .flatMap(cell -> cell.lookupAll(".text").stream())
+                        .filter(javafx.scene.text.Text.class::isInstance)
+                        .map(node -> ((javafx.scene.text.Text) node).getText())
+                        .filter(drawn -> drawn.endsWith("…") || drawn.endsWith("..."))
+                        .toList()))
+                .as("kind cells drawn with an ellipsis")
+                .isEmpty();
+    }
+
+    private static final GlossaryEntry ACME = GlossaryEntry.of(
+                    "e7", "p1", "Acme", null, TermType.ORGANISATION, Gender.UNKNOWN, false)
+            .withType(TermType.ORGANISATION, Origin.LIKELY);
 }

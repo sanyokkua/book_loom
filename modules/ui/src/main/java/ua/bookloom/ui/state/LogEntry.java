@@ -155,4 +155,13 @@ public record LogEntry(
     public boolean namesACall() {
         return CALL_MESSAGES.contains(messageKey);
     }
+
+    /**
+     * Whether the first argument is a stage's token and the second its round, which the log words as the chip does.
+     *
+     * @return {@code true} if this entry announces a stage, {@code false} otherwise
+     */
+    public boolean namesAStage() {
+        return messageKey == MessageKey.LOG_STAGE_STARTED;
+    }
 }

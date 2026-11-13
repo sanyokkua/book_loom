@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 
 /**
  * One model of one provider as the Models tab offers it.
@@ -11,14 +12,18 @@ import ua.bookloom.api.llm.ProviderKind;
  * @param providerName the provider's display name
  * @param kind the provider's wire dialect, which decides what the tab can say about the model
  * @param modelId the provider's model id
+ * @param engine the server engine behind the provider as the person chose or detection found it, which decides who
+ *     sets the model's window
  */
-public record ModelEntry(String providerId, String providerName, ProviderKind kind, String modelId) {
+public record ModelEntry(
+        String providerId, String providerName, ProviderKind kind, String modelId, ServerEngine engine) {
 
     public ModelEntry {
         Objects.requireNonNull(providerId, "providerId");
         Objects.requireNonNull(providerName, "providerName");
         Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(engine, "engine");
     }
 
     // The names are for display; the model is the same model whatever its provider is called.

@@ -61,6 +61,21 @@ public final class WordCounts {
     }
 
     /**
+     * Every word the book writes with a capital away from a sentence start, with how often.
+     *
+     * @return the counts by {@link Occurrences#keyOf} key; never null, empty when there is none
+     */
+    public Map<String, Integer> capitalisedMidSentence() {
+        final Map<String, Integer> found = new HashMap<>();
+        tallies.forEach((key, tally) -> {
+            if (tally.capitalisedMidSentence() > 0) {
+                found.put(key, tally.capitalisedMidSentence());
+            }
+        });
+        return Map.copyOf(found);
+    }
+
+    /**
      * How often a word is written with a capital away from a sentence start and not beside another capitalised word,
      * which would make it a part of a name.
      *

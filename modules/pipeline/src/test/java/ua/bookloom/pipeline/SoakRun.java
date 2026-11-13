@@ -15,10 +15,12 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.SentenceSplitter;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.PromptFrameRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SummaryRepository;
@@ -43,8 +45,7 @@ import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
-import ua.bookloom.pipeline.revision.ConsistencyPass;
+import ua.bookloom.pipeline.proofread.ProofreadTools;
 import ua.bookloom.pipeline.run.RunStores;
 
 /**
@@ -160,28 +161,31 @@ final class SoakRun {
 
     private TranslationJobImpl job(final String projectId, final FaultyModel model) {
         final TranslationJobImpl job = new TranslationJobImpl(
-                injector.getInstance(DocumentPort.class),
                 new RunRequest(projectId, ReviewMode.UNATTENDED),
-                model,
-                mapper,
-                injector.getInstance(PromptTemplates.class),
+                new JobTools(
+                        injector.getInstance(DocumentPort.class),
+                        model,
+                        mapper,
+                        injector.getInstance(PromptTemplates.class)),
                 stores(),
-                injector.getInstance(QualityLoop.class),
-                injector.getInstance(SentenceSplitter.class),
-                injector.getInstance(ConsistencyPass.class),
-                clock,
-                new UuidIdSource(),
-                delay -> {
-                    clock.advance(delay);
-                    return 0;
-                },
-                (period, ticking) -> {
-                    tick.set(ticking);
-                    return () -> tick.set(null);
-                },
-                BatchDrafter.DEFAULT_INITIAL_SIZE,
-                WordValidator.none(),
-                RequestDefaultsSource.environmentOnly());
+                new RunChecks(
+                        injector.getInstance(QualityLoop.class),
+                        injector.getInstance(SentenceSplitter.class),
+                        injector.getInstance(ProofreadTools.class),
+                        WordValidator.none()),
+                new RunPacing(
+                        clock,
+                        new UuidIdSource(),
+                        delay -> {
+                            clock.advance(delay);
+                            return 0;
+                        },
+                        (period, ticking) -> {
+                            tick.set(ticking);
+                            return () -> tick.set(null);
+                        },
+                        BatchDrafter.DEFAULT_INITIAL_SIZE),
+                new RunLogFacts(CallLedger.none(), "unknown"));
         job.pauseAt(Set.of(PausePoint.ON_ERROR));
         return job;
     }
@@ -203,12 +207,13 @@ final class SoakRun {
                 injector.getInstance(GlossaryRepository.class),
                 injector.getInstance(TmRepository.class),
                 injector.getInstance(SummaryRepository.class),
-                injector.getInstance(LexiconRepository.class));
+                injector.getInstance(LexiconRepository.class),
+                injector.getInstance(PromptFrameRepository.class));
     }
 
     private ExportReport export(final String projectId, final Path destination) {
         return dataOf(dataOf(injector.getInstance(ExportService.class)
-                        .newExport(new ExportRequest(projectId, destination, false, Set.of(), false), null))
+                        .newExport(new ExportRequest(projectId, destination, false, Set.of())))
                 .run());
     }
 

@@ -14,6 +14,7 @@ import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.settings.AppSetting;
 
@@ -66,12 +67,12 @@ public final class SettingWriter {
      * @return the stored value, or empty when none is stored or the store could not be read
      */
     public <T> Optional<T> stored(final AppSetting<T> setting) {
-        final Optional<T> value = settings.get(setting).data();
-        if (value == null) {
+        final Result<Optional<T>> read = settings.get(setting);
+        if (read.isErr()) {
             log.warn("{} could not be read; its default applies", setting.key());
             return Optional.empty();
         }
-        return value;
+        return Objects.requireNonNull(read.data());
     }
 
     /**
@@ -162,7 +163,7 @@ public final class SettingWriter {
         Objects.requireNonNull(what, "what");
         Objects.requireNonNull(write, "write");
         log.debug("queueing the write of {}", what);
-        afterWrites(() -> attempt(what, write), failed -> saveFailed.set(failed));
+        afterWrites(() -> attempt(what, write), saveFailed::set);
     }
 
     /**
@@ -177,7 +178,7 @@ public final class SettingWriter {
         // Each task waits for the one before it, whether that one worked or not, so a quick second choice is never
         // overwritten by the first.
         lastWrite = lastWrite
-                .handle((done, failure) -> (Void) null)
+                .handle((done, failure) -> null)
                 .thenRunAsync(
                         () -> {
                             final T answer = work.get();

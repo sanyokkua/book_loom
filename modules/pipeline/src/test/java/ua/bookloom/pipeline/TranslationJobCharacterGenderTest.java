@@ -2,10 +2,12 @@ package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
-import static ua.bookloom.pipeline.ChunkRunFixtures.FIX;
+import static ua.bookloom.pipeline.ChunkRunFixtures.PROOFREAD;
+import static ua.bookloom.pipeline.ChunkRunFixtures.REPAIR;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
 import static ua.bookloom.pipeline.ChunkRunFixtures.userMessage;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
+import static ua.bookloom.pipeline.TranslationJobTestSupport.draftThenRepair;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.project;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
@@ -17,6 +19,7 @@ import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.QaFinding;
@@ -39,10 +42,10 @@ class TranslationJobCharacterGenderTest {
     @TempDir
     private Path tempDir;
 
-    private TestProject projectWith(final Gender gender) {
+    private TestProject projectWith(final Gender gender, final QualityDial dial) {
         final Path book = TestBooks.txt(tempDir.resolve("Book.txt"), SOURCE);
-        final TestProject project = project(book, brief("en", "uk"));
-        final GlossaryEntry chisel = new GlossaryEntry(
+        final TestProject project = project(book, brief("en", "uk", dial));
+        final GlossaryEntry chisel = GlossaryEntry.of(
                 GlossaryIds.of(project.id(), "Chisel"),
                 project.id(),
                 "Chisel",
@@ -56,13 +59,13 @@ class TranslationJobCharacterGenderTest {
 
     @Test
     void run_masculineVerbAfterAWomansName_isRepairedWithOneDirectedFix() {
-        final ScriptedChatModel model = replies(WRONG, RIGHT);
-        final TestProject project = projectWith(Gender.FEMALE);
+        final ScriptedChatModel model = draftThenRepair(WRONG, RIGHT);
+        final TestProject project = projectWith(Gender.FEMALE, QualityDial.BALANCED);
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, FIX);
-        assertThat(userMessage(model.requests().get(1))).contains("відчинив").contains("gender");
+        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
+        assertThat(userMessage(model.requests().getLast())).contains("відчинив").contains("gender");
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, RIGHT);
@@ -73,12 +76,12 @@ class TranslationJobCharacterGenderTest {
 
     @Test
     void run_fixStillMasculine_keepsTheDraftWithTheNoteAndSpendsNoSecondFix() {
-        final ScriptedChatModel model = replies(WRONG, WRONG);
-        final TestProject project = projectWith(Gender.FEMALE);
+        final ScriptedChatModel model = draftThenRepair(WRONG, WRONG);
+        final TestProject project = projectWith(Gender.FEMALE, QualityDial.BALANCED);
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, FIX);
+        assertThat(formats(model)).containsExactly(DRAFT, REPAIR, PROOFREAD);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.DRAFT, WRONG);
@@ -90,7 +93,7 @@ class TranslationJobCharacterGenderTest {
     @Test
     void run_theCharacterIsAMan_makesNoFixCall() {
         final ScriptedChatModel model = replies(WRONG);
-        final TestProject project = projectWith(Gender.MALE);
+        final TestProject project = projectWith(Gender.MALE, QualityDial.FAST);
 
         report(job(project, model).run());
 

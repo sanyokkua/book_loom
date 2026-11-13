@@ -12,7 +12,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import ua.bookloom.api.llm.ChatRequest;
-import ua.bookloom.pipeline.batch.BatchFormat;
 import ua.bookloom.pipeline.batch.BatchItem;
 import ua.bookloom.pipeline.batch.BatchReply;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
@@ -117,7 +116,6 @@ class RealRunCorpusTest {
         final List<String> ids = Stream.of(
                         RunCorpus.text().stream().map(RunCase::id),
                         RunCorpus.batches().stream().map(BatchCase::id),
-                        RunCorpus.reviewerBatches().stream().map(ReviewerBatchCase::id),
                         RunCorpus.repairs().stream().map(RepairCase::id))
                 .flatMap(Function.identity())
                 .toList();
@@ -204,7 +202,6 @@ class RealRunCorpusTest {
         final String user = user(project.batchRequest(prepared));
 
         assertThat(prepared.items()).hasSize(batchCase.chunk().size());
-        assertThat(prepared.context().keyTerms()).isNotEmpty().contains("master");
         assertThat(user)
                 .contains("master", "master → господар", "Нелл")
                 .contains("Source: "
@@ -212,7 +209,7 @@ class RealRunCorpusTest {
     }
 
     @Test
-    void batch_contextCase_carriesTheRollingSummary() {
+    void batch_contextCase_carriesNoBookSoFar() {
         final BatchCase batchCase = RunCorpus.batches().stream()
                 .filter(c -> c.kind().equals("batch-context"))
                 .findFirst()
@@ -222,7 +219,8 @@ class RealRunCorpusTest {
         });
 
         assertThat(user(project.batchRequest(project.batch().orElseThrow())))
-                .contains("Раніше: Нелл і хлопчик прийшли до дому господаря");
+                .contains("Nell → Нелл")
+                .doesNotContain("Раніше: Нелл і хлопчик прийшли до дому господаря");
     }
 
     @ParameterizedTest(name = "{0}")
@@ -243,16 +241,6 @@ class RealRunCorpusTest {
     }
 
     @Test
-    void batchReply_correctShape_reportsTheTermsTheChunkAskedFor() {
-        final BatchCase batchCase = RunCorpus.batches().getFirst();
-        final BatchCase.Reply correct = batchCase.replies().getFirst();
-
-        assertThat(parse(batchCase, correct).outcome("1").orElseThrow().terms())
-                .containsEntry("master", "господар")
-                .containsEntry("imp", "імп");
-    }
-
-    @Test
     void batchReply_tooShortShape_isMarkedTooShortByTheItemValidator() {
         final BatchCase batchCase = RunCorpus.batches().getFirst();
         final BatchCase.Reply tooShort = batchCase.replies().stream()
@@ -270,7 +258,7 @@ class RealRunCorpusTest {
             final String id,
             final RepairCase repairCase,
             @org.junit.jupiter.api.io.TempDir final java.nio.file.Path dir) {
-        final RealRunRunner runner = new RealRunRunner((kind, segment, request) -> null, 1, dir);
+        final RealRunRunner runner = new RealRunRunner((kind, segment, request) -> null, dir);
         final ua.bookloom.api.document.Segment real = runner.documentSegment(repairCase);
 
         assertThat(runner.restores(real, repairCase.good())).as(id + " good").isTrue();
@@ -304,7 +292,7 @@ class RealRunCorpusTest {
         });
         final List<BatchItem> items = project.batch().orElseThrow().items();
         return new BatchReplyParser(new com.fasterxml.jackson.databind.ObjectMapper())
-                .parse(reply.reply(), items, "en", "uk", BatchFormat.JSON);
+                .parse(reply.reply(), items, "en", "uk");
     }
 
     private static String user(final ChatRequest request) {

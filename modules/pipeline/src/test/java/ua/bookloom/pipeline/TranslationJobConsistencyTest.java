@@ -3,7 +3,6 @@ package ua.bookloom.pipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
-import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.S0;
 import static ua.bookloom.pipeline.ChunkRunFixtures.S2;
 import static ua.bookloom.pipeline.ChunkRunFixtures.S3;
@@ -11,7 +10,6 @@ import static ua.bookloom.pipeline.ChunkRunFixtures.T0;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T2;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T3;
 import static ua.bookloom.pipeline.ChunkRunFixtures.pauses;
-import static ua.bookloom.pipeline.ChunkRunFixtures.reviewed;
 import static ua.bookloom.pipeline.ChunkRunFixtures.shown;
 import static ua.bookloom.pipeline.ChunkRunFixtures.target;
 import static ua.bookloom.pipeline.ChunkRunFixtures.userMessage;
@@ -50,9 +48,9 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.PromptFrame;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.api.project.TmEntry;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
@@ -64,13 +62,6 @@ import ua.bookloom.pipeline.glossary.GlossaryIds;
  * segment's context matches.
  */
 class TranslationJobConsistencyTest {
-
-    /** The second chunk's judge sees the three drafted pairs and not the reused one. */
-    private static final String[] REVIEWED_THREE = {
-        "<Pair id=\"s1\"><Source>It was late.",
-        "<Pair id=\"s2\"><Source>He paused.",
-        "<Pair id=\"s3\"><Source>She smiled."
-    };
 
     private static final String CHAPTER_ONE = "OEBPS/ch0.xhtml:0";
     private static final String CHAPTER_TWO = "OEBPS/ch1.xhtml:0";
@@ -100,8 +91,7 @@ class TranslationJobConsistencyTest {
         assertThat(userMessage(model.requests().getFirst()))
                 .contains("Hale", "Гейл", "character", "male")
                 .doesNotContain("Baker Street");
-        assertThat(snapshotOf(project, "Book.txt:0").glossary())
-                .containsExactly(new SnapshotTerm("Hale", "Гейл", TermType.CHARACTER, Gender.MALE, false, false, null));
+        assertThat(sentText(project, "Book.txt:0")).contains("Hale → Гейл").doesNotContain("Baker Street");
     }
 
     @Test
@@ -179,18 +169,24 @@ class TranslationJobConsistencyTest {
                 .extracting(id -> stored(project, id).status())
                 .containsExactly(
                         SegmentStatus.ACCEPTED, SegmentStatus.FLAGGED, SegmentStatus.ACCEPTED, SegmentStatus.ACCEPTED);
+        final PromptFrame frame = Objects.requireNonNull(
+                        project.stores().promptFrames().all(project.id()).data())
+                .getFirst();
         assertThat(List.of("Book.md:0", "Book.md:1", "Book.md:2", "Book.md:3"))
-                .extracting(id -> snapshotOf(project, id).precedingTargets())
-                .containsExactly(List.of(), List.of(T0), List.of(T0), List.of(T2));
-        assertThat(snapshotOf(project, "Book.md:3").styleSheet()).contains("faithful literary prose");
+                .extracting(id -> snapshotOf(project, id).frameHash())
+                .containsOnly(frame.hash());
+        assertThat(sentText(project, "Book.md:0")).doesNotContain(T0);
+        assertThat(sentText(project, "Book.md:1")).contains(T0);
+        assertThat(sentText(project, "Book.md:3")).contains(T2);
+        assertThat(frame.sections())
+                .anySatisfy(section ->
+                        assertThat(String.join("\n", section.lines())).contains("faithful literary prose"));
     }
 
     @Test
     void run_repeatedPassageInSameContext_isReused() {
         final TestProject project = project(twoChapters(tempDir, "Yes."), epubBriefOn(QualityDial.BALANCED));
-        final ScriptedChatModel model = replies(PAUSED, "Так.", SMILED, LATE, PAUSED, SMILED, LEFT)
-                .answerTo(REVIEW, reviewed())
-                .answerTo(REVIEW, reviewed());
+        final ScriptedChatModel model = replies(PAUSED, "Так.", SMILED, LATE, PAUSED, SMILED, LEFT);
         final TranslationJobImpl translation = job(project, model);
         final List<MemoryUpdated> memory = memoryEvents(translation);
 
@@ -213,10 +209,6 @@ class TranslationJobConsistencyTest {
         assertThat(memory).containsExactlyElementsOf(reuseBetweenSummaries());
         assertThat(drafts.get(4)).contains("He paused. → " + PAUSED);
         assertThat(drafts.get(5)).contains("She smiled. → " + SMILED);
-        assertThat(messagesOf(model, REVIEW).get(1))
-                .contains(REVIEWED_THREE)
-                .contains("<Pair id=\"s4\"><Source>They left.")
-                .doesNotContain("Yes.", "<Pair id=\"s5\">");
     }
 
     @Test
@@ -320,8 +312,7 @@ class TranslationJobConsistencyTest {
 
     private static List<String> messagesOf(final ScriptedChatModel model, final String format) {
         return model.requests().stream()
-                .filter(request -> format.equals(Objects.requireNonNull(request.responseFormat(), "format")
-                        .name()))
+                .filter(request -> format.equals(ScriptedChatModel.callName(request)))
                 .map(ChunkRunFixtures::userMessage)
                 .toList();
     }
@@ -349,6 +340,15 @@ class TranslationJobConsistencyTest {
         return Objects.requireNonNull(stored(project, segmentId).context(), "context snapshot of " + segmentId);
     }
 
+    // The lines of a record's own sections, as the user message carried them.
+    private static String sentText(final TestProject project, final String segmentId) {
+        return String.join(
+                "\n",
+                snapshotOf(project, segmentId).sections().stream()
+                        .flatMap(section -> section.lines().stream())
+                        .toList());
+    }
+
     private static void addTerm(
             final TestProject project,
             final String term,
@@ -356,7 +356,7 @@ class TranslationJobConsistencyTest {
             final TermType type,
             final Gender gender,
             final boolean locked) {
-        final GlossaryEntry entry = new GlossaryEntry(
+        final GlossaryEntry entry = GlossaryEntry.of(
                 GlossaryIds.of(project.id(), term), project.id(), term, rendering, type, gender, locked);
         Objects.requireNonNull(project.stores().glossary().add(entry).data(), "added " + term);
     }

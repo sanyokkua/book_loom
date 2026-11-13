@@ -23,10 +23,10 @@ class StageRowsTest {
 
     // IF a request were counted under the wrong stage, THEN the dialog would blame the wrong step for the time.
     @Test
-    void of_passAtFifthStage_countsEachStagesRequestsAndListsEightRows() {
+    void of_passAtFifthStage_countsEachStagesRequestsAndListsTenRows() {
         final StageRows rows = StageRows.of(PassEvents.logUpTo(new int[] {0, 6, 0, 3, 25}, 4, 49));
 
-        assertThat(counts(rows)).containsExactly(0, 6, 0, 3, 25, 0, 0, 0);
+        assertThat(counts(rows)).containsExactly(0, 6, 0, 3, 25, 0, 0, 0, 0, 0);
         assertThat(labels(rows)).containsExactlyElementsOf(PassEvents.CODES);
         assertThat(rows.rows().get(5).isPending()).isTrue();
     }
@@ -68,5 +68,17 @@ class StageRowsTest {
                 .apply(new StepChanged(StepKind.STAGE, "Name scan", 0, StepState.STARTED, null, null));
 
         assertThat(counts(StageRows.of(log))).containsExactly(1, 0);
+    }
+
+    // IF only the last request were kept, THEN the earlier requests of a stage could not be listed or chosen.
+    @Test
+    void of_stageWithRequests_listsEveryRequestOfTheStageInOrder() {
+        final StageRows rows = StageRows.of(PassEvents.logUpTo(new int[] {0, 3, 2}, 2, 49));
+
+        assertThat(rows.requests().get("STAGE:1"))
+                .extracting(StepEntry::key)
+                .containsExactly("REQUEST:0", "REQUEST:1", "REQUEST:2");
+        assertThat(rows.requests().get("STAGE:2")).extracting(StepEntry::key).containsExactly("REQUEST:3", "REQUEST:4");
+        assertThat(rows.requests()).doesNotContainKey("STAGE:0");
     }
 }

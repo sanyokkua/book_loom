@@ -1,13 +1,13 @@
 package ua.bookloom.pipeline.prompt;
 
 import java.util.List;
+import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallKind;
-import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.SegmentOutcomeNote;
 
@@ -29,7 +29,7 @@ public interface ModelCalls {
     Result<ChatResponse> call(CallKind kind, @Nullable String segmentId, ChatRequest request);
 
     /**
-     * Sends one model call about several segments, such as a reviewer call over a whole chunk, so its announcements name
+     * Sends one model call about several segments, such as a call over a whole chunk, so its announcements name
      * every segment it is about.
      *
      * @param kind which call this is
@@ -83,6 +83,30 @@ public interface ModelCalls {
     }
 
     /**
+     * Shows what the reply of the call just answered was read as, for a call about no segment: each line it asked about
+     * with the parsed answer for it. A seam that shows nothing ignores it.
+     *
+     * @param items the non-null items, one per line asked, in the order asked
+     */
+    default void read(final List<CallItem> items) {
+        parsed(List.of(), items);
+    }
+
+    /**
+     * Shows each line a call about no segment asked with the parsed answer for it; a line the reply gave no answer for
+     * stays as asked. A seam that shows nothing ignores it.
+     *
+     * @param answers each line asked, in order, with its answer or null when the reply gave none
+     */
+    default void answered(final Map<String, @Nullable String> answers) {
+        read(answers.entrySet().stream()
+                .map(line -> line.getValue() == null
+                        ? CallItem.asked(line.getKey())
+                        : CallItem.answered(line.getKey(), line.getValue()))
+                .toList());
+    }
+
+    /**
      * Announces what a step between calls has reached, such as a repair round starting. A seam that announces nothing
      * ignores it.
      *
@@ -99,83 +123,5 @@ public interface ModelCalls {
      */
     default StepAnnouncer steps() {
         return StepAnnouncer.silent();
-    }
-
-    /**
-     * Announces one paragraph a reread stage went over, with its text before and after, so an export can show each
-     * reread item next to its neighbours. A seam that shows nothing ignores it.
-     *
-     * @param segmentId the segment that was reread; non-null
-     * @param before the target before the reread; book text, so a seam never logs it above TRACE; non-null
-     * @param after the target the reread stored, or null when it changed nothing
-     * @param verdict {@code unchanged}, {@code fixed}, {@code refused:<rule>}, {@code skipped} or {@code remembered}
-     */
-    default void reread(
-            final String segmentId, final String before, @Nullable final String after, final String verdict) {
-        reread(segmentId, before, after, verdict, null);
-    }
-
-    /**
-     * Announces one reread paragraph with the paragraphs around it, so the item can be read in its place. A seam that
-     * shows nothing ignores it.
-     *
-     * @param segmentId the segment that was reread; non-null
-     * @param before the target before the reread; book text, never logged above TRACE; non-null
-     * @param after the target the reread stored, or null when it changed nothing
-     * @param verdict as for {@link #reread(String, String, String, String)}
-     * @param neighbours the paragraphs around it, or null when the stage cannot name them
-     */
-    default void reread(
-            final String segmentId,
-            final String before,
-            @Nullable final String after,
-            final String verdict,
-            final ExportProgress.@Nullable Neighbours neighbours) {
-        // Nothing shows rereads.
-    }
-
-    /**
-     * Whether the person asked to write the file now, so a stage sends no further call and leaves what it has not
-     * reached as stored. A seam with no early stop always answers {@code false}.
-     *
-     * @return {@code true} if the stages should stop before their next item, {@code false} otherwise
-     */
-    default boolean isStoppingEarly() {
-        return false;
-    }
-
-    /** The stages of a backward revision whose calls are counted before the first is sent. */
-    enum Stage {
-        /** One call per segment whose character's gender became known. */
-        GENDER_RETRY,
-        /**
-         * One fresh draft per flagged or doubted segment; a draft may take several calls (pieces, the reviewer), so
-         * the stage counts segments through {@link ModelCalls#advanced}, not calls.
-         */
-        RETRY_DOUBTED,
-        /** One call per paragraph checked against its neighbours. */
-        NEIGHBOUR_CHECK
-    }
-
-    /**
-     * Announces how many calls a stage is about to send at most, so a caller can show a determinate bar. A seam that
-     * does not count ignores it.
-     *
-     * @param stage the stage about to start; non-null
-     * @param calls the most calls it will send; zero or more
-     */
-    default void planned(final Stage stage, final int calls) {
-        // Nothing counts.
-    }
-
-    /**
-     * Announces how many units of a stage whose unit is not one call are finished. A seam that does not count ignores
-     * it.
-     *
-     * @param stage the stage the units belong to; non-null
-     * @param done the units finished so far; zero or more
-     */
-    default void advanced(final Stage stage, final int done) {
-        // Nothing counts.
     }
 }

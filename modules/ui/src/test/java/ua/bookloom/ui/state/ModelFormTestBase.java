@@ -13,8 +13,12 @@ import java.util.function.UnaryOperator;
 import org.junit.jupiter.api.AfterEach;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.llm.ModelSettings;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.RefusedSetting;
+import ua.bookloom.api.llm.SamplingOverride;
+import ua.bookloom.api.llm.ServerEngine;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.ScriptedModelCapabilities;
 
@@ -22,8 +26,10 @@ import ua.bookloom.ui.ScriptedModelCapabilities;
 @SuppressWarnings("NullAway.Init")
 abstract class ModelFormTestBase extends SettingsViewModelTestBase {
 
-    static final ModelEntry GEMMA = new ModelEntry("ollama", "Ollama", ProviderKind.OLLAMA, "gemma4:e4b");
-    static final ModelEntry GPT_OSS = new ModelEntry("ollama", "Ollama", ProviderKind.OLLAMA, "gpt-oss");
+    static final ModelEntry GEMMA =
+            new ModelEntry("ollama", "Ollama", ProviderKind.OLLAMA, "gemma4:e4b", ServerEngine.OLLAMA);
+    static final ModelEntry GPT_OSS =
+            new ModelEntry("ollama", "Ollama", ProviderKind.OLLAMA, "gpt-oss", ServerEngine.OLLAMA);
 
     final ScriptedModelCapabilities capabilities = ScriptedModelCapabilities.idle();
     final StructuredAnswers structured = new StructuredAnswers();
@@ -48,7 +54,16 @@ abstract class ModelFormTestBase extends SettingsViewModelTestBase {
         viewModel = viewModel();
         roster = onFx(() -> new ModelRoster(configs, catalog, modelSettings, viewModel, pool, io));
         form = onFx(() -> new ModelForm(
-                modelSettings, capabilities, structured, roster, viewModel, EnglishMessages.create(), pool, io));
+                new ModelSources(
+                        modelSettings,
+                        capabilities,
+                        structured,
+                        new ModelQuantChips(capabilities, new AdviceReader(capabilities, io), io)),
+                roster,
+                viewModel,
+                EnglishMessages.create(),
+                pool,
+                io));
     }
 
     final void await(final BooleanSupplier condition) throws Exception {
@@ -93,7 +108,7 @@ abstract class ModelFormTestBase extends SettingsViewModelTestBase {
 
     final void sendAgain(final String name) throws Exception {
         onFx(() -> {
-            form.sendAgain(name);
+            form.sendAgain(new RefusedSetting(name, LocalDate.of(2026, 10, 2), "omitted"));
             return null;
         });
         await(() -> !form.sendingAgain().get());
@@ -129,7 +144,9 @@ abstract class ModelFormTestBase extends SettingsViewModelTestBase {
                         s.maxOutput(),
                         s.outputField(),
                         List.of(refusal),
-                        s.measuredSecondsPerSegment(),
-                        s.measuredFrom()));
+                        s.secondsPerCall(),
+                        ProbeVerdicts.none(),
+                        ThinkingOverride.RECOMMENDED,
+                        SamplingOverride.profileDefault()));
     }
 }

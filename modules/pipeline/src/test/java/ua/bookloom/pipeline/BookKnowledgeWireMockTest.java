@@ -12,9 +12,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.llm.ModelWindow;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
@@ -39,7 +41,7 @@ class BookKnowledgeWireMockTest {
             "audience":"adult","era":"late twentieth century","narration":"third person",\
             "summary":"A clerk finds a ledger of unlit lanterns.","confidence":0.9}""";
 
-    private final BookKnowledge knowledge = new BookKnowledge(new PromptTemplates(), MAPPER);
+    private final BookKnowledge knowledge = new BookKnowledge(new ContextBuilder(new PromptTemplates()), MAPPER);
     private final CallFrame frame =
             new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
 
@@ -51,7 +53,8 @@ class BookKnowledgeWireMockTest {
                 },
                 event -> {},
                 Clock.systemUTC(),
-                "uk");
+                "uk",
+                ModelWindow.DEFAULT_WINDOW);
         return java.util.Objects.requireNonNull(
                 knowledge.ask(FACTS, STEM, frame, calls).data());
     }

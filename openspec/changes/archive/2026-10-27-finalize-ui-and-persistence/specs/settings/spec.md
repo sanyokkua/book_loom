@@ -4,7 +4,7 @@
 
 The settings screen SHALL let a person add a provider, open a stored provider for editing by choosing its row (there is no separate Edit button), and delete one after confirmation with Delete…; deleting a provider SHALL also remove its per-model settings, and deleting the current provider SHALL leave no current AI model.
 
-**Source**: S3, decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`. In plain words: a person whose AI program is not one of the two usual local ones can describe it themselves, removing one is never a single accidental click, and a deleted provider leaves nothing behind that could be mistaken for the model in use.
+**Source**: S3, decision 7 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#providers`. In plain words: a person whose AI program is not one of the two usual local ones can describe it themselves, removing one is never a single accidental click, and a deleted provider leaves nothing behind that could be mistaken for the model in use.
 
 #### Scenario: A provider is added
 
@@ -40,7 +40,7 @@ The settings screen SHALL let a person add a provider, open a stored provider fo
 
 The provider form SHALL ask for a name, a kind (Ollama or OpenAI-compatible), an address, a connect timeout and a request timeout, and WHEN the address of an OpenAI-compatible provider does not end in `/v1`, the form SHALL warn that the address usually ends in `/v1`.
 
-**Source**: S3, decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`. In plain words: the form asks only for what the person can know, and the most common mistake with OpenAI-style servers, leaving off `/v1`, is flagged before a test fails mysteriously.
+**Source**: S3, decision 7 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#providers`. In plain words: the form asks only for what the person can know, and the most common mistake with OpenAI-style servers, leaving off `/v1`, is flagged before a test fails mysteriously.
 
 #### Scenario: A missing /v1 is flagged
 
@@ -56,7 +56,7 @@ The provider form SHALL ask for a name, a kind (Ollama or OpenAI-compatible), an
 
 The provider form SHALL offer the sign-in choices None, Bearer token and API-key header (with the header's name, `X-Api-Key` until the person types another), each with one line saying what it sends, SHALL take the key from the environment variable whose name the person enters, and SHALL show that variable as "set" or "not set" without showing its value, looked up the same way a request looks it up (the "Look a variable up where the person set it" requirement of `llm-provider`); WHILE it is "not set" the form SHALL say where to set it.
 
-**Source**: S3, decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#settings--s1s5-h1-decisions-67` ("Keys are never saved, only environment-variable names"), ADR-0043. In plain words: the form never asks the person to type a secret. It asks where the secret lives and tells them whether BookLoom can find it.
+**Source**: S3, decision 7 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#settings--s1s5-h1-decisions-67` ("Keys are never saved, only environment-variable names"), ADR-0043. In plain words: the form never asks the person to type a secret. It asks where the secret lives and tells them whether BookLoom can find it.
 
 #### Scenario: A variable that exists is shown as set
 
@@ -85,7 +85,7 @@ The provider form SHALL offer the sign-in choices None, Bearer token and API-key
 
 The provider form SHALL offer a Models endpoint override and an Inference endpoint override, and WHILE the kind is Ollama SHALL show the Inference endpoint override as disabled with the reason that Ollama's chat address is fixed.
 
-**Source**: S3, decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`. In plain words: some OpenAI-style servers put their routes under unusual paths, so both can be changed. Ollama's route is fixed, and a greyed field that says why is clearer than a field that silently does nothing.
+**Source**: S3, decision 7 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#providers`. In plain words: some OpenAI-style servers put their routes under unusual paths, so both can be changed. Ollama's route is fixed, and a greyed field that says why is clearer than a field that silently does nothing.
 
 #### Scenario: An override is accepted for an OpenAI-compatible server
 
@@ -101,7 +101,7 @@ The provider form SHALL offer a Models endpoint override and an Inference endpoi
 
 The provider form SHALL let the person add custom headers as name and value rows, where a value MAY be `${env:NAME}`, and SHALL let the person add custom model identifiers shown as chips.
 
-**Source**: S3, decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`. In plain words: a company gateway may need an extra header, and some servers do not list the models they serve, so both can be added by hand and a secret header value can point at an environment variable.
+**Source**: S3, decision 7 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#providers`. In plain words: a company gateway may need an extra header, and some servers do not list the models they serve, so both can be added by hand and a secret header value can point at an environment variable.
 
 #### Scenario: A header with an environment reference
 
@@ -117,7 +117,7 @@ The provider form SHALL let the person add custom headers as name and value rows
 
 IF a custom header's name or the API-key header's name holds a space, a colon, a control character or another character an HTTP header name may not, is longer than 64 characters or reads like a key, or a connect or request timeout is not a whole number from 1 to 3600 seconds, or the address is not an absolute `http`/`https` address with a host, names a port outside 1 to 65535 or carries a user name or password, or the key variable is not the name of an environment variable (letters, digits and underscores, not starting with a digit) or reads like a key (a known key prefix such as `sk-`, `sk_`, `ghp_`, `AKIA…`, or 24 or more characters mixing lower case, upper case and digits), THEN the provider form SHALL show the finding under that field once the person has typed or pressed Save, never naming the refused text back, SHALL refuse Save while explaining on Save's hover what holds it, and the provider store SHALL refuse the same description with `ErrorCode.validation` so nothing of it is written; a stored provider that still carries one SHALL fail its call with `ErrorCode.validation` before anything is sent, and the test dialog and its curl line SHALL show its address without any user name or password.
 
-**Source**: `docs/specification/mockups/README.md#providers`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md`. In plain words: such a name or a timeout of years passes a save and then breaks every request as an unexplained transport error; the form says what to fix instead.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#providers`, `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md`. In plain words: such a name or a timeout of years passes a save and then breaks every request as an unexplained transport error; the form says what to fix instead.
 
 #### Scenario: A header name with a space
 
@@ -153,7 +153,7 @@ IF a custom header's name or the API-key header's name holds a space, a colon, a
 
 WHEN the person chooses Use this one on a stored provider, the settings screen SHALL make it the current provider; and WHILE the open project has stored segment decisions, SHALL first ask "Use LM Studio for the rest of this book?" (naming the chosen provider) and change nothing unless the person confirms.
 
-**Source**: S3, decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#changes-while-translating-i`, `docs/specification/mockups/README.md#providers`. In plain words: switching the AI model in the middle of a book changes the voice of the rest, whether or not a run is going at that moment, so the person is asked once and told that segments already done keep their translation.
+**Source**: S3, decision 7 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#changes-while-translating-i`, `docs/spec_baseline/specification/mockups/README.md#providers`. In plain words: switching the AI model in the middle of a book changes the voice of the rest, whether or not a run is going at that moment, so the person is asked once and told that segments already done keep their translation.
 
 #### Scenario: Use this one with no project open
 
@@ -175,7 +175,7 @@ WHEN the person chooses Use this one on a stored provider, the settings screen S
 
 The provider detail SHALL hold the connection form in a fold called Connection details, and the fold SHALL open by itself when the provider has a problem, when the provider is new, or when Show technical details is on.
 
-**Source**: theme H (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`. In plain words: someone whose AI model works never needs to see the form, and someone who needs it finds it already open.
+**Source**: theme H (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`. In plain words: someone whose AI model works never needs to see the form, and someone who needs it finds it already open.
 
 #### Scenario: A healthy provider keeps the fold closed
 
@@ -196,7 +196,7 @@ The provider detail SHALL hold the connection form in a fold called Connection d
 
 WHEN the person opens the details of a check, the settings screen SHALL show a dialog with a verdict banner, the request line with Copy as curl (the key hidden), three columns Body, a table of Status, Time, First token, Speed, Tokens and Structured, and Response, and a footer that switches between the tests that have run and closes; a copy is confirmed in the dialog's footer, never in a toast.
 
-**Source**: S2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#dialog--test-connection--models--inference-s2`. In plain words: when a test fails, a person or a helper can see exactly what was asked and what came back, and can reproduce it in a terminal without the secret being exposed.
+**Source**: S2 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#dialog--test-connection--models--inference-s2`. In plain words: when a test fails, a person or a helper can see exactly what was asked and what came back, and can reproduce it in a terminal without the secret being exposed.
 
 #### Scenario: The dialog shows the request and the answer
 
@@ -223,7 +223,7 @@ WHEN the person opens the details of a check, the settings screen SHALL show a d
 
 The Models tab SHALL list the models across all providers, and SHALL keep for the chosen model its own optional settings, with the explanation "Each model keeps its own settings. All are optional — off means BookLoom picks the value per task."
 
-**Source**: decision 6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#models-decision-6`. In plain words: one model may refuse a setting that another accepts, so settings belong to a model, and leaving them off always means the safe default.
+**Source**: decision 6 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#models-decision-6`. In plain words: one model may refuse a setting that another accepts, so settings belong to a model, and leaving them off always means the safe default.
 
 #### Scenario: Two models keep different settings
 
@@ -234,7 +234,7 @@ The Models tab SHALL list the models across all providers, and SHALL keep for th
 
 WHEN the Models tab reads the providers' models and a provider's program does not list them, the tab SHALL say under the chooser which providers did not answer and that only the models BookLoom already knows are shown for them, until a later reading has every provider answer.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-settings`. In plain words: Refresh with Ollama closed changed nothing on the screen, so it looked broken; the line says why the list is short.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-settings`. In plain words: Refresh with Ollama closed changed nothing on the screen, so it looked broken; the line says why the list is short.
 
 #### Scenario: Refresh while Ollama is closed
 
@@ -245,7 +245,7 @@ WHEN the Models tab reads the providers' models and a provider's program does no
 
 WHEN Restart now is pressed, the button SHALL read `Restarting...` until the window closes, and the next copy SHALL open its window at the place and size the closing window had (maximized when it was), unless that place is on no screen now. An ordinary launch SHALL open at the default size.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-settings`. In plain words: for the two seconds before the window closed nothing changed on screen, and the new window came back at 1024 × 700 in the middle of the screen; the closing copy now hands its place to the next one through the next copy's environment (`BOOKLOOM_WINDOW`).
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-settings`. In plain words: for the two seconds before the window closed nothing changed on screen, and the new window came back at 1024 × 700 in the middle of the screen; the closing copy now hands its place to the next one through the next copy's environment (`BOOKLOOM_WINDOW`).
 
 #### Scenario: The window comes back as it was
 
@@ -261,7 +261,7 @@ WHEN Restart now is pressed, the button SHALL read `Restarting...` until the win
 
 The Models tab SHALL show, as found out from the program, how much the model can read at once, how much is loaded now where the program says so, and whether it gives structured answers.
 
-**Source**: decision 6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#models-decision-6`. In plain words: before changing a number, a person sees what the model itself reports about its limits.
+**Source**: decision 6 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#models-decision-6`. In plain words: before changing a number, a person sees what the model itself reports about its limits.
 
 #### Scenario: Reported limits are shown
 
@@ -282,7 +282,7 @@ The Models tab SHALL show, as found out from the program, how much the model can
 
 The Models tab SHALL offer for each model Let BookLoom choose (the default), My value (one value for every request) and Don't send (the temperature is left out entirely).
 
-**Source**: S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#models-decision-6`. In plain words: most models want the tuned values, some people want one fixed value, and a few models refuse the setting altogether, so the choice is explicit and Don't send exists for them.
+**Source**: S6 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#models-decision-6`. In plain words: most models want the tuned values, some people want one fixed value, and a few models refuse the setting altogether, so the choice is explicit and Don't send exists for them.
 
 #### Scenario: My value sets one temperature
 
@@ -298,7 +298,7 @@ The Models tab SHALL offer for each model Let BookLoom choose (the default), My 
 
 The Models tab SHALL offer for each model a Use context window number (filled in from what is loaded) from 512 to 1,048,576 tokens, a Limit answer length switch no larger than the window, and under Advanced the field that carries the answer length, `max_completion_tokens` or `max_tokens`, which SHALL NOT apply to Ollama.
 
-**Source**: decision 6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#models-decision-6`. In plain words: a person can widen the window a model reads or cap how long it may answer, and for OpenAI-style servers choose the field name the server expects. Ollama has no such choice, so the field is not offered for it.
+**Source**: decision 6 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#models-decision-6`. In plain words: a person can widen the window a model reads or cap how long it may answer, and for OpenAI-style servers choose the field name the server expects. Ollama has no such choice, so the field is not offered for it.
 
 #### Scenario: A context window outside its range
 
@@ -334,7 +334,7 @@ The Models tab SHALL offer for each model a Use context window number (filled in
 
 The Models tab SHALL list under "Settings this model refused" each setting the model refused, when it was refused and what BookLoom did instead, with Send again on each row, and SHALL say "Nothing refused" when the list is empty.
 
-**Source**: S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), FR-INFER-09e (`docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), `docs/specification/mockups/README.md#refused-settings-s6`. In plain words: BookLoom learns by itself that a model rejects a setting, and the person can see what it learned and undo it if the model was updated.
+**Source**: S6 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), FR-INFER-09e (`docs/spec_baseline/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), `docs/spec_baseline/specification/mockups/README.md#refused-settings-s6`. In plain words: BookLoom learns by itself that a model rejects a setting, and the person can see what it learned and undo it if the model was updated.
 
 #### Scenario: A refusal is listed
 
@@ -360,7 +360,7 @@ The Models tab SHALL list under "Settings this model refused" each setting the m
 
 The Providers and Models tabs SHALL change nothing until saved, SHALL show a pinned footer with "● Unsaved changes", Cancel and Save while they hold changes, and WHEN the person leaves with changes SHALL ask Keep editing, Discard or Save.
 
-**Source**: theme H, option H1 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#settings--s1s5-h1-decisions-67`, `docs/specification/mockups/README.md#other-dialogs`. In plain words: a provider's address typed halfway must not become live, and moving to another tab must not silently lose or silently apply what the person typed.
+**Source**: theme H, option H1 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#settings--s1s5-h1-decisions-67`, `docs/spec_baseline/specification/mockups/README.md#other-dialogs`. In plain words: a provider's address typed halfway must not become live, and moving to another tab must not silently lose or silently apply what the person typed.
 
 #### Scenario: A change shows the footer
 
@@ -398,7 +398,7 @@ The Providers and Models tabs SHALL change nothing until saved, SHALL show a pin
 
 The Generation, Appearance, Automation and Storage & logs tabs SHALL apply a change at once and SHALL say when it takes effect: "Changes apply at once", "to the segments not translated yet", or "after BookLoom restarts".
 
-**Source**: theme H, option H1 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#settings--s1s5-h1-decisions-67`. In plain words: a switch takes effect when flipped, and the screen is honest about the cases where the running translation or the next launch is what changes.
+**Source**: theme H, option H1 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#settings--s1s5-h1-decisions-67`. In plain words: a switch takes effect when flipped, and the screen is honest about the cases where the running translation or the next launch is what changes.
 
 #### Scenario: A theme change applies at once
 
@@ -414,7 +414,7 @@ The Generation, Appearance, Automation and Storage & logs tabs SHALL apply a cha
 
 The Generation tab SHALL show what each quality choice does as a read-only table, SHALL offer Thinking before answering as Off, Low or On, SHALL offer Sampling as Program defaults or Tuned by BookLoom, and SHALL show the time limits as fixed read-only values.
 
-**Source**: S4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/01_Product/07_SETTINGS.md#generation-tab`. In plain words: the person can see what Fast, Balanced and Max mean without being able to break them, and can change only the two knobs that the program really has.
+**Source**: S4 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#generation-tab`. In plain words: the person can see what Fast, Balanced and Max mean without being able to break them, and can change only the two knobs that the program really has.
 
 #### Scenario: The quality table is read-only
 
@@ -440,7 +440,7 @@ The Generation tab SHALL show what each quality choice does as a read-only table
 
 The Appearance tab SHALL offer the theme, the language of the app with the note "Applies after BookLoom restarts." and a Restart now action, and a Show technical details switch, and SHALL NOT offer an accent row.
 
-**Source**: S5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/01_Product/07_SETTINGS.md#appearance-tab`. In plain words: the language changes on the next launch because the whole window is built in one language, and Restart now saves the wait. The old fixed accent line is gone because nothing could change it.
+**Source**: S5 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#appearance-tab`. In plain words: the language changes on the next launch because the whole window is built in one language, and Restart now saves the wait. The old fixed accent line is gone because nothing could change it.
 
 #### Scenario: A language choice waits for a restart
 
@@ -461,7 +461,7 @@ The Appearance tab SHALL offer the theme, the language of the app with the note 
 
 The Automation tab SHALL offer When to stop and ask you, a default quality, and switches to open the review desk when a translation finishes with segments to review, to run the last check before saving by default, to Keep the computer awake (on by default) and to Reopen the last project (on by default), and SHALL NOT offer a switch for operating-system notifications.
 
-**Source**: S4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/01_Product/07_SETTINGS.md#automation-tab`, ADR-0045. In plain words: how often BookLoom interrupts, and what it does at the end of a run, is the person's choice. Notifications are not offered because BookLoom sends none. What the window opens at launch with Reopen the last project on is the `app-shell` capability's rule.
+**Source**: S4 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#automation-tab`, ADR-0045. In plain words: how often BookLoom interrupts, and what it does at the end of a run, is the person's choice. Notifications are not offered because BookLoom sends none. What the window opens at launch with Reopen the last project on is the `app-shell` capability's rule.
 
 #### Scenario: The stop-and-ask choice is stored
 
@@ -505,7 +505,7 @@ The Automation tab's When to stop and ask you SHALL offer exactly these three ch
 
 The long phrases belong to the Automation tab. Every other screen that names the mode (the title bar, the Translating screen) uses the short words Unattended, Assisted and Manual, and `BOOKLOOM_REVIEW_MODE` and `bookloom.review.mode` take the launch values.
 
-**Source**: `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/01_Product/07_SETTINGS.md#automation-tab`, ADR-0045. In plain words: the tab, the other screens and the environment variable name the same three modes, so a person and a script mean the same thing: the tab says it in long sentences, the rest of the application in one word, and a script in the launch value. The default is Never — translate unattended.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#automation-tab`, ADR-0045. In plain words: the tab, the other screens and the environment variable name the same three modes, so a person and a script mean the same thing: the tab says it in long sentences, the rest of the application in one word, and a script in the launch value. The default is Never — translate unattended.
 
 #### Scenario: The words map to the modes
 
@@ -521,7 +521,7 @@ The long phrases belong to the Automation tab. Every other screen that names the
 
 The Storage & logs tab SHALL show where the projects are saved, how large they are (the database with its write-ahead file) and how many projects it holds, an Open data folder action (it opens the data folder, never the log folder), Make a backup… and Delete all data…, and SHALL show the log folder, that 10 launches are kept, a Detailed diagnostic log switch that applies after BookLoom restarts (a launch value `BOOKLOOM_TRACE_FILE` or `bookloom.trace.file` wins over it and is named), Open log folder and Save a diagnostic bundle…, and SHALL show each path in short form with the full path as its tooltip. Make a backup… SHALL write only to a file the person picks, SHALL never replace an existing file, and SHALL NOT carry any key. Delete all data… SHALL ask first, with Cancel as the default and a Make a backup first answer, and SHALL delete only as the `local-storage` capability's "Delete all data on request" says.
 
-**Source**: `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/01_Product/07_SETTINGS.md#storage-and-logs-tab`. In plain words: a person can find their saved work and the logs without hunting through the file system, and can make a backup or hand support a bundle. Long paths stay readable, and the whole path is one hover away.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#storage-and-logs-tab`. In plain words: a person can find their saved work and the logs without hunting through the file system, and can make a backup or hand support a bundle. Long paths stay readable, and the whole path is one hover away.
 
 #### Scenario: A long path is shortened
 
@@ -567,7 +567,7 @@ The Storage & logs tab SHALL show where the projects are saved, how large they a
 
 The settings screen SHALL carry the subtitle "Your books stay on this computer. BookLoom sends your text only to the AI model you choose here.", SHALL present six areas — Providers, Models, Generation, Appearance, Automation, and Storage & logs — as a row of tabs whose selected tab is marked by an underline, and SHALL have every one of them enabled, with no accent row on Appearance.
 
-**Source**: decision 6, S4, S5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#settings--s1s5-h1-decisions-67`, `docs/specification/01_Product/07_SETTINGS.md#settings-tabs`. In plain words: with the models, generation, automation and storage tabs built, nothing is greyed any more. The subtitle states the promise precisely: the books stay here, and the book's text goes only to the AI model the person chose (the first-launch look asks for model lists and sends no text).
+**Source**: decision 6, S4, S5 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#settings--s1s5-h1-decisions-67`, `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#settings-tabs`. In plain words: with the models, generation, automation and storage tabs built, nothing is greyed any more. The subtitle states the promise precisely: the books stay here, and the book's text goes only to the AI model the person chose (the first-launch look asks for model lists and sends no text).
 
 #### Scenario: All six areas are listed
 
@@ -594,7 +594,7 @@ The settings screen SHALL carry the subtitle "Your books stay on this computer. 
 
 The application SHALL apply a changed app language at the next launch and a changed When to stop and ask you at the next run start, leaving a running run in its mode; WHERE the review mode is set by the environment variable `BOOKLOOM_REVIEW_MODE` or the launch property `bookloom.review.mode`, that value SHALL win over the stored choice.
 
-**Source**: `docs/specification/mockups/README.md#settings--s1s5-h1-decisions-67`, `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D12". In plain words: the language needs a restart because every screen is built in one language; the review mode belongs to a run, so a change steers the next run rather than surprising the one going. Scripts and evaluations that set the mode explicitly keep control of it.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#settings--s1s5-h1-decisions-67`, `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D12". In plain words: the language needs a restart because every screen is built in one language; the review mode belongs to a run, so a change steers the next run rather than surprising the one going. Scripts and evaluations that set the mode explicitly keep control of it.
 
 #### Scenario: A changed review mode reaches the next run
 
@@ -615,7 +615,7 @@ The application SHALL apply a changed app language at the next launch and a chan
 
 WHEN Keep the computer awake is turned off while the application holds the computer awake, the application SHALL release the hold at once and SHALL NOT take it again while the switch is off.
 
-**Source**: `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/01_Product/07_SETTINGS.md#automation-tab`. In plain words: the switch applies at once like the other Automation switches, so a person who wants the laptop to sleep is not overruled by a run that is already going. When the computer is held awake is the `app-shell` capability's rule.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/spec_baseline/specification/01_Product/07_SETTINGS.md#automation-tab`. In plain words: the switch applies at once like the other Automation switches, so a person who wants the laptop to sleep is not overruled by a run that is already going. When the computer is held awake is the `app-shell` capability's rule.
 
 #### Scenario: Turning the switch off releases the hold
 
@@ -626,7 +626,7 @@ WHEN Keep the computer awake is turned off while the application holds the compu
 
 WHEN Test inference passes for a model of a stored provider, the application SHALL store the measured speed in seconds per segment on that model's settings, together with where it was measured (the inference test or an earlier translation, the later measurement winning), and the estimate before Start SHALL say where it was measured. WHEN a translation ends, the stored value SHALL be that run's seconds per drafted segment (the seconds its drafting calls took, pauses left out, divided by the segments drafted); a run that drafted nothing SHALL store nothing.
 
-**Source**: S2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13". In plain words: an estimate needs a measurement behind it, and the test the person just ran is one; storing it on the model keeps it after a restart and keeps two models' speeds apart.
+**Source**: S2 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13". In plain words: an estimate needs a measurement behind it, and the test the person just ran is one; storing it on the model keeps it after a restart and keeps two models' speeds apart.
 
 #### Scenario: The measured speed is stored and named
 
@@ -650,7 +650,7 @@ WHEN Test inference passes for a model of a stored provider, the application SHA
 
 The application SHALL offer Test connection, Test models and Test inference on the provider being edited, each running on the form as it stands, saved or not, and each running its own stage and every stage before it; Test models SHALL run without a chosen model (then it only counts the listed models) and only Test inference SHALL wait for one. A failed connection SHALL read "does not answer" only when nothing answered: a missing key reads "the key is not set", a refused sign-in (401/403) "answered, but refused the sign-in", and any other answered error "answered, but the check did not pass", each with the reason under it.
 
-**Source**: FR-PROV-06, FR-PROV-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), S2, S3 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`. In plain words: a person can test a new provider before saving it, and the answer is a sentence they can act on, not a code. A server with no listing endpoint is a normal, working configuration, so an unreadable listing is a qualified pass, not a failure.
+**Source**: FR-PROV-06, FR-PROV-07 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), S2, S3 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#providers`. In plain words: a person can test a new provider before saving it, and the answer is a sentence they can act on, not a code. A server with no listing endpoint is a normal, working configuration, so an unreadable listing is a qualified pass, not a failure.
 
 #### Scenario: The check is unavailable until a model is chosen
 
@@ -709,7 +709,7 @@ The application SHALL offer Test connection, Test models and Test inference on t
 
 The application SHALL offer the models the provider being edited reports, SHALL accept a model identifier typed by hand, and SHALL also offer the provider's custom models.
 
-**Source**: FR-MODEL-01, FR-MODEL-02, FR-MODEL-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-model`), DD-38, `docs/specification/mockups/README.md#providers`. In plain words: some servers list what they hold and some do not, and a server that holds nothing is a valid state rather than a broken one. Typing the identifier has to stay possible in all three cases. The chosen model is discarded on a provider change because a model identifier means nothing on a different server.
+**Source**: FR-MODEL-01, FR-MODEL-02, FR-MODEL-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-model`), DD-38, `docs/spec_baseline/specification/mockups/README.md#providers`. In plain words: some servers list what they hold and some do not, and a server that holds nothing is a valid state rather than a broken one. Typing the identifier has to stay possible in all three cases. The chosen model is discarded on a provider change because a model identifier means nothing on a different server.
 
 #### Scenario: A listed model can be chosen
 
@@ -758,7 +758,7 @@ The application SHALL offer the models the provider being edited reports, SHALL 
 
 The Providers area SHALL list each provider as a row showing its name, its endpoint's host and port, and a badge "current" or "idle"; and SHALL show a summary card — "Your AI model: Ollama · gemma4:e4b — ready ✓" for the current provider, "This provider's model: …" for another — with its speed and model count, or that no listing has been made yet, and the actions Test and Change model.
 
-**Source**: FR-PROV-01, FR-PROV-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), S3, theme H (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`, `docs/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`. In plain words: a person sees at a glance which AI model is in use and whether it works, without opening the form. The host alone tells `127.0.0.1:11434` from `127.0.0.1:1234`.
+**Source**: FR-PROV-01, FR-PROV-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), S3, theme H (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#providers`, `docs/spec_baseline/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`. In plain words: a person sees at a glance which AI model is in use and whether it works, without opening the form. The host alone tells `127.0.0.1:11434` from `127.0.0.1:1234`.
 
 #### Scenario: The rows name their hosts and status
 

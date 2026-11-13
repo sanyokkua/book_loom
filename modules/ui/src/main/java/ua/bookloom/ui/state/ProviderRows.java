@@ -25,6 +25,12 @@ final class ProviderRows {
         final URI url = config.baseUrl();
         final String hostPort = url.getPort() < 0 ? url.getHost() : url.getHost() + ":" + url.getPort();
         final String given = config.displayName();
-        return new ProviderRow(config.id(), config.kind(), url.toString(), hostPort, given == null ? "" : given);
+        return new ProviderRow(
+                config.id(),
+                config.kind(),
+                url.toString(),
+                hostPort,
+                given == null ? "" : given,
+                config.effectiveEngine());
     }
 }

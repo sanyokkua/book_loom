@@ -144,8 +144,9 @@ class Jdom2TreeNodeTest {
                 .findFirst()
                 .orElseThrow();
 
-        assertThatThrownBy(
-                        () -> SkeletonAnchors.writeBack(Jdom2TreeNode.of(body), prose.anchor(), "unclosed <emphasis>"))
+        final var arg1 = Jdom2TreeNode.of(body);
+        final var arg2 = prose.anchor();
+        assertThatThrownBy(() -> SkeletonAnchors.writeBack(arg1, arg2, "unclosed <emphasis>"))
                 .isInstanceOf(MalformedFragmentException.class);
     }
 

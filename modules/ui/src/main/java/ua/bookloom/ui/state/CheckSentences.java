@@ -1,6 +1,7 @@
 package ua.bookloom.ui.state;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.AccessLevel;
@@ -43,6 +44,7 @@ public final class CheckSentences {
             case CONNECTION -> connection(messages, chip, providerName);
             case MODELS -> models(messages, chip, modelChosen);
             case INFERENCE -> inference(messages, chip);
+            case ADVANCED -> advanced(messages, chip);
         };
     }
 
@@ -84,17 +86,26 @@ public final class CheckSentences {
         if (chip.status() == StageStatus.SOFT_PASS) {
             return Optional.of(messages.get(MessageKey.SETTINGS_CHECK_MODELS_SOFT));
         }
-        return chip.status() == StageStatus.PASSED && count != null
-                ? Optional.of(messages.get(
-                        modelChosen ? MessageKey.SETTINGS_CHECK_MODELS_OK : MessageKey.SETTINGS_CHECK_MODELS_LISTED,
-                        count))
-                : Optional.empty();
+        if (chip.status() != StageStatus.PASSED || count == null) {
+            return Optional.empty();
+        }
+        final MessageKey key =
+                modelChosen ? MessageKey.SETTINGS_CHECK_MODELS_OK : MessageKey.SETTINGS_CHECK_MODELS_LISTED;
+        return Optional.of(messages.get(key, count));
     }
 
     private static Optional<String> inference(final Messages messages, final StageChip chip) {
         final Duration elapsed = chip.elapsed();
         return chip.status() == StageStatus.PASSED && elapsed != null
                 ? Optional.of(messages.get(MessageKey.SETTINGS_CHECK_INFERENCE_OK, durationText(messages, elapsed)))
+                : Optional.empty();
+    }
+
+    // One line per check the stage ran, so a passed stage says what the server honours rather than only "passed".
+    private static Optional<String> advanced(final Messages messages, final StageChip chip) {
+        final List<String> lines = EngineWords.verdictLines(messages, chip.note());
+        return chip.status() == StageStatus.PASSED && !lines.isEmpty()
+                ? Optional.of(String.join("\n", lines))
                 : Optional.empty();
     }
 
@@ -127,6 +138,7 @@ public final class CheckSentences {
                     case CONNECTION -> MessageKey.SETTINGS_STAGE_CONNECTION;
                     case MODELS -> MessageKey.SETTINGS_STAGE_MODELS;
                     case INFERENCE -> MessageKey.SETTINGS_STAGE_INFERENCE;
+                    case ADVANCED -> MessageKey.SETTINGS_STAGE_ADVANCED;
                 });
     }
 }

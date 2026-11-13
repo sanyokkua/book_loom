@@ -20,7 +20,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class GlossaryKeys {
 
-    private static final Pattern EDGE_PUNCTUATION = Pattern.compile("^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$");
     private static final Pattern POSSESSIVE = Pattern.compile("['’ʼ][sS]$");
     private static final Pattern SPACES = Pattern.compile("[\\p{Z}\\s]+");
 
@@ -34,10 +33,8 @@ public final class GlossaryKeys {
     public static String of(final String term) {
         Objects.requireNonNull(term, "term");
         final String composed = Normalizer.normalize(term, Normalizer.Form.NFC);
-        final String trimmed = EDGE_PUNCTUATION.matcher(composed).replaceAll("");
-        final String bare = EDGE_PUNCTUATION
-                .matcher(POSSESSIVE.matcher(trimmed).replaceFirst(""))
-                .replaceAll("");
+        final String trimmed = Edges.strip(composed, Edges::isNeitherLetterNorNumber);
+        final String bare = Edges.strip(POSSESSIVE.matcher(trimmed).replaceFirst(""), Edges::isNeitherLetterNorNumber);
         final String kept = bare.isEmpty() ? composed.strip() : bare;
         return fold(SPACES.matcher(kept).replaceAll(" "));
     }

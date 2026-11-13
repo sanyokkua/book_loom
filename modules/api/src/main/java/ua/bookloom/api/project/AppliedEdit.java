@@ -4,19 +4,21 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * One find-and-replace edit the reviewer made to a segment's target and the app verified, kept on the segment as a
- * {@link QaFinding} so the review list can show it as a diff without a new stored field.
+ * One find-and-replace edit the per-chunk reviewer of earlier versions made to a segment's target and the app verified,
+ * kept on the segment as a {@link QaFinding} so the review list can show it as a diff without a new stored field.
+ * Nothing writes one since the reviewer was removed (ADR-0046); a segment stored before then still carries its edits,
+ * so they are still read back and shown.
  *
  * <p>The finding's note carries both texts joined by {@link #SEPARATOR}, a symbol no book text uses, because a quote or
  * a replacement may hold any ordinary character and so no ordinary separator could be split on safely.
  *
- * @param criterion what the reviewer says was wrong, such as {@code gender} or {@code invented-word}
+ * @param criterion what the edit says was wrong, such as {@code gender} or {@code invented-word}
  * @param quote the text the edit replaced, as it stood in the target
  * @param replacement the text that stands there now; empty when the edit deleted the quote
  */
 public record AppliedEdit(String criterion, String quote, String replacement) {
 
-    /** The {@link QaFinding#raisedBy()} of a finding that records an applied edit. */
+    /** The {@link QaFinding#raisedBy()} of a finding that records an applied edit; a stored id, so it keeps its name. */
     public static final String RAISED_BY = "reviewer-edit";
 
     /** The symbol for a record separator, which joins the quote to its replacement in the finding's note. */

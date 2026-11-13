@@ -9,6 +9,7 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallSegment;
 import ua.bookloom.api.pipeline.CallSnapshot;
@@ -25,13 +26,17 @@ class LiveRowDetailTest extends LiveCardTestBase {
 
     // The call of four segments ch2 · p05 to p08, in flight, with the clock at 21 s of 3:00.
     private static CallSnapshot call42() {
+        return call42(CallKind.DRAFT, "draft-batch-json");
+    }
+
+    private static CallSnapshot call42(final CallKind kind, final String label) {
         final List<CallSegment> segments = IntStream.rangeClosed(5, 8)
                 .mapToObj(n -> new CallSegment("s-" + n, "ch2 · p0" + n, "Source text " + n))
                 .toList();
         return CallSnapshot.waiting(
                 42,
-                CallKind.DRAFT,
-                "draft-batch-json",
+                kind,
+                label,
                 null,
                 segments,
                 LiveCallFixtures.smallPrompt(),
@@ -161,6 +166,16 @@ class LiveRowDetailTest extends LiveCardTestBase {
                 .contains("Being translated now", "Source text 5", "Source text 8");
     }
 
+    // IF the box said "Being translated now" while a proofread window was read, THEN it would name the wrong stage.
+    @Test
+    void simpleDetail_proofreadCallInFlight_saysBeingProofreadNow() {
+        showLive(LiveRowFixtures.calls(call42(CallKind.PROOFREAD, "proofread-window"), mixedChunk()));
+
+        assertThat(textOf("translating-live-inflight"))
+                .contains("Being proofread now", "Source text 5")
+                .doesNotContain("Being translated now");
+    }
+
     // IF Detailed did not name the call, THEN a person chasing a slow call could not tell which one it is.
     @Test
     void detailedLine_callInFlight_namesTheCallItsSegmentsAttemptAndClock() {
@@ -207,5 +222,29 @@ class LiveRowDetailTest extends LiveCardTestBase {
         assertThat(TooltipProbe.tipText(required("translating-live-mode-simple")))
                 .isEqualTo("Simple: segments and their translation. Detailed: adds the technical figures, what was"
                         + " sent and the reply.");
+    }
+
+    private void showAnsweredCall(final TokenUsage usage) {
+        final CallSnapshot call = call42().answered("{\"items\":[]}", usage, Duration.ofSeconds(7));
+        final LiveRow inCall =
+                new LiveRow("s-5", "ch2 · p05", "Source text 5", "Дощ.", Stage.ACCEPTED, null, List.of(), 42L);
+        showLive(LiveRowFixtures.calls(call, List.of(inCall)));
+        chooseMode(true);
+    }
+
+    // IF a missing time to first token read 0 ms, THEN a server that reports none would look instant.
+    @Test
+    void detailedDetail_callWithoutFirstTokenTime_readsDashes() {
+        showAnsweredCall(new TokenUsage(100, 50, null, null, null, null));
+
+        assertThat(labelText("translating-live-call-timings")).isEqualTo("first token – · speed – · cached –");
+    }
+
+    @Test
+    void detailedDetail_callWithReportedFigures_showsThem() {
+        showAnsweredCall(new TokenUsage(600, 50, Duration.ofSeconds(2), Duration.ofMillis(210), 200, null));
+
+        assertThat(labelText("translating-live-call-timings"))
+                .isEqualTo("first token 210 ms · speed 25.0 tok/s · cached 33 %");
     }
 }

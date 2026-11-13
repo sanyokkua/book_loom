@@ -38,9 +38,14 @@ class TermReadingSchemaTest {
     }
 
     @Test
-    void schema_topLevel_isTheWindowsThenTheTwoFlagsAndNothingElse() throws Exception {
-        assertThat(fields(schema().path("properties"))).containsExactly("windows", "speaking", "brand");
-        assertThat(texts(schema().path("required"))).containsExactly("windows", "speaking", "brand");
+    void schema_topLevel_isTheWindowsThenTheTwoFlagsAndTheExplainingWindow() throws Exception {
+        assertThat(fields(schema().path("properties"))).containsExactly("windows", "speaking", "brand", "explainsName");
+        assertThat(texts(schema().path("required"))).containsExactly("windows", "speaking", "brand", "explainsName");
+        assertThat(schema().path("properties")
+                        .path("explainsName")
+                        .path("maximum")
+                        .asInt())
+                .isEqualTo(6);
         assertThat(schema().path("additionalProperties").asBoolean(true)).isFalse();
         assertThat(schema().path("properties").path("speaking").path("type").asText())
                 .isEqualTo("boolean");

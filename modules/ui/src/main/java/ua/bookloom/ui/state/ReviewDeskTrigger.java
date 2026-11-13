@@ -85,12 +85,12 @@ public final class ReviewDeskTrigger {
     }
 
     private boolean isOn() {
-        final var read = settings.get(AppSetting.OPEN_REVIEW_DESK).data();
+        final var read = settings.get(AppSetting.OPEN_REVIEW_DESK);
         final boolean fallback = Boolean.TRUE.equals(AppSetting.OPEN_REVIEW_DESK.defaultValue());
-        if (read == null) {
+        if (read.isErr()) {
             log.warn("the review desk setting could not be read: using its default {}", fallback);
             return fallback;
         }
-        return read.orElse(fallback);
+        return Objects.requireNonNull(read.data()).orElse(fallback);
     }
 }

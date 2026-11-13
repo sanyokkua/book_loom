@@ -4,7 +4,7 @@
 the justification for every entry lives here. **The two files must be changed together** — an entry added there
 without a row here is an unexplained widening of the gate, which is the one thing this policy exists to prevent.
 
-Binding source: `docs/specification/05_Dependencies/03_LICENSING.md` (frozen). This file records; it does not decide.
+Binding source: `docs/spec_baseline/specification/05_Dependencies/03_LICENSING.md` (frozen). This file records; it does not decide.
 
 ## What the gate checks
 

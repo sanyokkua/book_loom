@@ -38,7 +38,7 @@ class BatchEvalCasesTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {4, 8, 12, 16})
+    @ValueSource(ints = {4, 8})
     void batches_everySize_holdsThatManyCasesAndTheRunNumbersTheItemsFromOne(final int size) {
         final List<Batch> batches = BatchEvalCases.batches(size);
 
@@ -65,11 +65,26 @@ class BatchEvalCasesTest {
     void batches_firstBatch_hasNoPrecedingPairsAndLaterOnesDo() {
         final List<Batch> batches = BatchEvalCases.batches(4);
 
-        assertThat(projectOf(batches.getFirst()).batch().orElseThrow().context().precedingPairs())
+        assertThat(projectOf(batches.getFirst())
+                        .batch()
+                        .orElseThrow()
+                        .context()
+                        .window()
+                        .previous())
                 .isEmpty();
-        assertThat(projectOf(batches.get(1)).batch().orElseThrow().context().precedingPairs())
+        assertThat(projectOf(batches.get(1))
+                        .batch()
+                        .orElseThrow()
+                        .context()
+                        .window()
+                        .previous())
                 .hasSize(2);
-        assertThat(projectOf(batches.getFirst()).batch().orElseThrow().context().nextSource())
+        assertThat(projectOf(batches.getFirst())
+                        .batch()
+                        .orElseThrow()
+                        .context()
+                        .window()
+                        .nextSource())
                 .isEqualTo(batches.get(1).cases().getFirst().masked());
     }
 
@@ -77,8 +92,14 @@ class BatchEvalCasesTest {
     void batches_lockedName_isListedByTheRunsOwnLinePrefixedWithItsItemId() {
         final PreparedBatch first = preparedFirst(4);
 
-        assertThat(first.context().draft().glossaryLines())
+        assertThat(first.plan().userText().lines())
+                .filteredOn(line -> line.contains("Зерубін"))
                 .singleElement()
-                .satisfies(line -> assertThat(line).matches("1: ⟦g\\d+⟧ → Зерубін, character, male"));
+                .satisfies(line -> assertThat(line).matches("1: ⟦g\\d+⟧ → Зерубін.*"));
+    }
+
+    @Test
+    void sizes_sweep_isFourAndEight() {
+        assertThat(BatchEvalCases.SIZES).containsExactly(4, 8);
     }
 }

@@ -10,6 +10,7 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.google.inject.Guice;
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -23,9 +24,12 @@ import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.testing.FakeProviderConfigs;
 import ua.bookloom.llm.testing.LlmTestStorageModule;
@@ -132,7 +136,18 @@ class OpenAiCompatibleClientOutputFieldTest {
     private static ModelSettings settings(
             @Nullable Integer window, @Nullable Integer maxOutput, OutputLengthField field) {
         return new ModelSettings(
-                "lmstudio", MODEL, TemperatureChoice.CHOOSE, null, window, maxOutput, field, List.of(), null, null);
+                "lmstudio",
+                MODEL,
+                TemperatureChoice.CHOOSE,
+                null,
+                window,
+                maxOutput,
+                field,
+                List.of(),
+                Map.of(),
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
     }
 
     private static ChatRequest request(@Nullable Integer cap) {

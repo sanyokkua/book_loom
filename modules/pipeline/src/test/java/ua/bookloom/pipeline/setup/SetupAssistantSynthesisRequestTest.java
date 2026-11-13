@@ -97,8 +97,8 @@ class SetupAssistantSynthesisRequestTest {
         assertThat(Objects.requireNonNull(request.responseFormat()).jsonSchema())
                 .isEqualTo(BriefSynthesisSchema.SCHEMA);
         assertThat(request.temperature()).isEqualTo(0.0);
-        assertThat(request.expectedOutputTokens()).isEqualTo(160);
-        assertThat(request.maxOutputTokens()).isEqualTo(320);
+        assertThat(request.expectedOutputTokens()).isEqualTo(300);
+        assertThat(request.maxOutputTokens()).isEqualTo(560);
         assertThat(request.reasoningEnabled()).isEqualTo(ReasoningLevel.OFF);
     }
 
@@ -108,7 +108,7 @@ class SetupAssistantSynthesisRequestTest {
         suggested();
 
         assertThat(events)
-                .filteredOn(event -> event instanceof ModelCallStarted)
+                .filteredOn(ModelCallStarted.class::isInstance)
                 .extracting(event -> ((ModelCallStarted) event).kind())
                 .containsExactly(CallKind.BRIEF_SUGGESTION, CallKind.BRIEF_SYNTHESIS);
     }

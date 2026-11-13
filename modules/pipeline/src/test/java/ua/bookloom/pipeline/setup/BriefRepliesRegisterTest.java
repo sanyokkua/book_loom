@@ -55,6 +55,6 @@ class BriefRepliesRegisterTest {
     void read_genreQuote_standsInSpeechAndNarrationAlike(final String value, final String quote) throws Exception {
         final Map<BriefField, Answer> answers = read("genre", value, quote);
 
-        assertThat(answers.get(BriefField.GENRE)).isEqualTo(new Answer(value, quote));
+        assertThat(answers).containsEntry(BriefField.GENRE, new Answer(value, quote));
     }
 }

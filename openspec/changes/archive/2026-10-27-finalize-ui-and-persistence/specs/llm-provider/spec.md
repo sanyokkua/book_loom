@@ -4,7 +4,7 @@
 
 The system SHALL send a provider's custom headers with every request to it, SHALL replace each `${env:NAME}` in a header value with the value of the environment variable `NAME` when the request is made (looked up as the "Look a variable up where the person set it" requirement says), and SHALL send the provider's key in the way its sign-in says (a Bearer token, or a named header).
 
-**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`, ADR-0043. In plain words: a gateway that wants an extra header, or a server that wants a key, works without the key ever being saved: the value is read from the person's environment at the moment of the call.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", decision 7 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#providers`, ADR-0043. In plain words: a gateway that wants an extra header, or a server that wants a key, works without the key ever being saved: the value is read from the person's environment at the moment of the call.
 
 #### Scenario: A bearer key is sent
 
@@ -62,7 +62,7 @@ IF a provider answers HTTP 401 or 403, THEN the system SHALL answer `ErrorCode.a
 
 IF a provider names an environment variable for its key or for a header and that variable is not set, THEN the system SHALL answer `ErrorCode.missingCredential` naming the variable and saying how to set it for the user account on macOS, Windows and Linux, before any request is sent, and SHALL NOT include any key value in the answer.
 
-**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", `docs/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`. In plain words: a call without its key would only come back as a confusing 401. Saying "the variable `HOME_API_KEY` is not set" lets the person fix the real cause.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`. In plain words: a call without its key would only come back as a confusing 401. Saying "the variable `HOME_API_KEY` is not set" lets the person fix the real cause.
 
 #### Scenario: An unset key variable
 
@@ -79,7 +79,7 @@ IF a provider names an environment variable for its key or for a header and that
 
 The system SHALL NOT write a key or a resolved header value to a log line at any level, and SHALL show the key as `••••` in a request it displays or copies for the test dialog.
 
-**Source**: `docs/specification/mockups/README.md#dialog--test-connection--models--inference-s2`, `.claude/rules/logging.md`. In plain words: logs and copied commands get shared with other people, so the secret is replaced by the same mask, `••••`, wherever the request is displayed.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#dialog--test-connection--models--inference-s2`, `.claude/rules/logging.md`. In plain words: logs and copied commands get shared with other people, so the secret is replaced by the same mask, `••••`, wherever the request is displayed.
 
 #### Scenario: The request line hides the key
 
@@ -95,7 +95,7 @@ The system SHALL NOT write a key or a resolved header value to a log line at any
 
 WHERE the application runs in the desktop window, WHEN it starts for the first time or for the first time after a fresh database, the system SHALL ask exactly `http://127.0.0.1:11434` (`/api/tags`) and `http://127.0.0.1:1234/v1` (`/models`) for their model lists with a 1 second connect timeout, SHALL send no other request and no inference, SHALL record that the look happened whatever it found, and SHALL NOT look again by itself.
 
-**Source**: ADR-0044, owner decision 13 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D14". In plain words: someone who just installed Ollama should find "AI model: Ollama — ready" on the first screen instead of an empty settings form. The look is local, listing only, and happens once; a fresh database counts as a first launch because the record of the look lives in it. The command line and the tests never look.
+**Source**: ADR-0044, owner decision 13 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D14". In plain words: someone who just installed Ollama should find "AI model: Ollama — ready" on the first screen instead of an empty settings form. The look is local, listing only, and happens once; a fresh database counts as a first launch because the record of the look lives in it. The command line and the tests never look.
 
 #### Scenario: Only the model lists are requested
 
@@ -127,7 +127,7 @@ WHERE the application runs in the desktop window, WHEN it starts for the first t
 
 WHEN a program asked by the first-launch look answers with at least one model, the system SHALL store it as a provider and, IF both programs answer, THEN Ollama SHALL become the current provider; it SHALL select the model when there is exactly one and ask the person when there are several. A program that answers with zero models SHALL count as not found.
 
-**Source**: ADR-0044, `docs/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D14". In plain words: a program with nothing loaded cannot translate, so it is reported as not found rather than as "ready"; a person with several models chooses one instead of BookLoom guessing.
+**Source**: ADR-0044, `docs/spec_baseline/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D14". In plain words: a program with nothing loaded cannot translate, so it is reported as not found rather than as "ready"; a person with several models chooses one instead of BookLoom guessing.
 
 #### Scenario: Ollama with one model
 
@@ -153,7 +153,7 @@ WHEN a program asked by the first-launch look answers with at least one model, t
 
 WHEN the person presses Try again under "No AI model found" on Projects, the system SHALL run the same look once more — the same two addresses, the same listing requests and the same storing rule — because the person asked for it.
 
-**Source**: ADR-0044, `docs/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`. In plain words: "Open the Ollama app, then press Try again" has to work. A check the person starts is user-triggered provider communication, so it stays within the offline rule.
+**Source**: ADR-0044, `docs/spec_baseline/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`. In plain words: "Open the Ollama app, then press Try again" has to work. A check the person starts is user-triggered provider communication, so it stays within the offline rule.
 
 #### Scenario: Try again finds Ollama after it was opened
 
@@ -164,7 +164,7 @@ WHEN the person presses Try again under "No AI model found" on Projects, the sys
 
 A chat reply of HTTP `400` or `404` whose body says the server has no model loaded — LM Studio's `Model unloaded`, `Model is unloaded`, `No models loaded`, or a model "not loaded" — SHALL be classified `ErrorCode.modelUnavailable`, not `validation` or `modelNotFound`.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`. In plain words: loading the model fixes it, which the resume capability's recovery waits for, so it must not look like a bad request. Classifying an HTTP reply is this capability's job.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#http-error-mapping`, `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`. In plain words: loading the model fixes it, which the resume capability's recovery waits for, so it must not look like a bad request. Classifying an HTTP reply is this capability's job.
 
 #### Scenario: An unloaded model is recognised
 
@@ -175,7 +175,7 @@ A chat reply of HTTP `400` or `404` whose body says the server has no model load
 
 WHEN an AI program answers a chat request with HTTP 200 and a body that is empty, is not the dialect's JSON, or holds no message, the `:llm` client SHALL return `ErrorCode.upstream` with the message "The AI program answered, but its reply could not be read." and the endpoint host and model as its only details, logged once at WARN with no body, never `internal` and never at ERROR; and WHEN it answers with HTTP 5xx, the message SHALL name the status ("The AI program had an error (HTTP 500).").
 
-**Source**: `docs/specification/02_Architecture/09_ERROR_HANDLING.md` (`upstream` — the endpoint failed), final QA W2-D2. In plain words: a server that answered is not one BookLoom cannot reach, and its broken reply is its fault, not an unexpected failure of BookLoom.
+**Source**: `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md` (`upstream` — the endpoint failed), final QA W2-D2. In plain words: a server that answered is not one BookLoom cannot reach, and its broken reply is its fault, not an unexpected failure of BookLoom.
 
 #### Scenario: An unreadable reply from either dialect
 
@@ -191,7 +191,7 @@ WHEN an AI program answers a chat request with HTTP 200 and a body that is empty
 
 The system SHALL describe a provider's sign-in as none, a Bearer token, or a named API-key header, SHALL hold for the last two only the name of the environment variable that holds the key, and SHALL NOT hold a key value; IF a Bearer or API-key sign-in has no variable name, or an API-key sign-in has no header name, THEN the system SHALL refuse the description with `ErrorCode.validation`.
 
-**Source**: FR-PROV-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", ADR-0043. In plain words: a provider says where its key lives, never what the key is, so describing or saving a provider can never leak it.
+**Source**: FR-PROV-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), decision 7 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", ADR-0043. In plain words: a provider says where its key lives, never what the key is, so describing or saving a provider can never leak it.
 
 #### Scenario: A remote provider with a key reference
 
@@ -217,7 +217,7 @@ The system SHALL describe a provider's sign-in as none, a Bearer token, or a nam
 
 The system SHALL let a provider description carry an override of the models endpoint, an override of the inference endpoint, custom headers each with a name and a value that may be `${env:NAME}`, and custom model identifiers.
 
-**Source**: decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", `docs/specification/mockups/README.md#providers`. In plain words: servers behind a gateway or with unusual routes need small adjustments, and a provider can name models its server does not list. Which header names must take an `${env:NAME}` value before a provider is saved is the `local-storage` capability's rule.
+**Source**: decision 7 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", `docs/spec_baseline/specification/mockups/README.md#providers`. In plain words: servers behind a gateway or with unusual routes need small adjustments, and a provider can name models its server does not list. Which header names must take an `${env:NAME}` value before a provider is saved is the `local-storage` capability's rule.
 
 #### Scenario: A full description is accepted
 
@@ -228,7 +228,7 @@ The system SHALL let a provider description carry an override of the models endp
 
 WHERE a provider has a models endpoint override, the system SHALL use it for discovery and for the connection probe of an OpenAI-compatible provider; WHERE an OpenAI-compatible provider has an inference endpoint override, the system SHALL send its chat calls there.
 
-**Source**: decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`. In plain words: when a server keeps its routes elsewhere, every question to it goes to the route the person named.
+**Source**: decision 7 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `docs/spec_baseline/specification/mockups/README.md#providers`. In plain words: when a server keeps its routes elsewhere, every question to it goes to the route the person named.
 
 #### Scenario: Discovery follows the models override
 
@@ -265,7 +265,7 @@ WHERE the application runs in the window, the system SHALL keep registered provi
 
 IF the inference stage's structured probe is rejected or answered nonconformingly, THEN the system SHALL send one plain probe and, for a nonblank reply, report `structured output: not confirmed`; a `modelNotFound` answer SHALL be reported as `modelUnavailable` and any other error as itself.
 
-**Source**: FR-INFER-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`. In plain words: a server that cannot do structured answers can still translate, so the test says "not confirmed" rather than "failed".
+**Source**: FR-INFER-08 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`. In plain words: a server that cannot do structured answers can still translate, so the test says "not confirmed" rather than "failed".
 
 #### Scenario: A server without structured output
 
@@ -276,7 +276,7 @@ IF the inference stage's structured probe is rejected or answered nonconformingl
 
 WHEN verification is asked for a provider description that has not been saved, the system SHALL verify it exactly as given, with its endpoints, headers and key, and SHALL NOT register or store it.
 
-**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", `docs/specification/mockups/README.md#providers`. In plain words: a person can test the form before saving it, so a wrong address never reaches the stored settings.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", `docs/spec_baseline/specification/mockups/README.md#providers`. In plain words: a person can test the form before saving it, so a wrong address never reaches the stored settings.
 
 #### Scenario: An unsaved provider is verified without being stored
 
@@ -290,7 +290,7 @@ WHEN verification is asked for a provider description that has not been saved, t
 
 The system SHALL describe a provider by an id, a display name, a kind (Ollama-native or OpenAI-compatible), a base URL that is absolute and uses `http` or `https`, and a connect timeout and a request timeout, both positive, defaulting to 10 seconds and 180 seconds; IF a description breaks one of these rules, THEN the system SHALL refuse it with `ErrorCode.validation` and register nothing.
 
-**Source**: FR-PROV-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-config`, ADR-0005, decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: a provider is a few settings, not code. The same OpenAI-compatible client serves LM Studio on this machine and any other OpenAI-shaped server. A key is only ever the name of an environment variable, read at call time.
+**Source**: FR-PROV-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-config`, ADR-0005, decision 7 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: a provider is a few settings, not code. The same OpenAI-compatible client serves LM Studio on this machine and any other OpenAI-shaped server. A key is only ever the name of an environment variable, read at call time.
 
 #### Scenario: A remote OpenAI-compatible endpoint is described by its URL alone
 
@@ -312,7 +312,7 @@ The system SHALL describe a provider by an id, a display name, a kind (Ollama-na
 
 WHERE the application runs from the command line, the system SHALL offer without configuration the provider `ollama` (Ollama-native, `http://localhost:11434`) and the provider `lmstudio` (OpenAI-compatible, `http://localhost:1234/v1`) with the default timeouts; WHERE it runs in the window, the provider list SHALL start empty and hold only what the first-launch look found and what the person adds. A lookup SHALL answer the description or nothing, and a registration of a known id SHALL replace it.
 
-**Source**: FR-PROV-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-factory`, `#provider-profile`, ADR-0043, ADR-0044, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13". In plain words: the command line still starts with the two usual servers and can point at another for one run. The window lists only real providers: the ones found on this computer and the ones the person saved. The presets keep the address `localhost`; the first-launch look deliberately asks `127.0.0.1`, so it never depends on how the name `localhost` resolves.
+**Source**: FR-PROV-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-factory`, `#provider-profile`, ADR-0043, ADR-0044, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13". In plain words: the command line still starts with the two usual servers and can point at another for one run. The window lists only real providers: the ones found on this computer and the ones the person saved. The presets keep the address `localhost`; the first-launch look deliberately asks `127.0.0.1`, so it never depends on how the name `localhost` resolves.
 
 #### Scenario: The presets exist from the start
 
@@ -339,7 +339,7 @@ WHERE the application runs from the command line, the system SHALL offer without
 
 WHEN a call answers a retryable code (`timeout`, `rateLimited`, `unreachable`, `upstream`, `discoveryFailed`), the system SHALL try again, up to 3 attempts in all, each with its own full request timeout, waiting the `Retry-After` delay when the response carries one (seconds or an HTTP date) and otherwise 500 ms doubled on each retry, capped at 8 s, with up to 25 % jitter; a non-retryable code SHALL NOT be repeated.
 
-**Source**: FR-INFER-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`. In plain words: a local server that is still loading a model, or a rate-limited cloud endpoint, deserves a second try; a wrong key or an unknown model does not. A slow first attempt must not eat the second attempt's time, and the last failure is the answer when every attempt fails. A repeat after a refused setting is not an attempt; that rule belongs to the `inference` capability.
+**Source**: FR-INFER-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`, `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`. In plain words: a local server that is still loading a model, or a rate-limited cloud endpoint, deserves a second try; a wrong key or an unknown model does not. A slow first attempt must not eat the second attempt's time, and the last failure is the answer when every attempt fails. A repeat after a refused setting is not an attempt; that rule belongs to the `inference` capability.
 
 #### Scenario: Two faults then success
 
@@ -375,7 +375,7 @@ WHEN a call answers a retryable code (`timeout`, `rateLimited`, `unreachable`, `
 
 WHEN discovery is asked, the system SHALL `GET <baseUrl>/api/tags` of an Ollama-native provider and return each entry's `name`, or `GET <baseUrl>/models` (or the models endpoint override) of an OpenAI-compatible provider and return each entry's `id` from `data`, as model ids; an empty listing SHALL be a success with no models.
 
-**Source**: FR-MODEL-01, FR-MODEL-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-model`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#model-discovery`, decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: a screen fills a list from this, and a server that keeps its model list on an unusual path can still be listed. An empty list is not an error: a server with nothing loaded is a valid state, and manual entry stays possible. A failure other than `auth`, `unreachable`, `timeout` or `cancelled`, or a body that is not a listing, is `discoveryFailed`.
+**Source**: FR-MODEL-01, FR-MODEL-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-model`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#model-discovery`, decision 7 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: a screen fills a list from this, and a server that keeps its model list on an unusual path can still be listed. An empty list is not an error: a server with nothing loaded is a valid state, and manual entry stays possible. A failure other than `auth`, `unreachable`, `timeout` or `cancelled`, or a body that is not a listing, is `discoveryFailed`.
 
 #### Scenario: Ollama lists its models
 
@@ -401,7 +401,7 @@ WHEN discovery is asked, the system SHALL `GET <baseUrl>/api/tags` of an Ollama-
 
 WHEN the connection of an Ollama-native provider is probed, the system SHALL `GET <baseUrl>/api/version`, and of an OpenAI-compatible provider `GET <baseUrl>/models` (or the models endpoint override); it SHALL count any HTTP answer as reachable except `401` and `403` (`ErrorCode.auth`) and `500` to `599` (`ErrorCode.upstream`), a refused connection being `ErrorCode.unreachable` and an elapsed timeout `ErrorCode.timeout`.
 
-**Source**: FR-PROV-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-architecture`, `#three-stage-verification`, decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: "can I reach it, and does it accept my key" is a different question from "what models does it have", so a server without a listing endpoint can still pass the first. A `404` from a proxy that hides the listing route is still a server that answered.
+**Source**: FR-PROV-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-architecture`, `#three-stage-verification`, decision 7 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: "can I reach it, and does it accept my key" is a different question from "what models does it have", so a server without a listing endpoint can still pass the first. A `404` from a proxy that hides the listing route is still a server that answered.
 
 #### Scenario: Ollama answers its version
 
@@ -422,7 +422,7 @@ WHEN the connection of an Ollama-native provider is probed, the system SHALL `GE
 
 WHEN verification of a provider and a model is asked for, the system SHALL run in order, up to the stage asked for and stopping at the first failure, the connection stage (the probe), the models stage (discovery: the model listed passes, unlisted fails `modelUnavailable`, `discoveryFailed` or an empty list passes softly with a note) and the inference stage (a probe for exactly `{"status":"ok"}` with reasoning Off and an output cap of `64`), reporting each stage run with its outcome and measured duration.
 
-**Source**: FR-PROV-06, FR-PROV-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), FR-MODEL-05, FR-MODEL-06 (`#fr-model`), FR-INFER-08 (`#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`. In plain words: three short questions, each with its own answer, so a person sees which one failed: the server, the model name, or generation itself. The probe asks the way a run asks, so a thinking model that spends a capped reply on reasoning fails here instead of flagging a book later. An unknown provider id with no description given is `ErrorCode.validation` and runs no stage.
+**Source**: FR-PROV-06, FR-PROV-07 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), FR-MODEL-05, FR-MODEL-06 (`#fr-model`), FR-INFER-08 (`#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`. In plain words: three short questions, each with its own answer, so a person sees which one failed: the server, the model name, or generation itself. The probe asks the way a run asks, so a thinking model that spends a capped reply on reasoning fails here instead of flagging a book later. An unknown provider id with no description given is `ErrorCode.validation` and runs no stage.
 
 #### Scenario: All three stages pass
 
@@ -473,7 +473,7 @@ WHEN verification of a provider and a model is asked for, the system SHALL run i
 
 WHEN a chat request goes to an Ollama-native provider, the system SHALL `POST` to `<baseUrl>/api/chat` a JSON body with `model`, `messages` (roles `system`, `user`, `assistant`), `"stream":true`, `options` holding `temperature`, `num_ctx`, `num_predict` and `seed` each only when given (the object left out when none is), `format` only when a response format is given, and `think` for the request's reasoning level; an absent field SHALL be left out, never `null`, and no other option SHALL be sent.
 
-**Source**: FR-INFER-01, FR-INFER-02, FR-INFER-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `#response-handling`, `#effective-context`, S4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: Ollama is spoken to natively because its OpenAI-shaped shim drops native controls and hides Ollama's own error bodies. Its default context is small and silently truncates a long prompt, so a run tells it the context size it needs. The reasoning level is sent as `"think":false` for Off, `"think":"low"` for Low and `"think":true` for On; no `keep_alive` is sent and `/api/show` is not read by a chat call.
+**Source**: FR-INFER-01, FR-INFER-02, FR-INFER-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `#response-handling`, `#effective-context`, S4 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: Ollama is spoken to natively because its OpenAI-shaped shim drops native controls and hides Ollama's own error bodies. Its default context is small and silently truncates a long prompt, so a run tells it the context size it needs. The reasoning level is sent as `"think":false` for Off, `"think":"low"` for Low and `"think":true` for On; no `keep_alive` is sent and `/api/show` is not read by a chat call.
 
 #### Scenario: A full request
 
@@ -505,7 +505,7 @@ WHEN a chat request goes to an Ollama-native provider, the system SHALL `POST` t
 
 WHEN a chat request goes to an OpenAI-compatible provider, the system SHALL `POST` to `<baseUrl>/chat/completions` (or the inference endpoint override) a JSON body with `model`, `messages` (roles `system`, `user`, `assistant`), `"stream":false`, `temperature` only when one is given, and `response_format` as `{"type":"json_schema","json_schema":{"name":<name>,"strict":true,"schema":<schema>}}` only when a response format is given; an absent field SHALL be left out, never `null`.
 
-**Source**: FR-INFER-01, FR-INFER-03, FR-INFER-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `#response-handling`, ADR-0013. In plain words: one client covers LM Studio, llama.cpp, vLLM and any other OpenAI-shaped server. The reasoning parameter is sent only as "Turn reasoning off for an OpenAI-compatible call, and retry a reply that spent its cap reasoning" states: never guessed, only the level the person chose.
+**Source**: FR-INFER-01, FR-INFER-03, FR-INFER-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `#response-handling`, ADR-0013. In plain words: one client covers LM Studio, llama.cpp, vLLM and any other OpenAI-shaped server. The reasoning parameter is sent only as "Turn reasoning off for an OpenAI-compatible call, and retry a reply that spent its cap reasoning" states: never guessed, only the level the person chose.
 
 #### Scenario: A request with structured output and no reasoning parameter
 
@@ -522,7 +522,7 @@ WHEN a chat request goes to an OpenAI-compatible provider, the system SHALL `POS
 
 WHEN a chat request goes to an OpenAI-compatible provider, the system SHALL send `"reasoning_effort":"none"` for reasoning Off, `"reasoning_effort":"low"` for Low, `"reasoning_effort":"medium"` for On, and no `reasoning_effort` when the request leaves reasoning to the provider's default. IF a capped reply has blank `content`, non-blank reasoning and the finish `length`, THEN the system SHALL send the same request once more with its cap raised to four times, bounded by the request's context size when one is given; a second such reply SHALL answer `ErrorCode.emptyCompletion`.
 
-**Source**: FR-INFER-02, FR-INFER-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `#response-handling`, S4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: through `/v1`, a thinking model writes every output token into `message.reasoning` unless told not to, so a capped call came back with no translation. Off, the default, keeps `reasoning_effort: none`; Low and On exist because the person chose them in Settings › Generation (the `inference` capability), and a server that refuses the control is handled by the refused-setting rule there.
+**Source**: FR-INFER-02, FR-INFER-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `#response-handling`, S4 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: through `/v1`, a thinking model writes every output token into `message.reasoning` unless told not to, so a capped call came back with no translation. Off, the default, keeps `reasoning_effort: none`; Low and On exist because the person chose them in Settings › Generation (the `inference` capability), and a server that refuses the control is handled by the refused-setting rule there.
 
 #### Scenario: LM Studio is told to skip reasoning
 
@@ -573,7 +573,7 @@ WHEN a chat request goes to an OpenAI-compatible provider, the system SHALL send
 
 WHEN a chat request carries an output cap, the system SHALL send it to an Ollama-native provider as `options.num_predict` and to an OpenAI-compatible provider as `max_tokens`, or as `max_completion_tokens` where the model's settings choose it; WHEN it carries none and the model's settings limit the answer length, the limit is sent in its place; WHEN neither exists, neither field. WHILE an Ollama-native reply streams past the runaway bound, the system SHALL stop reading, close the connection and return what arrived as finished for length.
 
-**Source**: FR-INFER-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `docs/specification/mockups/README.md#models-decision-6`. In plain words: a model that loops on one sentence would otherwise write until the server's own limit. The request states where the server must stop, and newer OpenAI-style models want that limit under another name, so the person's per-model choice decides which. A call that states no cap is left as unbounded as before unless the person limited that model's answer length. Ollama streams about one token per line, so a reply far past twice its cap is a model looping, and the client cuts it there. Which calls carry a cap, and how large it is, is the `translation-pipeline` capability's rule.
+**Source**: FR-INFER-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `docs/spec_baseline/specification/mockups/README.md#models-decision-6`. In plain words: a model that loops on one sentence would otherwise write until the server's own limit. The request states where the server must stop, and newer OpenAI-style models want that limit under another name, so the person's per-model choice decides which. A call that states no cap is left as unbounded as before unless the person limited that model's answer length. Ollama streams about one token per line, so a reply far past twice its cap is a model looping, and the client cuts it there. Which calls carry a cap, and how large it is, is the `translation-pipeline` capability's rule.
 
 #### Scenario: LM Studio receives max_tokens
 

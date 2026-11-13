@@ -2,9 +2,11 @@ package ua.bookloom.ui.screen;
 
 import java.util.List;
 import java.util.Objects;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
+import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
@@ -16,18 +18,23 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.ui.MemorySource;
+import ua.bookloom.ui.control.ModelFilterField;
+import ua.bookloom.ui.control.RecommendationLine;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.state.ModelAdvice;
 import ua.bookloom.ui.state.ModelListing;
+import ua.bookloom.ui.state.ModelNameFilter;
+import ua.bookloom.ui.state.ModelRecommendation;
+import ua.bookloom.ui.state.ProviderDraft;
 import ua.bookloom.ui.state.ProviderForm;
 import ua.bookloom.ui.state.SettingsViewModel;
 
 /**
- * The Model entry with its refresh button and the notes about the listing: an editable combo whose text is the view
+ * The Model entry with its refresh button and the hints about the listing: an editable combo whose text is the view
  * model's typed model. The view model outlives this field, so it is observed through weak listeners held by the fields
  * below, which live exactly as long as the nodes that use them.
  */
@@ -37,22 +44,32 @@ final class ModelField {
     private final SettingsViewModel viewModel;
     private final ProviderForm form;
     private final Messages messages;
+    private final MemorySource memory;
     private final ComboBox<String> combo = new ComboBox<>();
-    private final Label note = new Label();
+    private final ModelFilterField filter;
+    private static final int MAX_VISIBLE_ROWS = 10;
+
     private final VBox box = new VBox(6);
     private final ListChangeListener<String> onOffered = change -> showOffered();
     private final ChangeListener<String> onEntryText = (observed, was, now) -> onEntryTyped(now);
     private final ChangeListener<String> onModel = (observed, was, now) -> showModel(now);
-    private final ChangeListener<List<ModelAdvice.Note>> onNotes = (observed, was, now) -> showNotes(now);
+    private final ChangeListener<String> onProvider = (observed, was, now) -> providerChanged(now);
 
     // Set while this field changes the combo's items, editor or value, so the events that causes are not mistaken
     // for a person typing or picking; FX thread only.
     private boolean applying;
 
-    ModelField(final SettingsViewModel viewModel, final ProviderForm form, final Messages messages) {
+    ModelField(
+            final SettingsViewModel viewModel,
+            final ProviderForm form,
+            final Messages messages,
+            final MemorySource memory) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.form = Objects.requireNonNull(form, "form");
         this.messages = Objects.requireNonNull(messages, "messages");
+        this.memory = Objects.requireNonNull(memory, "memory");
+        this.filter = new ModelFilterField(
+                messages, "settings-model-filter", "settings-model-filter-none", this::onFilterTyped, this::openList);
         build();
     }
 
@@ -71,28 +88,21 @@ final class ModelField {
 
     /** Lists the models again when the person added or removed names of their own. */
     void showChoices() {
-        if (!combo.getItems().equals(form.modelChoices())) {
+        if (!combo.getItems().equals(matching(combo.getEditor().getText()))) {
             showOffered();
         }
     }
 
     private void build() {
         final ModelListing listing = viewModel.modelListing();
-        combo.setId("settings-model");
-        combo.setEditable(true);
-        combo.setPromptText(messages.get(MessageKey.SETTINGS_MODEL_NOT_CHOSEN));
-        combo.getStyleClass().add("w-model");
-        Tips.install(messages, combo, MessageKey.SETTINGS_MODEL_LABEL_TIP);
-        combo.getItems().setAll(form.modelChoices());
+        configureCombo(listing);
         applyText(viewModel.draftModel().get());
         combo.getEditor().textProperty().addListener(onEntryText);
         viewModel.draftModel().addListener(new WeakChangeListener<>(onModel));
         listing.offered().addListener(new WeakListChangeListener<>(onOffered));
-        viewModel.modelNotes().addListener(new WeakChangeListener<>(onNotes));
+        viewModel.editedProviderId().addListener(new WeakChangeListener<>(onProvider));
         combo.setOnAction(event -> onEntryCommitted());
-        configureNote();
-        showNotes(viewModel.modelNotes().get());
-        box.getChildren().addAll(entryRow(), note);
+        box.getChildren().addAll(filter.node(), entryRow());
         box.getChildren()
                 .addAll(
                         hint(
@@ -105,6 +115,31 @@ final class ModelField {
                                 listing.noListObtained()),
                         refusal(listing),
                         Wrapped.label(messages.get(MessageKey.SETTINGS_FORM_MODEL_HINT), "hint"));
+        final ObservableValue<Boolean> forOllama =
+                Bindings.createBooleanBinding(() -> isOllama(form.draft().get()), form.draft());
+        RecommendationLine.nodes(messages, memory, "settings-model").forEach(line -> {
+            Visibility.bind(line, forOllama);
+            box.getChildren().add(line);
+        });
+    }
+
+    private static boolean isOllama(final ProviderDraft draft) {
+        return ModelRecommendation.isOllamaServer(draft.kind(), draft.engine().effective());
+    }
+
+    private void configureCombo(final ModelListing listing) {
+        combo.setId("settings-model");
+        combo.setEditable(true);
+        combo.setPromptText(messages.get(MessageKey.SETTINGS_MODEL_NOT_CHOSEN));
+        combo.getStyleClass().add("w-model");
+        Tips.install(messages, combo, MessageKey.SETTINGS_MODEL_LABEL_TIP);
+        combo.getItems().setAll(form.modelChoices());
+        combo.setCellFactory(list -> new ModelChoiceCell(
+                listing,
+                viewModel.quantChips(),
+                () -> viewModel.editedProviderId().get(),
+                messages));
+        viewModel.quantChips().fromNames(viewModel.editedProviderId().get(), form.modelChoices());
     }
 
     private HBox entryRow() {
@@ -139,30 +174,101 @@ final class ModelField {
         return label;
     }
 
-    // A note is a sentence or two; it wraps under the entry rather than being cut at the card's edge.
-    private void configureNote() {
-        note.setId("settings-model-note");
-        note.setWrapText(true);
-        note.setMaxWidth(Double.MAX_VALUE);
-    }
-
-    private void showNotes(final List<ModelAdvice.Note> notes) {
-        ModelNoteLabel.show(note, notes, messages);
-    }
-
     private void onEntryTyped(final String text) {
         if (applying) {
             return;
         }
         log.trace("model entry now holds '{}'", text);
         viewModel.setModelText(text);
-        applyValue(text);
+        if (isPickFromOpenList(text)) {
+            // The list is still selecting the name; replacing its items now breaks that selection (D5). The commit
+            // that follows the pick restores the whole list.
+            log.debug("model entry follows a name picked in the open list; the list is left as it is");
+            return;
+        }
+        narrow(text);
+    }
+
+    private boolean isPickFromOpenList(final String text) {
+        return combo.isShowing() && text.equals(combo.getSelectionModel().getSelectedItem());
     }
 
     private void onEntryCommitted() {
         if (!applying) {
             log.debug("model entry committed");
             viewModel.commitModel();
+            // Settling on a model of a saved provider reads its facts for the chip; typing never does.
+            viewModel.testedSubject().get().ifPresent(viewModel.quantChips()::readFacts);
+            // A pick commits while the list is still selecting it, so the whole list comes back after that event.
+            Platform.runLater(() -> narrow(""));
+        }
+    }
+
+    // The offered names that contain the entry's text and the filter's text anywhere, ignoring case and accents.
+    private List<String> matching(final String text) {
+        final List<String> byEntry = ModelNameFilter.narrow(form.modelChoices(), id -> id, id -> id, text);
+        return ModelNameFilter.narrow(byEntry, id -> id, id -> id, filter.text());
+    }
+
+    // The filter only changes which names are listed; the entry, the value and the draft stay as they are.
+    private boolean onFilterTyped(final String typed) {
+        final String entry = combo.getEditor().getText();
+        final List<String> shown = matching(entry);
+        applying = true;
+        try {
+            if (combo.isShowing()) {
+                combo.hide();
+            }
+            combo.getItems().setAll(shown);
+            combo.setVisibleRowCount(Math.clamp(shown.size(), 1, MAX_VISIBLE_ROWS));
+            combo.getEditor().setText(entry);
+            combo.setValue(entry.isEmpty() ? null : entry);
+        } finally {
+            applying = false;
+        }
+        return !shown.isEmpty();
+    }
+
+    // A filter typed for one server's names would hide another's whole list, so it belongs to the provider it was
+    // typed for.
+    private void providerChanged(final String providerId) {
+        if (filter.clear()) {
+            log.debug("model filter cleared: provider {} is edited now", providerId);
+        }
+    }
+
+    private void openList() {
+        combo.getEditor().requestFocus();
+        combo.show();
+    }
+
+    /**
+     * Narrows the list to the names containing {@code filter} while the entry keeps what was typed. Changing the items
+     * makes the skin rewrite the entry, and the open popup keeps its first height, so the entry is put back and the
+     * popup is reopened at the new size.
+     */
+    private void narrow(final String filter) {
+        final String typed = combo.getEditor().getText();
+        final List<String> shown = matching(filter);
+        log.debug("narrowing the model list to {} name(s)", shown.size());
+        if (combo.isShowing()) {
+            combo.hide();
+        }
+        applying = true;
+        try {
+            if (!shown.equals(combo.getItems())) {
+                combo.getItems().setAll(shown);
+            }
+            combo.setVisibleRowCount(Math.clamp(shown.size(), 1, MAX_VISIBLE_ROWS));
+            this.filter.showNone(shown.isEmpty());
+            combo.setValue(typed.isEmpty() ? null : typed);
+            combo.getEditor().setText(typed);
+            combo.getEditor().positionCaret(typed.length());
+        } finally {
+            applying = false;
+        }
+        if (combo.getEditor().isFocused() && !filter.isEmpty() && !shown.isEmpty()) {
+            combo.show();
         }
     }
 
@@ -174,35 +280,24 @@ final class ModelField {
     }
 
     private void showOffered() {
-        final List<String> choices = form.modelChoices();
-        log.debug("showing {} model(s) to choose from", choices.size());
         final String typed = combo.getEditor().getText();
+        final List<String> choices = matching(typed);
+        log.debug("showing {} model(s) to choose from", choices.size());
         applying = true;
         try {
             combo.getItems().setAll(choices);
+            filter.showNone(choices.isEmpty());
         } finally {
             applying = false;
         }
         applyText(typed);
+        viewModel.quantChips().fromNames(viewModel.editedProviderId().get(), form.modelChoices());
     }
 
     private void applyText(final String text) {
         applying = true;
         try {
             combo.getEditor().setText(text);
-            combo.setValue(text.isEmpty() ? null : text);
-        } finally {
-            applying = false;
-        }
-    }
-
-    /**
-     * Keeps the combo's value equal to what was typed: an editable combo whose value is not one of its items would
-     * otherwise have its skin reset the value, and with it the entry, when the items change.
-     */
-    private void applyValue(final String text) {
-        applying = true;
-        try {
             combo.setValue(text.isEmpty() ? null : text);
         } finally {
             applying = false;

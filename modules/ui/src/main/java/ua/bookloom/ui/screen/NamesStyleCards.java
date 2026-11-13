@@ -146,10 +146,10 @@ final class NamesStyleCards {
         acceptAll.setMaxHeight(Double.MAX_VALUE);
         acceptAll.setOnAction(event -> {
             log.debug("names-style-accept-all pressed");
-            glossary.acceptAll();
+            glossary.suggestions().acceptAll();
         });
         acceptAll.disableProperty().bind(glossary.busy().or(frozen));
-        Visibility.bind(acceptAll, glossary.suggestedCount().greaterThan(0));
+        Visibility.bind(acceptAll, glossary.suggestions().suggestedCount().greaterThan(0));
         return acceptAll;
     }
 

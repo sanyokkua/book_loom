@@ -102,21 +102,14 @@ final class NameVariants {
         final String folded = NameSpelling.fold(rendering, pairs);
         final Map<String, Integer> spellings = new HashMap<>();
         String firstSegment = null;
-        String firstSpelling = null;
         for (final Map.Entry<String, String> target : targets.entrySet()) {
             if (!namesTerm(entry.term(), target.getKey(), common.sources())) {
                 continue;
             }
-            final Matcher words = NameSpelling.CAPITALISED.matcher(target.getValue());
-            while (words.find()) {
-                final String word = words.group();
-                if (!word.equalsIgnoreCase(rendering)
-                        && NameSpelling.fold(word, pairs).equals(folded)
-                        && !NameSpelling.isCommonWord(word, common.language(), common.lowerCase())) {
-                    spellings.merge(word, 1, Integer::sum);
-                    firstSegment = firstSegment == null ? target.getKey() : firstSegment;
-                    firstSpelling = firstSpelling == null ? word : firstSpelling;
-                }
+            final List<String> variants = variantsIn(target.getValue(), rendering, folded, pairs, common);
+            variants.forEach(word -> spellings.merge(word, 1, Integer::sum));
+            if (firstSegment == null && !variants.isEmpty()) {
+                firstSegment = target.getKey();
             }
         }
         if (firstSegment == null) {
@@ -124,6 +117,25 @@ final class NameVariants {
         }
         log.trace("Name variants {} -> {}: {}", entry.term(), rendering, spellings);
         return Optional.of(new Variant(firstSegment, finding(entry, rendering, spellings)));
+    }
+
+    private static List<String> variantsIn(
+            final String text,
+            final String rendering,
+            final String folded,
+            final List<String> pairs,
+            final Common common) {
+        final List<String> variants = new ArrayList<>();
+        final Matcher words = NameSpelling.CAPITALISED.matcher(text);
+        while (words.find()) {
+            final String word = words.group();
+            if (!word.equalsIgnoreCase(rendering)
+                    && NameSpelling.fold(word, pairs).equals(folded)
+                    && !NameSpelling.isCommonWord(word, common.language(), common.lowerCase())) {
+                variants.add(word);
+            }
+        }
+        return variants;
     }
 
     private static QaFinding finding(

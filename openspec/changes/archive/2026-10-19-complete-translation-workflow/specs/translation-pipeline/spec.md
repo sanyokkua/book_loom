@@ -8,7 +8,7 @@ WHEN a run prepares, the system SHALL derive one deterministic style sheet from 
 brief always yields the same text — and SHALL place that same style sheet in the system message of every model call
 the run makes. A brief left at its defaults SHALL yield the default style sheet, never an empty one.
 
-**Source**: FR-BRIEF-02 … FR-BRIEF-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-ALGO-B2 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-b-prep`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`. In plain words: everything the person says about the book on the Book Brief now reaches the model, on every call, in the same words. Building it without a model call keeps it reproducible and free; a brief nobody touched still tells the model how to behave.
+**Source**: FR-BRIEF-02 … FR-BRIEF-07 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-ALGO-B2 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-b-prep`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`. In plain words: everything the person says about the book on the Book Brief now reaches the model, on every call, in the same words. Building it without a model call keeps it reproducible and free; a brief nobody touched still tells the model how to behave.
 
 #### Scenario: The brief's words reach every call
 
@@ -42,7 +42,7 @@ pre-scan, summary and revision — from that call's template in the prompt catal
 call (draft, both repairs, directed fix, revision) SHALL ask for and accept exactly one `{"target":"…"}` object for
 exactly one segment, and every prompt SHALL state its JSON schema together with a literal reply its parser accepts.
 
-**Source**: `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `#output-contract`, `#directed-fix-repair`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#prompt-builder`, ADR-0038, `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-design`, `#few-shot-examples`. In plain words: prompts are text files, not code, so they can be read and tuned without touching the engine. Small local models reliably answer one segment with one small object and break on arrays keyed by id, so every call that produces book text keeps that shape. A repair asks the model to rewrite one text, so only that text sits in the block it rewrites, and the source it must stay faithful to sits beside it, where it cannot be mistaken for the text to return. A ~4B model copies what it is shown far better than it follows abstract rules, so every prompt shows a real reply, and book text that reads like an order is still only translated. A prompt that already works on real books must not change by accident.
+**Source**: `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `#output-contract`, `#directed-fix-repair`, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#prompt-builder`, ADR-0038, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#prompt-design`, `#few-shot-examples`. In plain words: prompts are text files, not code, so they can be read and tuned without touching the engine. Small local models reliably answer one segment with one small object and break on arrays keyed by id, so every call that produces book text keeps that shape. A repair asks the model to rewrite one text, so only that text sits in the block it rewrites, and the source it must stay faithful to sits beside it, where it cannot be mistaken for the text to return. A ~4B model copies what it is shown far better than it follows abstract rules, so every prompt shows a real reply, and book text that reads like an order is still only translated. A prompt that already works on real books must not change by accident.
 
 #### Scenario: A directed fix returns one target
 
@@ -115,7 +115,7 @@ hits for the segment; the targets of the segments just before it in the same uni
 with no content SHALL be left out entirely. The system SHALL record, with each draft, what context it saw, so a later
 retry can rebuild it.
 
-**Source**: FR-ALGO-04, FR-ALGO-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#context-package`, `#token-budget`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#context-package-assembler`. In plain words: models read the start and the end of a prompt best, so the rules and the text to translate sit there, and everything else sits between. Only the names that occur in the passage are sent, so a large glossary does not drown the source. The window of earlier translations restarts at each chapter so the last chapter's phrasing does not leak in.
+**Source**: FR-ALGO-04, FR-ALGO-08 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#context-package`, `#token-budget`, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#context-package-assembler`. In plain words: models read the start and the end of a prompt best, so the rules and the text to translate sit there, and everything else sits between. Only the names that occur in the passage are sent, so a large glossary does not drown the source. The window of earlier translations restarts at each chapter so the last chapter's phrasing does not leak in.
 
 #### Scenario: Only the terms in the chunk are injected
 
@@ -162,7 +162,7 @@ capability's memory-reuse exception, which asks no reviewer; IF that decision fa
 reused target and draft the segment as usual. WHEN only the source text matches, the system SHALL offer the stored
 target as a hint.
 
-**Source**: FR-ALGO-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-ALGO-C4b, FR-ALGO-C9 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#context-aware-tm`. In plain words: the same sentence can need a different translation in a different place, so it is reused blindly only when its neighbours say the same thing too — compared by what they say, not by where they sit, so a dialogue repeated in chapter 3 matches its first appearance in chapter 1; otherwise the earlier translation only helps the model. A reused translation still has to pass every automatic check, so memory can never put a broken target into the book, but the reviewer never sees it, because it already passed once. The memory holds what the run accepted; an edit the person makes in review stays with that one segment.
+**Source**: FR-ALGO-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-ALGO-C4b, FR-ALGO-C9 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#context-aware-tm`. In plain words: the same sentence can need a different translation in a different place, so it is reused blindly only when its neighbours say the same thing too — compared by what they say, not by where they sit, so a dialogue repeated in chapter 3 matches its first appearance in chapter 1; otherwise the earlier translation only helps the model. A reused translation still has to pass every automatic check, so memory can never put a broken target into the book, but the reviewer never sees it, because it already passed once. The memory holds what the run accepted; an edit the person makes in review stays with that one segment.
 
 #### Scenario: A repeated passage in the same context is reused
 
@@ -231,7 +231,7 @@ later draft prompts. WHERE the dial is Max, the refresh at the end of each unit 
 call. A model summary whose target text is empty SHALL count as unreadable: the system SHALL keep the previous summary
 and write one WARN line.
 
-**Source**: FR-ALGO-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-ALGO-C10 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#rolling-summary`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#rolling-summary-update`. In plain words: the model forgets earlier chapters, so a short record of who is who travels with every prompt. A deterministic summary costs nothing; the model-written one costs a call per chapter, so only the slowest, most careful setting pays for it. The deterministic text is the glossary lines and the heading titles: shown as "Running summary" on the fixture book it read `Earth (place)…` followed by chapter titles — not a summary, and the names already reach the draft in its glossary block — so it is never presented as one.
+**Source**: FR-ALGO-07 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-ALGO-C10 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#rolling-summary`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#rolling-summary-update`. In plain words: the model forgets earlier chapters, so a short record of who is who travels with every prompt. A deterministic summary costs nothing; the model-written one costs a call per chapter, so only the slowest, most careful setting pays for it. The deterministic text is the glossary lines and the heading titles: shown as "Running summary" on the fixture book it read `Earth (place)…` followed by chapter titles — not a summary, and the names already reach the draft in its glossary block — so it is never presented as one.
 
 #### Scenario: A long chapter refreshes the summary three times
 
@@ -295,7 +295,7 @@ The system SHALL set the run's mechanics from the Book Brief's quality dial, and
 
 WHERE the review mode is Manual, a chunk SHALL hold exactly one segment. The dial SHALL NOT change the trust threshold.
 
-**Source**: FR-ALGO-11, FR-BRIEF-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`, `#fr-brief`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#quality-dial-mapping`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#quality-dial`, ADR-0036, ADR-0038. In plain words: one control trades speed for care, and the table says exactly what it changes. The threshold that decides what gets flagged belongs to the review mode, so turning the dial never silently flags more or fewer segments.
+**Source**: FR-ALGO-11, FR-BRIEF-08 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`, `#fr-brief`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#quality-dial-mapping`, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#quality-dial`, ADR-0036, ADR-0038. In plain words: one control trades speed for care, and the table says exactly what it changes. The threshold that decides what gets flagged belongs to the review mode, so turning the dial never silently flags more or fewer segments.
 
 #### Scenario: Fast skips the reviewer
 
@@ -313,7 +313,7 @@ IF a segment's masked text alone is estimated above the chunk token budget, at m
 split it at the source language's sentence boundaries without ever separating a paired placeholder, draft each piece
 with the segment's context, join the pieces in order, and gate and decide the joined target as that one segment.
 
-**Source**: FR-ALGO-03, FR-ALGO-12 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-ALGO-C2, FR-ALGO-C2b (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunking`, `#token-budget`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#chunk-packing`, `docs/implementation_plan/CHANGE_BACKLOG.md` (D5). In plain words: some books hold one paragraph of 26,000 characters, far more than a small model answers well in one go. Splitting only that paragraph, and only between sentences, keeps the book's structure intact because the joined translation still goes back into the one paragraph it came from.
+**Source**: FR-ALGO-03, FR-ALGO-12 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-ALGO-C2, FR-ALGO-C2b (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunking`, `#token-budget`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#chunk-packing`, `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md` (D5). In plain words: some books hold one paragraph of 26,000 characters, far more than a small model answers well in one go. Splitting only that paragraph, and only between sentences, keeps the book's structure intact because the joined translation still goes back into the one paragraph it came from.
 
 #### Scenario: A huge paragraph is drafted in pieces
 
@@ -345,7 +345,7 @@ metadata (title/author)` and `Frontmatter values` — is off, the system SHALL t
 kind as kept as source by choice, decided by the brief at the time and whatever the segment's stored status, with no
 model call and its source text kept. A body segment SHALL never be kept as source by choice.
 
-**Source**: FR-BRIEF-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-DOC-11 (`#fr-doc`), DD-47 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), ADR-0041. In plain words: a person who wants the table of contents left in the original language gets exactly that, and the progress bar still reaches 100 % because those segments are not waiting to be translated. The switch is read whenever the counts are taken, so turning it off after a run already translated those labels keeps them as source too, and turning it on again makes the untranslated ones pending once more.
+**Source**: FR-BRIEF-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-DOC-11 (`#fr-doc`), DD-47 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), ADR-0041. In plain words: a person who wants the table of contents left in the original language gets exactly that, and the progress bar still reaches 100 % because those segments are not waiting to be translated. The switch is read whenever the counts are taken, so turning it off after a run already translated those labels keeps them as source too, and turning it on again makes the untranslated ones pending once more.
 
 #### Scenario: Front matter is kept by default
 
@@ -395,7 +395,7 @@ numeral, is a single character, or is an equation of one-letter symbols, the sys
 own text as the target, through the chunk's gate, with the path `verbatim` and no model call, reviewer, quality check
 or finding.
 
-**Source**: `.temporary_context/log.log` (the Bartimaeus run, 2026-10-01), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunking`. In plain words: a chapter number, a scene break or a lone locked name reads the same in every language. The Bartimaeus run sent the chapter number `2` to the model with a 740-token prompt, then held the echo against it; 69 segments of two characters or less were each a full call. Keeping them as they are costs nothing and cannot go wrong, and they are counted on their own line so nobody reads them as translations or as text someone chose to leave untranslated.
+**Source**: `.temporary_context/log.log` (the Bartimaeus run, 2026-10-01), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunking`. In plain words: a chapter number, a scene break or a lone locked name reads the same in every language. The Bartimaeus run sent the chapter number `2` to the model with a 740-token prompt, then held the echo against it; 69 segments of two characters or less were each a full call. Keeping them as they are costs nothing and cannot go wrong, and they are counted on their own line so nobody reads them as translations or as text someone chose to leave untranslated.
 
 #### Scenario: A chapter number is kept with no call
 
@@ -453,7 +453,7 @@ WHEN a run reaches a PENDING auxiliary segment whose masked source equals that o
 in the same chunk or already ACCEPTED earlier in the run, the system SHALL make no model call for it: it SHALL take
 the undecided draft or the accepted target. Each segment SHALL keep its own record and decision.
 
-**Source**: `.temporary_context/log.log` (the Bartimaeus run, 2026-10-01), DD-47 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), ADR-0041. In plain words: one book's alt texts read `image` 58 times and its page titles `The Bartimaeus Trilogy` 80 times, and each was a separate call. A text that is identical gets an identical answer, so it is asked for once.
+**Source**: `.temporary_context/log.log` (the Bartimaeus run, 2026-10-01), DD-47 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), ADR-0041. In plain words: one book's alt texts read `image` 58 times and its page titles `The Bartimaeus Trilogy` 80 times, and each was a separate call. A text that is identical gets an identical answer, so it is asked for once.
 
 #### Scenario: A repeated alt text is sent once
 
@@ -482,7 +482,7 @@ WHILE a run translates, the system SHALL announce, for each segment, when it sta
 it is decided. Display text SHALL be the masked text with its `⟦gN⟧` tokens removed and its whitespace collapsed. Book
 text SHALL travel only in these announcements in memory and SHALL NOT be written to the log above TRACE.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`, NFR-PRIV-04 (`docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#no-telemetry`). In plain words: the Translating screen's two-row live panel shows the segment just decided and the one being translated now, so the person can watch the translation happen, and the log names each segment the way a person reads it. The text stays in memory; a log file written at the usual level never contains the book.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`, NFR-PRIV-04 (`docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#no-telemetry`). In plain words: the Translating screen's two-row live panel shows the segment just decided and the one being translated now, so the person can watch the translation happen, and the log names each segment the way a person reads it. The text stays in memory; a log file written at the usual level never contains the book.
 
 #### Scenario: A segment's three announcements
 
@@ -521,7 +521,7 @@ the last 20 finished draft calls, taking both from the provider's usage figures.
 call, THEN the system SHALL estimate that call's completion tokens from the length of its reply in the target script and
 SHALL use the call's wall-clock time.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`. In plain words: tokens per second tells a person how fast their model really is on this book, and it is taken from what the server says it generated, so it is not a guess. Only drafts count, because a reviewer call's short answer would make a slow model look fast.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`. In plain words: tokens per second tells a person how fast their model really is on this book, and it is taken from what the server says it generated, so it is not a guess. Only drafts count, because a reviewer call's short answer would make a slow model look fast.
 
 #### Scenario: Usage figures give the rate
 
@@ -542,7 +542,7 @@ choice is not pending — and SHALL report no estimate until 5 segments of the r
 is with no model call SHALL not enter the average. The elapsed time
 SHALL count only the time the run was not paused.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`. In plain words: a book takes hours, so "how long is left" is the question a person asks most. The first few segments include loading the model, so no estimate is shown until the figure means something, and a lunch-long pause does not count as translation time.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`. In plain words: a book takes hours, so "how long is left" is the question a person asks most. The first few segments include loading the model, so no estimate is shown until the figure means something, and a lunch-long pause does not count as translation time.
 
 #### Scenario: An estimate after five segments
 
@@ -570,7 +570,7 @@ The system SHALL give every model call a run makes a context size of 8192 tokens
 context when it sizes chunks. Every draft, directed fix and revision call SHALL also state the output it expects: its
 segment's output allowance.
 
-**Source**: `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`, `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#effective-context`, `#service-owned-retry`. In plain words: Ollama's default context is small and it silently cuts off a longer prompt, which would drop the rules at the top of the prompt. Asking for 8192 makes room for the whole context package. Where each server receives the size — and that an OpenAI-compatible server never does — is the `llm-provider` capability's rule, as is the timeout the expected output sets: a call that writes a long paragraph may wait longer than one that writes a line.
+**Source**: `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`, `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#effective-context`, `#service-owned-retry`. In plain words: Ollama's default context is small and it silently cuts off a longer prompt, which would drop the rules at the top of the prompt. Asking for 8192 makes room for the whole context package. Where each server receives the size — and that an OpenAI-compatible server never does — is the `llm-provider` capability's rule, as is the timeout the expected output sets: a call that writes a long paragraph may wait longer than one that writes a line.
 
 #### Scenario: A draft to Ollama carries the context size
 
@@ -604,7 +604,7 @@ carry a cap too. IF a capped reply ends with a finish of cut off by length, THEN
 other cut-off reply ("Flag a segment whose reply cannot be used, and continue"); a cut-off summary keeps the previous
 summary.
 
-**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`, `#response-handling`, `openspec/changes/archive/2026-10-19-complete-translation-workflow/proposal.md#what-changes`. In plain words: a small model sometimes loops on one sentence and would otherwise write until the three-minute timeout, three attempts in a row, for one paragraph. The cap is a generous multiple of the length the segment should need — half as much again, a fixed margin for the `{"target":…}` wrapper, and room for every placeholder token — so a normal reply never reaches it and a runaway one is cut off, flagged and left behind. A one-word source under a 64-token cap came back as an empty target in the Bartimaeus run, so a translation call's cap never drops below 128. The reviewer was once left unbounded and a looping re-judge then held a whole run for three minutes per attempt; the reviewer's reply is, per pair, an id, a status and a few short edits, so its cap grows with the pairs and holds room for the one case that is long, a rewrite. A critique call (the retired reflect) was left unbounded until gemma4:e4b on the fixture book streamed 9,664 lines into the three-minute timeout, and the run's ETA jumped from three to nineteen minutes; every call kind now has a cap. How each server receives the cap is the `llm-provider` capability's rule.
+**Source**: `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`, `#response-handling`, `openspec/changes/archive/2026-10-19-complete-translation-workflow/proposal.md#what-changes`. In plain words: a small model sometimes loops on one sentence and would otherwise write until the three-minute timeout, three attempts in a row, for one paragraph. The cap is a generous multiple of the length the segment should need — half as much again, a fixed margin for the `{"target":…}` wrapper, and room for every placeholder token — so a normal reply never reaches it and a runaway one is cut off, flagged and left behind. A one-word source under a 64-token cap came back as an empty target in the Bartimaeus run, so a translation call's cap never drops below 128. The reviewer was once left unbounded and a looping re-judge then held a whole run for three minutes per attempt; the reviewer's reply is, per pair, an id, a status and a few short edits, so its cap grows with the pairs and holds room for the one case that is long, a rewrite. A critique call (the retired reflect) was left unbounded until gemma4:e4b on the fixture book streamed 9,664 lines into the three-minute timeout, and the run's ETA jumped from three to nineteen minutes; every call kind now has a cap. How each server receives the cap is the `llm-provider` capability's rule.
 
 #### Scenario: A short draft gets the floor
 
@@ -654,7 +654,7 @@ unknown or only suggested. WHEN the person changes a glossary term's target, the
 segment whose target contains the previous target as a whole word, one TERM deferral per changed term, only when the
 entry is locked after the change and had a non-empty target before it.
 
-**Source**: FR-ALGO-10 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-REVIEW-10 (`#fr-review`), FR-ALGO-D1 … FR-ALGO-D3 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#deferred-resolution`. In plain words: early in a book the model may not yet know that "Sam" is a woman, and Ukrainian verbs agree with gender. The careful setting goes back and fixes those sentences once the facts are known, rewrites a locked name the same way everywhere, and never overwrites what the person wrote by hand.
+**Source**: FR-ALGO-10 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-REVIEW-10 (`#fr-review`), FR-ALGO-D1 … FR-ALGO-D3 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#deferred-resolution`. In plain words: early in a book the model may not yet know that "Sam" is a woman, and Ukrainian verbs agree with gender. The careful setting goes back and fixes those sentences once the facts are known, rewrites a locked name the same way everywhere, and never overwrites what the person wrote by hand.
 
 #### Scenario: A rendering the model chose on its own is not swept
 
@@ -687,7 +687,7 @@ target the person changed, and call the model only for a gender deferral whose c
 person-set gender. IF a segment to be changed carries the person's own edit, THEN it SHALL record a proposal and leave
 its target unchanged.
 
-**Source**: FR-ALGO-10 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-REVIEW-10 (`#fr-review`), FR-ALGO-D1 … FR-ALGO-D3 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#deferred-resolution`. In plain words: early in a book the model may not yet know that "Sam" is a woman, and Ukrainian verbs agree with gender. The careful setting goes back and fixes those sentences once the facts are known, rewrites a locked name the same way everywhere, and never overwrites what the person wrote by hand.
+**Source**: FR-ALGO-10 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-REVIEW-10 (`#fr-review`), FR-ALGO-D1 … FR-ALGO-D3 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#deferred-resolution`. In plain words: early in a book the model may not yet know that "Sam" is a woman, and Ukrainian verbs agree with gender. The careful setting goes back and fixes those sentences once the facts are known, rewrites a locked name the same way everywhere, and never overwrites what the person wrote by hand.
 
 #### Scenario: The revision is bounded to swept segments
 
@@ -720,7 +720,7 @@ WHEN the desktop application starts, the system SHALL take the review mode from 
 Unattended. IF the value names no mode, THEN the system SHALL use Unattended and write one WARN line naming the rejected
 value.
 
-**Source**: FR-REVIEW-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, ADR-0036. In plain words: Settings are not saved yet, so the careful modes are chosen by a launch flag, read the same way as the log level. A typo must not silently change how the run behaves, and the default stays fully automatic.
+**Source**: FR-REVIEW-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, ADR-0036. In plain words: Settings are not saved yet, so the careful modes are chosen by a launch flag, read the same way as the log level. A typo must not silently change how the run behaves, and the default stays fully automatic.
 
 #### Scenario: A spelled-out alias is accepted
 
@@ -742,7 +742,7 @@ value.
 WHILE a run is paused, the system SHALL hold no place in the single-flight gate, so another model call — a verification
 or a review retry — can reach the provider.
 
-**Source**: FR-INFER-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#inference-gate`, ADR-0036. In plain words: a run paused for review waits for the person, who may want to retry the segment or test the provider; a paused run that kept the gate would make both wait forever.
+**Source**: FR-INFER-06 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#inference-gate`, ADR-0036. In plain words: a run paused for review waits for the person, who may want to retry the segment or test the provider; a paused run that kept the gate would make both wait forever.
 
 #### Scenario: A verification runs during a review pause
 
@@ -758,7 +758,7 @@ the segment FLAGGED at once with that error as its reason, with no self-heal rou
 segment, after any pause the review mode causes. The system SHALL examine a reply for these causes in a fixed order
 and act on the first that applies.
 
-**Source**: FR-DOC-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), FR-ALGO-C8 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md#segment-status-machine`, `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#empty-response-ordering`, `#repair-and-gate`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`, `docs/implementation_plan/CHANGE_BACKLOG.md` (D19). In plain words: one bad reply must not stop a book. A reply that holds nothing, that the server cut off, or that twice fails to be the one small JSON object asked for gives self-heal nothing to work on, so the segment is flagged at once and an export writes its source text rather than broken markup, and the report says why. A reply of only spaces counts as empty: accepting it would silently delete the paragraph. A context overflow belongs to the one segment whose prompt is too long, so it is flagged and the run moves on. A reply that lost a token or refused the task is still a reply the model can be asked to fix with the problem named, so it gets the dial's repair rounds first. A provider refusing the request for every segment alike — an unloaded model, an unreachable server — is not a bad reply and no longer flags anything; it pauses the run instead.
+**Source**: FR-DOC-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), FR-ALGO-C8 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), `docs/spec_baseline/specification/02_Architecture/03_DOCUMENT_MODEL.md#segment-status-machine`, `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#empty-response-ordering`, `#repair-and-gate`, `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`, `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md` (D19). In plain words: one bad reply must not stop a book. A reply that holds nothing, that the server cut off, or that twice fails to be the one small JSON object asked for gives self-heal nothing to work on, so the segment is flagged at once and an export writes its source text rather than broken markup, and the report says why. A reply of only spaces counts as empty: accepting it would silently delete the paragraph. A context overflow belongs to the one segment whose prompt is too long, so it is flagged and the run moves on. A reply that lost a token or refused the task is still a reply the model can be asked to fix with the problem named, so it gets the dial's repair rounds first. A provider refusing the request for every segment alike — an unloaded model, an unreachable server — is not a bad reply and no longer flags anything; it pauses the run instead.
 
 #### Scenario: A missing token flags the segment and the job goes on
 
@@ -874,7 +874,7 @@ IF any of the following holds, THEN the system SHALL return that failure without
 - the project's book is no longer open;
 - the job has already run.
 
-**Source**: FR-EXPORT-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), `docs/specification/02_Architecture/09_ERROR_HANDLING.md#boundary-discipline`, ADR-0035. In plain words: a job that cannot finish should fail before it costs a single model call. The target language becomes part of the output file name, so a value like `../x` must never get that far. The destination checks — the file type, the source itself, an existing file — now belong to the export, which is where the destination is chosen.
+**Source**: FR-EXPORT-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#boundary-discipline`, ADR-0035. In plain words: a job that cannot finish should fail before it costs a single model call. The target language becomes part of the output file name, so a value like `../x` must never get that far. The destination checks — the file type, the source itself, an existing file — now belong to the export, which is where the destination is chosen.
 
 #### Scenario: A path-like language code is refused
 
@@ -899,7 +899,7 @@ both a status role from the token catalogue and a mark that is not its colour. T
 own event, and the text of every entry SHALL come from the message catalogue by key. The log SHALL retain its most
 recent entries up to a fixed bound and SHALL drop the oldest first.
 
-**Source**: FR-NOTIF-6a, FR-NOTIF-6b, FR-NOTIF-6c (`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#activity-log`), FR-A11Y-6 (`docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#accessibility`), FR-UI-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`). In plain words: the log is the only record of what a multi-hour run decided. A fixed vocabulary of seven short tags, lined up in a column, is what makes it scannable, and now that the engine repairs, remembers and summarises, every one of the seven actually appears. Colour alone cannot carry the kind, and the text comes from the catalogue so a Ukrainian window never shows an English log. An entry names a segment the way the review panel does, by its locator, because a file name and an ordinal mean nothing to the person reading it.
+**Source**: FR-NOTIF-6a, FR-NOTIF-6b, FR-NOTIF-6c (`docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#activity-log`), FR-A11Y-6 (`docs/spec_baseline/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#accessibility`), FR-UI-08 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`). In plain words: the log is the only record of what a multi-hour run decided. A fixed vocabulary of seven short tags, lined up in a column, is what makes it scannable, and now that the engine repairs, remembers and summarises, every one of the seven actually appears. Colour alone cannot carry the kind, and the text comes from the catalogue so a Ukrainian window never shows an English log. An entry names a segment the way the review panel does, by its locator, because a file name and an ordinal mean nothing to the person reading it.
 
 #### Scenario: An accepted segment logs its kind and role
 
@@ -977,7 +977,7 @@ ACCEPTED or FLAGGED before the next is decided. WHERE the reviewer is off, the s
 segment before it drafts the next. The preceding targets of each draft SHALL be the effective targets of the earlier
 segments.
 
-**Source**: FR-ALGO-C4, FR-ALGO-C4b, FR-ALGO-C7, FR-ALGO-C8 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), FR-ALGO-C13 (`#self-heal`), FR-RESUME-03, FR-RESUME-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, ADR-0033, ADR-0034, ADR-0038. In plain words: the reviewer reads a whole chunk at once, so with the reviewer on (Balanced and Max) every segment of a chunk is drafted before any is decided, and each draft still sees the translations just before it, even those not yet decided. That fixes what a pause in the middle of a chunk can change: the rest of the chunk is already drafted and reviewed, so an edit made during the pause reaches the drafts made after it — from the next chunk on — while the drafts already paid for are kept. With the reviewer off (Fast) nothing needs the whole chunk, so each segment is drafted and decided in turn, and an edit reaches the very next draft. A decision is never lost to a pause or a stop; a draft that was not yet decided is dropped by a stop and drafted again by the next run.
+**Source**: FR-ALGO-C4, FR-ALGO-C4b, FR-ALGO-C7, FR-ALGO-C8 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), FR-ALGO-C13 (`#self-heal`), FR-RESUME-03, FR-RESUME-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, ADR-0033, ADR-0034, ADR-0038. In plain words: the reviewer reads a whole chunk at once, so with the reviewer on (Balanced and Max) every segment of a chunk is drafted before any is decided, and each draft still sees the translations just before it, even those not yet decided. That fixes what a pause in the middle of a chunk can change: the rest of the chunk is already drafted and reviewed, so an edit made during the pause reaches the drafts made after it — from the next chunk on — while the drafts already paid for are kept. With the reviewer off (Fast) nothing needs the whole chunk, so each segment is drafted and decided in turn, and an edit reaches the very next draft. A decision is never lost to a pause or a stop; a draft that was not yet decided is dropped by a stop and drafted again by the next run.
 
 #### Scenario: Balanced drafts the whole chunk before deciding any of it
 
@@ -1040,7 +1040,7 @@ decide the chunk's remaining segments from the drafts already made rather than d
 stopped, the system SHALL commit the segments already decided and drop the undecided drafts, whose segments stay
 PENDING for the next run to draft.
 
-**Source**: FR-ALGO-C4, FR-ALGO-C4b, FR-ALGO-C7, FR-ALGO-C8 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), FR-ALGO-C13 (`#self-heal`), FR-RESUME-03, FR-RESUME-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, ADR-0033, ADR-0034, ADR-0038. In plain words: the reviewer reads a whole chunk at once, so with the reviewer on (Balanced and Max) every segment of a chunk is drafted before any is decided, and each draft still sees the translations just before it, even those not yet decided. That fixes what a pause in the middle of a chunk can change: the rest of the chunk is already drafted and reviewed, so an edit made during the pause reaches the drafts made after it — from the next chunk on — while the drafts already paid for are kept. With the reviewer off (Fast) nothing needs the whole chunk, so each segment is drafted and decided in turn, and an edit reaches the very next draft. A decision is never lost to a pause or a stop; a draft that was not yet decided is dropped by a stop and drafted again by the next run.
+**Source**: FR-ALGO-C4, FR-ALGO-C4b, FR-ALGO-C7, FR-ALGO-C8 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), FR-ALGO-C13 (`#self-heal`), FR-RESUME-03, FR-RESUME-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, ADR-0033, ADR-0034, ADR-0038. In plain words: the reviewer reads a whole chunk at once, so with the reviewer on (Balanced and Max) every segment of a chunk is drafted before any is decided, and each draft still sees the translations just before it, even those not yet decided. That fixes what a pause in the middle of a chunk can change: the rest of the chunk is already drafted and reviewed, so an edit made during the pause reaches the drafts made after it — from the next chunk on — while the drafts already paid for are kept. With the reviewer off (Fast) nothing needs the whole chunk, so each segment is drafted and decided in turn, and an edit reaches the very next draft. A decision is never lost to a pause or a stop; a draft that was not yet decided is dropped by a stop and drafted again by the next run.
 
 #### Scenario: A resume reads the stored decision again
 
@@ -1093,7 +1093,7 @@ segment decided so far and add each proposed term the glossary does not hold as 
 type other and gender unknown. WHEN it added at least one term, the system SHALL announce the glossary update with the
 number added.
 
-**Source**: FR-ALGO-C9 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`. In plain words: a person who started from their own list of names still gets the names the book introduces later, found the same free, offline way as the first proposals, with no model call. A proposal never replaces what the person entered, and a name the person deleted stays deleted — otherwise the next chapter would bring it back. The new entries are unlocked and have no target, so until the person fills them in on Names & style they only tell the model that the word is a name.
+**Source**: FR-ALGO-C9 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), FR-GLOSS-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`. In plain words: a person who started from their own list of names still gets the names the book introduces later, found the same free, offline way as the first proposals, with no model call. A proposal never replaces what the person entered, and a name the person deleted stays deleted — otherwise the next chapter would bring it back. The new entries are unlocked and have no target, so until the person fills them in on Names & style they only tell the model that the word is a name.
 
 #### Scenario: A recurring name is added at the end of a chapter
 
@@ -1121,7 +1121,7 @@ most recently, with its source, its target and its path, and the segment started
 with its source and its draft once ready. WHEN the second row's segment is decided, the screen SHALL move it to the
 first row. Both rows SHALL show display text only, taken from the run's announcements.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`, the Translating screen's running state in `docs/specification/mockups/ui-mockup.html`. In plain words: a book takes hours, and watching sentences go by is how a person judges whether the model is doing well before the run ends. The panel shows the last finished sentence beside the one the model is working on, so a slow model is visibly busy rather than stuck, and a draft waiting for the chunk's reviewer is marked as not yet decided.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`, the Translating screen's running state in `docs/spec_baseline/specification/mockups/ui-mockup.html`. In plain words: a book takes hours, and watching sentences go by is how a person judges whether the model is doing well before the run ends. The panel shows the last finished sentence beside the one the model is working on, so a slow model is visibly busy rather than stuck, and a draft waiting for the chunk's reviewer is marked as not yet decided.
 
 #### Scenario: The decided segment above the one in progress
 
@@ -1164,7 +1164,7 @@ Start. WHEN a run completes, the screen SHALL show its outcome and SHALL offer C
 (n). WHEN a run ends Failed, the screen SHALL show the blocking error dialog, then the outcome so far, and SHALL offer
 its Start. The screen's Start SHALL begin a new run at the project's first pending segment — a start, never a resume.
 
-**Source**: FR-ALGO-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-RESUME-05 (`#fr-resume`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#error-dialog`, ADR-0035. In plain words: the screen always says what can happen next. Before a run it shows what the run will use and how much is left; after a run it points to Export, where the book is written, and offers a start again only when there is still something pending to translate; after a failure it keeps what was decided and offers to start again from the first undecided segment. When a start is offered at all is app-shell's "Move through the workflow by its five available steps". The Translating screen has seven states: idle, completed and failed are fixed here, running by "Start a run and report its progress", paused and stopped by the `resume` capability, and the provider error by the `notifications` capability. The mockup's dialog promised "Your progress is saved"; nothing is saved to disk yet, so the dialog says what is true.
+**Source**: FR-ALGO-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-RESUME-05 (`#fr-resume`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#error-dialog`, ADR-0035. In plain words: the screen always says what can happen next. Before a run it shows what the run will use and how much is left; after a run it points to Export, where the book is written, and offers a start again only when there is still something pending to translate; after a failure it keeps what was decided and offers to start again from the first undecided segment. When a start is offered at all is app-shell's "Move through the workflow by its five available steps". The Translating screen has seven states: idle, completed and failed are fixed here, running by "Start a run and report its progress", paused and stopped by the `resume` capability, and the provider error by the `notifications` capability. The mockup's dialog promised "Your progress is saved"; nothing is saved to disk yet, so the dialog says what is true.
 
 #### Scenario: Idle shows the ready card
 
@@ -1225,7 +1225,7 @@ system SHALL write it by default in a development run, and in an installed appli
 `BOOKLOOM_TRACE_FILE=1` or `-Dbookloom.trace.file=true` is set; writing it SHALL NOT change the level of the ordinary
 log or the console.
 
-**Source**: DD-23 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-23-slf4j-logback`), NFR-PRIV-04 (`docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#no-telemetry`), NFR-PRIV-06 and NFR-PRIV-07 (`#secrets-never-stored`), `.claude/rules/logging.md`. In plain words: until now the log a person could send was the terminal of a development run, cut where the terminal buffer ended. The detailed log is a bounded file that explains itself: its header says which build, machine, provider, model and book it is about, even in a file cut by rotation, and the run summary shows the pace of a run without reading every line.
+**Source**: DD-23 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-23-slf4j-logback`), NFR-PRIV-04 (`docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#no-telemetry`), NFR-PRIV-06 and NFR-PRIV-07 (`#secrets-never-stored`), `.claude/rules/logging.md`. In plain words: until now the log a person could send was the terminal of a development run, cut where the terminal buffer ended. The detailed log is a bounded file that explains itself: its header says which build, machine, provider, model and book it is about, even in a file cut by rotation, and the run summary shows the pace of a run without reading every line.
 
 #### Scenario: A development run writes the detailed log with its header
 
@@ -1253,7 +1253,7 @@ change of the session facts SHALL also be one INFO line. WHILE a job runs, the s
 run-summary line a minute, and one when the job ends. The detailed log SHALL never contain a credential, SHALL hold
 book text only on TRACE lines, and SHALL never leave the machine unless the person shares it.
 
-**Source**: DD-23 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-23-slf4j-logback`), NFR-PRIV-04 (`docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#no-telemetry`), NFR-PRIV-06 and NFR-PRIV-07 (`#secrets-never-stored`), `.claude/rules/logging.md`. In plain words: until now the log a person could send was the terminal of a development run, cut where the terminal buffer ended. The detailed log is a bounded file that explains itself: its header says which build, machine, provider, model and book it is about, even in a file cut by rotation, and the run summary shows the pace of a run without reading every line.
+**Source**: DD-23 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-23-slf4j-logback`), NFR-PRIV-04 (`docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#no-telemetry`), NFR-PRIV-06 and NFR-PRIV-07 (`#secrets-never-stored`), `.claude/rules/logging.md`. In plain words: until now the log a person could send was the terminal of a development run, cut where the terminal buffer ended. The detailed log is a bounded file that explains itself: its header says which build, machine, provider, model and book it is about, even in a file cut by rotation, and the run summary shows the pace of a run without reading every line.
 
 #### Scenario: The header names the build and the session facts
 
@@ -1340,7 +1340,7 @@ reply is the JSON object `{"items":[{"id","target","terms"?}]}`, answered by the
 it is, an auxiliary text, a translation-memory reuse and a segment larger than the chunk budget SHALL never join a
 batch.
 
-**Source**: `additional-work.md` 15d.8; `docs/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`. In plain words: a book of short paragraphs no longer pays the whole prompt once per paragraph; the model answers several at once, and if it loses one of them only that one is asked again.
+**Source**: `additional-work.md` 15d.8; `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`. In plain words: a book of short paragraphs no longer pays the whole prompt once per paragraph; the model answers several at once, and if it loses one of them only that one is asked again.
 
 #### Scenario: Four paragraphs go in one call
 
@@ -1419,7 +1419,7 @@ The system SHALL validate a batch reply per id — the id exactly once with text
 length band and the document's placeholder gate — and SHALL draft again on its own, through the ordinary
 single-segment draft with its own context package, only an id that fails. Every segment SHALL keep its own verdict.
 
-**Source**: `additional-work.md` 15d.8; `docs/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`. In plain words: a book of short paragraphs no longer pays the whole prompt once per paragraph; the model answers several at once, and if it loses one of them only that one is asked again.
+**Source**: `additional-work.md` 15d.8; `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`. In plain words: a book of short paragraphs no longer pays the whole prompt once per paragraph; the model answers several at once, and if it loses one of them only that one is asked again.
 
 #### Scenario: An unreadable reply sends every segment to its own draft
 
@@ -1483,7 +1483,7 @@ The batch size SHALL start at 8, halve when a reply loses an id, repeats one, me
 batch never held, and grow by one after three clean batches, never above 16 and never below 2. A call that got no
 reply from the model SHALL leave the size as it was.
 
-**Source**: `additional-work.md` 15d.8; `docs/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`. In plain words: a book of short paragraphs no longer pays the whole prompt once per paragraph; the model answers several at once, and if it loses one of them only that one is asked again.
+**Source**: `additional-work.md` 15d.8; `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`. In plain words: a book of short paragraphs no longer pays the whole prompt once per paragraph; the model answers several at once, and if it loses one of them only that one is asked again.
 
 #### Scenario: A run that batches never drafts every segment alone
 
@@ -1516,7 +1516,7 @@ reply from the model SHALL leave the size as it was.
 A batch item whose target carries protocol text of the reply SHALL fail as an item problem (`LEAKED`) and be drafted
 alone, never stripped and never stored.
 
-**Source**: `additional-work.md` 15d.8; `docs/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`. In plain words: a book of short paragraphs no longer pays the whole prompt once per paragraph; the model answers several at once, and if it loses one of them only that one is asked again.
+**Source**: `additional-work.md` 15d.8; `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`. In plain words: a book of short paragraphs no longer pays the whole prompt once per paragraph; the model answers several at once, and if it loses one of them only that one is asked again.
 
 #### Scenario: What counts as protocol text
 
@@ -1540,7 +1540,7 @@ The window SHALL hold every prompt: before a batch is sent its assembled prompt,
 need and the 500-token safety margin SHALL fit the run's window. A batch that does not fit SHALL be sent without the
 optional context, then with fewer segments, and drafted alone when two segments do not fit either.
 
-**Source**: `additional-work.md` 15d.8; `docs/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`. In plain words: a book of short paragraphs no longer pays the whole prompt once per paragraph; the model answers several at once, and if it loses one of them only that one is asked again.
+**Source**: `additional-work.md` 15d.8; `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`. In plain words: a book of short paragraphs no longer pays the whole prompt once per paragraph; the model answers several at once, and if it loses one of them only that one is asked again.
 
 #### Scenario: The chunk budget reserves the dynamic context
 
@@ -1580,7 +1580,7 @@ The system SHALL leave out of every prompt an empty value, an empty heading, a p
 preceding translated text that is not from the chunk's own unit. The system message and style sheet of a call kind
 SHALL be the same bytes for every call of a run, so a server can reuse its prompt cache.
 
-**Source**: `additional-work.md` 15d.5; `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`. In plain words: a small model reads every token it is given and may echo it, so nothing is sent that carries no information.
+**Source**: `additional-work.md` 15d.5; `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`. In plain words: a small model reads every token it is given and may echo it, so nothing is sent that carries no information.
 
 #### Scenario: Filler never reaches the model
 
@@ -1605,7 +1605,7 @@ The system SHALL build, for each source and target language of a run, one sectio
 the source language, and the pair's own rules from `prompt/languages/pairs/<source>-<target>.properties` — and SHALL
 inject it as `{{languageRules}}` into the draft, reviewer, summary, prescan and suggest-targets system messages.
 
-**Source**: `additional-work.md` 15d.5b; `docs/specification/01_Product/12_PROMPT_CATALOG.md#language-rules`. In plain words: what to watch for in Ukrainian, or in going from English to Ukrainian, is written once as data, sent only for the pair in hand, and a language nobody has written rules for is translated with general advice instead of failing.
+**Source**: `additional-work.md` 15d.5b; `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#language-rules`. In plain words: what to watch for in Ukrainian, or in going from English to Ukrainian, is written once as data, sent only for the pair in hand, and a language nobody has written rules for is translated with general advice instead of failing.
 
 #### Scenario: English to Ukrainian loads only its own files
 
@@ -1801,7 +1801,7 @@ language of this segment (infer it from its text)` and SHALL NOT name a language
 analysis — the name and recurring-term scans, pronoun evidence, stop words and titles — SHALL read the book in the tag
 the person chose, else in a tag the book declares and the application recognizes, else in no language.
 
-**Source**: FR-IMPORT-03, FR-BRIEF-01, FR-ALGO-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`), ADR-0037 (as amended), ADR-0042 (`docs/adr/ADR-0042-auto-source-language.md`). In plain words: a book with no language to start from used to be read as English — `Le Rouge` in a French book became a name, and an English `she` gave a French character a gender. Now the model is asked to identify the language and the code assumes nothing about it: a word that is a function word in any bundled language is never a name by itself, and a pronoun table is read only for a language that is known. A language the person chose, or one the book declares and the application recognizes, is still used by the code, but a prompt never names a language nobody chose.
+**Source**: FR-IMPORT-03, FR-BRIEF-01, FR-ALGO-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`), ADR-0037 (as amended), ADR-0042 (`docs/spec_baseline/adr/ADR-0042-auto-source-language.md`). In plain words: a book with no language to start from used to be read as English — `Le Rouge` in a French book became a name, and an English `she` gave a French character a gender. Now the model is asked to identify the language and the code assumes nothing about it: a word that is a function word in any bundled language is never a name by itself, and a pronoun table is read only for a language that is known. A language the person chose, or one the book declares and the application recognizes, is still used by the code, but a prompt never names a language nobody chose.
 
 #### Scenario: A declared language is never named in a prompt under Auto
 
@@ -1840,7 +1840,7 @@ Under Auto, a run the book marks foreign SHALL be kept verbatim only WHEN it is 
 most of the book's letters are written in, counted by code; a marked run in the book's own script SHALL be left to the
 prompt's foreign-passage rule.
 
-**Source**: FR-IMPORT-03, FR-BRIEF-01, FR-ALGO-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`), ADR-0037 (as amended), ADR-0042 (`docs/adr/ADR-0042-auto-source-language.md`). In plain words: a book with no language to start from used to be read as English — `Le Rouge` in a French book became a name, and an English `she` gave a French character a gender. Now the model is asked to identify the language and the code assumes nothing about it: a word that is a function word in any bundled language is never a name by itself, and a pronoun table is read only for a language that is known. A language the person chose, or one the book declares and the application recognizes, is still used by the code, but a prompt never names a language nobody chose.
+**Source**: FR-IMPORT-03, FR-BRIEF-01, FR-ALGO-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`), ADR-0037 (as amended), ADR-0042 (`docs/spec_baseline/adr/ADR-0042-auto-source-language.md`). In plain words: a book with no language to start from used to be read as English — `Le Rouge` in a French book became a name, and an English `she` gave a French character a gender. Now the model is asked to identify the language and the code assumes nothing about it: a word that is a function word in any bundled language is never a name by itself, and a pronoun table is read only for a language that is known. A language the person chose, or one the book declares and the application recognizes, is still used by the code, but a prompt never names a language nobody chose.
 
 #### Scenario: A marked run in another script is kept
 
@@ -1979,7 +1979,7 @@ for the model as its English display name followed by the exact tag; a tag witho
 `language tag "<tag>"`. This SHALL hold for any language the application recognizes, not only a listed one. When no source language is known, the prompt SHALL call it `the language of this segment (infer
 it from its text)`.
 
-**Source**: FR-ALGO-01, FR-ALGO-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-DOC-03 (`#fr-doc`), FR-BRIEF-01 (`#fr-brief`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunking`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#draft-translation`, `#output-contract`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#chunk-packing`, ADR-0037, ADR-0038. In plain words: the model sees only text with numbered holes where the markup was, never the book's structure. Segments now travel in small chunks so the reviewer can read neighbours together, but each translation is still asked for one segment at a time, the shape small models get right. Starting at the first pending segment is what lets a second run in the same session carry on where the first stopped. The person's choice of source language wins, because a book's own declaration is often missing or wrong.
+**Source**: FR-ALGO-01, FR-ALGO-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-DOC-03 (`#fr-doc`), FR-BRIEF-01 (`#fr-brief`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunking`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#draft-translation`, `#output-contract`, `docs/spec_baseline/specification/02_Architecture/05_PIPELINE_ENGINE.md#chunk-packing`, ADR-0037, ADR-0038. In plain words: the model sees only text with numbered holes where the markup was, never the book's structure. Segments now travel in small chunks so the reviewer can read neighbours together, but each translation is still asked for one segment at a time, the shape small models get right. Starting at the first pending segment is what lets a second run in the same session carry on where the first stopped. The person's choice of source language wins, because a book's own declaration is often missing or wrong.
 
 #### Scenario: The user message is the masked text
 
@@ -2042,7 +2042,7 @@ text to the quality checks, the reviewer and self-heal (the `quality-gates` capa
 ACCEPTED, repaired or FLAGGED. The restored text SHALL become the segment's machine translation once it passes every hard
 gate, and a later target SHALL replace it only when that target passes every hard gate too.
 
-**Source**: FR-DOC-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), FR-ALGO-C5, FR-ALGO-C7 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, `#segment-status-machine`. In plain words: models often add or drop spaces and line breaks around their answer, and the book's own spacing wins. A reply whose tokens all come back is no longer accepted on that alone: it now also has to pass the automatic checks, so restoring the markup makes it a candidate, not a final answer. A segment that is flagged in the end still keeps the last translation that was at least well formed, so an export writes that rather than the source when one exists.
+**Source**: FR-DOC-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), FR-ALGO-C5, FR-ALGO-C7 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), `docs/spec_baseline/specification/02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, `#segment-status-machine`. In plain words: models often add or drop spaces and line breaks around their answer, and the book's own spacing wins. A reply whose tokens all come back is no longer accepted on that alone: it now also has to pass the automatic checks, so restoring the markup makes it a candidate, not a final answer. A segment that is flagged in the end still keeps the last translation that was at least well formed, so an export writes that rather than the source when one exists.
 
 #### Scenario: A reply is restored and accepted
 
@@ -2090,7 +2090,7 @@ IF the model answers `ErrorCode.cancelled`, THEN the system SHALL end the job Ca
 A `validation` refusal made before any model call — a run that cannot start — is not a model-call failure and is
 answered as that refusal, not as a pause.
 
-**Source**: `docs/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`, `#boundary-discipline`, `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, `docs/implementation_plan/CHANGE_BACKLOG.md` (D19). In plain words: an unreachable server, a missing key or an unloaded model would make every following call fail too. Flagging them used to finish a run with every remaining segment flagged; now the segment waits, and the run pauses so the person can fix the server and press Retry now. The command line pauses on an error like the window and recovers from an outage by itself, but stops a pause only a person could end and writes what it translated. An internal error is a bug in the application, which pressing Retry now cannot fix, so it ends the run with a dialog rather than pausing it; a code a run's call should never answer means the same. Only a reply the model actually produced, or a prompt too long for the model, can be flagged.
+**Source**: `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`, `#boundary-discipline`, `docs/spec_baseline/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md` (D19). In plain words: an unreachable server, a missing key or an unloaded model would make every following call fail too. Flagging them used to finish a run with every remaining segment flagged; now the segment waits, and the run pauses so the person can fix the server and press Retry now. The command line pauses on an error like the window and recovers from an outage by itself, but stops a pause only a person could end and writes what it translated. An internal error is a bug in the application, which pressing Retry now cannot fix, so it ends the run with a dialog rather than pausing it; a code a run's call should never answer means the same. Only a reply the model actually produced, or a prompt too long for the model, can be flagged.
 
 #### Scenario: An unreachable model pauses the run
 
@@ -2162,7 +2162,7 @@ WHEN a job ends, the system SHALL return a successful result carrying:
 The job SHALL write no book and its result SHALL name no file; writing the book is the separate export (the `export`
 capability).
 
-**Source**: `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, ADR-0035, ADR-0038. In plain words: a screen can follow a job live — which chapter, which chunk, how many were accepted outright and how many needed repair — and a job that stopped still tells its caller exactly what was done and why. The section counts only the book's own chapters, so the title, the table of contents and the alt texts never show up as a twelfth chapter of eleven. A run now translates into memory only; the person decides when and where the book is written, after reviewing it.
+**Source**: `docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`, `docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, ADR-0035, ADR-0038. In plain words: a screen can follow a job live — which chapter, which chunk, how many were accepted outright and how many needed repair — and a job that stopped still tells its caller exactly what was done and why. The section counts only the book's own chapters, so the title, the table of contents and the alt texts never show up as a twelfth chapter of eleven. A run now translates into memory only; the person decides when and where the book is written, after reviewing it.
 
 #### Scenario: Events for a three-segment book
 
@@ -2245,7 +2245,7 @@ what it translated, waiting up to 5 seconds for the job and 60 seconds more for 
 while it exports, it SHALL cancel the export, wait up to 5 seconds for it to end, and leave no hidden temporary file
 beside the destination.
 
-**Source**: FR-INFER-01, FR-INFER-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/01_SYSTEM_ARCHITECTURE.md#fx-free-core`, `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#outbound-scope`, `docs/next_features.md` §13, ADR-0035, ADR-0036. In plain words: the command line is the headless proof tool, so it runs a book as a window run would — the brief's dial and names, the names review, the recovery from an outage — and never throws a night's work away: a harness run that hit a provider error ended Failed with 5 accepted and 27 flagged segments and wrote nothing. Partial exports get their own exit code, 3, because 2 already means a usage mistake and a script must tell the three apart. It keeps its older flags and its output name, and translates and then exports as two steps. It checks the destination first so an existing file stops it before an hour of translation. There is nobody at a terminal to review, so it never pauses, and a Ctrl+C no longer leaves a half-written hidden file behind. The pseudo model answers with the source in capitals, which the quality checks rightly call untranslated, so its paragraphs of 20 or more characters are counted as flagged — and still written, with that capitalised text.
+**Source**: FR-INFER-01, FR-INFER-08 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/spec_baseline/specification/02_Architecture/01_SYSTEM_ARCHITECTURE.md#fx-free-core`, `docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#outbound-scope`, `docs/next_features.md` §13, ADR-0035, ADR-0036. In plain words: the command line is the headless proof tool, so it runs a book as a window run would — the brief's dial and names, the names review, the recovery from an outage — and never throws a night's work away: a harness run that hit a provider error ended Failed with 5 accepted and 27 flagged segments and wrote nothing. Partial exports get their own exit code, 3, because 2 already means a usage mistake and a script must tell the three apart. It keeps its older flags and its output name, and translates and then exports as two steps. It checks the destination first so an existing file stops it before an hour of translation. There is nobody at a terminal to review, so it never pauses, and a Ctrl+C no longer leaves a half-written hidden file behind. The pseudo model answers with the source in capitals, which the quality checks rightly call untranslated, so its paragraphs of 20 or more characters are counted as flagged — and still written, with that capitalised text.
 
 #### Scenario: A Markdown book is translated beside itself
 
@@ -2327,7 +2327,7 @@ A method that only reads the job's state or counts SHALL write no line. Every li
 decided SHALL show that segment's id through the log line pattern. The system SHALL write book text only in TRACE lines,
 and SHALL never write a secret or a credential at any level.
 
-**Source**: DD-23 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-23-slf4j-logback`), NFR-PRIV-04 (`docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#no-telemetry`), NFR-PRIV-06 and NFR-PRIV-07 (`#secrets-never-stored`), `docs/next_features.md` §12. In plain words: the log is how a wrong book gets explained: which segment, what the model was asked, what it answered, and which rule decided. A development run of one book once wrote 53 MB, mostly lines repeated by state queries and paired "building/built" lines; a screen that reads the state ten times a second would make that worse. One line per decision, each tagged with its segment, keeps the log readable. Book text is written only at the most detailed level.
+**Source**: DD-23 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-23-slf4j-logback`), NFR-PRIV-04 (`docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#no-telemetry`), NFR-PRIV-06 and NFR-PRIV-07 (`#secrets-never-stored`), `docs/next_features.md` §12. In plain words: the log is how a wrong book gets explained: which segment, what the model was asked, what it answered, and which rule decided. A development run of one book once wrote 53 MB, mostly lines repeated by state queries and paired "building/built" lines; a screen that reads the state ten times a second would make that worse. One line per decision, each tagged with its segment, keeps the log readable. Book text is written only at the most detailed level.
 
 #### Scenario: A TRACE run follows a segment from prompt to decision
 
@@ -2380,7 +2380,7 @@ flagged tile SHALL use the warning colour.
 
 WHERE the total is zero, the screen SHALL report the proportion complete as zero rather than dividing by it.
 
-**Source**: FR-ALGO-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `#toasts`, `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`, ADR-0034, ADR-0035, ADR-0038. In plain words: the engine now reports throughput, repairs and its position in the book, so the dashboard shows them instead of refusing them. The proportion is still counted in segments, because two chapters can differ tenfold in length. The destination is no longer chosen before the run; it belongs to Export. The mockup's toast said the window could be closed; progress lives only in memory until storage arrives, so the message says the opposite.
+**Source**: FR-ALGO-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `#toasts`, `docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`, ADR-0034, ADR-0035, ADR-0038. In plain words: the engine now reports throughput, repairs and its position in the book, so the dashboard shows them instead of refusing them. The proportion is still counted in segments, because two chapters can differ tenfold in length. The destination is no longer chosen before the run; it belongs to Export. The mockup's toast said the window could be closed; progress lives only in memory until storage arrives, so the message says the opposite.
 
 #### Scenario: Counts advance as segments are decided
 
@@ -2432,7 +2432,7 @@ SHALL treat the events emitted during the run as progress only.
 IF a run is refused before it begins and therefore emits no finishing event, THEN the screen SHALL still leave
 the running state and report the refusal.
 
-**Source**: FR-ALGO-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/next_features.md` §14, `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#state-mirror`. In plain words: a run refused at the start — the project's book is no longer open, or the brief's language is not a language code — returns its error without ever emitting a finishing event. A screen that trusted only the event stream would sit spinning forever.
+**Source**: FR-ALGO-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/next_features.md` §14, `docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#state-mirror`. In plain words: a run refused at the start — the project's book is no longer open, or the brief's language is not a language code — returns its error without ever emitting a finishing event. A screen that trusted only the event stream would sit spinning forever.
 
 #### Scenario: A refused start leaves the running state
 
@@ -2461,7 +2461,7 @@ segment, or any other undecided draft of its chunk, as a decision.
 The engine SHALL NOT interrupt any work other than a model request: the wait while paused and the deterministic steps
 between calls are never interrupted by a pause or a stop; they take effect at the next boundary.
 
-**Source**: FR-RESUME-03, FR-RESUME-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, ADR-0035. In plain words: a local model can take minutes to answer, and a request that times out is retried up to three times. So the button aborts the request that is waiting, and nothing further is sent. The call that was aborted has no answer yet, which is why resuming sends it again instead of skipping it — whether it was a segment's draft, one of its repairs or the reviewer call for its chunk. The run no longer writes the book, so there is no longer an export for a pause to stay out of; export is its own action.
+**Source**: FR-RESUME-03, FR-RESUME-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`, ADR-0035. In plain words: a local model can take minutes to answer, and a request that times out is retried up to three times. So the button aborts the request that is waiting, and nothing further is sent. The call that was aborted has no answer yet, which is why resuming sends it again instead of skipping it — whether it was a segment's draft, one of its repairs or the reviewer call for its chunk. The run no longer writes the book, so there is no longer an export for a pause to stay out of; export is its own action.
 
 #### Scenario: A stop aborts a slow request
 
@@ -2507,7 +2507,7 @@ call belongs to when it belongs to one, before waiting for the answer, and SHALL
 because a pause or a stop was already requested. Each such call SHALL emit its own event. The client's own retries of
 one call — a timeout, a `Retry-After` wait — belong to that same call and SHALL NOT emit another event.
 
-**Source**: FR-ALGO-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`. In plain words: between two segment decisions the engine may now make several calls — a draft, a reviewer call, a repair — and a local model can take minutes for each. Naming the kind lets the screen and the log say what the model is doing, and lets throughput count only drafts. A provider client that retries a timed-out request is still waiting on the same ask.
+**Source**: FR-ALGO-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`. In plain words: between two segment decisions the engine may now make several calls — a draft, a reviewer call, a repair — and a local model can take minutes for each. Naming the kind lets the screen and the log say what the model is doing, and lets throughput count only drafts. A provider client that retries a timed-out request is still waiting on the same ask.
 
 #### Scenario: One event before each decision
 
@@ -2584,7 +2584,7 @@ Each draft SHALL get at most one structural repair and one placeholder repair, t
 the same rules, and neither repair SHALL count toward the dial's repair rounds. A self-heal call SHALL get neither
 repair: a self-heal reply that is not the required JSON object or fails the placeholder hard gate fails that round.
 
-**Source**: FR-INFER-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), FR-ALGO-C11, FR-ALGO-C12 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#output-contract`, `#directed-fix-repair`, `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#repair-and-gate`, ADR-0013. In plain words: a reply in the wrong shape is usually a formatting slip, so it gets one plain request for the right shape; a second slip means the model cannot produce the shape for this segment, and asking again would only burn time. A reply that lost or moved a token is a different problem: a small model that dropped one token of a pair usually got every word right, so the token is first put back where the source had it, with no call; only a reply that cannot be fixed that way gets one model repair told exactly which tokens are wrong and what they wrapped, and if that still fails, the dial's repair rounds try a directed fix before the segment is flagged. A drop cap cuts a word in two when it is shown with its tokens — `⟦g0⟧“A⟦g1⟧bove` — and a small model then drops a token or wraps the whole paragraph, so it is shown as the whole word and wrapped again on its first letter afterwards. The two format repairs are free, so a slip never eats the rounds meant for the translation itself.
+**Source**: FR-INFER-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), FR-ALGO-C11, FR-ALGO-C12 (`docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#output-contract`, `#directed-fix-repair`, `docs/spec_baseline/specification/02_Architecture/04_LLM_INTEGRATION.md#repair-and-gate`, ADR-0013. In plain words: a reply in the wrong shape is usually a formatting slip, so it gets one plain request for the right shape; a second slip means the model cannot produce the shape for this segment, and asking again would only burn time. A reply that lost or moved a token is a different problem: a small model that dropped one token of a pair usually got every word right, so the token is first put back where the source had it, with no call; only a reply that cannot be fixed that way gets one model repair told exactly which tokens are wrong and what they wrapped, and if that still fails, the dial's repair rounds try a directed fix before the segment is flagged. A drop cap cuts a word in two when it is shown with its tokens — `⟦g0⟧“A⟦g1⟧bove` — and a small model then drops a token or wraps the whole paragraph, so it is shown as the whole word and wrapped again on its first letter afterwards. The two format repairs are free, so a slip never eats the rounds meant for the translation itself.
 
 #### Scenario: A structural repair receives diagnostic data
 

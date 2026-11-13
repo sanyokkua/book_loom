@@ -1,15 +1,18 @@
 package ua.bookloom.persistence.sqlite;
 
 import com.google.inject.Inject;
+import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.SummaryRepository;
-import ua.bookloom.api.project.RollingSummary;
+import ua.bookloom.api.project.ChapterSummary;
 
-/** Stores a project's rolling summary as one {@code project_docs} document, each save replacing the one before. */
+/**
+ * Stores each chapter summary as one {@code project_docs} document named by its chapter key, so removing the project
+ * removes them by the schema's cascade.
+ */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class SqliteSummaryRepository implements SummaryRepository {
@@ -18,20 +21,30 @@ public final class SqliteSummaryRepository implements SummaryRepository {
     private final JsonCodec codec;
 
     @Override
-    public Result<RollingSummary> save(final RollingSummary summary) {
+    public Result<ChapterSummary> save(final ChapterSummary summary) {
         Objects.requireNonNull(summary, "summary");
-        log.debug("Summary save projectId={} version={}", summary.projectId(), summary.version());
-        return db.write("summary save", h -> {
-            ProjectDocs.write(h, codec, summary.projectId(), DocKind.SUMMARY, summary);
+        log.debug(
+                "Chapter summary save projectId={} chapter={} segments={}",
+                summary.projectId(),
+                summary.chapterKey(),
+                summary.segmentCount());
+        return db.write("chapter summary save", h -> {
+            ProjectDocs.write(h, codec, summary.projectId(), DocKind.CHAPTER_SUMMARY, summary.chapterKey(), summary);
             return summary;
         });
     }
 
     @Override
-    public Result<Optional<RollingSummary>> latest(final String projectId) {
+    public Result<List<ChapterSummary>> list(final String projectId) {
         Objects.requireNonNull(projectId, "projectId");
-        log.debug("Summary latest projectId={}", projectId);
-        return db.read(
-                "summary latest", h -> ProjectDocs.read(h, codec, projectId, DocKind.SUMMARY, RollingSummary.class));
+        final Result<List<ChapterSummary>> listed = db.read(
+                "chapter summary list",
+                h -> ProjectDocs.readAllInWriteOrder(
+                        h, codec, projectId, DocKind.CHAPTER_SUMMARY, ChapterSummary.class));
+        log.debug(
+                "Chapter summary list projectId={} count={}",
+                projectId,
+                listed.isOk() ? Objects.requireNonNull(listed.data()).size() : -1);
+        return listed;
     }
 }

@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.lexicon;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
@@ -168,11 +169,55 @@ class LexiconModelActionsTest {
     @Test
     void restore_termTheGlossaryHoldsNow_answersValidation() {
         desk.glossary()
-                .add(new GlossaryEntry("g1", desk.projectId(), "table", "стіл", TermType.TERM, Gender.UNKNOWN, false));
+                .add(GlossaryEntry.of("g1", desk.projectId(), "table", "стіл", TermType.TERM, Gender.UNKNOWN, false));
 
         final Result<LexiconEntry> restored = service.restore(LexiconEntry.of(desk.projectId(), "table"));
 
         assertThat(restored.error()).extracting(AppError::code).isEqualTo(ErrorCode.validation);
         assertThat(lexicon.all(desk.projectId()).data()).isEmpty();
+    }
+
+    // IF a title were asked as a bare noun, THEN "ms" came back "міз" and "mr" in Latin letters.
+    @Test
+    void suggest_titles_areRenderedByDataOrAskedAsTitles() {
+        lexicon.put(LexiconEntry.of(desk.projectId(), "mr"));
+        lexicon.put(LexiconEntry.of(desk.projectId(), "ms"));
+        lexicon.put(LexiconEntry.of(desk.projectId(), "constable"));
+        lexicon.put(LexiconEntry.of(desk.projectId(), "pentacle"));
+        model.answer(reply("{\"suggestions\":[{\"term\":\"constable\",\"target\":\"констебль\"},"
+                + "{\"term\":\"pentacle\",\"target\":\"пентакль\"}]}"));
+
+        service.suggest(desk.projectId(), model, event -> {});
+
+        assertThat(lexicon.all(desk.projectId()).data())
+                .extracting(LexiconEntry::term, LexiconEntry::suggested)
+                .containsExactlyInAnyOrder(
+                        tuple("mr", "пан"),
+                        tuple("ms", "пані"),
+                        tuple("constable", "констебль"),
+                        tuple("pentacle", "пентакль"));
+        final String asked = model.requests().getFirst().messages().get(1).content();
+        assertThat(asked)
+                .contains("- constable — title")
+                .contains("- pentacle — term")
+                .doesNotContain("- mr");
+    }
+
+    // IF the lexicon asked again for a word the glossary renders, THEN houses/Houses could come back two ways.
+    @Test
+    void suggest_termTheGlossaryAlreadyRenders_reusesThatRenderingInTheTermsCase() {
+        desk.glossary()
+                .add(GlossaryEntry.of(
+                        "p1:houses", desk.projectId(), "Houses", "Палати", TermType.PLACE, Gender.UNKNOWN, false));
+        lexicon.put(LexiconEntry.of(desk.projectId(), "houses"));
+        lexicon.put(LexiconEntry.of(desk.projectId(), "pentacle"));
+        model.answer(reply("{\"suggestions\":[{\"term\":\"pentacle\",\"target\":\"пентакль\"}]}"));
+
+        service.suggest(desk.projectId(), model, event -> {});
+
+        assertThat(lexicon.all(desk.projectId()).data())
+                .extracting(LexiconEntry::term, LexiconEntry::suggested)
+                .containsExactlyInAnyOrder(tuple("houses", "палати"), tuple("pentacle", "пентакль"));
+        assertThat(model.requests().getFirst().messages().get(1).content()).doesNotContain("- houses");
     }
 }

@@ -34,6 +34,7 @@ import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.api.project.ProofreadVerdict;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.SequenceJobs;
 import ua.bookloom.pipeline.SequenceJobs.Prepared;
@@ -104,7 +105,8 @@ final class SequenceEval {
     SequenceRun run(final ChatModel model, final Path workDir) {
         final String name = "sequence-" + workDir.getFileName() + ".md";
         final Path book = write(workDir.resolve(name));
-        final BookBrief brief = SequenceJobs.brief(fixture.source(), fixture.target(), dial, narrator.narrator());
+        final BookBrief brief = EvalChapterSummaries.apply(
+                SequenceJobs.brief(fixture.source(), fixture.target(), dial, narrator.narrator()), System.getenv());
         final Prepared prepared = SequenceJobs.importBook(book, brief);
         seedGlossary(prepared);
         applyDetectedNarrator(prepared);
@@ -157,8 +159,9 @@ final class SequenceEval {
                 capture.editsRefused(ids),
                 failedFirst.size(),
                 capture.firstRepairKinds(failedFirst),
-                recorder.reviewerTruncated(),
-                narrator);
+                recorder.proofreadTruncated(),
+                narrator,
+                capture.summaryGate());
     }
 
     // The names whose spelling the run suggested, to read beside the spellings the targets carry.
@@ -201,7 +204,7 @@ final class SequenceEval {
         for (final GlossarySeed seed : fixture.glossary()) {
             prepared.stores()
                     .glossary()
-                    .add(new GlossaryEntry(
+                    .add(GlossaryEntry.of(
                             GlossaryIds.of(prepared.projectId(), seed.term()),
                             prepared.projectId(),
                             seed.term(),
@@ -258,6 +261,21 @@ final class SequenceEval {
                 record.path(),
                 (int) record.findings().stream()
                         .filter(finding -> AppliedEdit.from(finding).isPresent())
-                        .count());
+                        .count(),
+                proofread(record));
+    }
+
+    // The segment's last verdict with its round, for the arm-7b judge.
+    private static SequenceRun.@Nullable Proofread proofread(final SegmentRecord record) {
+        final ProofreadVerdict verdict = record.proofread();
+        if (verdict == null) {
+            return null;
+        }
+        final int round = SequenceRun.Proofread.roundOf(verdict.fingerprint());
+        final String before = verdict.maskedBefore();
+        return new SequenceRun.Proofread(
+                verdict.outcome().name(),
+                round,
+                before == null ? null : TOKEN.matcher(before).replaceAll(""));
     }
 }

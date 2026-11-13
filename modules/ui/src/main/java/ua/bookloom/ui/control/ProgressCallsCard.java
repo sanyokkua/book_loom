@@ -29,10 +29,10 @@ final class ProgressCallsCard extends ModalCard {
     private final Messages messages;
 
     ProgressCallsCard(final ProgressDialogModel model, final Messages messages, final Runnable onClose) {
+        Objects.requireNonNull(onClose, "onClose");
         super(Size.XL);
         this.model = Objects.requireNonNull(model, "model");
         this.messages = Objects.requireNonNull(messages, "messages");
-        Objects.requireNonNull(onClose, "onClose");
         setId("calls-card");
         final Label title = title(messages.get(MessageKey.BUSY_CALLS));
         title.setId("progress-title");

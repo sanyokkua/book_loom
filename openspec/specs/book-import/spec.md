@@ -11,7 +11,7 @@ file is protected, damaged or of a kind the application does not read.
 
 The import screen SHALL accept a book from the file picker or dropped onto its full-width drop zone, whose content is centred, and on success SHALL show one verdict line, a closed "About this book" fold and the book's text browser, with Continue in the toolbar opening step 2 · Book Brief, reading the title and author from the metadata keys `title` and `author`.
 
-**Source**: docs/specification/mockups/README.md#step-1--import--i1i4, docs/specification/mockups/README.md#layout-and-sizes-l, FR-IMPORT-02, FR-IMPORT-06, FR-IMPORT-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), ADR-0037. In plain words: the import screen takes a book either way and reports what was found; Markdown supplies a title only from its front matter and plain text supplies neither.
+**Source**: docs/spec_baseline/specification/mockups/README.md#step-1--import--i1i4, docs/spec_baseline/specification/mockups/README.md#layout-and-sizes-l, FR-IMPORT-02, FR-IMPORT-06, FR-IMPORT-07 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), ADR-0037. In plain words: the import screen takes a book either way and reports what was found; Markdown supplies a title only from its front matter and plain text supplies neither.
 
 #### Scenario: An EPUB opens and reports itself
 
@@ -111,7 +111,7 @@ WHEN a book's declared language code is read, the system SHALL normalize it befo
 letter case SHALL be folded to the standard form, the retired code `ua` SHALL become `uk`, and a region SHALL be
 dropped (`en-US` → `en`, `pt-BR` → `pt`), except for Chinese as *Keep the script of a Chinese language code* states.
 
-**Source**: FR-IMPORT-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1 (`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: books spell the same language many ways — `EN`, `en-GB`, the old `ua` for Ukrainian — and each spelling would otherwise look like a different language, fail to preselect anything on the Book Brief, and raise false mismatch warnings. Chinese is the one case where the part after the dash matters, because Simplified and Traditional Chinese are written differently and are separate choices on the brief.
+**Source**: FR-IMPORT-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1 (`docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/spec_baseline/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: books spell the same language many ways — `EN`, `en-GB`, the old `ua` for Ukrainian — and each spelling would otherwise look like a different language, fail to preselect anything on the Book Brief, and raise false mismatch warnings. Chinese is the one case where the part after the dash matters, because Simplified and Traditional Chinese are written differently and are separate choices on the brief.
 
 #### Scenario: Case is folded
 
@@ -138,7 +138,7 @@ dropped (`en-US` → `en`, `pt-BR` → `pt`), except for Chinese as *Keep the sc
 WHEN the declared language code is Chinese, the system SHALL keep its script distinction: `zh`, `zh-CN` and `zh-SG`
 SHALL become `zh-Hans`, and `zh-TW` and `zh-HK` SHALL become `zh-Hant`.
 
-**Source**: FR-IMPORT-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1 (`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: Chinese is the one case where the part after the dash matters, because Simplified and Traditional Chinese are written differently and are separate choices on the brief.
+**Source**: FR-IMPORT-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1 (`docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/spec_baseline/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: Chinese is the one case where the part after the dash matters, because Simplified and Traditional Chinese are written differently and are separate choices on the brief.
 
 #### Scenario: Traditional Chinese keeps its script
 
@@ -161,7 +161,7 @@ IF the normalized code is not a well-formed language tag the application can nam
 declaration as unrecognized rather than guessing the nearest language, and a code the application can name SHALL be
 recognized whether or not the Book Brief lists it.
 
-**Source**: FR-IMPORT-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1 (`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: a language the brief does not list is still a real language, while a code nobody can name is not a guess to make on the person's behalf.
+**Source**: FR-IMPORT-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1 (`docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/spec_baseline/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: a language the brief does not list is still a real language, while a code nobody can name is not a guess to make on the person's behalf.
 
 #### Scenario: A language outside the list is recognized
 
@@ -177,7 +177,7 @@ recognized whether or not the Book Brief lists it.
 
 WHEN an EPUB is opened whose package declares one language and more than half of its content documents that declare a language declare a different one (both compared after normalization), the import screen SHALL show the Two language marks verdict line naming both languages by display name, SHALL still show the "About this book" fold and the book's text browser, and SHALL keep Continue available.
 
-**Source**: FR-IMPORT-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1 (`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), docs/specification/mockups/README.md#step-1--import--i1i4, ADR-0037. In plain words: an EPUB often contradicts itself — the package says English while every chapter says Ukrainian — and that is worth a line; the person is warned, not stopped, because the source language stays editable on the brief.
+**Source**: FR-IMPORT-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1 (`docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), docs/spec_baseline/specification/mockups/README.md#step-1--import--i1i4, ADR-0037. In plain words: an EPUB often contradicts itself — the package says English while every chapter says Ukrainian — and that is worth a line; the person is warned, not stopped, because the source language stays editable on the brief.
 
 #### Scenario: The chapters outvote the package
 
@@ -197,7 +197,7 @@ documents' language as the book's source language; WHERE the package declares no
 content documents that declare one agree, the system SHALL raise no warning and SHALL preselect that language as the
 source.
 
-**Source**: FR-IMPORT-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1 (`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: the chapters' own declaration is preferred because it sits next to the text and is written by whatever produced the text, while the package language is often a template default.
+**Source**: FR-IMPORT-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1 (`docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/spec_baseline/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: the chapters' own declaration is preferred because it sits next to the text and is written by whatever produced the text, while the package language is often a template default.
 
 #### Scenario: The content documents' language is preselected
 
@@ -215,7 +215,7 @@ source.
 WHERE no single language is declared by more than half of the content documents that declare one, or no content
 document declares a language, the system SHALL raise no warning and SHALL use the package's language.
 
-**Source**: FR-IMPORT-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1 (`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: without a clear majority there is no contradiction to report, so the package's declaration stands.
+**Source**: FR-IMPORT-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1 (`docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/spec_baseline/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: without a clear majority there is no contradiction to report, so the package's declaration stands.
 
 #### Scenario: A tie raises no warning
 
@@ -232,7 +232,7 @@ document declares a language, the system SHALL raise no warning and SHALL use th
 A book in any other format SHALL NOT raise the language-mismatch warning: FB2 and Markdown carry a single declaration
 and plain text carries none.
 
-**Source**: FR-IMPORT-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1 (`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: a contradiction needs two declarations to disagree, and only an EPUB carries two.
+**Source**: FR-IMPORT-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1 (`docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/spec_baseline/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: a contradiction needs two declarations to disagree, and only an EPUB carries two.
 
 #### Scenario: A plain-text book never warns
 
@@ -243,7 +243,7 @@ and plain text carries none.
 
 IF a book's declared language, after normalization, is not a language tag the application can name, THEN the import screen SHALL show a line quoting the declared code as written and saying the model will identify the source language and that it can be chosen on the Book Brief, SHALL keep Continue available, and SHALL leave the Book Brief with the source language "Find out from the text" (no source language chosen; ADR-0042).
 
-**Source**: FR-IMPORT-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`), docs/specification/mockups/README.md#step-1--import--i1i4. In plain words: a code the application cannot name is not a language it can preselect, and quoting it as written lets the person see what the book claimed and choose accordingly.
+**Source**: FR-IMPORT-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), ADR-0037 (`docs/spec_baseline/adr/ADR-0037-language-evidence-from-metadata-only.md`), docs/spec_baseline/specification/mockups/README.md#step-1--import--i1i4. In plain words: a code the application cannot name is not a language it can preselect, and quoting it as written lets the person see what the book claimed and choose accordingly.
 
 #### Scenario: An unrecognized code is quoted and nothing is preselected
 
@@ -256,7 +256,7 @@ IF a book's declared language, after normalization, is not a language tag the ap
 
 WHEN a book whose content is DRM-encrypted is chosen, the import screen SHALL show the DRM verdict line, saying the book is locked by the shop it came from and naming the file, under the error banner `This book is DRM-protected.`, SHALL offer Choose another file… as its only action, and SHALL offer no way to continue.
 
-**Source**: FR-IMPORT-04, FR-IMPORT-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-DRM-1 (`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), docs/specification/mockups/README.md#step-1--import--i1i4, ADR-0039. In plain words: a protected book is not broken and not the person's mistake, so the line says why it cannot be used and points at the only way forward; the banner is the notifications capability's.
+**Source**: FR-IMPORT-04, FR-IMPORT-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-DRM-1 (`docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), docs/spec_baseline/specification/mockups/README.md#step-1--import--i1i4, ADR-0039. In plain words: a protected book is not broken and not the person's mistake, so the line says why it cannot be used and points at the only way forward; the banner is the notifications capability's.
 
 #### Scenario: An Adobe-protected EPUB is blocked by name
 
@@ -273,7 +273,7 @@ WHEN a book whose content is DRM-encrypted is chosen, the import screen SHALL sh
 
 The DRM verdict SHALL name the encryption scheme where the inspection names one — from the book's encryption manifest, or `ZIP encryption` for a zipped FB2 whose entry is encrypted — and WHERE the scheme cannot be identified it SHALL name no scheme and still block the import.
 
-**Source**: FR-IMPORT-04, FR-IMPORT-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-DRM-1 (`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0039. In plain words: naming the scheme ("Adobe ADEPT") tells the person which shop's protection this is, but an unrecognized scheme must never let the book through.
+**Source**: FR-IMPORT-04, FR-IMPORT-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-DRM-1 (`docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0039. In plain words: naming the scheme ("Adobe ADEPT") tells the person which shop's protection this is, but an unrecognized scheme must never let the book through.
 
 #### Scenario: A password-protected zipped FB2 is blocked by name
 
@@ -290,7 +290,7 @@ The DRM verdict SHALL name the encryption scheme where the inspection names one 
 Opening a DRM-protected book through any caller other than the import screen — the command line included — SHALL still
 fail with `ErrorCode.validation`, exactly as before the DRM-blocked state existed.
 
-**Source**: FR-IMPORT-04, FR-IMPORT-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-DRM-1 (`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0039 (`docs/adr/ADR-0039-import-refusal-kind-is-data.md`). In plain words: the error vocabulary is unchanged, so scripts that rely on the command line's exit codes see nothing new.
+**Source**: FR-IMPORT-04, FR-IMPORT-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-DRM-1 (`docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0039 (`docs/spec_baseline/adr/ADR-0039-import-refusal-kind-is-data.md`). In plain words: the error vocabulary is unchanged, so scripts that rely on the command line's exit codes see nothing new.
 
 #### Scenario: The command line still refuses with the same code
 
@@ -302,7 +302,7 @@ fail with `ErrorCode.validation`, exactly as before the DRM-blocked state existe
 
 WHEN a file whose type is not one the application reads is chosen, the import screen SHALL show the Unsupported verdict line, naming the file and its detected type with "not supported" and saying "It reads EPUB, FB2, Markdown and plain text", under the error banner `Couldn't read this file.`, SHALL offer Choose another file… as its only action, and SHALL offer no way to continue.
 
-**Source**: FR-IMPORT-01, FR-IMPORT-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), docs/specification/mockups/README.md#step-1--import--i1i4, ADR-0039. In plain words: when someone drops a PDF, "unsupported" alone leaves them wondering whether the file is damaged; naming the type and listing what is supported answers the question in one glance. The banner is the notifications capability's.
+**Source**: FR-IMPORT-01, FR-IMPORT-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), docs/spec_baseline/specification/mockups/README.md#step-1--import--i1i4, ADR-0039. In plain words: when someone drops a PDF, "unsupported" alone leaves them wondering whether the file is damaged; naming the type and listing what is supported answers the question in one glance. The banner is the notifications capability's.
 
 #### Scenario: A PDF is named and refused
 
@@ -325,7 +325,7 @@ WHEN a file whose type is not one the application reads is chosen, the import sc
 WHERE the type of a file the application cannot read cannot be recognized at all, the Unsupported state SHALL show the
 detected type `Unknown`.
 
-**Source**: FR-IMPORT-01, FR-IMPORT-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`, ADR-0039 (`docs/adr/ADR-0039-import-refusal-kind-is-data.md`). In plain words: a file nobody can identify is still refused with a reason, rather than with an empty type.
+**Source**: FR-IMPORT-01, FR-IMPORT-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`, ADR-0039 (`docs/spec_baseline/adr/ADR-0039-import-refusal-kind-is-data.md`). In plain words: a file nobody can identify is still refused with a reason, rather than with an empty type.
 
 #### Scenario: An unrecognizable file is refused as unknown
 
@@ -337,7 +337,7 @@ detected type `Unknown`.
 Opening a file of an unsupported type through any caller other than the import screen SHALL still fail with
 `ErrorCode.validation`.
 
-**Source**: FR-IMPORT-01, FR-IMPORT-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), ADR-0039 (`docs/adr/ADR-0039-import-refusal-kind-is-data.md`). In plain words: the distinction is carried as data for the screen only; every other caller sees the same error code as before.
+**Source**: FR-IMPORT-01, FR-IMPORT-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), ADR-0039 (`docs/spec_baseline/adr/ADR-0039-import-refusal-kind-is-data.md`). In plain words: the distinction is carried as data for the screen only; every other caller sees the same error code as before.
 
 #### Scenario: The command line refuses a PDF with the validation code
 
@@ -349,7 +349,7 @@ Opening a file of an unsupported type through any caller other than the import s
 The import screen SHALL NOT show the "Preview state" selector the reference rendering draws above the drop zone; the
 screen's state SHALL be decided only by the file that was chosen.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`, `docs/specification/mockups/ui-mockup.html` (the Import screen's "Preview state" row). In plain words: the switcher exists in the reference drawing so a reader can flip between the four import states without real files; in the application it would let a person display a "DRM blocked" card for a book that is fine, so it is left out.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`, `docs/spec_baseline/specification/mockups/ui-mockup.html` (the Import screen's "Preview state" row). In plain words: the switcher exists in the reference drawing so a reader can flip between the four import states without real files; in the application it would let a person display a "DRM blocked" card for a book that is fine, so it is left out.
 
 #### Scenario: The switcher is absent
 
@@ -361,7 +361,7 @@ screen's state SHALL be decided only by the file that was chosen.
 
 The import screen SHALL show exactly one verdict line: can translate (with the chapters and the words), Reading… (an indeterminate bar and Cancel, because the parsers report no chapter count while they work), Already in projects (naming them, with Show them), Two language marks, DRM, Damaged or Unsupported; each refusal SHALL offer Choose another file….
 
-**Source**: docs/specification/mockups/README.md#step-1--import--i1i4. In plain words: after choosing a file the person gets one plain sentence saying whether BookLoom can translate it, and what to do when it cannot.
+**Source**: docs/spec_baseline/specification/mockups/README.md#step-1--import--i1i4. In plain words: after choosing a file the person gets one plain sentence saying whether BookLoom can translate it, and what to do when it cannot.
 
 #### Scenario: Reading shows an indeterminate bar and Cancel
 
@@ -388,7 +388,7 @@ The import screen SHALL show exactly one verdict line: can translate (with the c
 
 The import screen SHALL show the words of the translatable body text as the exact number below 1,000 ("640 words") and, from 1,000 up, rounded to the nearest hundred with "about" ("about 4,100 words"), in the verdict line and in the "About this book" summary alike.
 
-**Source**: FR-IMPORT-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), docs/specification/mockups/README.md#step-1--import--i1i4. In plain words: a short text is counted exactly, and a long book gets a round figure that is never more exact than it needs to be; both places say the same number.
+**Source**: FR-IMPORT-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), docs/spec_baseline/specification/mockups/README.md#step-1--import--i1i4. In plain words: a short text is counted exactly, and a long book gets a round figure that is never more exact than it needs to be; both places say the same number.
 
 #### Scenario: A long book is rounded to the hundred
 
@@ -409,7 +409,7 @@ The import screen SHALL show the words of the translatable body text as the exac
 
 The Two language marks verdict SHALL compare only what the file declares about itself, the package language against the chapters' language tags, and SHALL NOT read the book's text to decide.
 
-**Source**: docs/specification/mockups/README.md#step-1--import--i1i4, ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: BookLoom has no language detector, so it only points out when the file contradicts itself and leaves the choice to the person.
+**Source**: docs/spec_baseline/specification/mockups/README.md#step-1--import--i1i4, ADR-0037 (`docs/spec_baseline/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: BookLoom has no language detector, so it only points out when the file contradicts itself and leaves the choice to the person.
 
 #### Scenario: Text in another language raises no verdict by itself
 
@@ -420,7 +420,7 @@ The Two language marks verdict SHALL compare only what the file declares about i
 
 The "About this book" fold SHALL show, closed, a summary line (format, chapters, words, images, cover) and, opened, the cover or "No cover", the file, `Title · Author`, the declared language, DRM and what is kept, and SHALL omit a row the book does not state.
 
-**Source**: docs/specification/mockups/README.md#step-1--import--i1i4, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (I2). In plain words: the details are one click away and never cluttered with placeholders for things the book does not say.
+**Source**: docs/spec_baseline/specification/mockups/README.md#step-1--import--i1i4, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (I2). In plain words: the details are one click away and never cluttered with placeholders for things the book does not say.
 
 #### Scenario: The fold omits what the book does not state
 
@@ -431,7 +431,7 @@ The "About this book" fold SHALL show, closed, a summary line (format, chapters,
 
 The chapter count SHALL be the number of top-level nodes of the structure tree, and the screen SHALL show no row for a language detected from the text.
 
-**Source**: FR-IMPORT-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: the fold and the book's text browser always agree on how many chapters there are, and no language is guessed from the text.
+**Source**: FR-IMPORT-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), ADR-0037 (`docs/spec_baseline/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: the fold and the book's text browser always agree on how many chapters there are, and no language is guessed from the text.
 
 #### Scenario: Chapters are the top-level nodes
 
@@ -442,7 +442,7 @@ The chapter count SHALL be the number of top-level nodes of the structure tree, 
 
 The book's text browser SHALL be three panes — Chapters, the selected chapter's Segments, and the selected segment's Text — with a search of the text or of a place such as `ch1 · p05`, a kind filter, a kind chip on each row, and the line "Nothing matches 'xyz'." when nothing is found.
 
-**Source**: docs/specification/mockups/README.md#step-1--import--i1i4, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (I3, I4). In plain words: the person can read what BookLoom found before translating, and find a paragraph by its words or its place.
+**Source**: docs/spec_baseline/specification/mockups/README.md#step-1--import--i1i4, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (I3, I4). In plain words: the person can read what BookLoom found before translating, and find a paragraph by its words or its place.
 
 #### Scenario: The text browser narrows by search
 
@@ -468,7 +468,7 @@ The book's text browser SHALL be three panes — Chapters, the selected chapter'
 
 WHEN a book is dropped or chosen on the import screen while a project is open, the application SHALL ask "Open another book?" with "Open as a new project" as the primary choice, "Replace and delete this translation" as the named destructive choice and Cancel, and SHALL change nothing of the open project until the person chooses.
 
-**Source**: docs/specification/mockups/README.md#step-1--import--i1i4, docs/specification/mockups/README.md#other-dialogs, docs/specification/mockups/README.md#g1--dialogs-live-in-the-window-on-two-layers. In plain words: a second book never silently destroys the first project, and the safe choice is the primary one.
+**Source**: docs/spec_baseline/specification/mockups/README.md#step-1--import--i1i4, docs/spec_baseline/specification/mockups/README.md#other-dialogs, docs/spec_baseline/specification/mockups/README.md#g1--dialogs-live-in-the-window-on-two-layers. In plain words: a second book never silently destroys the first project, and the safe choice is the primary one.
 
 The question comes first, before the file is read; "Already in projects" is a verdict that can only follow it (an answer of "Open as a new project" for a book that is already stored). "Open as a new project" SHALL stop a run that is still going and wait for it to end, because one translation exists per application run and the stopped translation can be continued later from Projects; it SHALL leave a paused, stopped or finished run as it is, the window showing the new book's own state instead of a stopped, finished or failed run, and SHALL never remove the open project. "Replace and delete this translation" SHALL end any run that has not ended, open the book, delete the open project only once the new book is stored (a book that cannot be opened leaves the old project stored, and a book that is the open project's own resets that same project instead) and leave the run idle.
 
@@ -497,7 +497,7 @@ The question comes first, before the file is read; "Already in projects" is a ve
 
 WHEN the person presses "+ New translation" on Projects, the application SHALL open step 1 · Import showing only its heading, the formats line and the drop zone, and SHALL create the project only when a book is opened; until then Projects SHALL list no new project and, WHILE no project is open, steps 2 to 5 SHALL stay locked.
 
-**Source**: docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d, docs/specification/mockups/README.md#g6--workflow-steps-need-an-open-project. In plain words: a translation is always of a book, so pressing New translation leads to choosing the book, and leaving without one leaves nothing behind.
+**Source**: docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d, docs/spec_baseline/specification/mockups/README.md#g6--workflow-steps-need-an-open-project. In plain words: a translation is always of a book, so pressing New translation leads to choosing the book, and leaving without one leaves nothing behind.
 
 #### Scenario: New translation opens an empty import screen
 

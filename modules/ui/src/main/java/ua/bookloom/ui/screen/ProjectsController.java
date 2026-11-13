@@ -7,9 +7,12 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.ui.MemorySource;
 import ua.bookloom.ui.Navigator;
+import ua.bookloom.ui.control.ScrollHost;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -49,6 +52,7 @@ public final class ProjectsController {
      * @param lastOpened the words for when a project was last opened
      * @param runState the chosen AI model the first-launch card names
      * @param probe the look for a local AI program the card shows and can repeat
+     * @param memory this computer's memory, which the card's model advice is read from
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -59,12 +63,13 @@ public final class ProjectsController {
             final Navigator navigator,
             final LastOpened lastOpened,
             final RunStateSource runState,
-            final LocalModelProbe probe) {
+            final LocalModelProbe probe,
+            final MemorySource memory) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.list = new ProjectsListView(messages, viewModel, lastOpened);
-        this.empty = new ProjectsEmptyView(messages, navigator, runState, Objects.requireNonNull(probe, "probe"));
+        this.empty = new ProjectsEmptyView(messages, navigator, runState, probe, memory);
     }
 
     @FXML
@@ -81,10 +86,17 @@ public final class ProjectsController {
         final Node content =
                 switch (state) {
                     case LIST -> new VBox(14, list.build(), toolbar());
-                    case EMPTY -> empty.build();
+                    case EMPTY -> scrolling(empty.build());
                     case LOADING, FAILED -> new VBox();
                 };
         host.getChildren().setAll(content);
+    }
+
+    // The card is taller than a small window once the platform's font wraps its words, so it scrolls like every screen.
+    private static Node scrolling(final Node card) {
+        final ScrollHost scroll = new ScrollHost(card);
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+        return scroll;
     }
 
     private StepFooter toolbar() {
@@ -95,6 +107,6 @@ public final class ProjectsController {
                         messages.get(MessageKey.PROJECTS_NEW),
                         messages.get(MessageKey.PROJECTS_NEW_TIP),
                         "btn-primary",
-                        () -> navigator.openImportEmpty()));
+                        navigator::openImportEmpty));
     }
 }

@@ -2,6 +2,7 @@ package ua.bookloom.api.llm;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class VerificationExchangeTest {
@@ -33,5 +34,40 @@ class VerificationExchangeTest {
 
         assertThat(exchange.promptTokens()).isEqualTo(18);
         assertThat(exchange.completionTokens()).isEqualTo(7);
+    }
+
+    // IF the shorter forms left the shown bodies empty, THEN the test card would show nothing for an older exchange.
+    @Test
+    void constructor_elevenArguments_showsTheBodiesAsTheyAreWithNoLoadTimeAndNoCalls() {
+        final VerificationExchange exchange = new VerificationExchange(
+                "POST", "http://h/x", "{\"a\":1}", "OK", 200, null, null, false, "", null, null);
+
+        assertThat(exchange.shownRequestBody()).isEqualTo("{\"a\":1}");
+        assertThat(exchange.shownResponseBody()).isEqualTo("OK");
+        assertThat(exchange.loadMs()).isNull();
+        assertThat(exchange.calls()).isEmpty();
+    }
+
+    // IF the calls list could be changed after construction, THEN a report would change under the card that shows it.
+    @Test
+    void constructor_mutableCallList_isCopied() {
+        final java.util.ArrayList<ProbeCall> calls = new java.util.ArrayList<>();
+        calls.add(new ProbeCall(AdvancedCheck.SCHEMA, "{}", "{}", "", 200, java.time.Duration.ofMillis(5), null));
+        final VerificationExchange exchange = new VerificationExchange(
+                "POST", "http://h/x", "{}", "", 200, null, null, false, "", null, null, "{}", "", 12L, calls);
+
+        calls.clear();
+
+        assertThat(exchange.calls()).hasSize(1);
+        assertThat(exchange.loadMs()).isEqualTo(12L);
+        assertThat(List.copyOf(exchange.calls()).getFirst().check()).isEqualTo(AdvancedCheck.SCHEMA);
+    }
+
+    @Test
+    void constructor_fifteenArguments_hasNoCachedPromptTokens() {
+        final VerificationExchange exchange = new VerificationExchange(
+                "POST", "http://h/x", "{}", "{}", 200, null, null, false, "", null, null, "{}", "", null, List.of());
+
+        assertThat(exchange.cachedPromptTokens()).isNull();
     }
 }

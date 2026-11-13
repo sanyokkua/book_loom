@@ -15,14 +15,15 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.SentenceSplitter;
+import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.PromptFrameRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SummaryRepository;
-import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
@@ -43,7 +44,6 @@ import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 
 /**
  * A real book imported through {@code ProjectServiceImpl} over the in-memory stores, with the review desk's parts
@@ -82,11 +82,13 @@ public final class ReviewFixtures {
             GlossaryRepository glossary,
             SentenceSplitter splitter,
             LexiconRepository lexicon,
-            SummaryRepository summaries) {
+            SummaryRepository summaries,
+            PromptFrameRepository frames,
+            CheckpointPort checkpoint) {
 
         /** Queries over the same stores whose opened books are forgotten. */
         ReviewQueries queriesWithoutOpenBook() {
-            return new ReviewQueries(new OpenProjects(), projects, segments, deferrals);
+            return new ReviewQueries(new OpenProjects(), projects, segments, deferrals, frames, glossary, lexicon);
         }
 
         /** The retry over the same stores, deciding with {@code mode}'s threshold. */
@@ -101,14 +103,17 @@ public final class ReviewFixtures {
                     openProjects,
                     projects,
                     segments,
+                    glossary,
+                    lexicon,
+                    frames,
                     runs,
+                    summaries,
                     new PromptTemplates(),
                     new ObjectMapper(),
                     Guice.createInjector().getInstance(QualityLoop.class),
                     splitter,
                     mode,
-                    java.time.Clock.systemUTC(),
-                    RequestDefaultsSource.environmentOnly());
+                    java.time.Clock.systemUTC());
         }
 
         /** The audit over the same stores, with no word validator. */
@@ -256,7 +261,6 @@ public final class ReviewFixtures {
                 record.judgeScore(),
                 record.findings(),
                 record.path(),
-                record.repairRounds(),
                 record.reviewed(),
                 context);
     }
@@ -300,25 +304,35 @@ public final class ReviewFixtures {
         final ProjectRepository projects = injector.getInstance(ProjectRepository.class);
         final SegmentRepository segments = injector.getInstance(SegmentRepository.class);
         final DeferralRepository deferrals = injector.getInstance(DeferralRepository.class);
-        final ProjectServiceImpl service = service(injector, documents, projects, segments, openProjects);
-        final ImportedBook imported =
-                Objects.requireNonNull(service.create(book).data(), "imported book");
-        final String id = Objects.requireNonNull(imported.projectId(), "project id");
-        service.updateBrief(id, brief);
+        final PromptFrameRepository frames = injector.getInstance(PromptFrameRepository.class);
+        final GlossaryRepository glossary = injector.getInstance(GlossaryRepository.class);
+        final LexiconRepository lexicon = injector.getInstance(LexiconRepository.class);
+        final String id = imported(service(injector, documents, projects, segments, openProjects), book, brief);
         return new Desk(
                 id,
-                new SegmentActions(documents, openProjects, projects, segments, deferrals),
-                new ReviewQueries(openProjects, projects, segments, deferrals),
+                new SegmentActions(documents, openProjects, segments, deferrals),
+                new ReviewQueries(openProjects, projects, segments, deferrals, frames, glossary, lexicon),
                 segments,
                 deferrals,
                 projects,
                 openProjects,
                 documents,
                 injector.getInstance(RunRepository.class),
-                injector.getInstance(GlossaryRepository.class),
+                glossary,
                 injector.getInstance(SentenceSplitter.class),
-                injector.getInstance(LexiconRepository.class),
-                injector.getInstance(SummaryRepository.class));
+                lexicon,
+                injector.getInstance(SummaryRepository.class),
+                frames,
+                injector.getInstance(CheckpointPort.class));
+    }
+
+    private static String imported(final ProjectServiceImpl service, final Path book, final BookBrief brief) {
+        final String id = Objects.requireNonNull(
+                Objects.requireNonNull(service.create(book).data(), "imported book")
+                        .projectId(),
+                "project id");
+        service.updateBrief(id, brief);
+        return id;
     }
 
     private static ProjectServiceImpl service(

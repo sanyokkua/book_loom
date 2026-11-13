@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -24,12 +23,13 @@ class LogKindTest {
         "ACCEPTED, OK, LOG_ACCEPTED",
         "REPAIRED, INFO, LOG_MODEL_CALL",
         "MEMORY, INFO, LOG_GLOSSARY_APPLIED",
-        "SUMMARY, INFO, LOG_SUMMARY_UPDATED",
+        "SUMMARY, INFO, LOG_CHAPTER_SUMMARY_KEPT",
+        "PROOF, INFO, LOG_PROOFREAD",
         "RETRIED, WARN, LOG_RETRIED",
         "SEGMENT_ERROR, ERR, LOG_SEGMENT_ERROR",
         "MILESTONE, INFO, LOG_MILESTONE"
     })
-    void kind_eachOfTheSeven_hasItsRoleAndDefaultCatalogueKey(
+    void kind_eachOfTheEight_hasItsRoleAndDefaultCatalogueKey(
             final LogKind kind, final Tone role, final MessageKey key) {
         assertThat(kind.role()).isEqualTo(role);
         assertThat(kind.messageKey()).isEqualTo(key);
@@ -42,11 +42,12 @@ class LogKindTest {
         "REPAIRED, fix, ↺",
         "MEMORY, mem, ≡",
         "SUMMARY, sum, Σ",
+        "PROOF, proof, ¶",
         "RETRIED, retry, ↻",
         "SEGMENT_ERROR, err, ✕",
         "MILESTONE, info, ◆"
     })
-    void tagAndMark_eachOfTheSeven_isItsFixedWordAndGlyph(final LogKind kind, final String tag, final String mark) {
+    void tagAndMark_eachOfTheEight_isItsFixedWordAndGlyph(final LogKind kind, final String tag, final String mark) {
         assertThat(kind.tag()).isEqualTo(tag);
         assertThat(kind.mark()).isEqualTo(mark);
     }
@@ -56,13 +57,14 @@ class LogKindTest {
     @CsvSource({
         "ACCEPTED, false",
         "REPAIRED, false",
+        "PROOF, false",
         "MEMORY, false",
         "SUMMARY, false",
         "RETRIED, true",
         "SEGMENT_ERROR, true",
         "MILESTONE, false"
     })
-    void isTrouble_eachOfTheSeven_isTrueOnlyForRetriesAndErrors(final LogKind kind, final boolean trouble) {
+    void isTrouble_eachOfTheEight_isTrueOnlyForRetriesAndErrors(final LogKind kind, final boolean trouble) {
         assertThat(kind.isTrouble()).isEqualTo(trouble);
     }
 
@@ -70,7 +72,7 @@ class LogKindTest {
     @Test
     void tag_allKinds_areDistinctAndLowerCase() {
         final List<String> tags =
-                Arrays.stream(LogKind.values()).map(LogKind::tag).collect(Collectors.toList());
+                Arrays.stream(LogKind.values()).map(LogKind::tag).toList();
 
         assertThat(tags).doesNotHaveDuplicates().allMatch(tag -> tag.equals(tag.toLowerCase(Locale.ROOT)));
     }
@@ -86,9 +88,9 @@ class LogKindTest {
     @Test
     void mark_allKinds_areDistinct() {
         final List<String> marks =
-                Arrays.stream(LogKind.values()).map(LogKind::mark).collect(Collectors.toList());
+                Arrays.stream(LogKind.values()).map(LogKind::mark).toList();
 
-        assertThat(LogKind.values()).hasSize(7);
+        assertThat(LogKind.values()).hasSize(8);
         assertThat(marks).doesNotHaveDuplicates();
     }
 
@@ -112,7 +114,8 @@ class LogKindTest {
         args.add("s-2");
 
         assertThat(entry.args()).containsExactly("s-1");
-        assertThatThrownBy(() -> entry.args().add("s-3")).isInstanceOf(UnsupportedOperationException.class);
+        final var target = entry.args();
+        assertThatThrownBy(() -> target.add("s-3")).isInstanceOf(UnsupportedOperationException.class);
     }
 
     // IF a technical line looked like any other, THEN Show technical details could not hide it.

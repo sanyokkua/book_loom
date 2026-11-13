@@ -17,7 +17,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
@@ -28,10 +27,12 @@ import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.llm.pseudo.PseudoChatModel;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -43,7 +44,6 @@ class PreScanTest {
 
     private static final SuggestTargets SUGGEST = new SuggestTargets(new PromptTemplates(), new ObjectMapper());
     private static final NamePolicy POLICY = NamePolicy.TRANSLITERATE;
-
     private static final String PROJECT = "p1";
     private static final Pattern SLASH = Pattern.compile("/");
     private static final Pattern REVIEW_LINE = Pattern.compile("(?m)^- (.+?) — \\d+×");
@@ -70,7 +70,7 @@ class PreScanTest {
     @Test
     void scan_modelProposesHeldAndNewTerm_keepsHeldEntryAndAddsUnlockedTargetlessNewOne() {
         final GlossaryEntry held =
-                new GlossaryEntry("e1", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true);
+                GlossaryEntry.of("e1", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true);
         glossary.add(held);
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(
@@ -80,8 +80,9 @@ class PreScanTest {
         final Result<EntryChanges<GlossaryEntry>> result =
                 preScan.scan(PROJECT, book("We met Hale today.", "We met Milton today."), FRAME, POLICY, calls(model));
 
-        final GlossaryEntry milton =
-                new GlossaryEntry("p1:milton", PROJECT, "Milton", null, TermType.PLACE, Gender.UNKNOWN, false);
+        final GlossaryEntry milton = GlossaryEntry.of(
+                        "p1:milton", PROJECT, "Milton", null, TermType.PLACE, Gender.UNKNOWN, false)
+                .withType(TermType.PLACE, Origin.LIKELY);
         assertThat(added(result)).containsExactly(milton);
         assertThat(glossary.all(PROJECT).data()).containsExactlyInAnyOrder(held, milton);
     }
@@ -112,7 +113,7 @@ class PreScanTest {
     @Test
     void scan_secondOfThreeBatchesFails_returnsThatErrorAndWritesNothing() {
         final GlossaryEntry held =
-                new GlossaryEntry("e1", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true);
+                GlossaryEntry.of("e1", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true);
         glossary.add(held);
         final AppError failure = AppError.of(ErrorCode.unreachable, "Offline", "The provider is unreachable.");
         final ScriptedChatModel model = new ScriptedChatModel()
@@ -144,8 +145,8 @@ class PreScanTest {
         preScan.scan(PROJECT, book(NAMES_BOOK), FRAME, POLICY, calls(model));
 
         assertThat(glossary.all(PROJECT).data())
-                .containsExactly(
-                        new GlossaryEntry("p1:moreau", PROJECT, "Moreau", null, TermType.OTHER, Gender.UNKNOWN, false));
+                .extracting(GlossaryEntry::term, GlossaryEntry::type, GlossaryEntry::typeOrigin, GlossaryEntry::gender)
+                .containsExactly(tuple("Moreau", TermType.OTHER, Origin.LIKELY, Gender.UNKNOWN));
     }
 
     @ParameterizedTest
@@ -177,7 +178,7 @@ class PreScanTest {
 
     @Test
     void scan_personRemovedTheTerm_doesNotBringItBack() {
-        glossary.add(new GlossaryEntry("e2", PROJECT, "Chapter", null, TermType.TERM, Gender.NEUTER, false));
+        glossary.add(GlossaryEntry.of("e2", PROJECT, "Chapter", null, TermType.TERM, Gender.NEUTER, false));
         glossary.remove(PROJECT, "e2");
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(
@@ -254,7 +255,7 @@ class PreScanTest {
 
     @Test
     void scan_glossaryHoldsTerms_requestListsThem() {
-        glossary.add(new GlossaryEntry("e1", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
+        glossary.add(GlossaryEntry.of("e1", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
         final ScriptedChatModel model = new ScriptedChatModel().answer(reply("{\"terms\":[]}"));
 
         preScan.scan(PROJECT, book("We met Milton today."), FRAME, POLICY, calls(model));
@@ -335,8 +336,7 @@ class PreScanTest {
     }
 
     private static String userMessage(final ChatRequest request) {
-        final List<ChatMessage> messages = request.messages();
-        return messages.getLast().content();
+        return AnalysisData.of(request.messages().getLast().content());
     }
 
     private static BookSlice ninetyFiveNames() {

@@ -17,10 +17,12 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.pipeline.SourceLanguage;
+import ua.bookloom.pipeline.glossary.DeclensionGender;
 import ua.bookloom.pipeline.glossary.FrequencyScan;
 import ua.bookloom.pipeline.glossary.GivenNames;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
 import ua.bookloom.pipeline.glossary.PronounGender;
+import ua.bookloom.pipeline.glossary.UnsureMarks;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.pipeline.prompt.StyleSheet;
@@ -44,6 +46,7 @@ public final class PrepStage {
      * @param styleSheet the style sheet every call of the run carries
      * @param scanned whether the glossary was empty, so the scan ran
      * @param proposed how many names the scan added; 0 when it did not run
+     * @param entries how many entries the glossary holds as the run starts, the scan's included
      * @param narratorHint what the source text suggests about the narrator, or null when the language has no pronoun
      *     data or the book has nothing to judge; it never changes the brief
      */
@@ -51,6 +54,7 @@ public final class PrepStage {
             StyleSheet styleSheet,
             boolean scanned,
             int proposed,
+            int entries,
             @Nullable NarratorHint narratorHint) {
 
         /** Rejects a missing style sheet. */
@@ -59,12 +63,12 @@ public final class PrepStage {
         }
 
         /** What preparation settled before the narrator was read. */
-        public Prepared(final StyleSheet styleSheet, final boolean scanned, final int proposed) {
-            this(styleSheet, scanned, proposed, null);
+        public Prepared(final StyleSheet styleSheet, final boolean scanned, final int proposed, final int entries) {
+            this(styleSheet, scanned, proposed, entries, null);
         }
 
         Prepared withNarratorHint(@Nullable final NarratorHint hint) {
-            return new Prepared(styleSheet, scanned, proposed, hint);
+            return new Prepared(styleSheet, scanned, proposed, entries, hint);
         }
     }
 
@@ -105,7 +109,7 @@ public final class PrepStage {
                 logPrepared(projectId, Objects.requireNonNull(prepared.data(), "prepared"));
             }
             return prepared;
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             log.error("Unexpected failure while preparing a run project={}", projectId, cause);
             return Result.err(AppError.of(
                     ErrorCode.internal,
@@ -133,14 +137,16 @@ public final class PrepStage {
             return GivenNames.seedHeld(glossary, projectId, sourceLanguage)
                     .flatMap(seeded -> PronounGender.seedHeld(
                             glossary, projectId, index.visibleTexts(index.story()), sourceLanguage))
-                    .map(seeded -> new Prepared(styleSheet, false, 0));
+                    .map(seeded -> new Prepared(styleSheet, false, 0, held.size()));
         }
         log.debug("Name scan runs project={}: the glossary is empty", projectId);
         return FrequencyScan.newTerms(projectId, index, index.story(), sourceLanguage, glossary)
                 .map(proposals -> GivenNames.seeded(proposals, sourceLanguage))
                 .map(proposals -> PronounGender.seeded(proposals, index.visibleTexts(index.story()), sourceLanguage))
+                .map(proposals -> DeclensionGender.seeded(proposals, index.visibleTexts(index.story()), sourceLanguage))
+                .map(proposals -> UnsureMarks.marked(proposals, index.visibleTexts(index.story()), sourceLanguage))
                 .flatMap(proposals -> addAll(glossary, proposals))
-                .map(added -> new Prepared(styleSheet, true, added));
+                .map(added -> new Prepared(styleSheet, true, added, added));
     }
 
     private static Result<Integer> scanKeyTermsIfEmpty(

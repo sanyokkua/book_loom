@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.glossary;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
@@ -37,6 +39,9 @@ import ua.bookloom.util.text.GlossaryKeys;
 @Slf4j
 record GlossaryCsvFiles(GlossaryRepository glossary, Function<List<GlossaryCsv.Row>, Result<List<Integer>>> apply) {
 
+    /** How many line numbers an import's warning names; the count says how many there were. */
+    private static final int LOGGED_LINES = 20;
+
     GlossaryCsvFiles {
         Objects.requireNonNull(glossary, "glossary");
         Objects.requireNonNull(apply, "apply");
@@ -45,7 +50,7 @@ record GlossaryCsvFiles(GlossaryRepository glossary, Function<List<GlossaryCsv.R
     Result<GlossaryImportReport> importFrom(final String projectId, final Path source) {
         final Result<String> text = readUtf8(projectId, source);
         if (text.isErr()) {
-            return Result.err(Objects.requireNonNull(text.error(), "error"));
+            return Result.err(Objects.requireNonNull(text.error(), ERROR));
         }
         final GlossaryCsv.Parsed parsed = GlossaryCsv.parse(Objects.requireNonNull(text.data(), "text"));
         if (parsed.headerRefused()) {
@@ -59,7 +64,7 @@ record GlossaryCsvFiles(GlossaryRepository glossary, Function<List<GlossaryCsv.R
         log.debug("Glossary import project={} rows={} duplicates={}", projectId, rows.size(), duplicates);
         final Result<List<GlossaryEntry>> before = glossary.all(projectId);
         if (before.isErr()) {
-            return Result.err(Objects.requireNonNull(before.error(), "error"));
+            return Result.err(Objects.requireNonNull(before.error(), ERROR));
         }
         final Result<GlossaryImportReport> report = applyAll(rows, parsed, duplicates);
         if (report.isErr()) {
@@ -72,7 +77,7 @@ record GlossaryCsvFiles(GlossaryRepository glossary, Function<List<GlossaryCsv.R
     Result<Path> exportTo(final String projectId, final Path destination) {
         final Result<List<GlossaryEntry>> held = glossary.all(projectId);
         if (held.isErr()) {
-            return Result.err(Objects.requireNonNull(held.error(), "error"));
+            return Result.err(Objects.requireNonNull(held.error(), ERROR));
         }
         final List<GlossaryEntry> entries = Objects.requireNonNull(held.data(), "held");
         try {
@@ -118,7 +123,7 @@ record GlossaryCsvFiles(GlossaryRepository glossary, Function<List<GlossaryCsv.R
                     .onUnmappableCharacter(CodingErrorAction.REPORT)
                     .decode(ByteBuffer.wrap(bytes))
                     .toString());
-        } catch (CharacterCodingException notUtf8) {
+        } catch (CharacterCodingException _) {
             log.warn("Glossary import project={} path={} refused: the file is not UTF-8", projectId, source);
             return Result.err(fileError(
                     FailureReason.NOT_UTF8,
@@ -150,5 +155,34 @@ record GlossaryCsvFiles(GlossaryRepository glossary, Function<List<GlossaryCsv.R
             log.warn("Glossary export project={} path={} refused: {}", projectId, destination, error.details());
         }
         return error;
+    }
+
+    /** What an import did: one line per kind of problem and one summary line. */
+    static void logImport(final String projectId, final Path source, final GlossaryImportReport report) {
+        // One line per kind, not per row: a file of 5,000 bad rows must not write 5,000 warnings.
+        if (!report.malformedLines().isEmpty()) {
+            log.warn(
+                    "Glossary import path={} malformed={} problems={} lines={}",
+                    source,
+                    report.malformedLines().size(),
+                    report.problems(),
+                    report.malformedLines().stream().limit(LOGGED_LINES).toList());
+        }
+        if (!report.refusedLines().isEmpty()) {
+            log.warn(
+                    "Glossary import path={} refused={} ({}) lines={}",
+                    source,
+                    report.refusedLines().size(),
+                    GlossaryServiceImpl.LOCKED_NEEDS_TARGET,
+                    report.refusedLines().stream().limit(LOGGED_LINES).toList());
+        }
+        log.info(
+                "Glossary imported project={} path={} imported={} malformed={} refused={} duplicates={}",
+                projectId,
+                source,
+                report.imported(),
+                report.malformedLines().size(),
+                report.refusedLines().size(),
+                report.duplicates());
     }
 }

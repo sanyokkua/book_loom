@@ -79,18 +79,25 @@ final class ScrollFilter {
     private @Nullable Move moveWithRoom(final ScrollEvent event, final boolean wheel) {
         final EventTarget target = event.getTarget();
         for (Node node = target instanceof Node start ? start : null; node != null; node = node.getParent()) {
-            final Scroller scroller = Scroller.of(node);
-            if (scroller != null) {
-                final double pixels = wheel ? scroller.pixelsOf(event) : ScrollGlide.panePixels(event.getDeltaY());
-                if (scroller.hasRoom(pixels, wheel ? 0 : pendingOf(scroller))) {
-                    return new Move(scroller, pixels);
-                }
+            final Move move = moveAt(node, event, wheel);
+            if (move != null) {
+                return move;
             }
             if (node.equals(root)) {
                 return null;
             }
         }
         return null;
+    }
+
+    private static @Nullable Move moveAt(final Node node, final ScrollEvent event, final boolean wheel) {
+        final Scroller scroller = Scroller.of(node);
+        if (scroller == null) {
+            return null;
+        }
+        final double pixels = wheel ? scroller.pixelsOf(event) : ScrollGlide.panePixels(event.getDeltaY());
+        final double pending = wheel ? 0 : pendingOf(scroller);
+        return scroller.hasRoom(pixels, pending) ? new Move(scroller, pixels) : null;
     }
 
     private static double pendingOf(final Scroller scroller) {

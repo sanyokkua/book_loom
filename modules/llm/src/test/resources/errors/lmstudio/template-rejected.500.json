@@ -1,0 +1,1 @@
+{"error":{"message":"Engine protocol predict request returned 500: Jinja Exception: After the optional system message, conversation roles must alternate user and assistant roles","type":"internal_error","code":"unknown","param":null}}

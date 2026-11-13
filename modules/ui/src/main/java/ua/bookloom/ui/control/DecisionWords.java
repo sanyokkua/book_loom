@@ -8,8 +8,8 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.DecisionRow;
 
 /**
- * Words the values of a decided row in the interface language: the register and the narrator come from a closed list the
- * brief itself words; a genre, an audience or a voice is the model's own text and is shown as it is.
+ * Words the values of a decided row in the interface language: the register, the narrator and the story shape come from
+ * a closed list the brief itself words; a genre, an audience or a voice is the model's own text and is shown as it is.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
 // cannot see the private constructor @NoArgsConstructor generates (ADR-0024).
@@ -26,6 +26,7 @@ final class DecisionWords {
                     case REGISTER -> MessageKey.BRIEF_DECIDES_REGISTER;
                     case NARRATOR, NARRATOR_GENDER -> MessageKey.BRIEF_DECIDES_NARRATOR;
                     case AUDIENCE, VOICE -> MessageKey.BRIEF_DECIDES_READERS;
+                    case STORY_SHAPE -> MessageKey.BRIEF_DECIDES_STORY_SHAPE;
                 });
     }
 
@@ -33,7 +34,16 @@ final class DecisionWords {
         return switch (row.group()) {
             case REGISTER -> register(messages, row.value());
             case NARRATOR -> narrator(messages, row.value());
+            case STORY_SHAPE -> storyShape(messages, row.value());
             default -> row.value();
+        };
+    }
+
+    private static String storyShape(final Messages messages, final String value) {
+        return switch (value) {
+            case "One story" -> messages.get(MessageKey.BRIEF_STORY_SHAPE_ONE);
+            case "Separate stories" -> messages.get(MessageKey.BRIEF_STORY_SHAPE_SEPARATE);
+            default -> value;
         };
     }
 

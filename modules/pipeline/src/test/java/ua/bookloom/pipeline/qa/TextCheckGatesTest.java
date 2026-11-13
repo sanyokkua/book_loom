@@ -110,4 +110,37 @@ class TextCheckGatesTest {
         assertThat(result.failedOutright()).isFalse();
         assertThat(result.findings()).isEmpty();
     }
+
+    private static List<QaFinding> numberFindings(final String source, final String target) {
+        return QaEvaluator.evaluate(List.of(), input(source, target, ForeignPassagePolicy.TRANSLATE))
+                .findings()
+                .stream()
+                .filter(finding -> finding.raisedBy().equals("number"))
+                .toList();
+    }
+
+    @Test
+    void evaluate_leadingNumberReplaced_failsAHardGate() {
+        final QaResult result = QaEvaluator.evaluate(
+                List.of(), input("4. The night pass", "5. Нічний перевал", ForeignPassagePolicy.TRANSLATE));
+
+        assertThat(result.hardGatesPass()).isFalse();
+        assertThat(result.findings())
+                .extracting(QaFinding::raisedBy, QaFinding::severity)
+                .contains(tuple("number", Severity.HIGH));
+    }
+
+    @Test
+    void evaluate_twoDigitNumberLost_isARepairFinding() {
+        assertThat(numberFindings("They lived in 42 rooms.", "Вони жили у кімнатах."))
+                .extracting(QaFinding::severity)
+                .containsExactly(Severity.MEDIUM);
+    }
+
+    @Test
+    void evaluate_extraNumber_isANote() {
+        assertThat(numberFindings("He waited.", "Він чекав 5 хвилин."))
+                .extracting(QaFinding::severity)
+                .containsExactly(Severity.LOW);
+    }
 }

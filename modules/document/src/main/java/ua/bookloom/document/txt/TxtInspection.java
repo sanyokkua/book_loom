@@ -1,5 +1,7 @@
 package ua.bookloom.document.txt;
 
+import static ua.bookloom.util.contract.ArgNames.DOCUMENT;
+
 import com.google.inject.Inject;
 import java.nio.file.Path;
 import java.util.List;
@@ -51,21 +53,21 @@ public final class TxtInspection implements FormatInspection {
     /** Plain text carries no metadata a cover image could be read from (task 4.3): always none. */
     @Override
     public Optional<CoverImage> cover(Document document) {
-        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(document, DOCUMENT);
         log.debug("TXT declares no cover rule documentId={}", document.id());
         return Optional.empty();
     }
 
-    /** Plain text is one unit (task 4.4): a single node carrying that unit's whole segment count. */
+    /** Plain text is one unit (task 4.4): a single unlisted node carrying that unit's whole segment count. */
     @Override
     public List<StructureNode> structure(Document document) {
-        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(document, DOCUMENT);
         final Unit unit = document.units().get(0);
         log.debug(
                 "TXT structure documentId={} segmentCount={}",
                 document.id(),
                 unit.segments().size());
-        return List.of(new StructureNode("", unit.id(), unit.segments().size(), List.of()));
+        return List.of(new StructureNode("", unit.id(), unit.segments().size(), List.of(), null, false));
     }
 
     /**
@@ -76,7 +78,7 @@ public final class TxtInspection implements FormatInspection {
      */
     @Override
     public BookStats stats(Document document) {
-        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(document, DOCUMENT);
         requireOpen(document);
         final List<Segment> bodySegments = BodySegments.of(document);
         final BookStats stats = new BookStats(
@@ -100,7 +102,7 @@ public final class TxtInspection implements FormatInspection {
      */
     @Override
     public Set<String> resourceIds(Document document) {
-        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(document, DOCUMENT);
         requireOpen(document);
         log.debug("TXT declares no resource ids documentId={}", document.id());
         return Set.of();

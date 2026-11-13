@@ -11,6 +11,7 @@ import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.ScriptedProviderVerifier;
+import ua.bookloom.ui.notify.Voice;
 
 /**
  * A model listing and a provider test register while they are in flight and are cancelled — their request never made
@@ -71,16 +72,15 @@ class ProviderWorkCancelTest extends SettingsViewModelTestBase {
         executor = queued;
         final ScriptedProviderVerifier verifier = ScriptedProviderVerifier.idle();
         final SettingsViewModel viewModel = onFx(() -> new SettingsViewModel(
-                new FakeProviderConfigs(),
-                verifier,
-                newModelListing(),
-                errors,
+                new ProviderStore(new FakeProviderConfigs(), new MemorySettings()),
+                new ProviderChecks(verifier, newModelListing(), QuantChipsFixture.idle()),
+                new Voice(EnglishMessages.create(), errors),
                 executor,
                 activities,
-                new MemorySettings(),
-                EnglishMessages.create(),
-                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
-                new StructuredAnswers()));
+                new InferenceMemory(
+                        new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
+                        new StructuredAnswers()),
+                java.time.Clock.systemUTC()));
         queued.runAll();
         WaitForAsyncUtils.waitForFxEvents();
         form(viewModel);

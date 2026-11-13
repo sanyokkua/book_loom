@@ -3,6 +3,7 @@ package ua.bookloom.llm.client.openai;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -17,41 +18,37 @@ import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProviderConfig;
-import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.llm.client.openai.EngineShaping.ReasoningFields;
 import ua.bookloom.llm.dto.OpenAiChatRequest;
 import ua.bookloom.llm.dto.OpenAiChatRequest.ResponseFormatDto;
-import ua.bookloom.llm.provider.ReasoningHeadroom;
 
 /** Shapes a provider-neutral {@link ChatRequest} into the JSON body an OpenAI-compatible server expects. */
 @Slf4j
 final class OpenAiRequestMapper {
     private static final String FORMAT_TYPE = "json_schema";
 
-    /** The {@code reasoning_effort} that turns reasoning off; a request that leaves reasoning alone omits the field. */
-    static final String REASONING_OFF = "none";
-
-    /** The {@code reasoning_effort} a call that thinks asks for: the server's usual middle level. */
-    static final String REASONING_ON = "medium";
-
-    /** The {@code reasoning_effort} of a call that thinks a little. */
-    static final String REASONING_LOW = "low";
-
     private final ProviderConfig config;
     private final ObjectMapper mapper;
     private final BiFunction<String, Throwable, AppError> serializationFailure;
+    private final EngineShaping shaping;
 
     /**
      * Binds the mapper to one endpoint.
      *
      * @param serializationFailure builds the error for a body that could not be written, from the model id and the
      *     failure; the client owns it so every unexpected failure is logged and worded in one place
+     * @param shaping the engine's choice of fields for the reasoning switch and the cap
      */
     OpenAiRequestMapper(
-            ProviderConfig config, ObjectMapper mapper, BiFunction<String, Throwable, AppError> serializationFailure) {
+            ProviderConfig config,
+            ObjectMapper mapper,
+            BiFunction<String, Throwable, AppError> serializationFailure,
+            EngineShaping shaping) {
         this.config = Objects.requireNonNull(config, "config");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.serializationFailure = Objects.requireNonNull(serializationFailure, "serializationFailure");
+        this.shaping = Objects.requireNonNull(shaping, "shaping");
     }
 
     Result<ParsedFormat> parseFormat(@Nullable ResponseFormat format, String modelId) {
@@ -85,48 +82,57 @@ final class OpenAiRequestMapper {
     }
 
     Result<String> serializeRequest(String modelId, ChatRequest request, @Nullable ResponseFormatDto responseFormat) {
-        final List<OpenAiChatRequest.Message> messages =
-                request.messages().stream().map(this::toOpenAiMessage).toList();
         try {
-            final Integer cap = outputCap(request);
-            final boolean completionField = request.outputField() == OutputLengthField.MAX_COMPLETION_TOKENS;
-            log.debug("OpenAI output cap model={} cap={} completionField={}", modelId, cap, completionField);
-            final OpenAiChatRequest payload = new OpenAiChatRequest(
-                    modelId,
-                    messages,
-                    false,
-                    request.temperature(),
-                    responseFormat,
-                    completionField ? null : cap,
-                    completionField ? cap : null,
-                    request.seed(),
-                    reasoningEffort(request.reasoningEnabled()),
-                    request.samplingOrNone().topP(),
-                    request.samplingOrNone().topK(),
-                    request.samplingOrNone().minP(),
-                    request.samplingOrNone().repeatPenalty());
-            return Result.ok(mapper.writeValueAsString(payload));
-        } catch (JsonProcessingException failure) {
+            final OpenAiChatRequest payload = payload(modelId, request, responseFormat);
+            if (!shaping.reshapesBody()) {
+                return Result.ok(mapper.writeValueAsString(payload));
+            }
+            final ObjectNode body = mapper.valueToTree(payload);
+            shaping.toEndpoint(modelId, body);
+            return Result.ok(mapper.writeValueAsString(body));
+        } catch (JsonProcessingException | IllegalArgumentException failure) {
             return Result.err(serializationFailure.apply(modelId, failure));
         }
     }
 
-    private static @Nullable Integer outputCap(ChatRequest request) {
-        final ReasoningLevel level = request.reasoningEnabled();
-        return level != null && level.isThinking()
-                ? ReasoningHeadroom.raise(request.maxOutputTokens())
-                : request.maxOutputTokens();
+    private OpenAiChatRequest payload(String modelId, ChatRequest request, @Nullable ResponseFormatDto responseFormat) {
+        final List<OpenAiChatRequest.Message> messages =
+                request.messages().stream().map(this::toOpenAiMessage).toList();
+        final Integer cap = shaping.endpointCap(modelId, request.maxOutputTokens());
+        final boolean completionField = isCompletionField(modelId, request);
+        log.debug("OpenAI output cap model={} cap={} completionField={}", modelId, cap, completionField);
+        final ReasoningFields reasoning = shaping.reasoning(modelId, request.reasoningEnabled());
+        return new OpenAiChatRequest(
+                modelId,
+                messages,
+                false,
+                request.temperature(),
+                responseFormat,
+                completionField ? null : cap,
+                completionField ? cap : null,
+                request.seed(),
+                reasoning.effort(),
+                request.samplingOrNone().topP(),
+                request.samplingOrNone().topK(),
+                request.samplingOrNone().minP(),
+                request.samplingOrNone().repeatPenalty(),
+                reasoning.kwargs(),
+                reasoning.enableThinking(),
+                reasoning.reasoning(),
+                shaping.everyCallFields(request.samplingOrNone()));
     }
 
-    private static @Nullable String reasoningEffort(@Nullable ReasoningLevel reasoningEnabled) {
-        if (reasoningEnabled == null) {
-            return null;
+    // The model's stored choice of max_completion_tokens is kept only where the engine honours it.
+    private boolean isCompletionField(String modelId, ChatRequest request) {
+        final boolean chosen = request.outputField() == OutputLengthField.MAX_COMPLETION_TOKENS;
+        if (chosen && shaping.isMaxTokensOnly()) {
+            log.debug(
+                    "Cap sent as max_tokens: the engine ignores max_completion_tokens provider={} model={}",
+                    config.id(),
+                    modelId);
+            return false;
         }
-        return switch (reasoningEnabled) {
-            case ON -> REASONING_ON;
-            case LOW -> REASONING_LOW;
-            case OFF -> REASONING_OFF;
-        };
+        return chosen;
     }
 
     private OpenAiChatRequest.Message toOpenAiMessage(ChatMessage message) {

@@ -13,14 +13,12 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.AppError;
@@ -133,11 +131,10 @@ class TranslateCommandShutdownTest {
 
         private Result<ChatResponse> answer(ChatRequest request) {
             final String user = request.messages().getLast().content();
-            final int start = user.lastIndexOf("<Text>\n");
-            if (start < 0) {
+            final String text = CliRunFakes.singleItem(user);
+            if (text == null) {
                 return Result.ok(new ChatResponse("{\"target\":\"\"}", FinishReason.STOP));
             }
-            final String text = user.substring(start + "<Text>\n".length(), user.indexOf("\n</Text>", start));
             if (drafts.incrementAndGet() == 2) {
                 Thread.ofVirtual().start(() -> {
                     shutdown.run();
@@ -146,15 +143,14 @@ class TranslateCommandShutdownTest {
                 return awaitCancel();
             }
             return Result.ok(new ChatResponse(
-                    "{\"target\":\"" + text.toUpperCase(Locale.ROOT).replace("ONE", "ОДИН") + "\"}",
-                    FinishReason.STOP));
+                    CliRunFakes.itemReply(text.toUpperCase(Locale.ROOT).replace("ONE", "ОДИН")), FinishReason.STOP));
         }
 
         // The stop interrupts the call in flight, as it interrupts a real provider call.
         private static Result<ChatResponse> awaitCancel() {
             try {
-                Thread.sleep(Duration.ofSeconds(10));
-            } catch (InterruptedException interrupted) {
+                new CountDownLatch(1).await(10, TimeUnit.SECONDS);
+            } catch (InterruptedException _) {
                 Thread.currentThread().interrupt();
             }
             return Result.err(AppError.of(ErrorCode.cancelled, "Cancelled", "The call was stopped."));
@@ -173,8 +169,8 @@ class TranslateCommandShutdownTest {
         }
 
         @Override
-        public Result<ExportJob> newExport(ExportRequest request, @Nullable ChatModel model) {
-            final Result<ExportJob> created = real.newExport(request, model);
+        public Result<ExportJob> newExport(ExportRequest request) {
+            final Result<ExportJob> created = real.newExport(request);
             final ExportJob job = created.data();
             return job == null ? created : Result.ok(new KilledExportJob(job));
         }
@@ -199,7 +195,7 @@ class TranslateCommandShutdownTest {
                 });
                 try {
                     assertThat(cancelled.await(10, TimeUnit.SECONDS)).isTrue();
-                } catch (InterruptedException interrupted) {
+                } catch (InterruptedException _) {
                     Thread.currentThread().interrupt();
                 }
                 return delegate.run();
@@ -209,11 +205,6 @@ class TranslateCommandShutdownTest {
             public void cancel() {
                 delegate.cancel();
                 cancelled.countDown();
-            }
-
-            @Override
-            public void writeNow() {
-                delegate.writeNow();
             }
         }
     }

@@ -5,7 +5,7 @@ paths:
 
 # Threading & Concurrency
 
-Scope: all modules; especially `:ui`, `:pipeline`, `:llm`. Spec: `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md`. See also `javafx-ui.md`, `llm-provider-integration.md`.
+Scope: all modules; especially `:ui`, `:pipeline`, `:llm`. Spec: `docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md`. See also `javafx-ui.md`, `llm-provider-integration.md`.
 
 ## MUST
 

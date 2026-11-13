@@ -3,10 +3,11 @@ package ua.bookloom.pipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
-import static ua.bookloom.pipeline.ChunkRunFixtures.FIX;
-import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
+import static ua.bookloom.pipeline.ChunkRunFixtures.PROOFREAD;
+import static ua.bookloom.pipeline.ChunkRunFixtures.REPAIR;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
+import static ua.bookloom.pipeline.TranslationJobTestSupport.draftThenRepair;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.project;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
@@ -45,13 +46,12 @@ class TranslationJobRepairGuardsTest {
     private static final String RUSSIAN_LETTER = "Я відчинив стары двері.";
     private static final String RIGHT = "Я відчинив старі двері.";
     private static final String WITH_INVENTED_TOKENS = "Я відчинив ⟦g0⟧старі⟦g1⟧ двері.";
-    private static final String STARTS_WITH_QUOTE_CODE = "{\"target\":\"\\u001eЯ відчинив старі двері.\"}";
+    private static final String STARTS_WITH_QUOTE_CODE =
+            "{\"items\":[{\"id\":\"1\",\"target\":\"\\u001eЯ відчинив старі двері.\"}]}";
 
     private static final String CHISEL_SOURCE = "Chisel opened the old door.";
     private static final String MASCULINE = "Чизел відчинив старі двері.";
     private static final String FEMININE = "Чизел відчинила старі двері.";
-    private static final String GENDER_EDIT = "{\"results\":[{\"id\":\"s1\",\"status\":\"edits\",\"edits\":["
-            + "{\"criterion\":\"gender\",\"quote\":\"відчинив\",\"replacement\":\"відчинила\"}]}]}";
 
     @TempDir
     private Path tempDir;
@@ -65,7 +65,7 @@ class TranslationJobRepairGuardsTest {
     @Test
     void run_fixReplyStartsWithAQuoteCode_isReadAndRepairsTheSegment() {
         final ScriptedChatModel model = replies(RUSSIAN_LETTER).answer(answer(STARTS_WITH_QUOTE_CODE));
-        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.FAST));
+        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.BALANCED));
 
         report(job(project, model).run());
 
@@ -88,7 +88,7 @@ class TranslationJobRepairGuardsTest {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(answer(targetReply(RUSSIAN_LETTER)))
                 .answerTimes(2, answer(malformed));
-        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.FAST));
+        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.BALANCED));
 
         report(job(project, model).run());
 
@@ -104,12 +104,12 @@ class TranslationJobRepairGuardsTest {
     // defect; the alphabet check reads the fix too, and the segment is flagged with the first draft.
     @Test
     void run_fixStillHoldsARussianLetter_flagsTheSegmentAndKeepsTheDraft() {
-        final ScriptedChatModel model = replies(RUSSIAN_LETTER, "Я відчинив стыри двері.");
-        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.FAST));
+        final ScriptedChatModel model = draftThenRepair(RUSSIAN_LETTER, "Я відчинив стыри двері.");
+        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.BALANCED));
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, FIX);
+        assertThat(formats(model)).containsExactly(DRAFT, REPAIR, PROOFREAD);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
                 .containsExactly(SegmentStatus.FLAGGED, SegmentPath.REPAIRED, RUSSIAN_LETTER);
@@ -119,13 +119,13 @@ class TranslationJobRepairGuardsTest {
     // tokens aside, the good fix is adopted, and a low note says the markup was restored without a model.
     @Test
     void run_fixWrapsWordsInTokensTheSegmentLacks_adoptsTheTextWithTheTokensRemovedAndALowNote() {
-        final ScriptedChatModel model = replies(RUSSIAN_LETTER, WITH_INVENTED_TOKENS);
-        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.FAST));
+        final ScriptedChatModel model = draftThenRepair(RUSSIAN_LETTER, WITH_INVENTED_TOKENS);
+        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.BALANCED));
 
         report(job(project, model).run());
 
         final SegmentRecord stored = stored(project, "Book.txt:0");
-        assertThat(formats(model)).containsExactly(DRAFT, FIX);
+        assertThat(formats(model)).containsExactly(DRAFT, REPAIR, PROOFREAD);
         assertThat(stored)
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, RIGHT);
@@ -153,55 +153,21 @@ class TranslationJobRepairGuardsTest {
     // The same woman set by the person is enforced, before and after the task.
     @Test
     void run_womanSetByThePerson_earnsOneDirectedFix() {
-        final ScriptedChatModel model = replies(MASCULINE, FEMININE);
-        final TestProject project = chisel(QualityDial.FAST, entry -> entry.withGender(Gender.FEMALE));
+        final ScriptedChatModel model = draftThenRepair(MASCULINE, FEMININE);
+        final TestProject project = chisel(QualityDial.BALANCED, entry -> entry.withGender(Gender.FEMALE));
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, FIX);
+        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::path, SegmentRecord::machineTarget)
                 .containsExactly(SegmentPath.REPAIRED, FEMININE);
     }
 
-    // IF the reviewer's edit toward a suggested gender were applied, THEN the reviewer would enforce the guess that the
-    // checks no longer do: the edit becomes a low note and the draft stays.
-    @Test
-    void run_reviewerEditsTowardAGenderOnlySuggested_leavesALowNoteAndTheDraft() {
-        final ScriptedChatModel model = new ScriptedChatModel()
-                .answerTo(DRAFT, answer(targetReply(MASCULINE)))
-                .answerTo(FIX, answer(targetReply(FEMININE)))
-                .answerTo(REVIEW, answer(GENDER_EDIT));
-        final TestProject project = chisel(QualityDial.BALANCED, entry -> entry.withSuggestedGender(Gender.FEMALE));
-
-        report(job(project, model).run());
-
-        assertThat(formats(model)).containsExactly(DRAFT, REVIEW);
-        assertThat(stored(project, "Book.txt:0").machineTarget()).isEqualTo(MASCULINE);
-        assertThat(stored(project, "Book.txt:0").findings())
-                .filteredOn(finding -> finding.kind().equals("ignored-edit"))
-                .singleElement()
-                .satisfies(finding -> assertThat(finding.severity()).isEqualTo(Severity.LOW));
-    }
-
-    // The same edit toward a gender the person set is applied, before and after the task.
-    @Test
-    void run_reviewerEditsTowardAGenderSetByThePerson_isApplied() {
-        final ScriptedChatModel model = new ScriptedChatModel()
-                .answerTo(DRAFT, answer(targetReply(MASCULINE)))
-                .answerTo(REVIEW, answer(GENDER_EDIT));
-        final TestProject project = chisel(QualityDial.BALANCED, entry -> entry.withGender(Gender.FEMALE));
-
-        report(job(project, model).run());
-
-        assertThat(formats(model)).containsExactly(DRAFT, REVIEW);
-        assertThat(stored(project, "Book.txt:0").machineTarget()).isEqualTo(FEMININE);
-    }
-
     private TestProject chisel(final QualityDial dial, final UnaryOperator<GlossaryEntry> gender) {
         final Path book = TestBooks.txt(tempDir.resolve("Book.txt"), CHISEL_SOURCE);
         final TestProject project = project(book, brief("en", "uk", dial));
-        final GlossaryEntry chisel = gender.apply(new GlossaryEntry(
+        final GlossaryEntry chisel = gender.apply(GlossaryEntry.of(
                 GlossaryIds.of(project.id(), "Chisel"),
                 project.id(),
                 "Chisel",

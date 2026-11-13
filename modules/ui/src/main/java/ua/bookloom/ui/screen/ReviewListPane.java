@@ -30,12 +30,15 @@ import ua.bookloom.ui.control.StateMarker;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.i18n.RaiserWords;
 import ua.bookloom.ui.state.FindingBadge;
+import ua.bookloom.ui.state.LiveSection;
 import ua.bookloom.ui.state.ReviewRow;
 import ua.bookloom.ui.state.ReviewViewModel;
 
 /**
- * The review desk's left side: the filter box (To review, Worth a second look, All segments, each with its count),
+ * The review desk's left side: the filter box (To review, Worth a second look, Changed by proofread, Waiting on a
+ * gender, All segments, each with its count),
  * previous and next, the list of segments with a marker and one line each, and the shortcut line under it.
  *
  * <p>The list only follows the view model: picking a row selects that segment, and a segment the view model selects is
@@ -79,27 +82,28 @@ final class ReviewListPane extends VBox {
     private static final double SPACING = 8;
     private static final double ROW_GAP = 2;
     private static final double LIST_MIN_HEIGHT = 120;
-    private static final List<ReviewFilter> FILTERS =
-            List.of(ReviewFilter.ALL_FLAGGED, ReviewFilter.SUSPICIOUS, ReviewFilter.ALL_SEGMENTS);
+    private static final List<ReviewFilter> FILTERS = List.of(
+            ReviewFilter.ALL_FLAGGED,
+            ReviewFilter.SUSPICIOUS,
+            ReviewFilter.CHANGED_BY_PROOFREAD,
+            ReviewFilter.WAITING_ON_GENDER,
+            ReviewFilter.ALL_SEGMENTS);
 
     private final ReviewViewModel viewModel;
     private final Messages messages;
-    private final ObservableIntegerValue suspicious;
+    private final LiveSection lists;
     private final Guard guard;
     private final ListView<ReviewRow> list = new ListView<>();
-    private final ComboBox<ReviewFilter> filters = new ComboBox<>();
+    private final ComboBox<ReviewFilter> filterBox = new ComboBox<>();
     private final FilterCell buttonCell = new FilterCell();
     // True while the view model's state is written into the controls, so that the write is not read as a pick.
     private boolean applying;
 
     ReviewListPane(
-            final ReviewViewModel viewModel,
-            final ObservableIntegerValue suspicious,
-            final Guard guard,
-            final Messages messages) {
+            final ReviewViewModel viewModel, final LiveSection lists, final Guard guard, final Messages messages) {
         super(SPACING);
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
-        this.suspicious = Objects.requireNonNull(suspicious, "suspicious");
+        this.lists = Objects.requireNonNull(lists, "lists");
         this.guard = Objects.requireNonNull(guard, "guard");
         this.messages = Objects.requireNonNull(messages, "messages");
         list.setId("review-list");
@@ -121,23 +125,26 @@ final class ReviewListPane extends VBox {
         viewModel.rows().addListener((ListChangeListener<ReviewRow>) change -> Platform.runLater(this::syncSelection));
         viewModel.filter().addListener((observed, was, now) -> showFilter(now));
         viewModel.flaggedCount().addListener((observed, was, now) -> buttonCell.reword());
-        suspicious.addListener((observed, was, now) -> buttonCell.reword());
+        for (final ObservableIntegerValue count :
+                List.of(lists.suspicious(), lists.changedByProofread(), lists.waitingOnGender())) {
+            count.addListener((observed, was, now) -> buttonCell.reword());
+        }
     }
 
     private HBox filterRow() {
-        filters.setId("review-filter");
-        filters.getItems().setAll(FILTERS);
-        filters.setCellFactory(view -> new FilterCell());
-        filters.setButtonCell(buttonCell);
-        filters.setMaxWidth(Double.MAX_VALUE);
-        Tips.install(messages, filters, MessageKey.REVIEW_FILTER_TIP);
-        filters.setAccessibleText(messages.get(MessageKey.REVIEW_FILTER));
-        HBox.setHgrow(filters, Priority.ALWAYS);
+        filterBox.setId("review-filter");
+        filterBox.getItems().setAll(FILTERS);
+        filterBox.setCellFactory(view -> new FilterCell());
+        filterBox.setButtonCell(buttonCell);
+        filterBox.setMaxWidth(Double.MAX_VALUE);
+        Tips.install(messages, filterBox, MessageKey.REVIEW_FILTER_TIP);
+        filterBox.setAccessibleText(messages.get(MessageKey.REVIEW_FILTER));
+        HBox.setHgrow(filterBox, Priority.ALWAYS);
         showFilter(viewModel.filter().get());
-        filters.valueProperty().addListener((observed, was, now) -> chosen(now));
+        filterBox.valueProperty().addListener((observed, was, now) -> chosen(now));
         final Button previous = arrow("review-prev", Feather.CHEVRON_LEFT, Words.PREVIOUS, PREVIOUS, -1);
         final Button next = arrow("review-next", Feather.CHEVRON_RIGHT, Words.NEXT, NEXT, 1);
-        final HBox row = new HBox(SPACING / 2, filters, previous, next);
+        final HBox row = new HBox(SPACING / 2, filterBox, previous, next);
         row.setAlignment(Pos.CENTER_LEFT);
         return row;
     }
@@ -160,7 +167,7 @@ final class ReviewListPane extends VBox {
     private void showFilter(final ReviewFilter filter) {
         applying = true;
         try {
-            filters.setValue(filter);
+            filterBox.setValue(filter);
         } finally {
             applying = false;
         }
@@ -214,25 +221,6 @@ final class ReviewListPane extends VBox {
         }
     }
 
-    private String wordOf(final ReviewFilter filter) {
-        return switch (filter) {
-            case SUSPICIOUS -> messages.get(MessageKey.REVIEW_FILTER_SECOND_LOOK, suspicious.get());
-            case ALL_SEGMENTS -> messages.get(MessageKey.REVIEW_FILTER_ALL);
-            default ->
-                messages.get(
-                        MessageKey.REVIEW_FILTER_TO_REVIEW,
-                        viewModel.flaggedCount().get());
-        };
-    }
-
-    private static MessageKey tipOf(final ReviewFilter filter) {
-        return switch (filter) {
-            case SUSPICIOUS -> MessageKey.REVIEW_FILTER_SECOND_LOOK_TIP;
-            case ALL_SEGMENTS -> MessageKey.REVIEW_FILTER_ALL_TIP;
-            default -> MessageKey.REVIEW_FILTER_TO_REVIEW_TIP;
-        };
-    }
-
     /** A filter's word with its count, and its explanation on hover. Logs nothing: it is redrawn with the counts. */
     private final class FilterCell extends ListCell<ReviewFilter> {
 
@@ -257,6 +245,38 @@ final class ReviewListPane extends VBox {
                 setText(wordOf(item));
             }
         }
+
+        private String wordOf(final ReviewFilter filter) {
+            return switch (filter) {
+                case SUSPICIOUS ->
+                    messages.get(
+                            MessageKey.REVIEW_FILTER_SECOND_LOOK,
+                            lists.suspicious().get());
+                case CHANGED_BY_PROOFREAD ->
+                    messages.get(
+                            MessageKey.REVIEW_FILTER_CHANGED,
+                            lists.changedByProofread().get());
+                case WAITING_ON_GENDER ->
+                    messages.get(
+                            MessageKey.REVIEW_FILTER_WAITING,
+                            lists.waitingOnGender().get());
+                case ALL_SEGMENTS -> messages.get(MessageKey.REVIEW_FILTER_ALL);
+                default ->
+                    messages.get(
+                            MessageKey.REVIEW_FILTER_TO_REVIEW,
+                            viewModel.flaggedCount().get());
+            };
+        }
+
+        private static MessageKey tipOf(final ReviewFilter filter) {
+            return switch (filter) {
+                case SUSPICIOUS -> MessageKey.REVIEW_FILTER_SECOND_LOOK_TIP;
+                case CHANGED_BY_PROOFREAD -> MessageKey.REVIEW_FILTER_CHANGED_TIP;
+                case WAITING_ON_GENDER -> MessageKey.REVIEW_FILTER_WAITING_TIP;
+                case ALL_SEGMENTS -> MessageKey.REVIEW_FILTER_ALL_TIP;
+                default -> MessageKey.REVIEW_FILTER_TO_REVIEW_TIP;
+            };
+        }
     }
 
     /**
@@ -278,10 +298,22 @@ final class ReviewListPane extends VBox {
             HBox.setHgrow(spacer, Priority.ALWAYS);
             top.setAlignment(Pos.CENTER_LEFT);
             locator.getStyleClass().addAll("review-locator", "muted");
-            locator.setMinWidth(Label.USE_PREF_SIZE);
+            locator.setMinWidth(Region.USE_PREF_SIZE);
             line.getStyleClass().add("review-row-line");
             line.setMinWidth(0);
             line.setMaxWidth(Double.MAX_VALUE);
+        }
+
+        // A flagged row says why in plain words; an accepted one doubted by the audit names the check.
+        private String lineOf(final ReviewRow item) {
+            final FindingBadge badge = item.badge();
+            final String doubt = item.doubtCheck();
+            if (badge != null) {
+                return messages.get(MessageKey.REVIEW_ROW_LINE, messages.get(badge.why()), item.fullText());
+            }
+            return doubt == null
+                    ? item.fullText()
+                    : messages.get(MessageKey.REVIEW_ROW_LINE, RaiserWords.doubt(messages, doubt), item.fullText());
         }
 
         @Override
@@ -294,11 +326,7 @@ final class ReviewListPane extends VBox {
                 return;
             }
             locator.setText(item.locator());
-            final FindingBadge badge = item.badge();
-            line.setText(
-                    badge == null
-                            ? item.fullText()
-                            : messages.get(MessageKey.REVIEW_ROW_LINE, messages.get(badge.why()), item.fullText()));
+            line.setText(lineOf(item));
             whole.setText(item.fullText());
             setTooltip(whole);
             top.getChildren()

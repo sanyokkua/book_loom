@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.glossary;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.function.IntConsumer;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +19,9 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
  * asked with the held glossary, the readings and the verified names of the names step, and written the way a review
  * writes its suggestions — locked by {@link LockRule} through the facts {@link SuggestionLocks} gave each suggestion, so
  * a review and the names pass share one lock rule and one meaning of a verified name. Only an entry that was open is
- * touched, so a locked entry or one with the person's target is never suggested over.
+ * touched, so a locked entry or one with the person's target is never suggested over. With the suggestions written, a
+ * scanned form that fits two new names joins one of them when their targets agree ({@link FormCollapse}), and a name
+ * the book plays on is marked for the once-per-name question ({@link MeaningQuestions}).
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -35,6 +38,7 @@ final class NamesTranslation {
      * @param reviewed what the names step left: the readings of the entries read and the ids verified as names; never
      *     null
      * @param calls the seam every model call goes through; never null
+     * @param rejected receives the count of suggested renderings the target's rules refused; never null
      * @return the report of what was suggested and the glossary after, or the first failed call's or glossary access's
      *     error
      */
@@ -44,7 +48,8 @@ final class NamesTranslation {
             final String projectId,
             final Book book,
             final Reviewed reviewed,
-            final ModelCalls calls) {
+            final ModelCalls calls,
+            final IntConsumer rejected) {
         Objects.requireNonNull(glossary, "glossary");
         Objects.requireNonNull(scans, "scans");
         Objects.requireNonNull(reviewed, "reviewed");
@@ -61,14 +66,23 @@ final class NamesTranslation {
                 return Result.ok(new GlossaryReviewReport(0, 0, held));
             }
             final TargetContext context = new TargetContext(held, reviewed.readings(), reviewed.verified());
-            return scans.suggestFor(open, context, book, calls)
+            final String language = book.frame().analysisLanguage();
+            return scans.suggestFor(open, context, book, calls, rejected)
                     .flatMap(suggestions -> ReviewCommit.apply(
                             glossary,
                             projectId,
-                            List.of(),
-                            suggestions,
-                            book.frame().analysisLanguage(),
-                            book.story().visibleTexts()));
+                            new ReviewCommit.Answers(List.of(), List.of(), suggestions),
+                            language,
+                            book.story().visibleTexts()))
+                    .flatMap(report -> afterSuggestions(glossary, projectId, book, reviewed)
+                            .map(marked -> report));
         });
+    }
+
+    // With the suggested targets written, a form two new names share can be folded, and the names to ask are marked.
+    private static Result<Integer> afterSuggestions(
+            final GlossaryRepository glossary, final String projectId, final Book book, final Reviewed reviewed) {
+        return FormCollapse.collapse(glossary, projectId, book.frame().analysisLanguage())
+                .flatMap(collapsed -> MeaningQuestions.mark(glossary, projectId, reviewed.readings(), book.names()));
     }
 }

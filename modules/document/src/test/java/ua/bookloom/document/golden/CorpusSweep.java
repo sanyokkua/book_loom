@@ -333,7 +333,7 @@ final class CorpusSweep {
     private static long sizeOf(Path file) {
         try {
             return Files.size(file);
-        } catch (IOException e) {
+        } catch (IOException _) {
             return -1L;
         }
     }

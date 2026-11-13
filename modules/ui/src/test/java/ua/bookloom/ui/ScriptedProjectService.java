@@ -2,7 +2,6 @@ package ua.bookloom.ui;
 
 import static ua.bookloom.ui.ScriptedProjects.awaitGate;
 import static ua.bookloom.ui.ScriptedProjects.awaitLatch;
-import static ua.bookloom.ui.ScriptedProjects.notScripted;
 import static ua.bookloom.ui.ScriptedProjects.projectOf;
 
 import java.nio.file.Path;
@@ -19,6 +18,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.BookRelocation;
+import ua.bookloom.api.pipeline.ChapterTally;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.ProjectChange;
 import ua.bookloom.api.pipeline.ProjectOpening;
@@ -52,10 +52,8 @@ public final class ScriptedProjectService implements ProjectService {
     private final List<String> closed = new CopyOnWriteArrayList<>();
     private final List<Boolean> closedOnFxThread = new CopyOnWriteArrayList<>();
     private final List<String> events = new CopyOnWriteArrayList<>();
-    private final List<String> plans = new CopyOnWriteArrayList<>();
-    private final List<Boolean> plansOnFxThread = new CopyOnWriteArrayList<>();
+    private final ScriptedPlans plans = new ScriptedPlans();
     private final CountDownLatch entered = new CountDownLatch(1);
-    private volatile Result<BookPlan> planAnswer = notScripted();
     private volatile Result<ImportedBook> fallback =
             Result.err(AppError.of(ErrorCode.internal, "Not scripted", "The test scripted no answer for this file."));
     private volatile @Nullable RuntimeException failure;
@@ -116,7 +114,7 @@ public final class ScriptedProjectService implements ProjectService {
 
     /** From now on answers every plan with {@code answer}. */
     public void onPlan(final Result<BookPlan> answer) {
-        planAnswer = Objects.requireNonNull(answer, "answer");
+        plans.answer(answer);
     }
 
     /** From now on throws {@code thrown} from every round-trip check, the way a defective adapter would. */
@@ -228,7 +226,7 @@ public final class ScriptedProjectService implements ProjectService {
     }
 
     /** From now on {@link #list} throws {@code error}, as a JVM out of memory would. */
-    public void throwOnList(final Error error) {
+    public void throwOnList(final RuntimeException error) {
         listing.throwOnList(error);
     }
 
@@ -273,7 +271,7 @@ public final class ScriptedProjectService implements ProjectService {
         return scripted != null
                 ? scripted
                 : Result.ok(new ProjectChange.Saved(
-                        projectOf(projectId, imports.getLast()).withBrief(brief)));
+                        projectOf(projectId, imports.getLast()).withBrief(brief), 0));
     }
 
     @Override
@@ -283,9 +281,17 @@ public final class ScriptedProjectService implements ProjectService {
 
     @Override
     public Result<BookPlan> plan(final String projectId) {
-        plans.add(Objects.requireNonNull(projectId, "projectId"));
-        plansOnFxThread.add(Platform.isFxApplicationThread());
-        return planAnswer;
+        return plans.plan(projectId);
+    }
+
+    @Override
+    public Result<ChapterTally> chapterTally(final String projectId) {
+        return plans.tally(projectId);
+    }
+
+    /** From now on answers every chapter tally with {@code tally}; until then no chapter is finished. */
+    public void onChapterTally(final ChapterTally tally) {
+        plans.tally(tally);
     }
 
     @Override
@@ -368,12 +374,12 @@ public final class ScriptedProjectService implements ProjectService {
 
     /** The id of every project a plan was asked for, in call order. */
     public List<String> planProjects() {
-        return List.copyOf(plans);
+        return plans.calls();
     }
 
     /** For each plan, in call order, whether it arrived on the FX Application Thread. */
     public List<Boolean> planCallsOnFxThread() {
-        return List.copyOf(plansOnFxThread);
+        return plans.onFxThread();
     }
 
     /** The id of every project {@link #close} was asked to release, in call order. */

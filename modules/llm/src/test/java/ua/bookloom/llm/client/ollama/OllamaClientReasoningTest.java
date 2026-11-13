@@ -35,9 +35,9 @@ import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
 
 /**
- * Thinking per call (15i.X2) at the Ollama-native HTTP seam: a call with thinking on asks for {@code think}, gets the
- * room its reasoning needs on top of the answer's cap whichever model it is, and its thinking lines neither trip the
- * runaway line guard nor count against the reply.
+ * Thinking at the Ollama-native HTTP seam: the client sends the level the model's profile decided as {@code think} and
+ * the cap as given, and a thinking call's thinking lines neither trip the runaway line guard nor count against the
+ * reply.
  */
 class OllamaClientReasoningTest {
 
@@ -46,7 +46,7 @@ class OllamaClientReasoningTest {
     private static final int CAP = 10;
     // Twice the cap plus the 64-line margin: what the guard allowed before thinking had any room of its own.
     private static final int OLD_LIMIT = 84;
-    // The same bound with 1,024 tokens of room for thinking: (10 + 1024) * 2 + 64.
+    // A count of thinking lines far past the bound twice the cap allows.
     private static final int GROWN_LIMIT = 2132;
     private static final String THINKING_LINE =
             "{\"model\":\"gemma4:e4b-mlx\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"hm \"},\"done\":false}\n";
@@ -73,41 +73,18 @@ class OllamaClientReasoningTest {
         server.stop();
     }
 
-    // IF a call has thinking on, THEN Ollama is asked to think and its cap grows by 1,024 tokens, on any model.
+    // The client words the level the model's profile decided and sends the cap as given: the room for reasoning is
+    // already in the cap (ReasoningChoice), and no rule is read from the model's name.
     @ParameterizedTest
-    @CsvSource({"gemma4:e4b-mlx,1324", "qwen3:8b,1324", "gpt-oss:20b,1324"})
-    void chat_thinkingOn_sendsThinkTrueAndTheCapWithHeadroom(final String model, final int numPredict) {
+    @CsvSource({"gemma4:e4b-mlx,ON,true", "qwen3:8b,OFF,false", "gpt-oss:20b,LOW,low", "gpt-oss:20b,OFF,false"})
+    void chat_decidedLevel_sendsItsThinkValueAndTheCapAsGiven(
+            final String model, final ReasoningLevel level, final String think) {
         stubReply(SIMPLE_REPLY);
 
-        client().chat(model, request(300, ReasoningLevel.ON));
-
-        assertSent(model, "$.think", "true");
-        assertSent(model, "$.options.num_predict", String.valueOf(numPredict));
-    }
-
-    // IF thinking is off, THEN the request is today's: think false, the cap as asked (gpt-oss keeps its low level and
-    // its room).
-    @ParameterizedTest
-    @CsvSource({"gemma4:e4b-mlx,false,300", "qwen3:8b,false,300", "gpt-oss:20b,low,1324"})
-    void chat_thinkingOff_sendsTodaysRequest(final String model, final String think, final int numPredict) {
-        stubReply(SIMPLE_REPLY);
-
-        client().chat(model, request(300, ReasoningLevel.OFF));
+        client().chat(model, request(300, level));
 
         assertSent(model, "$.think", think);
-        assertSent(model, "$.options.num_predict", String.valueOf(numPredict));
-    }
-
-    // IF the level is Low, THEN Ollama is asked for "low" effort on any model and the cap grows like a thinking call's.
-    @ParameterizedTest
-    @CsvSource({"gemma4:e4b-mlx,1324", "qwen3:8b,1324", "gpt-oss:20b,1324"})
-    void chat_thinkingLow_sendsThinkLowAndTheCapWithHeadroom(final String model, final int numPredict) {
-        stubReply(SIMPLE_REPLY);
-
-        client().chat(model, request(300, ReasoningLevel.LOW));
-
-        assertSent(model, "$.think", "low");
-        assertSent(model, "$.options.num_predict", String.valueOf(numPredict));
+        assertSent(model, "$.options.num_predict", "300");
     }
 
     // Low streams reasoning lines too, so they do not count against the runaway bound.
@@ -118,13 +95,10 @@ class OllamaClientReasoningTest {
         final Result<ChatResponse> result =
                 client().chat(MODEL_ID, request(CAP, ReasoningLevel.LOW)).result();
 
-        assertThat(result.data()).isEqualTo(new ChatResponse("Hi", FinishReason.STOP));
-    }
-
-    @Test
-    void maxLines_thinkingLow_countsTheHeadroomTwice() {
-        assertThat(OllamaClient.maxLines(MODEL_ID, request(100, ReasoningLevel.LOW)))
-                .isEqualTo(2312L);
+        assertThat(result.data())
+                .usingRecursiveComparison()
+                .ignoringFields("rawBody")
+                .isEqualTo(new ChatResponse("Hi", FinishReason.STOP));
     }
 
     @Test
@@ -146,7 +120,10 @@ class OllamaClientReasoningTest {
         final Result<ChatResponse> result =
                 client().chat(MODEL_ID, request(CAP, ReasoningLevel.ON)).result();
 
-        assertThat(result.data()).isEqualTo(new ChatResponse("Hi", FinishReason.STOP));
+        assertThat(result.data())
+                .usingRecursiveComparison()
+                .ignoringFields("rawBody")
+                .isEqualTo(new ChatResponse("Hi", FinishReason.STOP));
         assertThat(OLD_LIMIT).isLessThan(300);
     }
 
@@ -158,10 +135,13 @@ class OllamaClientReasoningTest {
         final Result<ChatResponse> result =
                 client().chat(MODEL_ID, request(CAP, ReasoningLevel.ON)).result();
 
-        assertThat(result.data()).isEqualTo(new ChatResponse("Hi", FinishReason.STOP));
+        assertThat(result.data())
+                .usingRecursiveComparison()
+                .ignoringFields("rawBody")
+                .isEqualTo(new ChatResponse("Hi", FinishReason.STOP));
     }
 
-    // A reply that never stops is still a runaway with thinking on, cut at the grown bound and read as length.
+    // A reply that never stops is still a runaway with thinking on, cut and read as length.
     @Test
     void chat_thinkingOnWithARunawayAnswer_isCutAsLengthAtTheGrownBound() {
         stubReply(contentLines(GROWN_LIMIT + 200));
@@ -183,28 +163,11 @@ class OllamaClientReasoningTest {
         assertThat(result.data()).extracting(ChatResponse::finishReason).isEqualTo(FinishReason.LENGTH);
     }
 
-    @Test
-    void maxLines_thinkingOn_countsTheHeadroomTwice() {
-        assertThat(OllamaClient.maxLines(MODEL_ID, request(100, ReasoningLevel.ON)))
-                .isEqualTo(2312L);
-    }
-
-    @Test
-    void maxLines_thinkingOff_isTwiceTheCapPlusTheMargin() {
-        assertThat(OllamaClient.maxLines(MODEL_ID, request(100, ReasoningLevel.OFF)))
-                .isEqualTo(264L);
-    }
-
-    @Test
-    void maxLines_gptOssWithThinkingOff_countsItsHeadroom() {
-        assertThat(OllamaClient.maxLines("gpt-oss:20b", request(100, ReasoningLevel.OFF)))
-                .isEqualTo(2312L);
-    }
-
-    @Test
-    void maxLines_gptOssWithThinkingOn_countsTheHeadroomOnce() {
-        assertThat(OllamaClient.maxLines("gpt-oss:20b", request(100, ReasoningLevel.ON)))
-                .isEqualTo(2312L);
+    // The cap of a thinking call already holds its reasoning reserve, so the bound is twice the cap at any level.
+    @ParameterizedTest
+    @CsvSource({"OFF", "LOW", "ON"})
+    void maxLines_anyLevel_isTwiceTheCapPlusTheMargin(final ReasoningLevel level) {
+        assertThat(ThinkingLines.maxLines(request(100, level))).isEqualTo(264L);
     }
 
     // With no cap the bound is the context window, which already holds the thinking: no room is added.
@@ -221,7 +184,7 @@ class OllamaClientReasoningTest {
                 null,
                 CallKind.DRAFT);
 
-        assertThat(OllamaClient.maxLines(MODEL_ID, uncapped)).isEqualTo(8256L);
+        assertThat(ThinkingLines.maxLines(uncapped)).isEqualTo(8256L);
     }
 
     private static String thinkingLines(final int count) {

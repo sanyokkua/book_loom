@@ -17,17 +17,17 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.project.SegmentLocators;
-import ua.bookloom.pipeline.revision.ConsistencyReport;
 
 /**
  * The report side file: the counts the export reports, every flagged segment named by its locator with its findings,
- * and the consistency pass's notes — what a person reads to decide where to look before sharing the book.
+ * and what the Proofread stage re-read and left waiting — what a person reads to decide where to look before sharing the book.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -43,41 +43,35 @@ final class QualityReport {
      * Builds the report of one export.
      *
      * @param title the non-null written book's file name
-     * @param counts the non-null counts the export reports
-     * @param book the non-null book as written, whose document order and locators the flagged list follows
-     * @param records the non-null stored records
-     * @param keptKinds the non-null auxiliary kinds the brief keeps as source, whose records are never listed flagged
-     * @param pass what the consistency pass changed, or null when it was not run
-     * @param suspicious the non-null accepted segments the final audit doubts, listed with the checks that fired
-     * @param policy the non-null way each segment without an accepted target was written
-     * @param lastRun the project's last translation run, or null when it never ran
+     * @param sources the non-null parts of the export the report reads: its counts, the book as written, the stored
+     *     records, the kept auxiliary kinds, what the Proofread stage re-read and left waiting, the
+     *     accepted segments the final audit doubts, the policy for segments without an accepted target, and the
+     *     project's last run (or null when it never ran)
      * @return the report's Markdown text
      */
-    static String of(
-            final String title,
-            final ExportCounts counts,
-            final Document book,
-            final List<SegmentRecord> records,
-            final Set<SegmentKind> keptKinds,
-            @Nullable final ConsistencyReport pass,
-            final List<SuspiciousSegment> suspicious,
-            final ExportPolicy policy,
-            @Nullable final RunRecord lastRun) {
-        Objects.requireNonNull(counts, "counts");
-        Objects.requireNonNull(policy, "policy");
+    static String of(final String title, final SideFiles.Sources sources) {
+        final ExportCounts counts = Objects.requireNonNull(sources.counts(), "counts");
+        final ExportPolicy policy = Objects.requireNonNull(sources.policy(), "policy");
+        final ProofreadSummary summary = sources.summary();
+        final Document book = sources.targets().document();
         final String text = "# Export report: " + title + "\n\n"
                 + counts(counts)
                 + "\n"
-                + lastRun(lastRun)
+                + lastRun(sources.lastRun())
                 + "\n"
                 + policy.text()
                 + "\n## Flagged segments\n\n"
-                + flagged(book, records, keptKinds)
+                + flagged(book, sources.records(), sources.keptKinds())
                 + "\n## Suspicious accepted segments\n\n"
-                + suspicious(suspicious)
-                + "\n## Consistency notes\n\n"
-                + ConsistencySection.of(pass);
-        log.debug("Quality report built title={} length={} consistencyPass={}", title, text.length(), pass != null);
+                + suspicious(sources.suspicious())
+                + "\n## Proofread\n\n"
+                + ProofreadSection.of(summary);
+        log.debug(
+                "Quality report built title={} length={} proofreadReRead={} proofreadWaiting={}",
+                title,
+                text.length(),
+                summary.reRead(),
+                summary.waiting());
         return text;
     }
 

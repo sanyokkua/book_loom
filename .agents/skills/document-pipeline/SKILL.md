@@ -117,9 +117,9 @@ lists (image alt text, ADR-0041) change, so formatting is preserved by construct
 
 ## Reference index
 
-- In-repo authorities: `docs/specification/01_Product/03_DOCUMENT_FORMATS.md`,
-  `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md`,
-  `docs/specification/00_Foundation/02_GLOSSARY.md`.
+- In-repo authorities: `docs/spec_baseline/specification/01_Product/03_DOCUMENT_FORMATS.md`,
+  `docs/spec_baseline/specification/02_Architecture/03_DOCUMENT_MODEL.md`,
+  `docs/spec_baseline/specification/00_Foundation/02_GLOSSARY.md`.
 
 ## Mandatory validation checklist
 

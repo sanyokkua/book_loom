@@ -7,6 +7,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewFilter;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.SegmentView;
@@ -108,6 +109,18 @@ class ReviewViewModelListTest extends ReviewViewModelTestBase {
         org.testfx.util.WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(onFx(() -> review.flaggedCount().get())).isEqualTo(5);
+    }
+
+    // A reopened project has no run that ended to publish its second-look count: the count read must carry it, so the
+    // Review button shows the same number before and after a restart.
+    @Test
+    void refreshCount_reopenedProject_publishesTheSecondLookCountFromTheDesk() {
+        buildReview();
+        desk.willAnswerCounts(new ReviewCounts(100, 90, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0));
+
+        press(() -> review.refreshCount());
+
+        assertThat(onFx(() -> mirror.live().suspicious().get())).isEqualTo(1);
     }
 
     @Test

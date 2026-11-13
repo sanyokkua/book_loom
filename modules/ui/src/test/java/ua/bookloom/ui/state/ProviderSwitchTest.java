@@ -55,7 +55,7 @@ class ProviderSwitchTest extends ProviderFormTestBase {
             built.adopt(new ModelSelection("ollama", "gemma4:e4b"));
             built.editProvider("lmstudio");
             if (bookOpen) {
-                OpenBookForTest.open(current, "p1", "en", "uk");
+                OpenedBookFixture.open(current, "p1", "en", "uk");
             }
             return null;
         });

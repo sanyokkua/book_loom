@@ -24,8 +24,10 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.LogEntry;
@@ -186,6 +188,10 @@ public final class TaggedLog extends ListView<LogEntry> {
         if (entry.namesACall() && args.length > 0) {
             args[0] = messages.get(MessageKey.RUN_CALL_KIND, args[0]);
         }
+        if (entry.namesAStage() && args.length > 1) {
+            args[0] = StageWords.started(
+                    messages, JobStage.valueOf((String) args[0]), Integer.parseInt((String) args[1]));
+        }
         return messages.get(entry.messageKey(), args);
     }
 
@@ -211,7 +217,7 @@ public final class TaggedLog extends ListView<LogEntry> {
         private static Label part(final String styleClass) {
             final Label label = new Label();
             label.getStyleClass().add(styleClass);
-            label.setMinWidth(Label.USE_PREF_SIZE);
+            label.setMinWidth(Region.USE_PREF_SIZE);
             return label;
         }
 

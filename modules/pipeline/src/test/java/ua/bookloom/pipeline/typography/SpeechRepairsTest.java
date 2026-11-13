@@ -28,7 +28,7 @@ class SpeechRepairsTest {
             delimiter = '|',
             value = {
                 "comma inside before dash|He said.|«Ходімо,» — сказав він.|«Ходімо», — сказав він.",
-                "comma inside before en dash|He said.|«Ходімо,» – сказав він.|«Ходімо», – сказав він.",
+                "comma inside before en dash|He said.|«Ходімо,» – сказав він.|«Ходімо», — сказав він.",
                 "comma outside already|He said.|«Ходімо», — сказав він.|«Ходімо», — сказав він.",
                 "comma inside no dash|He said.|«Ходімо,» і пішов.|«Ходімо,» і пішов.",
             })

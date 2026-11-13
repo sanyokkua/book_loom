@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.List;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -24,6 +25,55 @@ public final class ProviderReports {
     /** A report in which all three stages passed and each kept the request it sent, the way the real verifier does. */
     public static Result<VerificationReport> allPassedWithExchanges() {
         return Result.ok(new VerificationReport(List.of(connection(), models(), inference())));
+    }
+
+    /**
+     * A report in which all three stages passed and the inference reply carried the given prompt timings.
+     *
+     * @param firstTokenMs the prompt-reading time in milliseconds, or null when the route reports none
+     * @param promptTokens the prompt tokens counted
+     * @param cachedPrompt the prompt tokens served from the cache, or null when not reported
+     * @return the report
+     */
+    public static Result<VerificationReport> allPassedWithTimings(
+            final @Nullable Long firstTokenMs, final Integer promptTokens, final @Nullable Integer cachedPrompt) {
+        final StageOutcome timed = new StageOutcome(
+                VerificationStage.INFERENCE,
+                StageStatus.PASSED,
+                null,
+                null,
+                Duration.ofMillis(1200),
+                null,
+                new VerificationExchange(
+                        "POST",
+                        "http://127.0.0.1:11434/v1/chat/completions",
+                        "{}",
+                        "OK",
+                        200,
+                        firstTokenMs,
+                        42.5,
+                        true,
+                        HEADERS,
+                        promptTokens,
+                        3,
+                        "{}",
+                        "OK",
+                        null,
+                        cachedPrompt,
+                        List.of()));
+        return Result.ok(new VerificationReport(List.of(connection(), models(), timed)));
+    }
+
+    /**
+     * A report of the Advanced features test: the three stages passed, then the optional stage with its note.
+     *
+     * @param note the verdicts in the verifier's machine words, such as {@code schema=honoured; thinking=think}
+     * @return the four stages, the last one passed without an exchange of its own
+     */
+    public static Result<VerificationReport> advancedPassed(final String note) {
+        final StageOutcome advanced = new StageOutcome(
+                VerificationStage.ADVANCED, StageStatus.PASSED, null, note, Duration.ofMillis(3400), null, null);
+        return Result.ok(new VerificationReport(List.of(connection(), models(), inference(), advanced)));
     }
 
     /** A report of Test connection alone that nothing answered, the way a closed local program fails it. */

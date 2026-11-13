@@ -31,13 +31,16 @@ final class ActivityBindings {
                 running);
         locking = Bindings.createBooleanBinding(
                 () -> running.stream()
-                        .anyMatch(activity ->
-                                isShownBlocking(activity) && !activity.kind().isHideable()),
+                        .anyMatch(activity -> activity.isBlocking()
+                                && !activity.isHidden()
+                                && !activity.kind().isHideable()),
                 running);
     }
 
+    // Work that shows its progress in a card of its own (the provider's model tests) never gets the progress dialog,
+    // but it still locks the navigation.
     private static boolean isShownBlocking(final Activity activity) {
-        return activity.isBlocking() && !activity.isHidden();
+        return activity.isBlocking() && !activity.isHidden() && !activity.kind().hasOwnCard();
     }
 
     BooleanBinding blocking() {

@@ -33,7 +33,7 @@ final class GlossaryServiceFixtures {
 
     static GlossaryEntry entry(
             final String term, @Nullable final String target, final TermType type, final boolean locked) {
-        return new GlossaryEntry(GlossaryIds.of(PROJECT, term), PROJECT, term, target, type, Gender.MALE, locked);
+        return GlossaryEntry.of(GlossaryIds.of(PROJECT, term), PROJECT, term, target, type, Gender.MALE, locked);
     }
 
     /** A one-body-unit book whose paragraphs are the given lines, plus an auxiliary unit holding {@code auxiliary}. */
@@ -63,7 +63,6 @@ final class GlossaryServiceFixtures {
                 null,
                 List.of(),
                 SegmentPath.DRAFT,
-                0,
                 false,
                 null);
     }

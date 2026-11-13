@@ -78,7 +78,7 @@ class FindBookDialogTest extends ShellTestBase {
     void chooseButton_pressed_runsChoose() {
         ask(new ProjectOpening.BookFileMissing(PROJECT), null);
 
-        onFx(() -> ((Button) required("findbook-choose")).fire());
+        onFx(((Button) required("findbook-choose"))::fire);
 
         assertThat(answers).containsExactly("choose");
     }

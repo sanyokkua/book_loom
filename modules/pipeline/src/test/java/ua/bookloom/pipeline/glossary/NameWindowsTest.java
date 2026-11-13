@@ -18,7 +18,7 @@ import ua.bookloom.pipeline.glossary.NameWindows.Window;
 class NameWindowsTest {
 
     private static GlossaryEntry entry(final String term, final TermType type) {
-        return new GlossaryEntry("id-" + term, "p1", term, null, type, Gender.UNKNOWN, false);
+        return GlossaryEntry.of("id-" + term, "p1", term, null, type, Gender.UNKNOWN, false);
     }
 
     private static Evidence windowsOf(final GlossaryEntry entry, final List<String> paragraphs) {
@@ -137,15 +137,15 @@ class NameWindowsTest {
     }
 
     // IF the window ended before the pronoun the code read, THEN it would claim a pronoun it does not show: a sentence
-    // of 514 characters is 148 tokens, and the next sentence would take the window past its 150.
+    // of 526 characters is 148 tokens, and the next sentence would take the window past its 150.
     @Test
     void of_pronounBeyondTheWindowsBudget_givesTheWindowNoPronoun() {
         final String sentence =
-                "Long ago " + String.join(" ", java.util.Collections.nCopies(123, "far")) + " Wren stopped.";
+                "Long ago " + String.join(" ", java.util.Collections.nCopies(126, "far")) + " Wren stopped.";
 
         final Evidence evidence = windowsOf(entry("Wren", TermType.CHARACTER), List.of(sentence + " She rested."));
 
-        assertThat(sentence).hasSize(514);
+        assertThat(sentence).hasSize(526);
         assertThat(evidence.windows()).singleElement().satisfies(window -> {
             assertThat(window.text()).isEqualTo(sentence);
             assertThat(window.pronoun()).isNull();
@@ -167,16 +167,16 @@ class NameWindowsTest {
     }
 
     // IF the review's window grew backward first, THEN the scene before a use would crowd out the "He" after it and the
-    // window would prove no gender: the 505-character sentence before fits with the use alone, not with "He rested."
-    // too (150 tokens are 521 characters), so growing forward first keeps the pronoun.
+    // window would prove no gender: the 517-character sentence before fits with the use alone, not with "He rested."
+    // too (150 tokens are 534 characters), so growing forward first keeps the pronoun.
     @Test
     void of_pronounInTheSentenceAfter_isKeptBeforeTheSentenceBefore() {
-        final String before = "Long ago " + String.join(" ", java.util.Collections.nCopies(122, "far")) + " the end.";
+        final String before = "Long ago " + String.join(" ", java.util.Collections.nCopies(125, "far")) + " the end.";
 
         final Evidence evidence =
                 windowsOf(entry("Wren", TermType.CHARACTER), List.of(before + " Wren stopped. He rested."));
 
-        assertThat(before).hasSize(505);
+        assertThat(before).hasSize(517);
         assertThat(evidence.windows())
                 .extracting(Window::text, Window::pronoun)
                 .containsExactly(tuple("Wren stopped. He rested.", Gender.MALE));
@@ -230,5 +230,20 @@ class NameWindowsTest {
         final Evidence evidence = windowsOf(entry("Badger", TermType.CHARACTER), List.of("Badger hit him."));
 
         assertThat(evidence.windows()).extracting(Window::pronoun).containsExactly(Gender.MALE);
+    }
+    // An entry whose lemma the book never writes is found by its forms, and each window keeps the pronoun after the
+    // form.
+    @Test
+    void windows_entryNamedOnlyByAForm_getsWindows() {
+        final GlossaryEntry inferred =
+                entry("Градимир", TermType.CHARACTER).withForms(List.of("Градимиру", "Градимиром"));
+        final BookSlice book = GlossaryTestSegments.of(List.of(
+                "Утром Градимиру принесли письмо. Он прочёл его молча.", "Вечером с Градимиром никто не говорил."));
+
+        final Evidence evidence = NameWindows.of(book.index(), book.ordinals(), List.of(inferred), "ru")
+                .getOrDefault(inferred.term(), Evidence.NONE);
+
+        assertThat(evidence.count()).isEqualTo(2);
+        assertThat(evidence.windows()).extracting(Window::pronoun).containsExactly(Gender.MALE, null);
     }
 }

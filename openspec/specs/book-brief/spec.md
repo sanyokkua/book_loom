@@ -11,7 +11,7 @@ that the engine will one day read.
 
 The book-brief screen SHALL let a person choose the target language and choose or change the source language, and WHEN a book is opened SHALL preselect as the source the language the book declares, normalized. WHERE it declares none, or a code the application cannot name, and its content documents give no majority, the screen SHALL start with the source language **Auto**, SHALL say that the model will identify it, and SHALL keep `Continue` available once a target language is chosen (ADR-0042).
 
-**Source**: FR-BRIEF-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-IMPORT-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`, ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`), `docs/next_features.md` §15 ("The source language cannot be corrected"). In plain words: the application takes the source language from the book's metadata and never guesses it from the text (it does not guess; the model identifies the language when none is chosen), so the metadata's answer is only a starting point. Real books declare the wrong language — one surveyed EPUB declares `en-US` for Ukrainian text, and the locked selector made the model keep Ukrainian passages verbatim in a Polish translation — so the person must be able to correct it. A book that declares nothing gets no invented default: it is Auto, and a run with a wrong chosen source language is worse than a run that asks the model.
+**Source**: FR-BRIEF-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-IMPORT-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`, ADR-0037 (`docs/spec_baseline/adr/ADR-0037-language-evidence-from-metadata-only.md`), `docs/next_features.md` (removed in 2026-11; open items are in `docs/known-limits.md`) §15 ("The source language cannot be corrected"). In plain words: the application takes the source language from the book's metadata and never guesses it from the text (it does not guess; the model identifies the language when none is chosen), so the metadata's answer is only a starting point. Real books declare the wrong language — one surveyed EPUB declares `en-US` for Ukrainian text, and the locked selector made the model keep Ukrainian passages verbatim in a Polish translation — so the person must be able to correct it. A book that declares nothing gets no invented default: it is Auto, and a run with a wrong chosen source language is worse than a run that asks the model.
 
 #### Scenario: The declared language is preselected and can be changed
 
@@ -71,7 +71,7 @@ The book-brief screen SHALL let a person choose the target language and choose o
 
 The book-brief screen SHALL show the same 34 languages in the source and target lists and, WHEN a person types into either field, narrow the list to those whose display name contains the typed text anywhere, ignoring case and accents. WHEN the field loses focus holding text that names a recognized language the list lacks, as a display name or tag, the screen SHALL accept it and show its display name; otherwise it SHALL keep the previous language, or none.
 
-**Source**: FR-BRIEF-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`, `docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#internationalization`. In plain words: a list of 34 languages is too long to scroll every time, so typing a few letters finds the entry — `bokmal` finds Norwegian Bokmål without the accent. Both fields share one list because any of these languages can be either side of a translation. The list is only the common European languages, not a limit: a person translating Latin types `Latin` or `la` and gets it, because the application can name it. Text that names no language is refused rather than sent to the model as a language.
+**Source**: FR-BRIEF-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`, `docs/spec_baseline/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#internationalization`. In plain words: a list of 34 languages is too long to scroll every time, so typing a few letters finds the entry — `bokmal` finds Norwegian Bokmål without the accent. Both fields share one list because any of these languages can be either side of a translation. The list is only the common European languages, not a limit: a person translating Latin types `Latin` or `la` and gets it, because the application can name it. Text that names no language is refused rather than sent to the model as a language.
 
 #### Scenario: Both lists hold the same 34 languages
 
@@ -123,7 +123,7 @@ The book-brief screen SHALL show the same 34 languages in the source and target 
 
 IF the chosen source language and the chosen target language are the same, THEN the book-brief screen SHALL show the message `The source and target languages are the same.` beside the language fields, SHALL keep `Continue` unavailable until they differ, and SHALL NOT store the brief while they are the same, so the project keeps its stored pair and its name.
 
-**Source**: FR-BRIEF-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`. In plain words: a run like that would spend hours asking a model to translate a book into the language it is already in. Storing the pair renamed the project to `X · EN → EN` and announced it, so a refused pair is now only shown; any other choice made meanwhile is stored with the next pair that differs.
+**Source**: FR-BRIEF-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`. In plain words: a run like that would spend hours asking a model to translate a book into the language it is already in. Storing the pair renamed the project to `X · EN → EN` and announced it, so a refused pair is now only shown; any other choice made meanwhile is stored with the next pair that differs.
 
 #### Scenario: The same language on both sides is refused
 
@@ -144,7 +144,7 @@ IF the chosen source language and the chosen target language are the same, THEN 
 
 The book-brief screen SHALL offer, in its Tone & style card, a genre field that suggests exactly 40 predefined genres, filters them as typed and accepts free text; a register choice of `Formal / literary`, `Neutral` or `Casual`, defaulting to `Neutral`; and free-text narrative voice / era and audience fields. WHERE a predefined genre is chosen, the run SHALL receive its English name whatever the interface language; WHERE free text is entered, the run SHALL receive that text as written.
 
-**Source**: FR-BRIEF-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`. In plain words: these fields tell the model what kind of book it is translating — a Gothic novel for adults reads differently from a children's adventure — and that shapes every sentence. A list helps people name a genre quickly, but books do not fit lists, so free text is allowed. Forty is a fixed count, not an estimate, because a fixed catalogue is what a completeness test can check and "about forty" is not. The prompt is written in English, so a chosen genre reaches it in English even when the interface shows it in Ukrainian.
+**Source**: FR-BRIEF-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`. In plain words: these fields tell the model what kind of book it is translating — a Gothic novel for adults reads differently from a children's adventure — and that shapes every sentence. A list helps people name a genre quickly, but books do not fit lists, so free text is allowed. Forty is a fixed count, not an estimate, because a fixed catalogue is what a completeness test can check and "about forty" is not. The prompt is written in English, so a chosen genre reaches it in English even when the interface shows it in Ukrainian.
 
 #### Scenario: A new book starts with the defaults
 
@@ -181,12 +181,12 @@ The book-brief screen SHALL offer, in its Tone & style card, a genre field that 
 
 The book-brief screen SHALL offer, in its Translation policies card, a character-and-place-name policy, a foreign-language-passage policy, a footnote policy, a unit policy and a faithful ↔ natural slider from 0 to 100 labelled `literal · balanced · free`, each with the choices and the default the scenarios name.
 
-**Source**: FR-BRIEF-03, FR-BRIEF-04, FR-BRIEF-05, FR-BRIEF-06, FR-BRIEF-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), DD-26 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-26-foreign-passage-policy`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`. In plain words: these are the decisions a human translator makes once per book — do the names stay English, get spelled in the target alphabet, or get translated; does a Latin epigraph stay Latin; are footnotes translated; do miles become kilometres; how close to the original wording should the translation stay. The defaults are the safe choices for most fiction: names transliterated, foreign passages kept foreign, footnotes translated, units kept, and a balance just past the middle towards natural.
+**Source**: FR-BRIEF-03, FR-BRIEF-04, FR-BRIEF-05, FR-BRIEF-06, FR-BRIEF-07 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), DD-26 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-26-foreign-passage-policy`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: these are the decisions a human translator makes once per book — do the names stay English, get spelled in the target alphabet, or get translated; does a Latin epigraph stay Latin; are footnotes translated; do miles become kilometres; how close to the original wording should the translation stay. The name policy `Translate or adapt` lets the model use the target language's own form of a name that has one, and only when the person chooses it; names are sounded out by default for every language pair. The defaults are the safe choices for most fiction: names transliterated, foreign passages kept foreign, footnotes translated, units kept, and a balance just past the middle towards natural.
 
 #### Scenario: A new book starts with the policy defaults
 
 - **WHEN** a book is opened and the brief is shown
-- **THEN** the name policy is `Transliterate`, the foreign-passage policy is `Keep as-is`, the footnote policy is
+- **THEN** the name policy is `Transliterate` whatever the language pair, the foreign-passage policy is `Keep as-is`, the footnote policy is
   `Translate`, the unit policy is `Keep`, and the slider stands at `55`
 
 #### Scenario: A policy change is kept
@@ -202,13 +202,23 @@ The book-brief screen SHALL offer, in its Translation policies card, a character
 #### Scenario: Each policy offers these choices
 
 - **WHEN** the Translation policies card is shown
-- **THEN** the name policy offers `Translate`, `Transliterate` and `Keep original`, the foreign-passage policy `Keep as-is`, `Translate` and `Translate + note`, the footnote policy `Translate` and `Keep`, and the unit policy `Keep` and `Metric`
+- **THEN** the name policy offers `Translate or adapt`, `Transliterate` and `Keep original`, the foreign-passage policy `Keep as-is`, `Translate` and `Translate + note`, the footnote policy `Translate` and `Keep`, and the unit policy `Keep` and `Metric`
+
+#### Scenario: Transliterate is the default for every pair
+
+- **WHEN** a book is opened for `en` → `de`, and another for `ru` → `uk`
+- **THEN** both briefs hold the name policy `Transliterate`
+
+#### Scenario: What Translate or adapt means is said on hover
+
+- **WHEN** the person hovers `Translate or adapt`
+- **THEN** the explanation says the model may use the target language's own form of a name that has one, and that nothing is adapted under the other two choices
 
 ### Requirement: Choose which auxiliary text is also translated
 
 The book-brief screen SHALL offer, in its Also translate card, four switches: `ToC / navigation labels`, `Image alt-text` and `Book metadata (title/author)`, each on by default, and `Frontmatter values`, off by default. The ToC switch SHALL also govern each page's own title, and the metadata switch the book's description, wherever the format carries one.
 
-**Source**: FR-BRIEF-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-DOC-11 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-47 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`. In plain words: besides the chapters, a book carries text a reader still sees — the table of contents, image descriptions read aloud by screen readers, the title on the library shelf. Each is translated by default except Markdown frontmatter values, which often hold copyright and edition notes that should stay as written. A page's own title reads like a navigation label — it is the same kind of short wayfinding text — and a description reads like the title and author it sits beside, so each rides along with the switch it resembles instead of the mockup growing two more toggles it does not draw (see design).
+**Source**: FR-BRIEF-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-DOC-11 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-47 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`. In plain words: besides the chapters, a book carries text a reader still sees — the table of contents, image descriptions read aloud by screen readers, the title on the library shelf. Each is translated by default except Markdown frontmatter values, which often hold copyright and edition notes that should stay as written. A page's own title reads like a navigation label — it is the same kind of short wayfinding text — and a description reads like the title and author it sits beside, so each rides along with the switch it resembles instead of the mockup growing two more toggles it does not draw (see design).
 
 #### Scenario: A new book starts with three switches on
 
@@ -236,20 +246,21 @@ The book-brief screen SHALL offer, in its Also translate card, four switches: `T
 
 ### Requirement: Choose the quality dial and show what it turns on
 
-The book-brief screen SHALL offer, in its Quality vs speed card, a dial of `Fast`, `Balanced` or `Max`, defaulting to `Balanced`, with a one-line hint naming what the chosen position turns on, and a model row naming the provider and the model the run will use, with a `change` link that opens the Settings screen and no readiness badge. The screen SHALL NOT offer a review-mode choice; the review mode is decided when the application is launched.
+The book-brief screen SHALL offer, in its Quality vs speed card, a dial of `Fast`, `Balanced` or `Max`, defaulting to `Balanced`, with a one-line hint naming what the position does about fixing, proofreading and extra calls and the line "The same for every model.", and a model row naming the provider and the model, with a `change` link that opens Settings and no readiness badge. It SHALL NOT offer a review-mode choice; that is decided when the application is launched.
 
-**Source**: FR-BRIEF-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), DD-45 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-45-acceptance-model`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#quality-dial-mapping`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`, ADR-0036 (`docs/adr/ADR-0036-review-modes-pause-the-run.md`). In plain words: the dial trades speed for care, and a person can only make that trade knowingly if the screen says what each position costs — a reviewer pass per chunk (two on Max), a whole-book consistency pass. The model row is shown because the model is the other half of the quality question, and the link keeps the one place it is changed in Settings, so this row cannot drift from that choice. It carries no readiness badge because that would mean keeping a verification result between checks, which this build does not do; `app-shell`'s "Match the reference rendering" states this as a deviation from the reference rendering, alongside the sidebar's own readiness dot. The review mode — when the run stops for the person — is a preference about how they like to work, not a property of the book, so it does not belong here.
+**Source**: FR-BRIEF-08 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), DD-45 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-45-acceptance-model`), `docs/spec_baseline/specification/01_Product/05_TRANSLATION_ALGORITHM.md#quality-dial-mapping`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`, ADR-0036 (`docs/spec_baseline/adr/ADR-0036-review-modes-pause-the-run.md`), `design.md#d2--the-runs-three-stages-and-the-quality-dial`. In plain words: the dial trades speed for care, and a person can only make that trade knowingly if the screen says what each position costs — how many fixing calls a piece gets, which passages are re-read, and how many extra calls that costs; the same for every model, so the person never has to wonder whether the dial means less on a small model. The model row is shown because the model is the other half of the quality question, and the link keeps the one place it is changed in Settings, so this row cannot drift from that choice. It carries no readiness badge because that would mean keeping a verification result between checks, which this build does not do; `app-shell`'s "Match the reference rendering" states this as a deviation from the reference rendering, alongside the sidebar's own readiness dot. The review mode — when the run stops for the person — is a preference about how they like to work, not a property of the book, so it does not belong here.
 
 #### Scenario: Balanced is the default and says what it does
 
 - **WHEN** a book is opened and the brief is shown
 - **THEN** the dial is at `Balanced` and the hint reads
-  `Balanced: chunks of up to 8 segments · AI reviewer on · backward-consistency pass off`
+  `Balanced: fixing calls — one repair per piece · proofread — marked and doubtful windows · extra calls — about one call per marked passage`
+- **AND** the line below reads `The same for every model.`
 
 #### Scenario: The hint follows the dial
 
 - **WHEN** the dial is moved to `Max`
-- **THEN** the hint reads `Max: chunks of up to 2 segments · AI reviewer on · backward-consistency pass on`
+- **THEN** the hint reads `Max: fixing calls — one repair per piece · proofread — marked and doubtful windows, then the whole book re-read · extra calls — about one call per marked passage, plus one call per 4 paragraphs of the whole book`
 
 #### Scenario: The model row names the configured model and links to Settings
 
@@ -266,13 +277,13 @@ The book-brief screen SHALL offer, in its Quality vs speed card, a dial of `Fast
 #### Scenario: The hint for Fast
 
 - **WHEN** the dial is moved to `Fast`
-- **THEN** the hint reads `Fast: chunks of up to 8 segments · AI reviewer off · backward-consistency pass off`
+- **THEN** the hint reads `Fast: fixing calls — none, marks for review (lost formatting marks retried once) · proofread — none · extra calls — no extra calls`
 
 ### Requirement: Carry every brief choice into the run
 
-WHEN a run is started, the system SHALL build the instructions sent to the model from the brief as it then stands and SHALL send them with every translation request of the run. WHILE an "Also translate" switch is off, the run SHALL NOT translate the auxiliary text of that kind, and the exported book SHALL keep it exactly as it was in the source language. WHILE a book stays open, the brief's choices SHALL be kept for it when the person moves to another screen and back.
+WHEN a run is started, the system SHALL build the instructions sent to the model from the brief as it then stands, once for the book, and SHALL send them with every translation request of the run, with a short reminder. WHILE an "Also translate" switch is off, the run SHALL NOT translate that kind of auxiliary text, and the exported book SHALL keep it as in the source language. WHILE a book stays open, its brief choices SHALL be kept when the person moves to another screen and back.
 
-**Source**: FR-BRIEF-01..09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-DOC-11 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, DD-47 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`). In plain words: until now every control on this screen except the target language was drawn and ignored. A brief that does not reach the model is decoration, so this is the requirement that makes the screen mean something: what the person set is what the model is told, on every call, and a switch that says "do not translate the table of contents" leaves the table of contents alone.
+**Source**: FR-BRIEF-01..09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-DOC-11 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, DD-47 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: until now every control on this screen except the target language was drawn and ignored. A brief that does not reach the model is decoration, so this is the requirement that makes the screen mean something: what the person set is what the model is told, on every call, and a switch that says "do not translate the table of contents" leaves the table of contents alone.
 
 #### Scenario: Register and name policy reach the model
 
@@ -300,14 +311,24 @@ WHEN a run is started, the system SHALL build the instructions sent to the model
 #### Scenario: Every brief choice is in the instructions
 
 - **WHEN** a run is started
-- **THEN** the instructions are built from the source and target languages, genre, register, narrative voice / era, audience, the four policies, the faithful ↔ natural balance and the quality dial
+- **THEN** the run is built from the source and target languages, genre, register, narrative voice / era, audience, the four policies, the faithful ↔ natural balance, the quality dial, the policy keys (apostrophe, quotation marks, default address), the declared conventions and the chapter-summaries switch
+
+#### Scenario: The instructions are built once and a reminder goes with each call
+
+- **WHEN** a run of three translation requests is started
+- **THEN** the three requests carry the same instructions text, and each also carries a reminder of at most three lines
+
+#### Scenario: A policy key reaches the model
+
+- **WHEN** a run is started for a Ukrainian target with the apostrophe `’`, the quotation marks `«»` and strangers addressed as `Ви`
+- **THEN** every translation request instructs the model to use those three
 
 ### Requirement: Keep the destination off the brief
 
 The book-brief screen SHALL NOT offer a destination path, a Browse action or an overwrite switch; where the
 translated book is written SHALL be chosen on the Export screen.
 
-**Source**: FR-EXPORT-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, ADR-0035 (`docs/adr/ADR-0035-export-is-a-separate-action.md`). In plain words: a run no longer writes the book — exporting is its own action that can happen at any time, even halfway through — so asking where to save before the translation even starts asks the question at the wrong moment.
+**Source**: FR-EXPORT-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-export`, ADR-0035 (`docs/spec_baseline/adr/ADR-0035-export-is-a-separate-action.md`). In plain words: a run no longer writes the book — exporting is its own action that can happen at any time, even halfway through — so asking where to save before the translation even starts asks the question at the wrong moment.
 
 #### Scenario: The brief has no destination card
 
@@ -319,7 +340,7 @@ translated book is written SHALL be chosen on the Export screen.
 WHERE a label of a segmented choice on the brief does not fit its segment, the screen SHALL wrap the label onto a
 further line or widen the segment, and SHALL NOT cut the label short with an ellipsis.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`, `docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#internationalization`, `docs/next_features.md` §15 ("Book Brief segmented buttons truncate Ukrainian labels at 1024 px"). In plain words: Ukrainian words are longer than English ones, and the hand test found the name policy reading "Транслітерув…" and "Залишати оригі…" in a 1024-pixel window — a choice whose label cannot be read cannot be chosen with confidence.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`, `docs/spec_baseline/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#internationalization`, `docs/next_features.md` (removed in 2026-11; open items are in `docs/known-limits.md`) §15 ("Book Brief segmented buttons truncate Ukrainian labels at 1024 px"). In plain words: Ukrainian words are longer than English ones, and the hand test found the name policy reading "Транслітерув…" and "Залишати оригі…" in a 1024-pixel window — a choice whose label cannot be read cannot be chosen with confidence.
 
 #### Scenario: Ukrainian policy labels are readable at 1024 px
 
@@ -373,13 +394,13 @@ The book-brief screen SHALL offer, in its Tone & style card, a narrator choice o
 
 ### Requirement: Suggest the narrator from the source and ask once at Start translation
 
-WHEN a book is opened, the application SHALL read its narration chapter by chapter, outside quotes and dialogue, and keep a `NarratorHint` (the person `FIRST`, `THIRD` or `MIXED`, and the chapters judged); it SHALL never set the narrator's gender. WHILE the hint is `FIRST`, or `MIXED` with at least a quarter of its judged chapters first person, and the gender is not chosen and the narrator is not third person, the Tone & style card SHALL show a notice and preselect `First person`.
+WHEN a book is opened, the application SHALL read its narration chapter by chapter, outside quotes and dialogue, and keep a narrator hint (its person and the chapters judged), leaving the gender to "Read the narrator's gender from the source in Prepare". WHILE the hint is `FIRST`, or `MIXED` with a quarter or more of its chapters first person, and the gender is not chosen and the narrator is not third person, the Tone & style card SHALL show a notice and preselect `First person`.
 
-**Source**: FR-BRIEF-02, ADR-0038; tasks 15e.14. In plain words: a first-person book told by a man and translated with no narrator gender came out with feminine verbs (`я була`), because nothing told the model or the checks who "I" is. The source shows that the book says "I" but not the gender, so the application notices the first, shows a note, and asks the second question once, at the moment it matters, without ever blocking the start.
+**Source**: FR-BRIEF-02, ADR-0038; tasks 15e.14, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: a first-person book told by a man and translated with no narrator gender came out with feminine verbs (`я була`), because nothing told the model or the checks who "I" is. The source shows that the book says "I", and where its language has gendered past forms Prepare also reads the gender from them, but where it does not so the application notices the first, shows a note, and asks the second question once, at the moment it matters, without ever blocking the start.
 
 #### Scenario: A first-person book shows the notice and preselects the person
 
-- **WHEN** a book whose narration says "I" is opened and its brief is shown
+- **WHEN** a book whose narration says "I", in a source language with no gendered past forms, is opened and its brief is shown
 - **THEN** the notice is shown, the narrator choice is `First person`, the gender choice is `Not stated` and the brief's
   gender is unchanged
 
@@ -414,11 +435,16 @@ WHEN a book is opened, the application SHALL read its narration chapter by chapt
 - **THEN** the notice is not recomputed in the first case and none is shown in the second
 - **AND** the hint is read again in the run's preparation with the brief's language (known limitation of the 2026-10-07 review: the screens would need a port that re-reads the book's text, which is not worth it while the person can choose the narrator by hand)
 
+#### Scenario: A source with gendered past forms may settle the gender
+
+- **WHEN** a Russian first-person book is opened and Prepare has read the narrator as female from the book
+- **THEN** the narrator choice is `First person`, the gender choice is `Female` and no notice is shown
+
 ### Requirement: Ask who narrates once at Start translation
 
-WHEN Start translation is pressed (on Names & style or on Translating) under the notice's conditions and the question has not been answered for the book in this session, the application SHALL ask once `Who narrates?` with `Male`, `Female`, `Not stated — start anyway` and `Back`. A gender SHALL be written to the brief as a first-person narrator of that gender and the run SHALL start; `Not stated` SHALL start as before; `Back` or Escape SHALL start nothing and change nothing.
+WHEN Start translation is pressed under the notice's conditions and the question was not answered for the book in this session, the application SHALL ask once `Who narrates?` with `Male`, `Female`, `Not stated — start anyway` and `Back`, a likely answer already chosen. It SHALL write a chosen gender to the brief as a first-person narrator and start the run; Enter on a likely answer starts with it kept likely, not confirmed; `Back` or Escape starts nothing and changes nothing.
 
-**Source**: FR-BRIEF-02, ADR-0038; tasks 15e.14. In plain words: a first-person book told by a man and translated with no narrator gender came out with feminine verbs (`я була`), because nothing told the model or the checks who "I" is. The source shows that the book says "I" but not the gender, so the application notices the first, shows a note, and asks the second question once, at the moment it matters, without ever blocking the start.
+**Source**: FR-BRIEF-02, ADR-0038; tasks 15e.14, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: a first-person book told by a man and translated with no narrator gender came out with feminine verbs (`я була`), because nothing told the model or the checks who "I" is. The source shows that the book says "I" but not the gender, so the application notices the first, shows a note, and asks the second question once, at the moment it matters, without ever blocking the start.
 
 #### Scenario: The answer reaches the brief and the run
 
@@ -436,57 +462,15 @@ WHEN Start translation is pressed (on Names & style or on Translating) under the
 - **WHEN** the question was answered with `Male` or `Not stated — start anyway`
 - **THEN** the question is not asked again for the book
 
-### Requirement: Suggest the narrator's gender only from evidence the code verifies
+#### Scenario: Enter keeps the likely answer
 
-WHEN the model's style suggestion answers the narrator's gender, the application SHALL keep it only when its quote is found in the sample the model read and shows the gender in words the code can check; any other answer SHALL be the unknown gender. A first-person narrator whose gender is unknown SHALL take the kept gender, shown as `Male (suggested)` or `Female (suggested)` until the person changes it; a gender the person set is never replaced and a third-person narrator gets none.
+- **WHEN** the brief holds a first-person narrator, female, likely, and Start translation is pressed and Enter is pressed on the chosen `Female (likely)`
+- **THEN** the run starts and the narrator stays female, likely, not confirmed
 
-**Source**: FR-BRIEF-02; tasks 15h.G2, 15i.B4. In plain words: the model was free to say "male" from nothing, and its answer was then thrown away for a book whose narrator was already set to first person. Now the model has to point at a line the code can check — a name it can look up or a word like "ma'am" — and the gender it proves fills only a gap, marked as a suggestion.
+#### Scenario: Choosing the button confirms it
 
-#### Scenario: A vocative of a glossary person genders the narrator
-
-- **WHEN** the glossary holds the character `Jack` as male, the narrator is first person with no gender, and the model
-  quotes `Hang on to your ass, Jack` from the sample with the name `Jack`
-- **THEN** the narrator's gender is male and shown as `Male (suggested)` with the quote
-
-#### Scenario: A gender with nothing the code can check stays unknown
-
-- **WHEN** the model answers `female` with a quote that holds neither a known name nor a word of address
-- **THEN** the narrator's gender stays unknown and Start translation asks who narrates
-
-#### Scenario: A name the narrator says to someone else is no vote
-
-- **WHEN** a window holds `"Mind the step, Lucy," I said` and the model answers `female` with the name `Lucy`
-- **THEN** that window gives no gender vote
-
-#### Scenario: A name in the quote proves the gender whatever the model said
-
-- **WHEN** the quote calls the narrator by a name, or the narrator gives it ("Hang on to your ass, Jack"), the name the model gives stands in the quote, and it is a glossary character of known gender (the whole term or one word of it) or a name of the source language's first-name list
-- **THEN** that name's gender is the narrator's, whatever the model said
-
-#### Scenario: Words of address of one gender prove it when no name does
-
-- **WHEN** the quote has no name but holds words of the source language file's `addressTerms` table (`term>male` / `term>female`, such as `sir`, `ma'am`, `пане`, `дівчино`) of one gender only
-- **THEN** that gender is the narrator's
-
-#### Scenario: The narrator's own introduction is a vote
-
-- **WHEN** a window holds `"I'm Lucy," I said`
-- **THEN** the name `Lucy` is a vote for the narrator's gender, while a name the attribution beside quoted speech shows the narrator saying to someone else is not
-
-#### Scenario: One window proves a gender unless another proves the other
-
-- **WHEN** one window proves a gender and no other window proves the other gender
-- **THEN** the gender is kept and shown with its quote and the number of proving windows, not as uncertain
-
-#### Scenario: The suggested mark explains itself
-
-- **WHEN** the narrator's gender is shown as `Male (suggested)` or `Female (suggested)`
-- **THEN** a hover explanation is shown, in English and Ukrainian
-
-#### Scenario: No kept gender leaves the question to Start
-
-- **WHEN** no gender is kept for a first-person narrator
-- **THEN** the gender stays unknown and the Start question asks as before
+- **WHEN** the same question is answered by pressing the `Female` button
+- **THEN** the brief holds a first-person female narrator as the person's choice, and the question is not asked again for the book
 
 ### Requirement: Keep the proving quotes and the origin of the narrator's gender
 
@@ -559,9 +543,9 @@ The brief's narrator SHALL keep the proving quotes and the gender origin `VERIFI
 
 ### Requirement: Suggest the tone and style from verified readings, one decision per field
 
-WHEN the person presses "✦ Fill in from the book", the application SHALL ask what the model knows of the book, read several samples with one `brief-suggestion` call each, ask one `brief-synthesis` call over the facts and the samples' verified readings, and decide each field once; a failed sample counts as no reading, and a stop leaves the brief unchanged.
+WHEN the person presses "✦ Fill in from the book", the application SHALL ask what the model knows of the book, read several samples with one `brief-suggestion` call each, ask one `brief-synthesis` call over the facts and the samples' verified readings, and decide each field once, answering also the story shape from one quote in each of two samples; a failed sample counts as no reading, and a stop leaves the brief unchanged.
 
-**Source**: FR-BRIEF-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`); tasks 15h.G1, 15i.B2–B4 (`openspec/changes/archive/2026-10-19-complete-translation-workflow/additional-work.md`); `docs/specification/01_Product/12_PROMPT_CATALOG.md#brief-synthesis`; docs/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3. In plain words: one sample can be an odd stretch of a book and a model's memory can be wrong, so a field is kept only when most samples or checked knowledge say it.
+**Source**: FR-BRIEF-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`); tasks 15h.G1, 15i.B2–B4 (`openspec/changes/archive/2026-10-19-complete-translation-workflow/additional-work.md`); `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#brief-synthesis`; docs/spec_baseline/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: one sample can be an odd stretch of a book and a model's memory can be wrong, so a field is kept only when most samples or checked knowledge say it.
 
 #### Scenario: Three of four windows decide the register
 
@@ -571,17 +555,17 @@ WHEN the person presses "✦ Fill in from the book", the application SHALL ask w
 #### Scenario: A split register stays neutral and uncertain
 
 - **WHEN** two windows answer `casual` and two answer `formal`
-- **THEN** the suggested register is `Neutral` and shown as uncertain
+- **THEN** the suggested register is the synthesis's most probable value, `Neutral`, shown as `Neutral (likely)` and not as agreed
 
 #### Scenario: One window alone does not decide the genre
 
 - **WHEN** the synthesis names `Mystery` citing one of four windows and the model does not know the book
-- **THEN** the genre stays empty and is shown as uncertain
+- **THEN** the genre is `Mystery`, shown as `Mystery (likely)` and not as agreed
 
 #### Scenario: A cited window that read another genre is no support
 
 - **WHEN** the synthesis names `Thriller` citing two windows that read `fantasy` and `romance`
-- **THEN** the genre stays empty and is shown as uncertain
+- **THEN** the genre is `Thriller`, shown as `Thriller (likely)` with no basis named
 
 #### Scenario: One failed window does not fail the suggestion
 
@@ -644,11 +628,26 @@ WHEN the person presses "✦ Fill in from the book", the application SHALL ask w
 - **WHEN** the person stops the suggestion while the knowledge question is running
 - **THEN** the suggestion ends as cancelled and the brief is unchanged
 
-### Requirement: Keep a suggested field only when its basis holds
+#### Scenario: The story shape is decided from two windows
 
-The register SHALL be kept by a strict majority of the windows read, and the narrator's person SHALL be the narrator detector's when it answers, else a strict majority of the windows. The genre, audience and voice / era SHALL come from the synthesis, and SHALL stand only when the basis holds; any other field SHALL stay neutral or empty and be shown as uncertain. WHILE the source language is Auto, the language a strict majority of the windows name SHALL be a proposal only.
+- **WHEN** the synthesis answers one story, with a quote from sample 1 (`Mara reached the pass at dusk, as she had sworn in chapter one.`) and a quote from sample 3 (`Three days after the pass, Mara still carried the key.`)
+- **THEN** the story shape is `One story`, shown as `(likely)`, with both quotes
 
-**Source**: FR-BRIEF-02; tasks 15h.G1, 15i.B2–B4; `docs/specification/01_Product/12_PROMPT_CATALOG.md#brief-synthesis`. In plain words: one window can be an odd stretch of a book, and a model's memory of a famous title can be wrong, so a field is kept only when most of the book's passages say it, or when the model's checked knowledge of the book says the same as the passages; otherwise the field stays for the person to choose.
+#### Scenario: A collection is separate stories
+
+- **WHEN** the synthesis answers separate stories, with a quote from sample 1 that opens one tale and a quote from sample 2 that opens another with new characters
+- **THEN** the story shape is `Separate stories`, shown as `(likely)`
+
+#### Scenario: No field is left empty
+
+- **WHEN** the windows give no clear answer for the audience
+- **THEN** the audience is the synthesis's most probable value, for example `general`, shown as `general (likely)`
+
+### Requirement: Mark a suggested field likely unless its basis holds
+
+The register SHALL be kept by a strict majority of the windows read, and the narrator's person SHALL be the detector's when it answers, else a strict majority of the windows. The genre, audience and voice / era SHALL stand unmarked only when the synthesis's basis holds; any other field SHALL take the model's most probable value, shown as `(likely)` until the person confirms or changes it. WHILE the source language is Auto, the language most windows name SHALL be a proposal only.
+
+**Source**: FR-BRIEF-02; tasks 15h.G1, 15i.B2–B4; `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#brief-synthesis`, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: one window can be an odd stretch of a book, and a model's memory of a famous title can be wrong, so a field is shown without a mark only when most of the book's passages say it, or when the model's checked knowledge of the book says the same as the passages; otherwise the field shows the model's most probable value marked likely, and the person confirms or changes it. No field is left empty.
 
 #### Scenario: A window with no verified answer counts against every register
 
@@ -678,13 +677,23 @@ The register SHALL be kept by a strict majority of the windows read, and the nar
 #### Scenario: Each field says what it stands on
 
 - **WHEN** a field is kept
-- **THEN** it names its basis before its value and says what it stands on (`from 3 of 4 passages`, `from what the model knows of this book`, the detector's count)
+- **THEN** it names its basis before its value and says what it stands on (`from 3 of 4 passages`, `from what the model knows of this book`, the detector's count), and a likely field says `the model's best guess`
+
+#### Scenario: No majority gives a likely register
+
+- **WHEN** no register has a strict majority of the windows
+- **THEN** the register is the synthesis's most probable value, shown as `(likely)`
+
+#### Scenario: A field with no basis is a likely value
+
+- **WHEN** the synthesis names the voice / era `Victorian` and cites no window and no accepted knowledge
+- **THEN** the voice / era is `Victorian`, shown as `Victorian (likely)`, and a field that stands on a basis carries no mark
 
 ### Requirement: Make the brief read-only while a translation is going on
 
 WHILE the run state of the open project is Translating, Stuck call, Waiting for the AI program, Pausing or Stopping, the Book Brief SHALL be read-only and SHALL show the banner "Pause the translation to change the brief. Changes apply to segments not translated yet." with a Pause button; in every other run state, Paused included, it SHALL be editable except the languages, which "Lock the languages once translating has started" governs.
 
-**Source**: docs/specification/mockups/README.md#changes-while-translating-i, docs/specification/mockups/README.md#run-states-a, docs/specification/mockups/README.md#step-2--book-brief--b1b3-i, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (open question 7, recorded default: read-only until a pause). In plain words: the engine rereads the brief's switches only when it resumes, so an edit made mid-run would look accepted and change nothing; the screen therefore waits for a pause and says so.
+**Source**: docs/spec_baseline/specification/mockups/README.md#changes-while-translating-i, docs/spec_baseline/specification/mockups/README.md#run-states-a, docs/spec_baseline/specification/mockups/README.md#step-2--book-brief--b1b3-i, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (open question 7, recorded default: read-only until a pause). In plain words: the engine rereads the brief's switches only when it resumes, so an edit made mid-run would look accepted and change nothing; the screen therefore waits for a pause and says so.
 
 #### Scenario: The brief is read-only during a translation
 
@@ -715,7 +724,7 @@ WHILE the run state of the open project is Translating, Stuck call, Waiting for 
 
 WHILE a project has started translating — it holds at least one decided segment or a run is in progress — the Book Brief SHALL lock both language choices and SHALL point to "Translate into another language" on Projects for another target.
 
-**Source**: docs/specification/mockups/README.md#changes-while-translating-i, docs/specification/mockups/README.md#step-2--book-brief--b1b3-i. In plain words: changing the languages under finished segments would mix two translations in one book, so a new target is a new project.
+**Source**: docs/spec_baseline/specification/mockups/README.md#changes-while-translating-i, docs/spec_baseline/specification/mockups/README.md#step-2--book-brief--b1b3-i. In plain words: changing the languages under finished segments would mix two translations in one book, so a new target is a new project.
 
 #### Scenario: Languages are locked after the first decided segment
 
@@ -731,7 +740,7 @@ WHILE a project has started translating — it holds at least one decided segmen
 
 The Book Brief's languages card SHALL show a Project name line reading "automatic — follows the languages" while the name is automatic, with a Rename… action, and an automatic name SHALL follow the chosen languages as `<title> · <SRC> → <TGT>`, with no arrow until a target is chosen (`<title> · <SRC>`, or only the title while no source is known).
 
-**Source**: docs/specification/mockups/README.md#project-names--one-book-several-translations-pn, docs/specification/mockups/README.md#step-2--book-brief--b1b3-i, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (PN1). In plain words: the person sees what the project is called and why, and a name they typed is never overwritten by a language change.
+**Source**: docs/spec_baseline/specification/mockups/README.md#project-names--one-book-several-translations-pn, docs/spec_baseline/specification/mockups/README.md#step-2--book-brief--b1b3-i, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (PN1). In plain words: the person sees what the project is called and why, and a name they typed is never overwritten by a language change.
 
 #### Scenario: The automatic name follows a language change
 
@@ -758,7 +767,7 @@ The Book Brief's languages card SHALL show a Project name line reading "automati
 
 IF the person chooses a source and target that another project of the same book already uses, THEN the Book Brief SHALL open the dialog "Same language pair" naming that project, with "Open that project" and "Make a second <language> translation" that requires a name of its own.
 
-**Source**: docs/specification/mockups/README.md#project-names--one-book-several-translations-pn, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (PN2). In plain words: two projects with the same pair would be indistinguishable, so the person either goes to the existing one or names a deliberate second one.
+**Source**: docs/spec_baseline/specification/mockups/README.md#project-names--one-book-several-translations-pn, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (PN2). In plain words: two projects with the same pair would be indistinguishable, so the person either goes to the existing one or names a deliberate second one.
 
 #### Scenario: A used pair opens the dialog
 
@@ -785,42 +794,21 @@ IF the person chooses a source and target that another project of the same book 
 - **WHEN** the person chooses "Make a second Ukrainian translation" and the name field is empty
 - **THEN** the primary button is disabled, and it becomes enabled once the name is filled in and unused (for example `Earth Gravity · 26b`)
 
-### Requirement: State a time estimate on the brief only when it is measured
-
-The Quality and speed card SHALL show an estimate line, such as "For this book on this computer: about 2 h 30 min (estimate from the model test)", only when a speed in seconds per segment was measured for the chosen model by the inference test or an earlier run, and otherwise SHALL show the relative cost of the choices; a speed in tokens per second alone SHALL NOT give an estimate.
-
-**Source**: docs/specification/mockups/README.md#step-2--book-brief--b1b3-i, docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (PR2). In plain words: a made-up number for hours of work misleads, so a time appears only when the computer was actually measured, and otherwise the card says how the choices compare.
-
-#### Scenario: A measured speed gives an estimate
-
-- **WHEN** the inference test measured 3.0 seconds per segment for the chosen model
-- **THEN** the card shows an estimate line "For this book on this computer: about … (estimate from the model test)", worked out from the speed, the book's segment count and the chosen quality (Fast, Balanced or Max)
-
-#### Scenario: Tokens per second alone give no estimate
-
-- **WHEN** the title bar showed 9.4 tok/s during a test, but no seconds per segment were measured for the chosen model
-- **THEN** the card shows no time and shows the relative cost of the choices
-
-#### Scenario: No measurement gives relative cost
-
-- **WHEN** no inference test and no earlier run exist for the chosen model
-- **THEN** the card shows no time and says Balanced costs about 1.5 times Fast and Max about 3 times
-
 ### Requirement: Show the brief suggestion in a progress dialog that is not hideable
 
-The brief suggestion SHALL run in a progress dialog whose Steps group lists what the model knows about the book (not listed when the title is the file name), reading sample 1 to K (K = 3, 4 or 5 for Fast, Balanced or Max, fewer when the story is too short for K windows), and deciding genre, readers and voice; Esc SHALL cancel it and it SHALL NOT be hideable.
+The brief suggestion SHALL run in a progress dialog whose Steps group lists what the model knows about the book (not listed when the title is the file name), reading sample 1 to K (K = 3, 4 or 5 for Fast, Balanced or Max, fewer when the story is too short for K windows), and deciding genre, readers, voice and story shape; Esc SHALL cancel it and it SHALL NOT be hideable.
 
-**Source**: docs/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3, docs/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (B1–B3). In plain words: the suggestion is short work, so the person watches its steps and can stop it, but it is not pushed into the background.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3, docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (B1–B3), `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: the suggestion is short work, so the person watches its steps and can stop it, but it is not pushed into the background.
 
 #### Scenario: The steps follow the dial and skip unknown knowledge
 
 - **WHEN** the person presses "✦ Fill in from the book" on Balanced for a book whose title is only its file name
-- **THEN** the dialog lists no "what the model knows" step, then Read sample 1 to Read sample 4 with their location ranges, then Decide genre, readers and voice
+- **THEN** the dialog lists no "what the model knows" step, then Read sample 1 to Read sample 4 with their location ranges, then Decide genre, readers, voice and story shape
 
 #### Scenario: A known title adds the knowledge step
 
 - **WHEN** the person presses "✦ Fill in from the book" on Balanced for a book with a known title
-- **THEN** the dialog lists what the model knows about the book, Read sample 1 to Read sample 4 and Decide genre, readers and voice (1 + 4 + 1 steps)
+- **THEN** the dialog lists what the model knows about the book, Read sample 1 to Read sample 4 and Decide genre, readers, voice and story shape (1 + 4 + 1 steps)
 
 #### Scenario: Esc cancels the suggestion
 
@@ -829,20 +817,30 @@ The brief suggestion SHALL run in a progress dialog whose Steps group lists what
 
 ### Requirement: Show what the suggestion decides with its agreement and verified quote
 
-The dialog's "What it decides" group SHALL list four rows, genre, register, who tells the story and who reads it with the voice, each with its value so far and its agreement ("3 of 4 samples agree"); selecting one SHALL show each sample's answer with its verified quote, and a value without a quote SHALL NOT be used.
+The dialog's "What it decides" group SHALL list five rows, genre, register, who tells the story, who reads it with the voice, and the story shape, each with its value so far and its agreement ("3 of 4 samples agree"); selecting one SHALL show each sample's answer with its verified quote, and a value without support SHALL be shown as likely.
 
-**Source**: docs/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (B2, B3). In plain words: the person can see why each field has its value and read the sentence of the book that supports it.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (B2, B3), `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: the person can see why each field has its value and read the sentence of the book that supports it.
 
 #### Scenario: A field shows its agreement and quote
 
 - **WHEN** on Balanced three of four samples answer `formal` for the register, each with a quote found in its sample
 - **THEN** "What it decides" shows Register `Formal` with "3 of 4 samples agree", and selecting it shows each sample's answer with its quote
 
+#### Scenario: The story shape shows its two quotes
+
+- **WHEN** the story shape is `One story` from sample 1 and sample 3
+- **THEN** the row reads `One story` with "2 of 2 samples agree", and selecting it shows both quotes
+
+#### Scenario: A value without support is shown as likely
+
+- **WHEN** the genre has no cited window and no accepted knowledge
+- **THEN** its row shows the value with `(likely)` and no agreement count
+
 ### Requirement: Write nothing to the brief until the person applies the suggestion
 
 The application SHALL write nothing to the brief until the person presses "Apply to the brief", which SHALL be offered when all steps have ended, and Cancel SHALL leave the brief unchanged.
 
-**Source**: docs/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (B1). In plain words: a model's suggestion is only a proposal; the brief changes when the person says so.
+**Source**: docs/spec_baseline/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md (B1). In plain words: a model's suggestion is only a proposal; the brief changes when the person says so.
 
 #### Scenario: Nothing is written until Apply
 
@@ -884,9 +882,316 @@ WHEN Start translation is pressed and the open book's narration was not judged w
 
 The Book Brief SHALL take at most 100 characters of genre, 200 of audience and 500 of narrative voice and era notes; typing stops at the cap and a paste keeps only what fits.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`. In plain words: these fields go into every model call of the run, so a pasted page would be sent thousands of times; each cap is far more than a genre, an audience or a note on the voice needs.
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`. In plain words: these fields go into every model call of the run, so a pasted page would be sent thousands of times; each cap is far more than a genre, an audience or a note on the voice needs.
 
 #### Scenario: A pasted page is cut to the cap
 
 - **WHEN** 600 characters are pasted into Audience and into Narrative voice / era notes
 - **THEN** Audience holds 200 characters and the notes 500, and the brief stores exactly those
+
+### Requirement: Keep the narrator's most probable gender as likely and verify it only by evidence the code checks
+
+WHEN the model's style suggestion answers the narrator's gender, the application SHALL set the gender from the book, shown as `Male, from the book` or `Female, from the book` with the quote, when the code verifies the quote it cites, and otherwise keep the answer as a likely gender, shown as `Male (likely)` or `Female (likely)`; a gender the person, the book's count or the run's count set is never replaced, and a third-person narrator gets none.
+
+**Source**: FR-BRIEF-02; tasks 15h.G2, 15i.B4; the owner's decision that the model always gives its most probable value, marked likely, and that the person's value and verified book evidence win over it, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: the model was free to say "male" from nothing, and its answer was then thrown away for a book whose narrator was already set to first person. Now the model always gives its best answer. When it points at a line the code can check — a name it can look up or a word like "ma'am" — the line is the book's own evidence, so the gender is the book's; with nothing checkable it stays likely, so nobody takes it for a fact. No check holds the text to a likely gender: the translation-pipeline capability's "Tell the model who narrates and who is present" gives it to every call as `likely male` or `likely female`, which orders no verb form. The person's choice and the book's own forms outrank it.
+
+#### Scenario: A vocative of a glossary person genders the narrator
+
+- **WHEN** the glossary holds the character `Tobin` as male, the narrator is first person with no gender, and the model quotes `"Keep up, Tobin," Mara called back to me.` from the sample with the name `Tobin`
+- **THEN** the narrator's gender is male and shown as `Male, from the book` with the quote
+
+#### Scenario: A gender with nothing the code can check is still kept as likely
+
+- **WHEN** the model answers `female` with a quote that holds neither a known name nor a word of address
+- **THEN** the narrator's gender is female, shown as `Female (likely)` with no quote
+- **AND** Start translation asks who narrates with `Female` already chosen
+
+#### Scenario: A name the narrator says to someone else is no vote
+
+- **WHEN** a window holds `"Mind the step, Lucy," I said` and the model answers `female` with the name `Lucy`
+- **THEN** that window gives no gender vote
+
+#### Scenario: A name in the quote proves the gender whatever the model said
+
+- **WHEN** the quote calls the narrator by a name, or the narrator gives it (`"Keep up, Tobin," Mara called back to me.`), the name the model gives stands in the quote, and it is a glossary character of known gender (the whole term or one word of it) or a name of the source language's first-name list
+- **THEN** that name's gender is the narrator's, from the book, whatever the model said
+
+#### Scenario: Words of address of one gender prove it when no name does
+
+- **WHEN** the quote has no name but holds words of the source language file's `addressTerms` table (`term>male` / `term>female`, such as `sir`, `ma'am`, `пане`, `дівчино`) of one gender only
+- **THEN** that gender is the narrator's, from the book
+
+#### Scenario: The narrator's own introduction is a vote
+
+- **WHEN** a window holds `"I'm Lucy," I said`
+- **THEN** the name `Lucy` is a vote for the narrator's gender, while a name the attribution beside quoted speech shows the narrator saying to someone else is not
+
+#### Scenario: One window proves a gender unless another proves the other
+
+- **WHEN** one window proves a gender and no other window proves the other gender
+- **THEN** the gender is kept as the book's and shown with its quote and the number of proving windows, not as uncertain
+
+#### Scenario: The likely mark explains itself
+
+- **WHEN** the narrator's gender is shown as `Male (likely)` or `Female (likely)`
+- **THEN** a hover explanation is shown, in English and Ukrainian
+
+#### Scenario: A gender nobody would replace is not replaced
+
+- **WHEN** the person set the narrator's gender to male and the model answers female
+- **THEN** the narrator stays male as the person's choice
+
+### Requirement: State a time estimate on the brief as measured or as an estimate
+
+The Quality and speed card SHALL show the time as measured, "about … , measured on this model", when this model has measured seconds for every kind of call the plan makes; otherwise as a range marked "estimate" and where it was measured, scaled from this model's measured seconds per drafted segment; and no time when nothing was ever measured for the model. Tokens per second alone SHALL give no time, and the card SHALL NOT show a relative cost.
+
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-2--book-brief--b1b3-i`, `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `design.md#d2--the-runs-three-stages-and-the-quality-dial`, `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: a made-up number for hours of work misleads, so a time appears only when the model was measured on this computer. When every kind of call the chosen quality makes (draft, repair, proofread) has its own measured seconds, the time is the planned calls of each kind times those seconds; when only a draft speed is known, from the model test or an earlier run, the built-in per-call figures are scaled by it and shown as a range that says it is an estimate and where the speed came from. A claim of how much dearer Max is than Fast was a guess too and is gone. This is the one place the estimate before Start is specified; the speeds it reads are stored by the settings capability's "Store the speed the inference test measured on the model".
+
+#### Scenario: Stored seconds per call kind give a measured estimate
+
+- **WHEN** the chosen model has stored seconds for each call kind and the book's plan at Balanced adds up to 8,460 seconds
+- **THEN** the card shows "For this book on this computer: about 2 h 21 min, measured on this model"
+
+#### Scenario: Measured per kind
+
+- **WHEN** `gemma4:e4b` stored 3.0 seconds per draft call and 6.0 seconds per proofread call, and Balanced plans 300 draft calls and 20 proofread calls and no other kind
+- **THEN** the card shows "For this book on this computer: about 17 min, measured on this model"
+
+#### Scenario: A speed per segment gives a labelled estimate
+
+- **WHEN** the model test measured 3.0 seconds per segment, no seconds per call kind are stored, the book has 3,000 segments and the dial is at Fast
+- **THEN** the card shows a range that holds 2 h 30 min, such as "For this book on this computer: about 2–3 h, estimate from the model test", worked out from the built-in figures scaled by that speed
+
+#### Scenario: A kind never measured makes it an estimate
+
+- **WHEN** an earlier Fast run stored 3.0 seconds per draft call, no proofread call was ever measured, and the dial is at Balanced
+- **THEN** the card shows a range marked "estimate from an earlier translation", not "measured on this model"
+
+#### Scenario: Tokens per second alone give no estimate
+
+- **WHEN** the title bar showed 9.4 tok/s during a test, but no seconds per segment were measured for the chosen model
+- **THEN** the card shows no time and no relative cost
+
+#### Scenario: Nothing measured shows no time
+
+- **WHEN** no inference test and no earlier run exist for the chosen model
+- **THEN** the card shows no estimate line and does not say Balanced costs about 1.5 times Fast
+
+### Requirement: Offer the apostrophe, quotation-mark and default-address choices the target language sets
+
+WHERE the target language's file sets them, the Translation policies card SHALL offer the apostrophe character, the quotation-mark style and the default address for strangers and for family, each with the file's default, and SHALL show no row for a choice the file does not set.
+
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: typography and form of address differ by language, and a model drifts between them from page to page; the person fixes them once per book. The choices come from the target language's own file, so an English target shows no address row. Title of address and foreign-word treatment are out of scope.
+
+#### Scenario: Ukrainian defaults
+
+- **WHEN** the target is `uk` and a new brief is shown
+- **THEN** the apostrophe is `’` (U+2019), the quotation marks are `«»` with `„“` inside, and the default address is `Ви` for strangers and `ти` for family
+
+#### Scenario: A choice the file does not set has no row
+
+- **WHEN** the target language's file sets no address words
+- **THEN** the card shows no default-address row, and no address line reaches the instructions
+
+#### Scenario: A change is kept
+
+- **WHEN** the person sets the apostrophe to `'`
+- **THEN** the brief holds `'`
+
+### Requirement: Offer a choice for each convention the target language declares
+
+WHERE the target language's file declares a convention with its choices and a default, the Translation policies card SHALL show one row for it, store the person's answer with the brief, and show no extra row when the file declares none.
+
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: some conventions exist in only some languages, such as whether a hard g in a foreign name is written г or ґ in Ukrainian; the language file declares the choice and its default, and the screen needs no code per language. One name may still be spelled otherwise in the glossary.
+
+#### Scenario: Ukrainian declares the hard g
+
+- **WHEN** the target is `uk`
+- **THEN** the card shows the row "Hard g in foreign names" with `г` chosen and `ґ` offered
+
+#### Scenario: A language that declares nothing shows nothing
+
+- **WHEN** the target language's file declares no convention
+- **THEN** the card shows no convention row
+
+#### Scenario: The answer is stored
+
+- **WHEN** the person chooses `ґ`
+- **THEN** the brief holds the answer `ґ` for the hard g, and the glossary's checks follow it
+
+### Requirement: Offer a per-book switch for chapter summaries
+
+The Book Brief SHALL offer a Chapter summaries switch for the book, suggested on when the analysis found one continuing story or when no analysis ran and suggested off when it found separate stories, that the person can force on or off in the Brief and in the preparation panel before Start, and that no later suggestion changes once forced.
+
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: a novel needs the story so far; a collection of independent tales is better without it. The analysis suggests, the person decides, and the switch is the same at every dial. Like every Brief field it is read-only while a translation is at work and editable while the run is paused or stopped; a change applies from the next Continue.
+
+#### Scenario: No analysis means on
+
+- **WHEN** no brief suggestion has been run
+- **THEN** Chapter summaries is on
+
+#### Scenario: The story shape suggests the switch
+
+- **WHEN** the suggestion finds one story, and then in another book finds separate stories
+- **THEN** the switch is suggested on in the first book and off in the second
+
+#### Scenario: A forced value is not changed by a later suggestion
+
+- **WHEN** the person turns the switch off and then presses "✦ Fill in from the book", which finds one story
+- **THEN** the switch stays off
+
+#### Scenario: The same switch sits in the preparation panel
+
+- **WHEN** the person turns the switch off in the preparation panel before Start
+- **THEN** the Book Brief shows it off
+
+#### Scenario: Read-only while translating, editable while paused
+
+- **WHEN** a translation is running, and then it is paused
+- **THEN** the switch is read-only while it runs and editable once paused, and a change applies from the next Continue
+
+### Requirement: Say how many finished chapters will be summarised when the switch is turned on
+
+WHEN the person turns Chapter summaries on while chapters are already finished, the Book Brief SHALL show how many finished chapters will be summarised before the next passage.
+
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: turning summaries on at chapter 13 costs one model call for each earlier chapter before the run goes on, and the person should know that before they confirm.
+
+#### Scenario: Twelve finished chapters
+
+- **WHEN** 12 chapters are finished and the person turns the switch on
+- **THEN** the brief says "12 finished chapters will be summarised before the next passage"
+
+#### Scenario: Nothing finished, nothing said
+
+- **WHEN** no chapter is finished and the person turns the switch on
+- **THEN** no such line is shown
+
+#### Scenario: Turned off, nothing said
+
+- **WHEN** the person turns the switch off
+- **THEN** no such line is shown
+
+### Requirement: Show the story shape the analysis found, with the switch it suggests
+
+WHEN the brief suggestion has decided the story shape, the Book Brief SHALL show it as `One story` or `Separate stories`, marked likely until the person confirms or changes it, beside a line saying what the chapter-summaries switch is suggested to be, and SHALL show no story shape when no analysis ran.
+
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#brief-synthesis`, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: the shape is the reason for the suggestion, so the person sees both and can disagree with either.
+
+#### Scenario: One story
+
+- **WHEN** the suggestion decided one story
+- **THEN** the brief shows `One story (likely)` and the line "Suggested: on — the chapters tell one story (likely)"
+
+#### Scenario: Separate stories
+
+- **WHEN** the suggestion decided separate stories
+- **THEN** the brief shows `Separate stories (likely)` and the line "Suggested: off — separate stories (likely)"
+
+#### Scenario: No analysis
+
+- **WHEN** no brief suggestion has been run
+- **THEN** no story shape and no suggestion line are shown
+
+#### Scenario: The person changes the shape
+
+- **WHEN** the person changes `One story (likely)` to `Separate stories`
+- **THEN** the mark `(likely)` is gone
+
+### Requirement: Mark every field the analysis filled as likely until the person decides
+
+WHEN the brief suggestion fills a field of the Book Brief, the Book Brief SHALL show `(likely)` beside it until the person confirms or changes it, and a likely value SHALL feed the instructions like any other brief value.
+
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`, `docs/spec_baseline/specification/01_Product/12_PROMPT_CATALOG.md#brief-synthesis`, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: a guess that looks like a decision gets trusted; the mark keeps it a guess until the person has looked at it, yet the translation can already use it.
+
+#### Scenario: An applied suggestion carries marks
+
+- **WHEN** the person applies a suggestion that filled the register `Casual` and the genre `Mystery`
+- **THEN** the brief shows `Casual (likely)` and `Mystery (likely)`
+
+#### Scenario: Confirming or changing removes the mark
+
+- **WHEN** the person confirms `Casual` or changes `Mystery` to `Thriller`
+- **THEN** neither carries the mark
+
+#### Scenario: A person's own choice has no mark
+
+- **WHEN** the person set the audience `adult`
+- **THEN** it shows no mark
+
+#### Scenario: A likely value feeds the instructions
+
+- **WHEN** a run is started with `Casual (likely)`
+- **THEN** its requests instruct the model to use a casual register
+
+### Requirement: Ask about a meaning-bearing name in Prepare, once, and never during a run
+
+WHEN a reading of a name cites a window where the book explains or plays on its meaning, Prepare SHALL ask the person once, before translating, whether to transcribe the name, translate it, or transcribe it and gloss it at first use, and SHALL ask nothing about a name the book does not play on, and nothing during a run.
+
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a translator sounds a name out by default and asks only when the story depends on what it means; a question in the middle of a long run would stall it, and the answer would come too late for the chapters already done.
+
+#### Scenario: The book explains a name
+
+- **WHEN** a reading of `Brightwater` cites the window `They called the village Brightwater for the bright water of its stream.`
+- **THEN** Prepare asks whether to transcribe, translate, or transcribe and gloss it at first use
+
+#### Scenario: A name the book does not play on is not asked
+
+- **WHEN** `Brightwater` is only a surname in every window
+- **THEN** no question is asked and it is sounded out with its meaning kept as a note
+
+#### Scenario: Back leaves the default
+
+- **WHEN** the person closes the question without answering
+- **THEN** the name is transcribed and its meaning kept as a note
+
+#### Scenario: Never during a run
+
+- **WHEN** a run is at chapter 12 and a new name is found there
+- **THEN** no question is asked and the name is handled by the default
+
+### Requirement: Read the narrator's gender from the source in Prepare
+
+WHERE the source language's file lists a first-person pronoun and gendered past forms, Prepare SHALL count the narrator's first-person past forms in narration, outside quotes and dialogue, and SHALL store the narrator's gender as verified when at least 3 forms are counted and 80 % or more agree, showing the count.
+
+**Source**: `docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: in Russian and Ukrainian the narrator's own verb says who "I" is (`я пришла`), so a book told in the first person rarely needs the question at Start. The count is the book's own evidence, so it outranks the model's guess; a language with no gendered past forms, such as English, falls through to the later steps.
+
+#### Scenario: The count settles the gender
+
+- **WHEN** the source language is `ru` and the narration holds 43 first-person past forms, 41 of them feminine
+- **THEN** the narrator's gender is female, verified, and the Brief shows "Narrator: female (from the book, 41 of 43 forms)"
+
+#### Scenario: A particle between the pronoun and the verb is allowed
+
+- **WHEN** the narration says `я тоже не спал`
+- **THEN** it counts as one masculine form
+
+#### Scenario: Speech does not count
+
+- **WHEN** the only `я пришла` of a chapter stands inside a character's quoted speech
+- **THEN** it is not counted
+
+#### Scenario: Too few or too mixed forms settle nothing
+
+- **WHEN** the narration holds 3 forms and 2 of them are feminine
+- **THEN** the gender is not stored as verified, and the model's likely answer, if any, stays shown as likely
+
+#### Scenario: A language with no gendered past forms is not counted
+
+- **WHEN** the source language is `en`
+- **THEN** no count is made and the later steps decide
+
+### Requirement: Re-check the decided segments when a policy key changes
+
+WHEN the person changes the apostrophe, the quotation marks, the default address or a declared convention after segments were decided, the application SHALL re-check those segments against the new choice and SHALL show a banner naming how many segments it flagged.
+
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`, `design.md#d6--brief-policy-keys-declared-conventions-and-story-shape`. In plain words: a changed key can make earlier text wrong without any new call, so the app looks again for free and tells the person how many pieces now need a look.
+
+#### Scenario: A changed apostrophe flags the old text
+
+- **WHEN** 40 segments are decided and 12 of them use the apostrophe `’`, and the person sets the apostrophe to `'`
+- **THEN** a banner says 12 segments were flagged
+
+#### Scenario: Nothing decided, nothing re-checked
+
+- **WHEN** no segment is decided yet and the person changes the quotation marks
+- **THEN** no banner is shown

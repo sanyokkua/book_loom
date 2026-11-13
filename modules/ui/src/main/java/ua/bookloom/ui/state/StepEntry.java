@@ -3,7 +3,6 @@ package ua.bookloom.ui.state;
 import java.util.Objects;
 import java.util.OptionalInt;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.StepKind;
 import ua.bookloom.api.pipeline.StepResult;
 import ua.bookloom.api.pipeline.StepState;
@@ -70,6 +69,17 @@ public record StepEntry(
      * @return the kind and index, never null
      */
     public String key() {
+        return keyOf(kind, index);
+    }
+
+    /**
+     * The key a step of this kind and position has, which an event can compute before any row exists.
+     *
+     * @param kind the step's kind
+     * @param index the step's position within its kind, from zero
+     * @return the kind and index
+     */
+    public static String keyOf(final StepKind kind, final int index) {
         return kind.name() + ":" + index;
     }
 
@@ -84,7 +94,7 @@ public record StepEntry(
         }
         try {
             return OptionalInt.of(Integer.parseInt(label.substring(SAMPLE_LABEL.length())));
-        } catch (final NumberFormatException e) {
+        } catch (NumberFormatException _) {
             return OptionalInt.empty();
         }
     }
@@ -113,23 +123,9 @@ public record StepEntry(
      * @param before the text the step was given, or {@code null}; book text, logged at TRACE only
      * @param after the text it gave back, or {@code null}; book text, logged at TRACE only
      * @param verdict its one-line result, such as {@code kept}, or {@code null}
-     * @param neighbours the paragraphs around a reread item, or {@code null} for a step that reads none; book text
      */
     public record StepText(
             @Nullable String before,
             @Nullable String after,
-            @Nullable String verdict,
-            ExportProgress.@Nullable Neighbours neighbours) {
-
-        /**
-         * What a step read and wrote with no neighbours to show.
-         *
-         * @param before the text the step was given, or {@code null}
-         * @param after the text it gave back, or {@code null}
-         * @param verdict its one-line result, or {@code null}
-         */
-        public StepText(final @Nullable String before, final @Nullable String after, final @Nullable String verdict) {
-            this(before, after, verdict, null);
-        }
-    }
+            @Nullable String verdict) {}
 }

@@ -98,6 +98,7 @@ val resolvedAppVersion = rootProject.version.toString()
 
 val generateVersionResource =
     tasks.register("generateVersionResource") {
+        group = "build"
         description = "Writes ua/bookloom/app/version.properties from the appVersion Gradle property."
 
         val outputDir = layout.buildDirectory.dir("generated/version")
@@ -149,7 +150,7 @@ val collectDist =
 
 // --- The shared `arch-test` source set (design D4) --------------------------------------------------------------
 //
-// The nine boundary rules of `02_Architecture/02_MODULES_AND_LAYERING.md#archunit-rules` live HERE, once, and
+// The ten boundary rules of `02_Architecture/02_MODULES_AND_LAYERING.md#archunit-rules` live HERE, once, and
 // nowhere else.
 //
 // Why `:app` and not a ninth subproject: ArchUnit reasons over compiled bytecode reachable on a classpath, and
@@ -158,6 +159,15 @@ val collectDist =
 // per-module copies of the other seven would drift apart the first time one was edited without the others.
 // `settings.gradle.kts` fixes the module set at eight; this is a source set, not a ninth module.
 val archTest: SourceSet by sourceSets.creating
+
+// The scanner's Java defaults include only main and test; the architecture suite is test code too.
+extensions.configure<org.sonarqube.gradle.SonarExtension> {
+    properties {
+        property("sonar.tests", files(sourceSets.test.get().allJava.srcDirs, archTest.allJava.srcDirs))
+        property("sonar.java.test.binaries", files(sourceSets.test.get().output.classesDirs, archTest.output.classesDirs))
+        property("sonar.java.test.libraries", files(sourceSets.test.get().compileClasspath, archTest.compileClasspath))
+    }
+}
 
 // The rules must see everything `:app` sees (the seven module jars, Guice, JavaFX), plus `:app`'s own classes.
 configurations["archTestImplementation"].extendsFrom(configurations["implementation"])

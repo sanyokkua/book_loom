@@ -217,7 +217,7 @@ public final class StorageController {
         line.textProperty()
                 .bind(Bindings.createStringBinding(
                         () -> fileName.getValue() == null ? "" : messages.get(wording, fileName.getValue()), fileName));
-        Visibility.bind(line, fileName.map(name -> name != null));
+        Visibility.bind(line, fileName.map(Objects::nonNull));
     }
 
     private void showOverride() {

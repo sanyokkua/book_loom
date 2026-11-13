@@ -143,7 +143,7 @@ class TranslationMemoryTest {
 
         final TmLookup lookup = memory.lookup(unit.get(1), unit);
 
-        assertThat(stored.length()).isEqualTo(36);
+        assertThat(stored).hasSize(36);
         assertThat(lookup.suggestions()).hasSize(1);
     }
 
@@ -200,8 +200,8 @@ class TranslationMemoryTest {
     void lookup_segmentAbsentFromItsUnit_isRejected() {
         final List<Segment> unit = middle("ch02.xhtml:9", "Yes.");
 
-        assertThatThrownBy(() -> memory.lookup(segment("ch09.xhtml:0", "Yes."), unit))
-                .isInstanceOf(IllegalArgumentException.class);
+        final var arg1 = segment("ch09.xhtml:0", "Yes.");
+        assertThatThrownBy(() -> memory.lookup(arg1, unit)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @ParameterizedTest

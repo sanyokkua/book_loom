@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +30,7 @@ final class InterruptibleWork {
 
     private final AtomicBoolean stopped = new AtomicBoolean();
     private final AtomicInteger state = new AtomicInteger(IDLE);
-    private volatile @Nullable Thread worker;
+    private final AtomicReference<@Nullable Thread> worker = new AtomicReference<>();
     private final Consumer<Thread> interrupter;
 
     /** Creates work that interrupts its thread with {@link Thread#interrupt()}. */
@@ -50,7 +51,7 @@ final class InterruptibleWork {
     /** Asks the work to stop; callable from any thread, and harmless once the work has ended. */
     void stop() {
         stopped.set(true);
-        final Thread thread = worker;
+        final Thread thread = worker.get();
         final boolean claimed = thread != null && state.compareAndSet(RUNNING, INTERRUPTING);
         log.debug("work asked to stop, running now: {}", claimed);
         if (claimed) {
@@ -72,7 +73,7 @@ final class InterruptibleWork {
     <T> T run(final Supplier<T> work, final Supplier<T> whenStopped) {
         Objects.requireNonNull(work, "work");
         Objects.requireNonNull(whenStopped, "whenStopped");
-        worker = Thread.currentThread();
+        worker.set(Thread.currentThread());
         state.set(RUNNING);
         try {
             return stopped.get() ? whenStopped.get() : work.get();
@@ -85,14 +86,14 @@ final class InterruptibleWork {
     // the next task.
     private void release() {
         if (state.compareAndSet(RUNNING, FINISHED)) {
-            worker = null;
+            worker.set(null);
             return;
         }
         while (state.get() == INTERRUPTING) {
             Thread.onSpinWait();
         }
         final boolean cleared = Thread.interrupted();
-        worker = null;
+        worker.set(null);
         state.set(FINISHED);
         log.debug("work ended after a stop; its interrupt cleared: {}", cleared);
     }

@@ -1,22 +1,24 @@
 package ua.bookloom.pipeline;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.llm.CallLedger;
+import ua.bookloom.api.llm.CallRecord;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.BriefSampleRead;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
+import ua.bookloom.api.pipeline.ChapterSummaryKept;
 import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -25,22 +27,24 @@ import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.ProofreadForecast;
+import ua.bookloom.api.pipeline.ProofreadRoundStarted;
+import ua.bookloom.api.pipeline.ProofreadWindowRead;
 import ua.bookloom.api.pipeline.RecoveryWaiting;
 import ua.bookloom.api.pipeline.Resumed;
-import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDrafted;
 import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.StepChanged;
 import ua.bookloom.api.pipeline.StepsPlanned;
-import ua.bookloom.pipeline.reviewer.EditOutcome;
 
 /**
  * Writes one INFO {@code run summary} line a minute while a job runs, and a last one when it ends: segments accepted,
  * flagged, kept verbatim and pending, model calls with their average and 95th-percentile time (over the newest
  * {@link #PERCENTILE_WINDOW} calls, so the memory held does not grow with the run), tokens a second,
- * timeouts so far and the segment being translated.
+ * timeouts so far and the segment being translated. The final line adds the run's calls by kind, read from the call
+ * ledger, so every stage is counted from what each call reported.
  *
  * <p>Driven by the job's own events rather than a timer: the first event at least {@link #INTERVAL} after the last
  * line writes the next one, so no thread is added, a paused job (which sends no events) writes nothing, and a test
@@ -58,11 +62,12 @@ final class RunSummaryLogger {
 
     private static final double PERCENTILE = 0.95;
     private static final double MILLIS_PER_SECOND = 1000.0;
-    private static final double PERCENT = 100.0;
     private static final String NONE = "-";
 
     private final Clock clock;
-    private final CallKindTotals kindTotals = new CallKindTotals();
+    private final CallLedger ledger;
+    // The ledger's records after this mark are the run's: the job is built just before it runs.
+    private final long mark;
     private final Deque<Long> recentMillis = new ArrayDeque<>();
     private long calls;
     private long totalMillis;
@@ -72,13 +77,18 @@ final class RunSummaryLogger {
     private String locator = NONE;
     private int timeouts;
     // By segment: a segment decided again (a repair, a retry) counts its latest decision only.
-    private final Map<String, Long> ignoredEditsBySegment = new HashMap<>();
-    private long ignoredEdits;
     private long completionTokens;
     private long generationMillis;
 
     RunSummaryLogger(final Clock clock) {
+        this(clock, CallLedger.none());
+    }
+
+    /** A summary whose final line counts, by kind, the calls the ledger keeps from now on. */
+    RunSummaryLogger(final Clock clock, final CallLedger ledger) {
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.ledger = Objects.requireNonNull(ledger, "ledger");
+        this.mark = ledger.mark();
     }
 
     /**
@@ -87,6 +97,15 @@ final class RunSummaryLogger {
      */
     void onEvent(final JobEvent event) {
         Objects.requireNonNull(event, "event");
+        if (event instanceof Finished) {
+            write("final");
+            return;
+        }
+        count(event);
+        writeWhenDue();
+    }
+
+    private void count(final JobEvent event) {
         switch (event) {
             case SegmentStarted started -> locator = started.locator();
             case SegmentDecided decided -> decide(decided);
@@ -94,23 +113,22 @@ final class RunSummaryLogger {
             case Resumed resumed -> progress = resumed.progress();
             case StageStarted stage -> progress = stage.progress();
             case ModelCallFinished finished -> record(finished);
-            case Finished _ -> {
-                write("final");
-                return;
-            }
-            case ModelCallStarted _,
+            case Finished _,
+                    ModelCallStarted _,
                     SegmentDrafted _,
                     MemoryUpdated _,
                     ContextAssembled _,
-                    RoundStarted _,
                     RecoveryWaiting _,
                     BatchStarted _,
                     CallSnapshotUpdated _,
                     StepsPlanned _,
                     StepChanged _,
-                    BriefSampleRead _ -> {}
+                    BriefSampleRead _,
+                    ChapterSummaryKept _,
+                    ProofreadForecast _,
+                    ProofreadRoundStarted _,
+                    ProofreadWindowRead _ -> {}
         }
-        writeWhenDue();
     }
 
     private void writeWhenDue() {
@@ -125,33 +143,10 @@ final class RunSummaryLogger {
 
     private void decide(final SegmentDecided decided) {
         progress = decided.progress();
-        countIgnoredEdits(decided);
-    }
-
-    private void countIgnoredEdits(final SegmentDecided decided) {
-        final long count = decided.detail() == null
-                ? 0
-                : decided.detail().findingKinds().stream()
-                        .filter(EditOutcome.IGNORED_EDIT_KIND::equals)
-                        .count();
-        final Long before = count > 0
-                ? ignoredEditsBySegment.put(decided.segmentId(), count)
-                : ignoredEditsBySegment.remove(decided.segmentId());
-        final long earlier = before == null ? 0 : before;
-        if (count != earlier) {
-            ignoredEdits += count - earlier;
-            log.debug(
-                    "Ignored reviewer edits segment={} count={} earlier={} total={}",
-                    decided.segmentId(),
-                    count,
-                    earlier,
-                    ignoredEdits);
-        }
     }
 
     private void record(final ModelCallFinished finished) {
         final long millis = finished.elapsed().toMillis();
-        kindTotals.record(finished);
         calls++;
         totalMillis += millis;
         recentMillis.addLast(millis);
@@ -175,7 +170,7 @@ final class RunSummaryLogger {
         final JobProgress at = progress;
         log.info(
                 "run summary {} accepted={} flagged={} verbatim={} pending={} calls={} avgCallMs={} p95CallMs={}"
-                        + " tokensPerSecond={} timeouts={} ignoredEdits={} current={}{}",
+                        + " tokensPerSecond={} timeouts={} current={}{}",
                 kind,
                 at == null ? 0 : at.accepted(),
                 at == null ? 0 : at.flagged(),
@@ -186,36 +181,28 @@ final class RunSummaryLogger {
                 percentileMillis(),
                 tokensPerSecond(),
                 timeouts,
-                ignoredEdits,
                 locator,
-                "final".equals(kind) ? byKind() : "");
+                "final".equals(kind) ? finalTail() : "");
     }
 
-    private String byKind() {
-        final StringBuilder line = new StringBuilder();
-        kindTotals.totals().forEach((kind, totals) -> {
-            if (!line.isEmpty()) {
-                line.append(' ');
-            }
-            line.append(String.format(
-                    Locale.ROOT,
-                    "%s=%d/%d in:%d out:%d promptEvalMs:%d generationMs:%d cached:%d ttftMs:%s prefill:%s",
-                    kind,
-                    totals.attempts(),
-                    totals.failed(),
-                    totals.promptTokens(),
-                    totals.completionTokens(),
-                    totals.promptEval().toMillis(),
-                    totals.generation().toMillis(),
-                    totals.cachedPromptTokens(),
-                    totals.meanFirstToken()
-                            .map(mean -> String.valueOf(mean.toMillis()))
-                            .orElse(NONE),
-                    totals.prefillShare()
-                            .map(share -> String.format(Locale.ROOT, "%.1f%%", share * PERCENT))
-                            .orElse(NONE)));
-        });
-        return line.isEmpty() ? "" : " byKind[" + line + "]";
+    // Counted from what each call reported, so every stage of the run is in it and a missing figure stays missing.
+    private String finalTail() {
+        final List<CallRecord> records = ledger.since(mark);
+        final CallKindTotals totals = CallKindTotals.of(records);
+        final String line = PrepSummary.byKind(totals.totals());
+        return " cost=" + totalCost(totals)
+                + (line.isEmpty() ? "" : " byKind[" + line + "]")
+                + PrepSummary.secondsPerCall(records);
+    }
+
+    // A dash when no call reported a price; a free model's reported 0 is a 0.
+    private static String totalCost(final CallKindTotals totals) {
+        final List<BigDecimal> priced = totals.totals().values().stream()
+                .flatMap(kindTotals -> kindTotals.costTotal().stream())
+                .toList();
+        return priced.isEmpty()
+                ? NONE
+                : priced.stream().reduce(BigDecimal.ZERO, BigDecimal::add).toPlainString();
     }
 
     /** How many call times are held for the percentile; never more than {@link #PERCENTILE_WINDOW}. */

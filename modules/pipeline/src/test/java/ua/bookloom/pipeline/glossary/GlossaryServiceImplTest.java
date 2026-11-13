@@ -34,6 +34,7 @@ import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
@@ -45,6 +46,7 @@ import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
@@ -75,7 +77,7 @@ class GlossaryServiceImplTest {
     @Test
     void add_newTerm_listsItWithThoseValues() {
         final GlossaryEntry justine =
-                new GlossaryEntry("p1:justine", PROJECT, "Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true);
+                GlossaryEntry.of("p1:justine", PROJECT, "Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true);
 
         final Result<GlossaryEntry> added = service.add(justine);
 
@@ -87,7 +89,7 @@ class GlossaryServiceImplTest {
     void add_termDifferingOnlyInCase_answersValidationNamingTheTermAndAddsNothing() {
         service.add(entry("Justine", "Жустіна", TermType.CHARACTER, false));
 
-        final Result<GlossaryEntry> refused = service.add(new GlossaryEntry(
+        final Result<GlossaryEntry> refused = service.add(GlossaryEntry.of(
                 "p1:justine-2", PROJECT, "justine", "Юстина", TermType.CHARACTER, Gender.FEMALE, false));
 
         assertThat(refused.error()).extracting(AppError::code).isEqualTo(ErrorCode.validation);
@@ -289,8 +291,9 @@ class GlossaryServiceImplTest {
 
         // The review gave no gender, so the proposal's first-sentence guess stays only as a suggestion (15h.A2).
         assertThat(Objects.requireNonNull(added.data()).added())
-                .containsExactly(new GlossaryEntry(
+                .containsExactly(GlossaryEntry.of(
                                 "p1:moreau", PROJECT, "Moreau", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                        .withType(TermType.CHARACTER, Origin.LIKELY)
                         .withSuggestedGender(Gender.MALE)
                         .withSuggestedTarget("Моро"));
         assertThat(model.requests()).hasSize(3);
@@ -304,7 +307,7 @@ class GlossaryServiceImplTest {
     void review_briefWithTargetLanguage_removesTheCommonWordAndAnnouncesTheCall() {
         injector.getInstance(ProjectRepository.class).save(project(withTarget(BookBrief.defaults("en"), "uk")));
         openProjects.put(PROJECT, book(List.of("Well, we met Moreau today."), "Title"));
-        service.add(new GlossaryEntry("p1:well", PROJECT, "Well", null, TermType.OTHER, Gender.UNKNOWN, false));
+        service.add(GlossaryEntry.of("p1:well", PROJECT, "Well", null, TermType.OTHER, Gender.UNKNOWN, false));
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(Result.ok(new ChatResponse(
                         "{\"verdicts\":[{\"term\":\"Well\",\"verdict\":\"not-a-name\",\"type\":\"other\","
@@ -343,7 +346,8 @@ class GlossaryServiceImplTest {
                 injector.getInstance(DeferralRepository.class),
                 injector.getInstance(ProjectRepository.class),
                 openProjects,
-                injector.getInstance(GlossaryModelScans.class));
+                injector.getInstance(GlossaryModelScans.class),
+                injector.getInstance(SummaryRepository.class));
 
         final Result<List<GlossaryEntry>> failed = broken.entries(PROJECT);
 

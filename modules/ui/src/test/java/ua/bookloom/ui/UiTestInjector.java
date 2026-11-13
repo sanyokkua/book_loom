@@ -6,7 +6,9 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -35,7 +37,6 @@ import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
-import ua.bookloom.api.settings.GenerationOverrides;
 import ua.bookloom.api.settings.ReviewModeChoice;
 import ua.bookloom.ui.dialog.ContinuePrompt;
 import ua.bookloom.ui.dialog.FindBookPrompt;
@@ -48,6 +49,7 @@ import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.dialog.TranslateIntoPrompt;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.state.FileRevealer;
+import ua.bookloom.ui.state.FixedMemory;
 import ua.bookloom.ui.state.ProjectActions;
 import ua.bookloom.ui.state.RowOpener;
 import ua.bookloom.ui.theme.ThemeBlock;
@@ -93,6 +95,7 @@ public final class UiTestInjector {
         private ProjectService projects = new ScriptedProjectService();
         private LanguageSupport languages = tag -> true;
         private ExportService exports = new ScriptedExportService();
+        private ScriptedProofreadProgress proofread = new ScriptedProofreadProgress();
         private ChatModelFactory models = ScriptedChatModelFactory.ok();
         private TranslationEngine engine = ScriptedTranslationEngine.idle();
         private ScriptedGlossaryService glossary = new ScriptedGlossaryService();
@@ -103,6 +106,8 @@ public final class UiTestInjector {
         private final ReplacementQuestions replacements = new ReplacementQuestions();
         private @Nullable ExecutorService backgroundExecutor;
         private boolean gated;
+        private MemorySource memory = new FixedMemory(16);
+        private Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         private SettingsRepository settings = new MemorySettings();
         private FileRevealer revealer = new RecordingFileRevealer();
         private @Nullable ProjectActions projectActions;
@@ -114,19 +119,28 @@ public final class UiTestInjector {
             this.locale = locale;
         }
 
-        /** What the graph's {@link ProviderConfigs} is. */
+        /** How much memory the graph's computer has; by default 16 GB, whatever the machine running the test has. */
+        public Builder memory(final MemorySource value) {
+            memory = Objects.requireNonNull(value, "memory");
+            return this;
+        }
+
+        /** What the graph's {@link Clock} is; by default one standing at {@link #NOW}. */
+        public Builder clock(final Clock value) {
+            clock = Objects.requireNonNull(value, "clock");
+            return this;
+        }
+
         public Builder configs(final ProviderConfigs value) {
             configs = Objects.requireNonNull(value, "configs");
             return this;
         }
 
-        /** What the graph's {@link ProviderVerifier} is. */
         public Builder verifier(final ProviderVerifier value) {
             verifier = Objects.requireNonNull(value, "verifier");
             return this;
         }
 
-        /** What the graph's {@link ModelCatalog} is. */
         public Builder catalog(final ModelCatalog value) {
             catalog = Objects.requireNonNull(value, "catalog");
             return this;
@@ -144,19 +158,21 @@ public final class UiTestInjector {
             return this;
         }
 
-        /** What the graph's {@link ExportService} is. */
+        public Builder proofread(final ScriptedProofreadProgress value) {
+            proofread = Objects.requireNonNull(value, "proofread");
+            return this;
+        }
+
         public Builder exports(final ExportService value) {
             exports = Objects.requireNonNull(value, "exports");
             return this;
         }
 
-        /** What the graph's {@link ChatModelFactory} is. */
         public Builder models(final ChatModelFactory value) {
             models = Objects.requireNonNull(value, "models");
             return this;
         }
 
-        /** What the graph's {@link TranslationEngine} is. */
         public Builder engine(final TranslationEngine value) {
             engine = Objects.requireNonNull(value, "engine");
             return this;
@@ -199,13 +215,11 @@ public final class UiTestInjector {
             return this;
         }
 
-        /** What the graph's {@link StorageInfo} is. */
         public Builder storage(final StorageInfo value) {
             launch.storage(Objects.requireNonNull(value, "storage"));
             return this;
         }
 
-        /** What the graph's {@link ReviewModeChoice} is. */
         public Builder reviewModeChoice(final ReviewModeChoice value) {
             launch.reviewModeChoice(Objects.requireNonNull(value, "reviewModeChoice"));
             return this;
@@ -329,12 +343,6 @@ public final class UiTestInjector {
             return this;
         }
 
-        /** What the graph says overrides a Generation setting for this launch. */
-        public Builder overrides(final GenerationOverrides value) {
-            launch.overrides(Objects.requireNonNull(value, "overrides"));
-            return this;
-        }
-
         /** The operating system's language; by default the display language, so no restart is ever needed. */
         public Builder osLocale(final Locale value) {
             launch.osLocale(Objects.requireNonNull(value, "osLocale"));
@@ -358,7 +366,7 @@ public final class UiTestInjector {
             final Module open = gated ? Modules.EMPTY_MODULE : new OpenStepsModule();
             return Guice.createInjector(Modules.override(new UiModule())
                     .with(
-                            new ReviewPortsModule(glossary, lexicon, namesPass, desk, reviewMode),
+                            new ReviewPortsModule(proofread, glossary, lexicon, namesPass, desk, reviewMode),
                             new ScriptedPorts(),
                             replacements.module(),
                             open));
@@ -370,10 +378,11 @@ public final class UiTestInjector {
             protected void configure() {
                 install(launch.module(locale));
                 UiTestBindings.bindExecutors(binder(), backgroundExecutor);
-                UiTestBindings.bindStores(binder(), configs, settings, modelSettings, NOW);
+                UiTestBindings.bindStores(binder(), configs, settings, modelSettings, clock);
                 bind(EnvironmentVariables.class).toInstance(name -> environment.contains(name));
                 bind(ProviderVerifier.class).toInstance(verifier);
                 bind(ModelCatalog.class).toInstance(catalog);
+                bind(MemorySource.class).toInstance(memory);
                 bind(ModelCapabilities.class).toInstance(capabilities);
                 bind(ChatModelFactory.class).toInstance(models);
                 bind(TranslationEngine.class).toInstance(engine);

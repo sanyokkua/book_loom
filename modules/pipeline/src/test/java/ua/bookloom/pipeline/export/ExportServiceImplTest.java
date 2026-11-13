@@ -26,9 +26,8 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
-import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
-import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportReport;
@@ -40,6 +39,7 @@ import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.CallLedgerTestModule;
 import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.TestBooks;
@@ -49,7 +49,7 @@ import ua.bookloom.pipeline.export.BookExporterTestSupport.BlockingClosePort;
 import ua.bookloom.pipeline.export.BookExporterTestSupport.ScriptedMoveOperation;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
-import ua.bookloom.pipeline.revision.ConsistencyPass;
+import ua.bookloom.pipeline.run.RunStores;
 
 /** The export service and job over the real document module and the in-memory repositories. */
 class ExportServiceImplTest {
@@ -70,7 +70,11 @@ class ExportServiceImplTest {
     @BeforeEach
     void setUp() {
         injector = Guice.createInjector(
-                new DocumentModule(), new InMemoryPersistenceModule(), new ReviewModeTestModule(), binder -> {
+                new DocumentModule(),
+                new InMemoryPersistenceModule(),
+                new ReviewModeTestModule(),
+                new CallLedgerTestModule(),
+                binder -> {
                     binder.bind(Clock.class).toInstance(Clock.systemUTC());
                     binder.bind(IdSource.class).toInstance(new UuidIdSource());
                 });
@@ -95,7 +99,8 @@ class ExportServiceImplTest {
                         new DocumentModule(),
                         new InMemoryPersistenceModule(),
                         new PipelineModule(),
-                        new ReviewModeTestModule())
+                        new ReviewModeTestModule(),
+                        new CallLedgerTestModule())
                 .getInstance(ExportService.class);
 
         assertThat(bound).isInstanceOf(ExportServiceImpl.class);
@@ -224,7 +229,7 @@ class ExportServiceImplTest {
         final Path destination = tempDir.resolve("Book.uk.md");
         final ScriptedMoveOperation moves = new ScriptedMoveOperation()
                 .answer(Result.err(error(ErrorCode.internal, new IOException("scripted move failure"))));
-        final ExportJob job = dataOf(service.newExportWith(request(id, destination, false), null, moves));
+        final ExportJob job = dataOf(service.newExportWith(request(id, destination, false), moves));
 
         final Result<ExportReport> result = job.run();
 
@@ -240,15 +245,8 @@ class ExportServiceImplTest {
         final Path destination = tempDir.resolve("Book.uk.md");
         final BlockingClosePort port = new BlockingClosePort(TestDocuments.documents(), 2);
         final ExportServiceImpl blocking = new ExportServiceImpl(
-                projects,
-                segments,
-                openProjects,
-                port,
-                injector.getInstance(ConsistencyPass.class),
-                injector.getInstance(GlossaryRepository.class),
-                injector.getInstance(RunRepository.class),
-                Clock.systemUTC());
-        final ExportJob job = dataOf(blocking.newExport(request(id, destination, false), null));
+                injector.getInstance(RunStores.class), port, injector.getInstance(DeferralRepository.class));
+        final ExportJob job = dataOf(blocking.newExport(request(id, destination, false)));
         workers = Executors.newSingleThreadExecutor();
 
         final Future<Result<ExportReport>> running = workers.submit(job::run);
@@ -290,11 +288,11 @@ class ExportServiceImplTest {
     }
 
     private ExportJob newExport(final String projectId, final Path destination, final boolean overwrite) {
-        return dataOf(service.newExport(request(projectId, destination, overwrite), null));
+        return dataOf(service.newExport(request(projectId, destination, overwrite)));
     }
 
     private static ExportRequest request(final String projectId, final Path destination, final boolean overwrite) {
-        return new ExportRequest(projectId, destination, overwrite, Set.of(), false);
+        return new ExportRequest(projectId, destination, overwrite, Set.of());
     }
 
     private static BookBrief withTarget(final BookBrief brief, @Nullable final String targetLanguage) {

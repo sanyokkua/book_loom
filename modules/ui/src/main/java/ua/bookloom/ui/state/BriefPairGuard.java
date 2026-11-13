@@ -54,9 +54,8 @@ public final class BriefPairGuard implements BriefSaveOutcomes {
      * @param projects the service the second translation is stored through
      * @param prompt the Same language pair question
      * @param opener what "Open that project" does; a provider because it reaches back to the brief
-     * @param messages the catalogue the question is worded from
-     * @param languages names languages in the interface language
-     * @param errors where an unexpected failure is shown
+     * @param text the catalogue the question is worded from, the language names, and where an unexpected failure is
+     *     shown
      * @param executor the daemon executor the service runs on, never the FX thread
      */
     @Inject
@@ -66,18 +65,16 @@ public final class BriefPairGuard implements BriefSaveOutcomes {
             final ProjectService projects,
             final SamePairPrompt prompt,
             final Provider<RowOpener> opener,
-            final Messages messages,
-            final LanguageNames languages,
-            final ErrorPresenter errors,
+            final ProjectText text,
             @BackgroundExecutor final ExecutorService executor) {
         this.current = Objects.requireNonNull(current, "current");
         this.named = Objects.requireNonNull(named, "named");
         this.projects = Objects.requireNonNull(projects, "projects");
         this.prompt = Objects.requireNonNull(prompt, "prompt");
         this.opener = Objects.requireNonNull(opener, "opener");
-        this.messages = Objects.requireNonNull(messages, "messages");
-        this.languages = Objects.requireNonNull(languages, "languages");
-        this.errors = Objects.requireNonNull(errors, "errors");
+        this.messages = Objects.requireNonNull(text, "text").messages();
+        this.languages = text.languages();
+        this.errors = text.errors();
         this.calls = new OffThread(Objects.requireNonNull(executor, "executor"));
         current.book().addListener((observed, was, now) -> reset());
         reset();
@@ -115,7 +112,7 @@ public final class BriefPairGuard implements BriefSaveOutcomes {
 
     @Override
     public UnaryOperator<BookBrief> refused(final String projectId, final BookBrief sent, final ProjectChange refusal) {
-        if (!isOpen(projectId) || !(refusal instanceof ProjectChange.PairInUse inUse)) {
+        if (!isOpen(projectId) || !(refusal instanceof ProjectChange.PairInUse(var existing))) {
             log.debug(
                     "a refused brief save needs no question: {}",
                     refusal.getClass().getSimpleName());
@@ -127,8 +124,8 @@ public final class BriefPairGuard implements BriefSaveOutcomes {
             log.debug("the refused pair is the stored one; nothing to restore");
             return waiting -> waiting;
         }
-        if (!pairOf(inUse.existing().brief()).equals(asked)) {
-            return acceptedAnyway(inUse.existing(), asked);
+        if (!pairOf(existing.brief()).equals(asked)) {
+            return acceptedAnyway(existing, asked);
         }
         log.info(
                 "the pair {} -> {} is used by another translation; the brief goes back to {} -> {}",
@@ -141,7 +138,7 @@ public final class BriefPairGuard implements BriefSaveOutcomes {
         if (now != null) {
             current.replaceBrief(restore.apply(now));
         }
-        ask(projectId, inUse.existing(), asked, previous);
+        ask(projectId, existing, asked, previous);
         return restore;
     }
 

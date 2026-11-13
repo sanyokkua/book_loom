@@ -12,11 +12,17 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.CallLedger;
+import ua.bookloom.api.llm.CallRecord;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ChatRequest;
@@ -29,6 +35,7 @@ import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
+import ua.bookloom.api.pipeline.CallKind;
 
 /** Scripted provider seams for a whole command run: a model that fails chosen drafts, a probe, a clock. */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -49,6 +56,7 @@ final class CliRunFakes {
         private final ErrorCode failure;
         private final Map<String, String> translations;
         private final AtomicInteger drafts = new AtomicInteger();
+        private final AtomicReference<CallLedger> ledger = new AtomicReference<>(CallLedger.none());
 
         /**
          * @param failingDrafts the draft calls, counted from one, that answer {@code failure}
@@ -66,23 +74,39 @@ final class CliRunFakes {
             this.translations.putAll(replacements);
         }
 
+        /** Records every call it answers in {@code calls}, as the gated model records a provider's calls. */
+        ScriptedModels recordingInto(CallLedger calls) {
+            ledger.set(Objects.requireNonNull(calls, "calls"));
+            return this;
+        }
+
         @Override
         public Result<ChatModel> create(ModelSelection selection) {
-            return Result.ok(this::answer);
+            return Result.ok(this::recorded);
+        }
+
+        // A scripted reply reports no usage, as a server that sends no figures does.
+        private Result<ChatResponse> recorded(ChatRequest request) {
+            final Result<ChatResponse> result = answer(request);
+            final CallKind kind = request.callKind();
+            if (kind != null) {
+                Objects.requireNonNull(ledger.get(), "ledger")
+                        .record(new CallRecord(
+                                kind, null, Duration.ZERO, null, result.isOk() ? null : FailureReason.UNCLASSIFIED));
+            }
+            return result;
         }
 
         private Result<ChatResponse> answer(ChatRequest request) {
             final String user = request.messages().getLast().content();
-            final int start = user.lastIndexOf("<Text>\n");
-            if (start < 0) {
+            final String text = singleItem(user);
+            if (text == null) {
                 return Result.ok(new ChatResponse(OTHER_REPLY, FinishReason.STOP));
             }
             if (failingDrafts.contains(drafts.incrementAndGet())) {
                 return Result.err(AppError.of(failure, "Provider failure", "The scripted provider failed."));
             }
-            final String text = user.substring(start + "<Text>\n".length(), user.indexOf("\n</Text>", start));
-            return Result.ok(new ChatResponse(
-                    "{\"target\":\"" + translations.getOrDefault(text, text) + "\"}", FinishReason.STOP));
+            return Result.ok(new ChatResponse(itemReply(translations.getOrDefault(text, text)), FinishReason.STOP));
         }
     }
 
@@ -146,5 +170,21 @@ final class CliRunFakes {
         public Instant instant() {
             return Objects.requireNonNull(now.get(), "now");
         }
+    }
+
+    /** The one item of a single draft, a batch of one, or null for any other call. */
+    static @Nullable String singleItem(final String user) {
+        final int block = user.lastIndexOf("<Items>");
+        if (block < 0) {
+            return null;
+        }
+        final Matcher items =
+                Pattern.compile("<s id=\"1\">(.*?)</s>", Pattern.DOTALL).matcher(user.substring(block));
+        return items.find() && !user.substring(block).contains("<s id=\"2\">") ? items.group(1) : null;
+    }
+
+    /** A translate-family reply of one item. */
+    static String itemReply(final String target) {
+        return "{\"items\":[{\"id\":\"1\",\"target\":\"" + target + "\"}]}";
     }
 }

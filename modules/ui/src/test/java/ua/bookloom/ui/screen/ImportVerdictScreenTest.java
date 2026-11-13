@@ -73,7 +73,7 @@ class ImportVerdictScreenTest extends ImportScreenTestBase {
         awaitFx(() -> viewModel().opening().get());
 
         assertThat(textOf("import-verdict-text")).isEqualTo("Reading...");
-        assertThat(ThemeTestSupport.onFx(() -> ((ProgressBar) required("import-verdict-bar")).isIndeterminate()))
+        assertThat(ThemeTestSupport.onFx(((ProgressBar) required("import-verdict-bar"))::isIndeterminate))
                 .isTrue();
         assertThat(optional("import-verdict-cancel")).isNotNull();
         projects.release();

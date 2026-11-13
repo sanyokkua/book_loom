@@ -24,11 +24,15 @@ import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.VerificationExchange;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.llm.LlmModule;
+import ua.bookloom.llm.engine.EngineDetector;
+import ua.bookloom.llm.engine.EngineFacts;
+import ua.bookloom.llm.engine.EngineRegistry;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 import ua.bookloom.llm.retry.RetryPolicy;
+import ua.bookloom.llm.testing.FakeModelSettingsRepository;
 import ua.bookloom.llm.testing.FakeProviderConfigs;
 
 /** A failed stage that was answered by the server keeps the status it answered with, for the test dialog. */
@@ -56,17 +60,19 @@ class ProviderVerifierFailureStatusTest {
 
     private StageOutcome stageOf(final ProviderConfig config, final int stageIndex) {
         final var mapper = new LlmModule().objectMapper();
-        final var factory = new ProviderClientFactory(
-                new HttpExchange(new HttpClients(), System::nanoTime, Map.<String, String>of()::get),
-                mapper,
-                System::nanoTime);
+        final var exchange = new HttpExchange(new HttpClients(), System::nanoTime, Map.<String, String>of()::get);
+        final var factory = new ProviderClientFactory(exchange, mapper, System::nanoTime);
+        final var configs = new FakeProviderConfigs();
         final var verifier = new ProviderVerifierImpl(
-                new FakeProviderConfigs(),
+                configs,
                 factory,
-                new InferenceGate(),
-                new RetryPolicy(CLOCK, () -> 0.5, delay -> {}),
-                mapper,
-                System::nanoTime);
+                new RetriedCalls(new InferenceGate(), new RetryPolicy(CLOCK, () -> 0.5, delay -> {})),
+                new EngineRegistry(configs, new EngineDetector(exchange, mapper), new EngineFacts(exchange, mapper)),
+                new ProbeTools(
+                        mapper,
+                        System::nanoTime,
+                        new FakeModelSettingsRepository(),
+                        ProbeShapings.over(new FakeModelSettingsRepository())));
         return Objects.requireNonNull(verifier.verify(config, "m", VerificationPolicy.CONNECTION_AND_MODELS)
                         .data())
                 .stages()

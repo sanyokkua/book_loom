@@ -27,10 +27,10 @@ class StepWordsBriefTest {
                 "en|knowledge||What the model knows about the book",
                 "en|sample-1|ch1 · p02–p14|Read sample 1 · ch1 · p02–p14",
                 "en|sample-4||Read sample 4",
-                "en|synthesis||Decide genre, readers and voice",
+                "en|synthesis||Decide genre, readers, voice and story shape",
                 "uk|knowledge||Що модель знає про книгу",
                 "uk|sample-2|ch1 · p15–p27|Читання зразка 2 · ch1 · p15–p27",
-                "uk|synthesis||Визначення жанру, читачів і голосу"
+                "uk|synthesis||Визначення жанру, читачів, голосу й будови книги"
             })
     void name_briefRequestStep_isReadInTheInterfaceLanguage(
             final String tag, final String label, final @Nullable String place, final String expected) {

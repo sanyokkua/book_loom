@@ -43,23 +43,35 @@ final class GlossaryChoiceCell<T> extends GlossaryCells.EntryCell<Label> {
     private @Nullable ComboBox<T> combo;
     private boolean filling;
 
+    /**
+     * What the column does with a value.
+     *
+     * @param label words a value
+     * @param read the value an entry holds
+     * @param shownLabel the words shown for an entry, which may differ from its value's own label
+     * @param write stores a chosen value for an entry id
+     * @param <T> the enum the column chooses from
+     */
+    record Choice<T>(
+            Function<T, String> label,
+            Function<GlossaryEntry, T> read,
+            Function<GlossaryEntry, String> shownLabel,
+            BiConsumer<String, T> write) {}
+
     GlossaryChoiceCell(
             final Messages messages,
             final MessageKey tip,
             final T[] values,
-            final Function<T, String> label,
-            final Function<GlossaryEntry, T> read,
-            final Function<GlossaryEntry, String> shownLabel,
-            final BiConsumer<String, T> write,
+            final Choice<T> choice,
             final ObservableBooleanValue frozen) {
         super(Tips.installOnHover(messages, new Label(), tip));
         this.messages = messages;
         this.tip = tip;
         this.values = values.clone();
-        this.label = label;
-        this.read = read;
-        this.shownLabel = shownLabel;
-        this.write = write;
+        this.label = choice.label();
+        this.read = choice.read();
+        this.shownLabel = choice.shownLabel();
+        this.write = choice.write();
         this.frozen = frozen;
         final Label shown = control();
         shown.getStyleClass().add("glossary-choice");
@@ -101,6 +113,28 @@ final class GlossaryChoiceCell<T> extends GlossaryCells.EntryCell<Label> {
         }
     }
 
+    private static boolean isCharacterKey(final KeyCode code) {
+        return code.isLetterKey() || code.isDigitKey();
+    }
+
+    // A closed list does not pick a value by the letters typed over it: typing aimed at another row must not change
+    // this one. Enter opens the list, and in the open list it confirms.
+    private void keysOf(final ComboBox<T> made) {
+        made.addEventFilter(KeyEvent.ANY, event -> {
+            if (!made.isShowing() && (event.getEventType() == KeyEvent.KEY_TYPED || isCharacterKey(event.getCode()))) {
+                event.consume();
+            }
+        });
+        made.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.ENTER && !made.isShowing()) {
+                made.show();
+                event.consume();
+            } else if (event.getCode() == KeyCode.ENTER) {
+                confirm(made.getSelectionModel().getSelectedItem());
+            }
+        });
+    }
+
     private ComboBox<T> editor() {
         final ComboBox<T> existing = combo;
         if (existing != null) {
@@ -118,14 +152,7 @@ final class GlossaryChoiceCell<T> extends GlossaryCells.EntryCell<Label> {
             }
         });
         made.setCellFactory(list -> new ChoiceListCell());
-        made.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
-            if (event.getCode() == KeyCode.ENTER && !made.isShowing()) {
-                made.show();
-                event.consume();
-            } else if (event.getCode() == KeyCode.ENTER) {
-                confirm(made.getSelectionModel().getSelectedItem());
-            }
-        });
+        keysOf(made);
         combo = made;
         return made;
     }

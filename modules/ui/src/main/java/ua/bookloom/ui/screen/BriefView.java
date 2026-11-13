@@ -3,6 +3,8 @@ package ua.bookloom.ui.screen;
 import java.util.Objects;
 import java.util.Optional;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.StringBinding;
+import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
@@ -49,6 +51,7 @@ final class BriefView {
     private final WorkflowProgress progress;
     private final BriefLanguagesCard languages;
     private final BriefToneCard tone;
+    private final BriefStoryShapeField storyShape;
     private final BriefPoliciesCard policies;
     private final BriefAlsoCard also;
     private final BriefQualityCard quality;
@@ -65,7 +68,8 @@ final class BriefView {
         this.parts = parts;
         log.debug("building the brief");
         this.languages = new BriefLanguagesCard(parts);
-        this.tone = new BriefToneCard(viewModel, messages, parts.runs().view());
+        this.storyShape = new BriefStoryShapeField(viewModel, parts.lock(), messages);
+        this.tone = new BriefToneCard(viewModel, messages, parts.runs().view(), storyShape.node());
         this.policies = new BriefPoliciesCard(viewModel, messages);
         this.also = new BriefAlsoCard(viewModel, messages);
         this.quality = new BriefQualityCard(parts);
@@ -95,7 +99,7 @@ final class BriefView {
         final TwoColumns columns = new TwoColumns(left, right, LayoutClass.Width.REGULAR);
         columns.setId("brief-columns");
         columns.disableProperty().bind(parts.lock().readOnly());
-        return new VBox(CARD_SPACING, subtitle, readOnlyBanner(), columns, footer);
+        return new VBox(CARD_SPACING, subtitle, readOnlyBanner(), recheckBanner(), columns, footer);
     }
 
     // While a translation is at work the whole brief is read-only; the banner stays outside the columns so Pause works.
@@ -116,6 +120,18 @@ final class BriefView {
                 .bind(Bindings.createBooleanBinding(
                         () -> !controls.get().pause().isEnabled(), controls));
         return banner;
+    }
+
+    // A policy key changed after segments were decided: the count of those the re-check left to look at.
+    private Banner recheckBanner() {
+        final ReadOnlyIntegerProperty rechecked = parts.viewModel().rechecked();
+        final StringBinding words = Bindings.createStringBinding(
+                () -> messages.get(MessageKey.BRIEF_RECHECK_BANNER, rechecked.get()), rechecked);
+        final Banner banner = new Banner("brief-recheck-banner", Tone.INFO, "ℹ", words.get(), "");
+        words.addListener((observed, was, now) -> banner.setTitle(now));
+        // The binding is held by the banner's properties so it lives as long as the node.
+        banner.getProperties().put("brief-recheck-words", words);
+        return Visibility.bind(banner, rechecked.greaterThan(0));
     }
 
     private void pause() {
@@ -154,6 +170,7 @@ final class BriefView {
         }
         languages.show(brief);
         tone.show(brief);
+        storyShape.show(brief);
         policies.show(brief);
         also.show(brief);
         quality.show(brief);

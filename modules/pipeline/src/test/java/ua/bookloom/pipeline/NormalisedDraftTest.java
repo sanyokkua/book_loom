@@ -14,7 +14,6 @@ import ua.bookloom.document.DocumentModule;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.memory.ProtectedMask;
-import ua.bookloom.pipeline.prompt.DraftContext;
 import ua.bookloom.pipeline.typography.TypographyGate;
 
 /** The checks and the reviewer read the typography-normalised reply, the text that is stored as the target. */
@@ -39,7 +38,7 @@ class NormalisedDraftTest {
 
         final DraftOutcome.Drafted drafted = DraftStepFixtures.drafted(DraftStepFixtures.segmentTranslator(
                         gate, (kind, segmentId, request) -> model.chat(request), BookFormat.MARKDOWN, "uk", "en")
-                .translate(segment, DraftContext.empty(), mask));
+                .translate(segment, null, mask));
 
         assertThat(drafted.maskedReply()).isEqualTo(drafted.maskedForm()).startsWith("«");
     }

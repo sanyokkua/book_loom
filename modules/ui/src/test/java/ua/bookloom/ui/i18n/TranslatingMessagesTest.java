@@ -43,4 +43,22 @@ class TranslatingMessagesTest {
         assertThat(messagesFor(tag).get(MessageKey.CONFIRM_STOP_TEXT, done, total, inFlight))
                 .isEqualTo(expected);
     }
+
+    // In Proofread the segments a stop interrupts are being proofread, not translated.
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "uk|74|142|1|Готово й збережено 74 з 142 сегментів. 1 сегмент, що вичитується зараз, буде вичитано"
+                        + " наступного разу. Для короткої перерви скористайтеся паузою.",
+                "uk|74|142|5|Готово й збережено 74 з 142 сегментів. 5 сегментів, що вичитуються зараз, буде вичитано"
+                        + " наступного разу. Для короткої перерви скористайтеся паузою.",
+                "en|74|142|1|74 of 142 segments are done and saved. The 1 being proofread now is proofread next time."
+                        + " For a short break, use Pause."
+            })
+    void stopQuestionInProofread_eachLanguage_saysTheSegmentsAreProofreadNextTime(
+            final String tag, final int done, final int total, final int inFlight, final String expected) {
+        assertThat(messagesFor(tag).get(MessageKey.CONFIRM_STOP_TEXT_PROOFREAD, done, total, inFlight))
+                .isEqualTo(expected);
+    }
 }

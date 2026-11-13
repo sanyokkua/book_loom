@@ -49,7 +49,8 @@ public sealed interface RepairReply {
 
     /**
      * Content that must flag the segment now: an empty or whitespace-only reply, a reply cut off before it
-     * finished, or a model call that itself answered {@code emptyCompletion}/{@code contextWindow}.
+     * finished, or a model call whose own error is flagged at once (an empty reply, a prompt too long, a model
+     * that looped).
      *
      * @param error the error to record against the segment
      */

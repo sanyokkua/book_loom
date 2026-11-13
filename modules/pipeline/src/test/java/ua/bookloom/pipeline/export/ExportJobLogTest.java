@@ -26,6 +26,7 @@ import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.CallLedgerTestModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.TestProjects;
@@ -47,6 +48,7 @@ class ExportJobLogTest {
                 new DocumentModule(),
                 new InMemoryPersistenceModule(),
                 new ReviewModeTestModule(),
+                new CallLedgerTestModule(),
                 binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
         service = injector.getInstance(ExportServiceImpl.class);
         projects = injector.getInstance(ProjectRepository.class);
@@ -65,7 +67,7 @@ class ExportJobLogTest {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "Source.");
         projects.save(TestProjects.of("p1", source, BookFormat.MARKDOWN, "hash", BookBrief.defaults("en")));
         final ExportJob job = Objects.requireNonNull(
-                service.newExport(new ExportRequest("p1", tempDir.resolve("Book.uk.md"), true, Set.of(), false), null)
+                service.newExport(new ExportRequest("p1", tempDir.resolve("Book.uk.md"), true, Set.of()))
                         .data(),
                 "export job");
 

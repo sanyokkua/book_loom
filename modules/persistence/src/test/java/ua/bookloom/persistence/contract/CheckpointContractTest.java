@@ -12,6 +12,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -26,6 +27,8 @@ import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.ProofreadOutcome;
+import ua.bookloom.api.project.ProofreadVerdict;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentCounts;
 import ua.bookloom.api.project.SegmentRecord;
@@ -69,6 +72,97 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
         assertThat(deferralRepository().open("p1").data())
                 .extracting(Deferral::id)
                 .containsExactly("d1");
+    }
+
+    // The Proofread stage's window: new texts, their verdicts and the deferral they settled are one step.
+    @Test
+    void commitWindow_textsMarksAndResolvedDeferrals_storedTogether() {
+        givenProjects("p1");
+        final SegmentRepository segments = segmentRepository();
+        segments.saveAll(
+                "p1", List.of(decidedBeforeProofread("ch06.xhtml:20"), decidedBeforeProofread("ch06.xhtml:21")));
+        final Deferral gender =
+                new Deferral("d1", "p1", "ch06.xhtml:20", DeferralReason.GENDER_CHANGED, "Тарн", null, null, null);
+        deferralRepository().add(gender);
+
+        final Result<Integer> result = checkpointPort().commit(windowCommit(gender));
+
+        assertThat(result.isOk()).isTrue();
+        assertThat(segments.find("p1", "ch06.xhtml:20").data()).hasValueSatisfying(r -> {
+            assertThat(r.machineTarget()).isEqualTo("Тарна прийшла завтра.");
+            assertThat(r.proofread()).isEqualTo(keptVerdict());
+        });
+        assertThat(segments.find("p1", "ch06.xhtml:21").data())
+                .hasValueSatisfying(r -> assertThat(r.proofread().outcome()).isEqualTo(ProofreadOutcome.UNCHANGED));
+        assertThat(deferralRepository().open("p1").data()).isEmpty();
+    }
+
+    // A proposal keeps no waiting-on, so a new one shares the earlier one's key: it is resolved before the new is
+    // added.
+    @Test
+    void commit_newProposalResolvingTheEarlierOfTheSameSegment_leavesOnlyTheNewOneOpen() {
+        givenProjects("p1");
+        segmentRepository().saveAll("p1", List.of(decidedBeforeProofread("ch06.xhtml:20")));
+        final Deferral earlier = proposal("old", "Тарна прийшла.");
+        deferralRepository().add(earlier);
+        final Deferral fresh = proposal("new", "Тарна прийшла вчора.");
+
+        final Result<Integer> result = checkpointPort()
+                .commit(new ChunkCommit("p1", List.of(), List.of(), List.of(), List.of(fresh), List.of("old"), null));
+
+        assertThat(result.isOk()).isTrue();
+        assertThat(deferralRepository().open("p1").data()).containsExactly(fresh);
+    }
+
+    private static Deferral proposal(final String id, final String text) {
+        return new Deferral(id, "p1", "ch06.xhtml:20", DeferralReason.PROOFREAD, null, null, text, text);
+    }
+
+    @Test
+    void removeProject_withProofreadVerdicts_verdictsGone() {
+        givenProjects("p1", "p2");
+        segmentRepository().saveAll("p1", List.of(decidedBeforeProofread("ch06.xhtml:20")));
+        segmentRepository().saveAll("p2", List.of(decidedBeforeProofread("ch06.xhtml:20")));
+        checkpointPort().commit(windowCommit(null));
+
+        projectRepository().delete("p1");
+
+        assertThat(segmentRepository().all("p1").data()).isEmpty();
+        assertThat(segmentRepository().find("p2", "ch06.xhtml:20").data())
+                .hasValueSatisfying(r -> assertThat(r.proofread()).isNull());
+    }
+
+    protected static ChunkCommit windowCommit(@Nullable final Deferral resolved) {
+        final SegmentRecord kept = decidedBeforeProofread("ch06.xhtml:20")
+                .withMachineTarget("Тарна прийшла завтра.", "Тарна прийшла завтра.")
+                .withProofread(keptVerdict());
+        final SegmentRecord unchanged = decidedBeforeProofread("ch06.xhtml:21")
+                .withProofread(new ProofreadVerdict("fp2", ProofreadOutcome.UNCHANGED, ""));
+        return new ChunkCommit(
+                "p1",
+                List.of(kept, unchanged),
+                List.of(),
+                List.of(),
+                List.of(),
+                resolved == null ? List.of() : List.of(resolved.id()),
+                null);
+    }
+
+    protected static ProofreadVerdict keptVerdict() {
+        return new ProofreadVerdict(
+                "fp1",
+                ProofreadOutcome.KEPT,
+                "gender now known: Тарн",
+                "Тарн прийшов завтра.",
+                SegmentStatus.ACCEPTED,
+                "Тарн прийшов завтра.",
+                List.of());
+    }
+
+    protected static SegmentRecord decidedBeforeProofread(final String segmentId) {
+        return pending("p1", segmentId, "ch06.xhtml", 0, SegmentKind.PARAGRAPH)
+                .withStatus(SegmentStatus.ACCEPTED)
+                .withMachineTarget("Тарн прийшов завтра.", "Тарн прийшов завтра.");
     }
 
     @Test
@@ -119,17 +213,17 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
     void commit_glossaryAdditionOfAnExistingLockedTerm_keepsTheExistingEntry() {
         givenProjects("p1");
         final GlossaryRepository glossary = glossaryRepository();
-        glossary.add(new GlossaryEntry("existing", "p1", "hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
+        glossary.add(GlossaryEntry.of("existing", "p1", "hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
         final ChunkCommit commit = new ChunkCommit(
                 "p1",
                 List.of(),
                 List.of(),
-                List.of(new GlossaryEntry("proposed", "p1", "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false)),
+                List.of(GlossaryEntry.of("proposed", "p1", "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false)),
                 List.of());
 
         final Result<Integer> result = checkpointPort().commit(commit);
 
-        assertThat(result.data()).isEqualTo(0);
+        assertThat(result.data()).isZero();
         assertThat(glossary.all("p1").data()).hasSize(1);
         assertThat(glossary.findByTerm("p1", "hale").data())
                 .isPresent()
@@ -140,18 +234,18 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
     void commit_glossaryAdditionOfARemovedTerm_isNotReAdded() {
         givenProjects("p1");
         final GlossaryRepository glossary = glossaryRepository();
-        glossary.add(new GlossaryEntry("e1", "p1", "Chapter", null, TermType.TERM, Gender.NEUTER, false));
+        glossary.add(GlossaryEntry.of("e1", "p1", "Chapter", null, TermType.TERM, Gender.NEUTER, false));
         glossary.remove("p1", "e1");
         final ChunkCommit commit = new ChunkCommit(
                 "p1",
                 List.of(),
                 List.of(),
-                List.of(new GlossaryEntry("e2", "p1", "Chapter", null, TermType.TERM, Gender.NEUTER, false)),
+                List.of(GlossaryEntry.of("e2", "p1", "Chapter", null, TermType.TERM, Gender.NEUTER, false)),
                 List.of());
 
         final Result<Integer> result = checkpointPort().commit(commit);
 
-        assertThat(result.data()).isEqualTo(0);
+        assertThat(result.data()).isZero();
         assertThat(glossary.all("p1").data()).isEmpty();
     }
 
@@ -162,7 +256,7 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
                 "p1",
                 List.of(),
                 List.of(),
-                List.of(new GlossaryEntry("e1", "p1", "Milton", null, TermType.CHARACTER, Gender.UNKNOWN, false)),
+                List.of(GlossaryEntry.of("e1", "p1", "Milton", null, TermType.CHARACTER, Gender.UNKNOWN, false)),
                 List.of());
 
         final Result<Integer> result = checkpointPort().commit(commit);

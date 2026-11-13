@@ -2,6 +2,7 @@ package ua.bookloom.llm.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.math.BigDecimal;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
@@ -9,16 +10,20 @@ import org.jspecify.annotations.Nullable;
  * The response fields consumed from an OpenAI-compatible chat completion.
  *
  * @param model nullable because provider replies may omit metadata
+ * @param provider nullable; the hosting company an aggregating provider (OpenRouter) says answered
  * @param choices nullable because malformed or partial replies may omit the collection
  * @param usage nullable because providers may omit reported token counts
  * @param stats nullable; LM Studio's own timing of the call, which other providers do not send
+ * @param timings nullable; llama-server's own timing of the call, which other providers do not send
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record OpenAiChatResponse(
         @JsonProperty("model") @Nullable String model,
         @JsonProperty("choices") @Nullable List<Choice> choices,
         @JsonProperty("usage") @Nullable Usage usage,
-        @JsonProperty("stats") @Nullable Stats stats) {
+        @JsonProperty("stats") @Nullable Stats stats,
+        @JsonProperty("provider") @Nullable String provider,
+        @JsonProperty("timings") @Nullable Timings timings) {
 
     /** Copies a present choices list to preserve its order and prevent mutation. */
     public OpenAiChatResponse {
@@ -71,12 +76,28 @@ public record OpenAiChatResponse(
      * @param promptTokens nullable because a provider may omit the prompt token count
      * @param completionTokens nullable because a provider may omit the completion token count
      * @param promptTokensDetails nullable; the split of the prompt tokens, which only some providers send
+     * @param completionTokensDetails nullable; the split of the completion tokens, which only some providers send
+     * @param cost nullable; the call's price, which OpenRouter sends and a free model may report as 0 or omit
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Usage(
             @JsonProperty("prompt_tokens") @Nullable Integer promptTokens,
             @JsonProperty("completion_tokens") @Nullable Integer completionTokens,
-            @JsonProperty("prompt_tokens_details") @Nullable PromptTokensDetails promptTokensDetails) {}
+            @JsonProperty("prompt_tokens_details") @Nullable PromptTokensDetails promptTokensDetails,
+
+            @JsonProperty("completion_tokens_details") @Nullable
+            CompletionTokensDetails completionTokensDetails,
+
+            @JsonProperty("cost") @Nullable BigDecimal cost) {}
+
+    /**
+     * The part of the completion a provider reports on.
+     *
+     * @param reasoningTokens nullable count of completion tokens spent reasoning; OpenRouter sends it on every reply
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record CompletionTokensDetails(
+            @JsonProperty("reasoning_tokens") @Nullable Integer reasoningTokens) {}
 
     /**
      * The part of the prompt a provider reports on.
@@ -92,9 +113,26 @@ public record OpenAiChatResponse(
      *
      * @param timeToFirstToken nullable time before the first token, which is the prompt evaluation
      * @param generationTime nullable time spent generating the completion
+     * @param tokensPerSecond nullable generation rate, which gives the generation time when only the rate is sent
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Stats(
             @JsonProperty("time_to_first_token") @Nullable Double timeToFirstToken,
-            @JsonProperty("generation_time") @Nullable Double generationTime) {}
+            @JsonProperty("generation_time") @Nullable Double generationTime,
+            @JsonProperty("tokens_per_second") @Nullable Double tokensPerSecond) {}
+
+    /**
+     * llama-server's own timing of one call.
+     *
+     * @param promptMs nullable milliseconds spent reading the prompt, the time before the first token
+     * @param predictedMs nullable milliseconds spent generating the completion
+     * @param predictedPerSecond nullable generation rate, which gives the generation time when only the rate is sent
+     * @param cacheN nullable count of prompt tokens served from the server's cache
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record Timings(
+            @JsonProperty("prompt_ms") @Nullable Double promptMs,
+            @JsonProperty("predicted_ms") @Nullable Double predictedMs,
+            @JsonProperty("predicted_per_second") @Nullable Double predictedPerSecond,
+            @JsonProperty("cache_n") @Nullable Integer cacheN) {}
 }

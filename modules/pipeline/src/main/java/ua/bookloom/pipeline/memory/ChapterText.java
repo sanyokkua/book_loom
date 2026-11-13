@@ -6,24 +6,17 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.pipeline.chunk.TokenBudget;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 
 /**
- * One side of a chapter as the summary call is shown it. A long chapter would not fit the model's context, so its
- * middle is dropped: the opening sets the chapter up and the ending is where it leaves the story, which are the parts a
- * running summary needs most.
+ * One part of a chapter as the chapter-summary call is shown it. A chapter is read in parts cut at segment ends, so
+ * only a single segment longer than a whole part needs cutting: its middle is dropped, because its opening sets the
+ * passage up and its ending is where it leaves the story, the parts a summary needs most.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class ChapterText {
-
-    /**
-     * The most estimated tokens either side of a chapter may take: the source and the target together use half the
-     * model's context, which leaves the other half for the instructions, the previous summary and the reply.
-     */
-    static final int MAX_TOKENS = TokenBudget.EFFECTIVE_CONTEXT / 4;
 
     /** Stands where the middle of a chapter was dropped. */
     static final String GAP = "\n[…]\n";

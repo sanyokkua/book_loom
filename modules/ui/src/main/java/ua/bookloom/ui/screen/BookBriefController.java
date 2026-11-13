@@ -20,6 +20,7 @@ import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.OpenedBook;
 import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.SettingsViewModel;
+import ua.bookloom.ui.state.StartAdvice;
 import ua.bookloom.ui.state.TranslatingViewModel;
 import ua.bookloom.ui.state.WorkflowProgress;
 
@@ -45,6 +46,8 @@ public final class BookBriefController {
     private final BriefLock lock;
     private final BriefProject stored;
     private final BriefEstimate estimate;
+    private final StartAdvice advice;
+    private final QualityWords quality;
     private final TranslatingViewModel translating;
     private final ChangeListener<@Nullable OpenedBook> onBook = (observed, was, now) -> show(now != null);
 
@@ -55,46 +58,41 @@ public final class BookBriefController {
      * Receives the collaborators the injector owns.
      *
      * @param viewModel the choices the brief assembles
-     * @param project the holder of the open book they are about
-     * @param messages the catalogue the built parts are worded from
-     * @param navigator where Back, Continue and the route from the no-book state lead
+     * @param context the holder of the open book they are about, the catalogue the built parts are worded from, and
+     *     where Back, Continue and the route from the no-book state lead
      * @param names how the language boxes name and recognise languages
      * @param settings where the model row reads the chosen model from
      * @param progress where Continue records that the brief step is done
-     * @param runs the run-state row, whose translation at work holds Fill in from the book
-     * @param lock whether the brief is read-only and its languages locked
-     * @param stored the open project's stored name and size
-     * @param estimate the time estimate under the quality choice
-     * @param translating the run controls the read-only banner's Pause uses
+     * @param facts whether the brief is read-only and its languages locked, the open project's stored name and size,
+     *     and the time estimate under the quality choice
+     * @param run the run-state row, whose translation at work holds Fill in from the book, and the run controls the
+     *     read-only banner's Pause uses
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
     @Inject
     public BookBriefController(
             final BookBriefViewModel viewModel,
-            final CurrentProject project,
-            final Messages messages,
-            final Navigator navigator,
+            final ScreenContext context,
             final LanguageNames names,
             final SettingsViewModel settings,
             final WorkflowProgress progress,
-            final RunStateSource runs,
-            final BriefLock lock,
-            final BriefProject stored,
-            final BriefEstimate estimate,
-            final TranslatingViewModel translating) {
+            final BriefFacts facts,
+            final RunView run) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
-        this.project = Objects.requireNonNull(project, "project");
-        this.messages = Objects.requireNonNull(messages, "messages");
-        this.navigator = Objects.requireNonNull(navigator, "navigator");
+        this.project = Objects.requireNonNull(context, "context").project();
+        this.messages = context.messages();
+        this.navigator = context.navigator();
         this.names = Objects.requireNonNull(names, "names");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.progress = Objects.requireNonNull(progress, "progress");
-        this.runs = Objects.requireNonNull(runs, "runs");
-        this.lock = Objects.requireNonNull(lock, "lock");
-        this.stored = Objects.requireNonNull(stored, "stored");
-        this.estimate = Objects.requireNonNull(estimate, "estimate");
-        this.translating = Objects.requireNonNull(translating, "translating");
+        this.runs = Objects.requireNonNull(run, "run").runs();
+        this.lock = Objects.requireNonNull(facts, "facts").lock();
+        this.stored = facts.stored();
+        this.estimate = facts.estimate();
+        this.advice = facts.advice();
+        this.quality = facts.quality();
+        this.translating = run.translating();
     }
 
     @FXML
@@ -120,6 +118,8 @@ public final class BookBriefController {
                                 lock,
                                 stored,
                                 estimate,
+                                advice,
+                                quality,
                                 translating))
                         .root()
                 : NoBookView.build(messages, navigator);

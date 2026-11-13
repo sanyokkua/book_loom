@@ -58,7 +58,7 @@ public final class LastProjectRecorder {
             } else {
                 log.debug("last project {} stored", projectId);
             }
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             log.warn("the last project could not be stored", thrown);
         }
     }

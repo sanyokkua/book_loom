@@ -9,7 +9,7 @@ stable identity, its position in document order, and its kind.
 
 Source: FR-DOC-01 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-07,
 `02_Architecture/03_DOCUMENT_MODEL.md#data-model`, ADR-0025
-(`docs/adr/ADR-0025-reassembly-replaces-run-inner-content.md`).
+(`docs/spec_baseline/adr/ADR-0025-reassembly-replaces-run-inner-content.md`).
 In plain words: a book stops being a file and becomes two things — the structure, which is frozen, and a numbered list
 of the bits of text that may be translated. Everything downstream addresses text by segment id, so the numbering has
 to exist before anything can translate, store, review or export. The unit of that numbering is a *run* rather than a
@@ -53,7 +53,7 @@ buffer in place, so that no segment's span is invalidated by writing back any ot
 
 Source: DD-07, `02_Architecture/03_DOCUMENT_MODEL.md#data-model` ("a stable node path/id plus child index … not a byte
 offset and not an inserted sentinel node"), FR-DOC-TXT-3 (`01_Product/03_DOCUMENT_FORMATS.md#txt`), ADR-0025
-(`docs/adr/ADR-0025-reassembly-replaces-run-inner-content.md`).
+(`docs/spec_baseline/adr/ADR-0025-reassembly-replaces-run-inner-content.md`).
 In plain words: the segment has to remember exactly which slot in the structure it came from, so a translation can be
 written back into that same slot. In a tree, a byte offset would be invalidated by the first edit of any earlier
 segment, and a sentinel node would mean the parser modified the structure it promised not to touch. Plain text and
@@ -106,7 +106,7 @@ of the segment's own run within its block, and SHALL NOT add, remove, reorder or
 system SHALL NOT regenerate, rebuild, or restructure the skeleton.
 
 Source: FR-DOC-03, `02_Architecture/03_DOCUMENT_MODEL.md#reassembly`, ADR-0025
-(`docs/adr/ADR-0025-reassembly-replaces-run-inner-content.md`).
+(`docs/spec_baseline/adr/ADR-0025-reassembly-replaces-run-inner-content.md`).
 In plain words: reassembly edits the content of one run and nothing else. Re-serializing the parsed tree on export is
 expected and fine; building a new tree from the segments is not, because everything the segments do not capture —
 attributes, comments, structure, ordering — would be lost in the rebuild. The unit of replacement is a run's inner
@@ -185,7 +185,7 @@ process the book normally and carry the obfuscated font bytes through unchanged,
 named.
 
 Source: FR-DOC-EPUB-7, EC-EPUB-1, EC-FONT-1, FR-IMPORT-04, ADR-0026
-(`docs/adr/ADR-0026-drm-adjudication-by-encrypted-resource.md`), `02_Architecture/09_ERROR_HANDLING.md#error-code`.
+(`docs/spec_baseline/adr/ADR-0026-drm-adjudication-by-encrypted-resource.md`), `02_Architecture/09_ERROR_HANDLING.md#error-code`.
 In plain words: encrypted content cannot be translated and must not be half-imported. Font obfuscation is recorded in
 the same file but is not encryption of the book — it is a routine embedding technique, and refusing books that use it
 would reject a large share of ordinary EPUBs. The decision is taken from *what* was encrypted rather than from the
@@ -235,7 +235,7 @@ segment's kind, mapping to `HEADING`, `LIST_ITEM`, `TABLE_CELL` or `VERSE_LINE` 
 `PARAGRAPH` otherwise.
 
 Source: FR-DOC-01, `02_Architecture/03_DOCUMENT_MODEL.md#data-model` ("the translatable inner content of a single
-block-level element … and so on"), ADR-0027 (`docs/adr/ADR-0027-structural-block-segmentation.md`).
+block-level element … and so on"), ADR-0027 (`docs/spec_baseline/adr/ADR-0027-structural-block-segmentation.md`).
 In plain words: the specification lists paragraphs, headings and list items as examples and ends with "and so on",
 so the importer has to decide for itself what a block is. Deciding by tag name fails silently: a survey of 194 real
 books found 42 of them — whole author catalogues — writing every paragraph as `<div class="paragraph">`, so a tag
@@ -300,7 +300,7 @@ out of 12,412, and one FB2 has 1,950 image-only paragraphs in a single section.
 WHERE a segment-bearing block contains line-break elements, the system SHALL emit one segment per maximal run of
 content between them, in document order, and SHALL preserve the line-break elements themselves in the skeleton.
 
-Source: FR-DOC-01, FR-DOC-08, ADR-0025 (`docs/adr/ADR-0025-reassembly-replaces-run-inner-content.md`), ADR-0027.
+Source: FR-DOC-01, FR-DOC-08, ADR-0025 (`docs/spec_baseline/adr/ADR-0025-reassembly-replaces-run-inner-content.md`), ADR-0027.
 In plain words: some converters write a whole chapter as one element whose paragraphs are separated by line breaks
 rather than by real block elements. One surveyed EPUB holds 465,500 characters inside four elements separated by
 9,290 line breaks, and one FB2 holds 1,850,973 characters in two paragraphs separated by 11,945 of them. Treating
@@ -887,7 +887,7 @@ only the byte spans of segments that carry target text, leaving every other byte
 the document from its syntax tree.
 
 Source: FR-DOC-MD-4, FR-DOC-03, DD-43, `02_Architecture/03_DOCUMENT_MODEL.md#repackaging`, ADR-0025
-(`docs/adr/ADR-0025-reassembly-replaces-run-inner-content.md`).
+(`docs/spec_baseline/adr/ADR-0025-reassembly-replaces-run-inner-content.md`).
 In plain words: re-rendering a Markdown file from its tree normalises formatting everywhere — emphasis markers,
 bullet characters, fence styles, and whether the file ends with a newline — in parts of the document nobody
 translated. Copying the original and replacing only translated spans makes every untouched byte identical by
@@ -1039,7 +1039,7 @@ declares no language at all — so absence has to be representable rather than g
 The system's per-format golden tests SHALL assert that the segments emitted for a fixture cover at least a stated
 proportion of that fixture's visible text, counting text inside deliberately excluded blocks as not translatable.
 
-Source: FR-DOC-01, FR-DOC-09, ADR-0027 (`docs/adr/ADR-0027-structural-block-segmentation.md`),
+Source: FR-DOC-01, FR-DOC-09, ADR-0027 (`docs/spec_baseline/adr/ADR-0027-structural-block-segmentation.md`),
 `04_Build_and_Release/06_TESTING_STRATEGY.md`.
 In plain words: every other assertion in the document suite checks that nothing was *damaged*, and a book that yields
 no segments at all satisfies every one of them perfectly — the skeleton round-trips, the bytes match, the gate is
@@ -1072,7 +1072,7 @@ Each fixture's expectations SHALL be declared with the fixture and SHALL NOT be 
 output.
 
 Source: FR-DOC-09 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), FR-DOC-01, ADR-0027
-(`docs/adr/ADR-0027-structural-block-segmentation.md`), `04_Build_and_Release/06_TESTING_STRATEGY.md`,
+(`docs/spec_baseline/adr/ADR-0027-structural-block-segmentation.md`), `04_Build_and_Release/06_TESTING_STRATEGY.md`,
 `01_Product/03_DOCUMENT_FORMATS.md#round-trip-golden-requirement`.
 In plain words: a fixture that exists but is not asserted proves nothing, and that is not hypothetical — the shape
 that corrupts a translation containing inline markup had no fixture and no test in the shipped code, which is why

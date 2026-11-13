@@ -10,7 +10,7 @@ import ua.bookloom.api.project.Project;
 
 /**
  * Stores and retrieves a project, keyed by its stable id — one book kept as if there could be many
- * ({@code docs/adr/0034}).
+ * ({@code docs/spec_baseline/adr/0034}).
  */
 public interface ProjectRepository {
 

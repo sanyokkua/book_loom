@@ -37,8 +37,17 @@ class ModelCapabilitiesTest {
     void report_default_carriesContextLengthAndNoLoaded() {
         final ModelCapabilities capabilities = (provider, model) -> Result.ok(new ContextLength(4096));
 
-        final Result<ModelReport> report = capabilities.report("ollama", "gemma");
+        final Result<ModelReport> report = capabilities.report(SELECTION);
 
-        assertThat(report.data()).isEqualTo(new ModelReport(4096, null));
+        assertThat(report.data()).isEqualTo(ModelReport.windowsOnly(4096, null));
+        assertThat(report.data()).extracting(ModelReport::verdict).isEqualTo("unknown model");
+    }
+
+    // A capability that cannot tell says the model needs no load of its own, so Start never shows a line by guess.
+    @Test
+    void loadsWithOwnSettings_default_isFalse() {
+        final ModelCapabilities capabilities = (provider, model) -> Result.ok(ContextLength.unknown());
+
+        assertThat(capabilities.loadsWithOwnSettings(SELECTION)).isFalse();
     }
 }

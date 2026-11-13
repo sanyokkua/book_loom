@@ -61,54 +61,37 @@ public final class ProjectActionsImpl implements ProjectActions {
      * hold this object themselves.
      *
      * @param projects the service every action goes through
-     * @param renamePrompt the Rename card
-     * @param samePairPrompt the Same language pair card
-     * @param translatePrompt the Translate into another language card
-     * @param findBookPrompt the Find the book card
-     * @param confirm the question asked before a removal
-     * @param chooser the file dialog that finds a moved book
-     * @param opener what opens a project after a dialog
-     * @param list the Projects list to refresh after a change
-     * @param importer the Import screen's state, reset when its project is removed
+     * @param dialogs the cards and questions an action asks, and the file dialog that finds a moved book
+     * @param views what opens a project after a dialog, the Projects list to refresh after a change, and the Import
+     *     screen's state, reset when its project is removed
      * @param current the open project, closed when it is removed
-     * @param messages the catalogue the refusals and language names come from
-     * @param languages names languages in the interface language
-     * @param errors where an unexpected failure is shown
+     * @param text the catalogue the refusals and language names come from, and where an unexpected failure is shown
      * @param runs the window's run, stopped before its own project is removed
      * @param executor the daemon executor the service runs on, never the FX thread
      */
     @Inject
     public ProjectActionsImpl(
             final ProjectService projects,
-            final RenamePrompt renamePrompt,
-            final SamePairPrompt samePairPrompt,
-            final TranslateIntoPrompt translatePrompt,
-            final FindBookPrompt findBookPrompt,
-            final ConfirmPrompt confirm,
-            final FileChooserPort chooser,
-            final Provider<RowOpener> opener,
-            final Provider<ProjectsViewModel> list,
-            final Provider<ImportViewModel> importer,
+            final ProjectDialogs dialogs,
+            final ProjectViews views,
             final CurrentProject current,
-            final Messages messages,
-            final LanguageNames languages,
-            final ErrorPresenter errors,
+            final ProjectText text,
             final ProjectOpener.RunSwitch runs,
             @BackgroundExecutor final ExecutorService executor) {
         this.projects = Objects.requireNonNull(projects, "projects");
-        this.renamePrompt = Objects.requireNonNull(renamePrompt, "renamePrompt");
-        this.samePairPrompt = Objects.requireNonNull(samePairPrompt, "samePairPrompt");
-        this.translatePrompt = Objects.requireNonNull(translatePrompt, "translatePrompt");
-        this.findBookPrompt = Objects.requireNonNull(findBookPrompt, "findBookPrompt");
-        this.confirm = Objects.requireNonNull(confirm, "confirm");
-        this.chooser = Objects.requireNonNull(chooser, "chooser");
-        this.opener = Objects.requireNonNull(opener, "opener");
-        this.list = Objects.requireNonNull(list, "list");
-        this.importer = Objects.requireNonNull(importer, "importer");
+        this.renamePrompt = Objects.requireNonNull(dialogs, "dialogs").renamePrompt();
+        this.samePairPrompt = dialogs.samePairPrompt();
+        this.translatePrompt = dialogs.translatePrompt();
+        this.findBookPrompt = dialogs.findBookPrompt();
+        this.confirm = dialogs.confirm();
+        this.chooser = dialogs.chooser();
+        this.opener = Objects.requireNonNull(views, "views").opener();
+        this.list = views.list();
+        this.importer = views.importer();
         this.current = Objects.requireNonNull(current, "current");
-        this.messages = Objects.requireNonNull(messages, "messages");
-        this.languages = Objects.requireNonNull(languages, "languages");
-        this.errors = Objects.requireNonNull(errors, "errors");
+        this.messages = Objects.requireNonNull(text, "text").messages();
+        this.languages = text.languages();
+        this.errors = text.errors();
         this.runs = Objects.requireNonNull(runs, "runs");
         this.calls = new OffThread(Objects.requireNonNull(executor, "executor"));
     }
@@ -251,7 +234,7 @@ public final class ProjectActionsImpl implements ProjectActions {
                     switch (change) {
                         case null -> log.debug("translation of book={} failed", group.contentHash());
                         case ProjectChange.Saved saved -> openNew(group, saved.project());
-                        case ProjectChange.PairInUse inUse -> askSamePair(group, target, inUse.existing());
+                        case ProjectChange.PairInUse(var existing) -> askSamePair(group, target, existing);
                         case ProjectChange.NameInUse _ -> {
                             log.warn("translation refused book={} clash=NameInUse", group.contentHash());
                             translateInto(group);

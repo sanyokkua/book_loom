@@ -10,8 +10,8 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.ReadingCounts.Read;
 import ua.bookloom.pipeline.glossary.ReadingVotes.GenderCall;
@@ -134,7 +134,7 @@ final class ReadingVerdict {
      * @param kind a name, a term, not a name, or no opinion
      * @param type the type the readings show; {@link TermType#OTHER} when they show none
      * @param gender the gender decided; {@link Gender#UNKNOWN} when none
-     * @param origin {@link GenderOrigin#VERIFIED} or {@link GenderOrigin#SUGGESTED}; null exactly when the gender is
+     * @param origin {@link Origin#BOOK} or {@link Origin#LIKELY}; null exactly when the gender is
      *     unknown
      * @param quote the ordinary-word use a removal stands on; empty for any other decision
      * @param noEvidence whether the term is a person the book gives no evidence of a gender for (15i.N5)
@@ -143,7 +143,7 @@ final class ReadingVerdict {
             Kind kind,
             TermType type,
             Gender gender,
-            @Nullable GenderOrigin origin,
+            @Nullable Origin origin,
             String quote,
             boolean noEvidence) {
 
@@ -152,7 +152,7 @@ final class ReadingVerdict {
                 final Kind kind,
                 final TermType type,
                 final Gender gender,
-                @Nullable final GenderOrigin origin,
+                @Nullable final Origin origin,
                 final String quote) {
             this(kind, type, gender, origin, quote, false);
         }
@@ -274,7 +274,7 @@ final class ReadingVerdict {
         final GlossaryEntry entry = facts.entry();
         final boolean person =
                 decided == TermType.CHARACTER || (decided == TermType.OTHER && entry.type() == TermType.CHARACTER);
-        if (!person || entry.genderOrigin() == GenderOrigin.PERSON) {
+        if (!person || entry.genderOrigin() == Origin.USER) {
             log.debug("Reading verdict for entry {}: no gender decided (person {})", entry.id(), person);
             return GenderCall.NONE;
         }

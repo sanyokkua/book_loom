@@ -28,11 +28,24 @@ final class SpeechRepairs {
     record Result(String text, List<Normalisation.Tally> tallies) {}
 
     static Result apply(final String source, final String text, final String languageTag, final TypographyRules rules) {
+        final List<Normalisation.Tally> tallies = new ArrayList<>();
+        final String quoted = quoteRepairs(tallies, source, text, languageTag, rules);
+        if (!tallies.isEmpty()) {
+            log.debug("Speech repairs language={} fired={}", languageTag, tallies);
+        }
+        return new Result(quoted, List.copyOf(tallies));
+    }
+
+    private static String quoteRepairs(
+            final List<Normalisation.Tally> tallies,
+            final String source,
+            final String text,
+            final String languageTag,
+            final TypographyRules rules) {
         final List<QuotePair> pairs = rules.quotes();
         if (pairs.isEmpty() || !(rules.isSpeechRepaired() || rules.isCommaOutsideQuote())) {
-            return new Result(text, List.of());
+            return text;
         }
-        final List<Normalisation.Tally> tallies = new ArrayList<>();
         String current = text;
         if (rules.isSpeechRepaired()) {
             final QuotePair primary = pairs.get(0);
@@ -47,10 +60,7 @@ final class SpeechRepairs {
         if (rules.isCommaOutsideQuote()) {
             current = run(tallies, "comma moved outside the quote", CommaBeforeDash.apply(current, pairs.get(0)));
         }
-        if (!tallies.isEmpty()) {
-            log.debug("Speech repairs language={} fired={}", languageTag, tallies);
-        }
-        return new Result(current, List.copyOf(tallies));
+        return current;
     }
 
     private static String run(final List<Normalisation.Tally> tallies, final String label, final Edit edit) {

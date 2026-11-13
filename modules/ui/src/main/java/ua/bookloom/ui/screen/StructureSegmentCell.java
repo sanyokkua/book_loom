@@ -26,6 +26,8 @@ import ua.bookloom.ui.state.StructureSegmentRow;
  */
 final class StructureSegmentCell extends ListCell<StructureSegmentRow> {
 
+    private static final String CHIP_NEUTRAL = "chip-neutral";
+
     private static final double GAP = 8;
     private static final double CELL_PADDING = 12;
     private static final double LOCATOR_WIDTH = 78;
@@ -38,10 +40,10 @@ final class StructureSegmentCell extends ListCell<StructureSegmentRow> {
     private final NumberFormat numbers;
     private final ReadOnlyBooleanProperty technical;
     private final Label locator = new Label();
-    private final Label kind = chip("structure-seg-kind", "chip-neutral");
+    private final Label kind = chip("structure-seg-kind", CHIP_NEUTRAL);
     private final Label text = new Label();
-    private final Label verbatim = chip("structure-seg-kept", "chip-neutral");
-    private final Label source = chip("structure-seg-source", "chip-neutral");
+    private final Label verbatim = chip("structure-seg-kept", CHIP_NEUTRAL);
+    private final Label source = chip("structure-seg-source", CHIP_NEUTRAL);
     private final Label tokens = new Label();
     private final Label chunk = chip("structure-seg-chunk", CHUNK_A);
     private final HBox line = new HBox(GAP, locator, kind, text, verbatim, source, tokens, chunk);

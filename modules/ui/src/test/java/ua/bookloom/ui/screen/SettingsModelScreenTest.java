@@ -2,9 +2,13 @@ package ua.bookloom.ui.screen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ListView;
+import javafx.scene.control.skin.ComboBoxListViewSkin;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
@@ -31,7 +35,7 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
     // IF the screen did not ask for the list when shown, THEN the combo would stay empty until something else
     // refreshed it; and IF it asked about another provider, THEN it would list another server's models.
     @Test
-    void modelControl_screenShown_asksTheCatalogueOnceForTheSelectedProvider() throws InterruptedException {
+    void modelControl_screenShown_asksTheCatalogueOnceForTheSelectedProvider() {
         openSettings();
         catalog.awaitEntered();
         WaitForAsyncUtils.waitForFxEvents();
@@ -61,6 +65,47 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
 
         assertThat(ThemeTestSupport.onFx(() -> viewModel().draftModel().get())).isEqualTo("qwen3:8b");
         assertThat(((Button) required("settings-test-inference")).isDisable()).isFalse();
+    }
+
+    // IF picking a name in the open list changed the list's items while the list was still selecting it, THEN the
+    // list would fail on its own stale selection change (an IndexOutOfBoundsException on the FX thread) on a click.
+    @Test
+    void modelControl_nameClickedInOpenList_choosesItWithNoFailureOnTheFxThread() throws TimeoutException {
+        catalog.respondWith("gemma3:12b", "qwen3:8b", "qwen3:14b");
+        openSettings();
+        awaitFx(() -> modelCombo().getItems().size() == 3);
+        openFold();
+        final List<Throwable> failures = new CopyOnWriteArrayList<>();
+        onFx(() -> {
+            Thread.currentThread().setUncaughtExceptionHandler((thread, error) -> failures.add(error));
+            modelCombo().show();
+        });
+
+        onFx(() -> popupList().getSelectionModel().clearAndSelect(1));
+        onFx(() -> Thread.currentThread().setUncaughtExceptionHandler(null));
+
+        assertThat(failures).isEmpty();
+        assertThat(ThemeTestSupport.onFx(() -> viewModel().draftModel().get())).isEqualTo("qwen3:8b");
+    }
+
+    // IF typing did not narrow the list, THEN a catalogue of hundreds of models could not be searched: "free" must
+    // leave only the names that contain it, anywhere in the name, and clearing the text must bring them all back.
+    @Test
+    void modelControl_textTyped_narrowsTheOfferedListToNamesContainingIt() throws TimeoutException {
+        catalog.respondWith("vendor/alpha:free", "vendor/beta", "free-tier/gamma", "vendor/delta");
+        openSettings();
+        awaitFx(() -> modelCombo().getItems().size() == 4);
+
+        typeIntoModelEntry("free");
+
+        assertThat(ThemeTestSupport.onFx(() -> List.copyOf(modelCombo().getItems())))
+                .containsExactly("vendor/alpha:free", "free-tier/gamma");
+        assertThat(ThemeTestSupport.onFx(() -> viewModel().draftModel().get())).isEqualTo("free");
+
+        onFx(() -> modelCombo().getEditor().clear());
+
+        assertThat(ThemeTestSupport.onFx(() -> List.copyOf(modelCombo().getItems())))
+                .hasSize(4);
     }
 
     // IF typing did not set the model as it happens, THEN the check would stay disabled: a disabled button never
@@ -102,7 +147,7 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
     // IF the listing note showed or took room when nothing was being listed, THEN it would claim work that is not
     // happening; and IF it stayed after the answer, it would never go away.
     @Test
-    void listingLabel_whileListing_visibleAndManaged_thenHidden() throws InterruptedException, TimeoutException {
+    void listingLabel_whileListing_visibleAndManaged_thenHidden() throws TimeoutException {
         openSettings();
         awaitFx(() -> !listingLabel().isVisible());
         assertThat(listingLabel().isManaged()).isFalse();
@@ -160,8 +205,7 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
     // IF a list arriving replaced or blanked what a person had typed but not yet committed, THEN their entry would be
     // lost the moment the server answered.
     @Test
-    void modelControl_typedNotCommitted_thenListArrives_keepsTextAndModel()
-            throws InterruptedException, TimeoutException {
+    void modelControl_typedNotCommitted_thenListArrives_keepsTextAndModel() throws TimeoutException {
         catalog.respondWith("gemma3:12b", "qwen3:8b");
         catalog.hold();
         openSettings();
@@ -169,7 +213,7 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
         typeIntoModelEntry("mistral-small:24b");
 
         catalog.release();
-        awaitFx(() -> modelCombo().getItems().size() == 2);
+        awaitFx(() -> viewModel().modelListing().offered().size() == 2);
 
         assertThat(modelCombo().getEditor().getText()).isEqualTo("mistral-small:24b");
         assertThat(ThemeTestSupport.onFx(() -> viewModel().draftModel().get())).isEqualTo("mistral-small:24b");
@@ -179,8 +223,7 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
     // IF a list that does not contain a committed identifier replaced it in the entry, THEN a person who named a model
     // the server does not list would lose it as soon as the listing answered.
     @Test
-    void modelControl_committedThenListWithoutThatIdArrives_keepsTheText()
-            throws InterruptedException, TimeoutException {
+    void modelControl_committedThenListWithoutThatIdArrives_keepsTheText() throws TimeoutException {
         catalog.respondWith("gemma3:12b", "qwen3:8b");
         catalog.hold();
         openSettings();
@@ -189,10 +232,15 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
         commitModelEntry();
 
         catalog.release();
-        awaitFx(() -> modelCombo().getItems().size() == 2);
+        awaitFx(() -> viewModel().modelListing().offered().size() == 2);
 
         assertThat(modelCombo().getEditor().getText()).isEqualTo("mistral-small:24b");
         assertThat(ThemeTestSupport.onFx(() -> viewModel().draftModel().get())).isEqualTo("mistral-small:24b");
+    }
+
+    @SuppressWarnings("unchecked")
+    private ListView<String> popupList() {
+        return (ListView<String>) ((ComboBoxListViewSkin<String>) modelCombo().getSkin()).getPopupContent();
     }
 
     // IF a refusal a person can fix were not said beside the control, THEN they would get no reason for an empty list;

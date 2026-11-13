@@ -2,7 +2,7 @@
 //
 // Formatting is mechanical and never argued about in review: `spotlessApply` runs in the pre-commit hook, so a
 // file is fixed before anyone ever sees it, and `spotlessCheck` gates CI
-// (docs/specification/04_Build_and_Release/02_QUALITY_GATES.md#tools, DD-25).
+// (docs/spec_baseline/specification/04_Build_and_Release/02_QUALITY_GATES.md#tools, DD-25).
 //
 // A separate plugin from `bookloom.java-conventions` per design decision D2: formatting is the one gate that
 // must also apply to source sets a module adds later (arch-test, fixtures) without dragging the whole

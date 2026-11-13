@@ -16,7 +16,7 @@ class TermMappingVerifierTest {
 
     private static List<TermMappingVerifier.Pair> verify(
             final Map<String, String> claimed, final String source, final String target) {
-        return TermMappingVerifier.verify(claimed, KEY_TERMS, source, target);
+        return TermMappingVerifier.verify(claimed, KEY_TERMS, source, target, List.of());
     }
 
     @Test
@@ -89,7 +89,7 @@ class TermMappingVerifierTest {
     @Test
     void verify_hyphenatedTargetWord_holdsEachPart() {
         final var pairs = TermMappingVerifier.verify(
-                Map.of("Zerubin", "Зерубін"), List.of("Zerubin"), "Z-Zerubin came.", "З-Зерубін прийшов.");
+                Map.of("Zerubin", "Зерубін"), List.of("Zerubin"), "Z-Zerubin came.", "З-Зерубін прийшов.", List.of());
 
         assertThat(pairs).containsExactly(new TermMappingVerifier.Pair("Zerubin", "Зерубін"));
     }
@@ -139,36 +139,6 @@ class TermMappingVerifierTest {
                         "Денер сказав це.",
                         List.of("гзж")))
                 .isEmpty();
-    }
-
-    // The one identity rule (15i.N6): a rendering equal to the term across scripts is a leftover, not learned.
-    @ParameterizedTest
-    @CsvSource({
-        "data,data,en,uk,Вони загубили data дорогою.,0",
-        "data,data,en,de,Sie verloren data unterwegs.,1",
-        "data,дані,en,uk,Вони загубили дані дорогою.,1",
-        "ZX-81,ZX-81,en,uk,Вони купили ZX-81 дорогою.,1",
-    })
-    void verify_withLanguages_dropsACopyAcrossScriptsOnly(
-            final String term,
-            final String rendering,
-            final String sourceTag,
-            final String targetTag,
-            final String target,
-            final int expected) {
-        final String source = "They bought the " + term + " on the way.";
-
-        final var pairs = TermMappingVerifier.verify(
-                Map.of(term, rendering), List.of(term), source, target, List.of(), sourceTag, targetTag);
-
-        assertThat(pairs).hasSize(expected);
-    }
-
-    @Test
-    void verify_withoutLanguages_doesNotApplyTheIdentityRule() {
-        assertThat(TermMappingVerifier.verify(
-                        Map.of("data", "data"), List.of("data"), "The data.", "Вони загубили data дорогою."))
-                .hasSize(1);
     }
 
     @Test

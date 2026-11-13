@@ -28,6 +28,7 @@ import ua.bookloom.ui.ScriptedModelCatalog;
 import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.notify.Voice;
 
 /**
  * What the settings view model tests share: the hand-written fakes for the registry, the verifier, the toasts and the
@@ -116,16 +117,13 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
 
     SettingsViewModel viewModel(final ScriptedProviderVerifier verifier, final StructuredAnswers structured) {
         final SettingsViewModel built = onFx(() -> new SettingsViewModel(
-                configs,
-                verifier,
-                newModelListing(),
-                errors,
+                new ProviderStore(configs, settings),
+                new ProviderChecks(verifier, newModelListing(), QuantChipsFixture.idle()),
+                new Voice(EnglishMessages.create(), errors),
                 executor,
                 activities,
-                settings,
-                EnglishMessages.create(),
-                new ModelSpeedRecorder(modelSettings, speeds, executor),
-                structured));
+                new InferenceMemory(new ModelSpeedRecorder(modelSettings, speeds, executor), structured),
+                java.time.Clock.systemUTC()));
         awaitProvidersLoaded();
         form(built);
         return built;
@@ -136,13 +134,7 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
         ProviderForm form = formOfOwner;
         if (formOwner != viewModel || form == null) {
             form = onFx(() -> new ProviderForm(
-                    viewModel,
-                    configs,
-                    modelSettings,
-                    settings,
-                    name -> "OFFICE_KEY".equals(name),
-                    technical,
-                    executor));
+                    viewModel, configs, modelSettings, settings, "OFFICE_KEY"::equals, technical, executor));
             formOwner = viewModel;
             formOfOwner = form;
         }

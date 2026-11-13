@@ -33,7 +33,7 @@ public final class InMemoryRunRepository implements RunRepository {
                     run.state(),
                     held.equals(run));
             return Result.ok(run);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -45,7 +45,7 @@ public final class InMemoryRunRepository implements RunRepository {
             final Optional<RunRecord> latest = Optional.ofNullable(store.latestRun(projectId));
             log.debug("Run latest projectId={} found={}", projectId, latest.isPresent());
             return Result.ok(latest);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }

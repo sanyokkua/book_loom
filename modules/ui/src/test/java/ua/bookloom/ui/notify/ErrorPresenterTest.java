@@ -23,6 +23,8 @@ import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
+import ua.bookloom.api.SafeDetails;
 import ua.bookloom.ui.ShellTestBase;
 import ua.bookloom.ui.UiTestInjector;
 
@@ -57,7 +59,7 @@ class ErrorPresenterTest extends ShellTestBase {
     }
 
     private void fireToggle() {
-        onFx(() -> ((ToggleButton) required("error-details-toggle")).fire());
+        onFx(((ToggleButton) required("error-details-toggle"))::fire);
     }
 
     private boolean isPresent(final String id) {
@@ -187,7 +189,7 @@ class ErrorPresenterTest extends ShellTestBase {
         onFx(() -> presenter().present(timeoutWithDetails(), retries::incrementAndGet));
         required("error-card");
 
-        onFx(() -> ((Button) required("error-retry")).fire());
+        onFx(((Button) required("error-retry"))::fire);
 
         assertThat(retries.get()).isEqualTo(1);
         assertThat(isPresent("error-card")).isFalse();
@@ -201,7 +203,7 @@ class ErrorPresenterTest extends ShellTestBase {
         onFx(() -> presenter().present(timeoutWithDetails(), retries::incrementAndGet));
         required("error-card");
 
-        onFx(() -> ((Button) required("error-dismiss")).fire());
+        onFx(((Button) required("error-dismiss"))::fire);
 
         assertThat(retries.get()).isZero();
         assertThat(isPresent("error-card")).isFalse();
@@ -304,12 +306,37 @@ class ErrorPresenterTest extends ShellTestBase {
         assertThat(textOf("error-message")).isNotBlank().doesNotContainPattern("[A-Za-z]");
     }
 
+    // IF the long OpenRouter sentences were cut at the right edge of the smallest window, THEN the person would lose
+    // the part that says what to do; the label must be as tall as its wrapped text needs.
+    @ParameterizedTest
+    @EnumSource(
+            value = FailureReason.class,
+            names = {"CREDITS", "BLOCKED", "NO_ENDPOINT_FOR_PARAMETERS"})
+    void present_underUkrainianAtTheMinimumSize_openRouterReasonShowsEveryRow(final FailureReason reason) {
+        useLocale(Locale.of("uk"));
+        resizeScene(960, 640);
+
+        present(AppError.of(
+                ErrorCode.upstream,
+                TITLE,
+                MESSAGE,
+                SafeDetails.empty().withReason(reason).render(),
+                null));
+        required("error-card");
+        final Label message = (Label) required("error-message");
+
+        assertThat(message.getText()).isNotBlank().doesNotContain("provider failed");
+        assertThat(message.getLayoutBounds().getHeight())
+                .isGreaterThanOrEqualTo(
+                        message.prefHeight(message.getLayoutBounds().getWidth()));
+    }
+
     // IF Copy details copied anything beyond the details field, THEN a cause or a secret could reach a report.
     @Test
     void copyDetails_clicked_copiesTheSafeDetailsOnly() {
         present(AppError.of(ErrorCode.unreachable, TITLE, MESSAGE, DETAILS, new ConnectException(CAUSE_TEXT)));
 
-        onFx(() -> ((Button) required("error-details-copy")).fire());
+        onFx(((Button) required("error-details-copy"))::fire);
 
         assertThat(copied).containsExactly("attempt 3 of 3; model gemma3:12b");
         assertThat(buttonText("error-details-copy")).isEqualTo("Copy details");

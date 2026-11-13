@@ -1,5 +1,8 @@
 package ua.bookloom.persistence.memory;
 
+import static ua.bookloom.util.contract.ArgNames.MODEL_ID;
+import static ua.bookloom.util.contract.ArgNames.PROVIDER_ID;
+
 import com.google.inject.Inject;
 import java.util.List;
 import java.util.Map;
@@ -24,13 +27,13 @@ public final class InMemoryModelSettingsRepository implements ModelSettingsRepos
 
     @Override
     public Result<Optional<ModelSettings>> find(final String providerId, final String modelId) {
-        Objects.requireNonNull(providerId, "providerId");
-        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(providerId, PROVIDER_ID);
+        Objects.requireNonNull(modelId, MODEL_ID);
         try {
             final Optional<ModelSettings> found = Optional.ofNullable(byModel.get(key(providerId, modelId)));
             log.debug("Model settings read provider={} model={} present={}", providerId, modelId, found.isPresent());
             return Result.ok(found);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -46,7 +49,7 @@ public final class InMemoryModelSettingsRepository implements ModelSettingsRepos
                     settings.modelId(),
                     settings.refused().size());
             return Result.ok(settings);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -54,8 +57,8 @@ public final class InMemoryModelSettingsRepository implements ModelSettingsRepos
     @Override
     public Result<ModelSettings> update(
             final String providerId, final String modelId, final UnaryOperator<ModelSettings> change) {
-        Objects.requireNonNull(providerId, "providerId");
-        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(providerId, PROVIDER_ID);
+        Objects.requireNonNull(modelId, MODEL_ID);
         Objects.requireNonNull(change, "change");
         try {
             final ModelSettings kept = byModel.compute(
@@ -64,20 +67,20 @@ public final class InMemoryModelSettingsRepository implements ModelSettingsRepos
                             change.apply(stored == null ? ModelSettings.defaults(providerId, modelId) : stored));
             log.debug("Model settings updated provider={} model={}", providerId, modelId);
             return Result.ok(kept);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
 
     @Override
     public Result<Boolean> delete(final String providerId, final String modelId) {
-        Objects.requireNonNull(providerId, "providerId");
-        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(providerId, PROVIDER_ID);
+        Objects.requireNonNull(modelId, MODEL_ID);
         try {
             final boolean removed = byModel.remove(key(providerId, modelId)) != null;
             log.debug("Model settings deleted provider={} model={} existed={}", providerId, modelId, removed);
             return Result.ok(removed);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -87,7 +90,7 @@ public final class InMemoryModelSettingsRepository implements ModelSettingsRepos
         try {
             log.debug("Model settings listed count={}", byModel.size());
             return Result.ok(List.copyOf(byModel.values()));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }

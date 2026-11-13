@@ -12,7 +12,11 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.pipeline.ExportOpenWork;
+import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.project.ExportRecord;
@@ -30,6 +34,7 @@ final class ExportStatement {
 
     private final ReviewDesk desk;
     private final ProjectRepository projects;
+    private final ExportService exports;
     private final Messages messages;
     private final ExecutorService executor;
     private final ObservableList<String> lines = FXCollections.observableArrayList();
@@ -39,10 +44,12 @@ final class ExportStatement {
     ExportStatement(
             final ReviewDesk desk,
             final ProjectRepository projects,
+            final ExportService exports,
             final Messages messages,
             final ExecutorService executor) {
         this.desk = Objects.requireNonNull(desk, "desk");
         this.projects = Objects.requireNonNull(projects, "projects");
+        this.exports = Objects.requireNonNull(exports, "exports");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.executor = Objects.requireNonNull(executor, "executor");
     }
@@ -79,7 +86,7 @@ final class ExportStatement {
         final ExportFigures now = figures.get();
         if (now != null) {
             log.debug("the tiles read the export just written: {} written", record.written());
-            figures.set(new ExportFigures(now.counts(), record));
+            figures.set(new ExportFigures(now.counts(), record, now.open()));
         }
     }
 
@@ -96,13 +103,27 @@ final class ExportStatement {
                 counts.total(),
                 last != null);
         final List<String> worded = PartialExportStatement.lines(counts, messages);
-        final ExportFigures read = new ExportFigures(counts, last);
+        final ExportFigures read = new ExportFigures(counts, last, openWork(projectId));
         Platform.runLater(() -> publish(asked, worded, read));
     }
 
+    // A read that failed names no open work; the service logged its cause.
+    private ExportOpenWork openWork(final String projectId) {
+        final Result<ExportOpenWork> read = exports.openWork(projectId);
+        final @Nullable AppError error = read.error();
+        if (error != null) {
+            log.warn(
+                    "the open work of project {} could not be read code={}; no banner names it",
+                    projectId,
+                    error.code());
+            return ExportOpenWork.NONE;
+        }
+        return Objects.requireNonNull(read.data());
+    }
+
     private @Nullable ExportRecord lastExport(final String projectId) {
-        final Optional<ExportRecord> stored = projects.lastExport(projectId).data();
-        return stored == null ? null : stored.orElse(null);
+        final Result<Optional<ExportRecord>> stored = projects.lastExport(projectId);
+        return stored.isErr() ? null : Objects.requireNonNull(stored.data()).orElse(null);
     }
 
     private void publish(final long asked, final List<String> worded, final ExportFigures read) {

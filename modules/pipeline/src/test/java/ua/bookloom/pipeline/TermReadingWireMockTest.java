@@ -15,6 +15,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.llm.ModelWindow;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
@@ -59,7 +60,8 @@ class TermReadingWireMockTest {
                 },
                 event -> {},
                 Clock.systemUTC(),
-                "uk");
+                "uk",
+                ModelWindow.DEFAULT_WINDOW);
         return reading.read(ILSA, List.of(WINDOW), frame, calls);
     }
 
@@ -121,7 +123,7 @@ class TermReadingWireMockTest {
             final JsonNode format = body.path("response_format").path("json_schema");
             assertThat(format.path("name").asText()).isEqualTo("term-reading");
             assertThat(fieldNames(format.path("schema").path("properties")))
-                    .containsExactly("windows", "speaking", "brand");
+                    .containsExactly("windows", "speaking", "brand", "explainsName");
             assertThat(fieldNames(format.path("schema")
                             .path("properties")
                             .path("windows")

@@ -1,5 +1,7 @@
 package ua.bookloom.ui.screen;
 
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.llm.QuantTier;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -14,6 +16,11 @@ import ua.bookloom.ui.i18n.MessageKey;
  */
 record ChipLook(String glyph, String styleClass, MessageKey status) {
 
+    private static final String CLASS_OK = "chip-ok";
+    private static final String CLASS_WARN = "chip-warn";
+    private static final String CLASS_ERR = "chip-err";
+    private static final String CLASS_NEUTRAL = "chip-neutral";
+
     /**
      * Looks up the look of a status.
      *
@@ -22,10 +29,31 @@ record ChipLook(String glyph, String styleClass, MessageKey status) {
      */
     static ChipLook of(final StageStatus status) {
         return switch (status) {
-            case PASSED -> new ChipLook("✓", "chip-ok", MessageKey.SETTINGS_STATUS_PASSED);
-            case SOFT_PASS -> new ChipLook("!", "chip-warn", MessageKey.SETTINGS_STATUS_SOFT_PASS);
-            case FAILED -> new ChipLook("✕", "chip-err", MessageKey.SETTINGS_STATUS_FAILED);
-            case SKIPPED -> new ChipLook("–", "chip-neutral", MessageKey.SETTINGS_STATUS_SKIPPED);
+            case PASSED -> new ChipLook("✓", CLASS_OK, MessageKey.SETTINGS_STATUS_PASSED);
+            case SOFT_PASS -> new ChipLook("!", CLASS_WARN, MessageKey.SETTINGS_STATUS_SOFT_PASS);
+            case FAILED -> new ChipLook("✕", CLASS_ERR, MessageKey.SETTINGS_STATUS_FAILED);
+            case SKIPPED -> new ChipLook("–", CLASS_NEUTRAL, MessageKey.SETTINGS_STATUS_SKIPPED);
+        };
+    }
+
+    /**
+     * The look of a quant chip for a tier; the glyph is empty because the chip's own words name the tier.
+     *
+     * @param tier how the quant rates, or null while the model's size is not known
+     * @return the look, whose style class carries the role colour
+     */
+    static ChipLook of(final @Nullable QuantTier tier) {
+        if (tier == null) {
+            return new ChipLook("", CLASS_NEUTRAL, MessageKey.SETTINGS_QUANT_TIER_UNMEASURED);
+        }
+        return switch (tier) {
+            case EXCELLENT -> new ChipLook("", CLASS_OK, MessageKey.SETTINGS_QUANT_TIER_EXCELLENT);
+            case GOOD -> new ChipLook("", CLASS_OK, MessageKey.SETTINGS_QUANT_TIER_GOOD);
+            case ACCEPTABLE -> new ChipLook("", CLASS_NEUTRAL, MessageKey.SETTINGS_QUANT_TIER_ACCEPTABLE);
+            case POOR -> new ChipLook("", CLASS_WARN, MessageKey.SETTINGS_QUANT_TIER_POOR);
+            case UNUSABLE -> new ChipLook("", CLASS_ERR, MessageKey.SETTINGS_QUANT_TIER_UNUSABLE);
+            case REMOVED -> new ChipLook("", CLASS_ERR, MessageKey.SETTINGS_QUANT_TIER_REMOVED);
+            case UNMEASURED -> new ChipLook("", CLASS_NEUTRAL, MessageKey.SETTINGS_QUANT_TIER_UNMEASURED);
         };
     }
 
@@ -35,7 +63,7 @@ record ChipLook(String glyph, String styleClass, MessageKey status) {
      * @return the look of the uncertain chip
      */
     static ChipLook uncertain() {
-        return new ChipLook("?", "chip-warn", MessageKey.BRIEF_EVIDENCE_UNCERTAIN);
+        return new ChipLook("?", CLASS_WARN, MessageKey.BRIEF_EVIDENCE_UNCERTAIN);
     }
 
     /**
@@ -49,6 +77,7 @@ record ChipLook(String glyph, String styleClass, MessageKey status) {
             case CONNECTION -> MessageKey.SETTINGS_STAGE_CONNECTION;
             case MODELS -> MessageKey.SETTINGS_STAGE_MODELS;
             case INFERENCE -> MessageKey.SETTINGS_STAGE_INFERENCE;
+            case ADVANCED -> MessageKey.SETTINGS_STAGE_ADVANCED;
         };
     }
 }

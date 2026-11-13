@@ -351,7 +351,7 @@ public final class SetupHelper {
             final Consumer<JobEvent> progress) {
         try {
             return models.create(selection).flatMap(model -> work.apply(model, progress));
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             log.error("a setup proposal threw instead of returning a result", thrown);
             return Result.err(
                     AppError.of(ErrorCode.internal, "Suggestion failed", "An unexpected failure stopped it."));

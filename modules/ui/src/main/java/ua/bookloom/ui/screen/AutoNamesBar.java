@@ -23,7 +23,6 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.NamesStyleViewModel;
-import ua.bookloom.ui.state.RunMode;
 
 /**
  * The one button above both cards of Names &amp; style that prepares the names and the recurring terms in one pass,
@@ -103,10 +102,10 @@ final class AutoNamesBar {
         confirm.getStyleClass().add("btn-ghost");
         confirm.setMinWidth(Region.USE_PREF_SIZE);
         confirm.disableProperty().bind(names.busy().or(frozen));
-        Visibility.bind(confirm, names.suggestedGenderCount().greaterThan(0));
+        Visibility.bind(confirm, names.suggestions().suggestedGenderCount().greaterThan(0));
         confirm.setOnAction(event -> {
             log.debug("names-style-confirm-genders pressed");
-            names.confirmGenders();
+            names.suggestions().confirmGenders();
         });
         return confirm;
     }
@@ -139,16 +138,19 @@ final class AutoNamesBar {
         show.run();
     }
 
-    // Blank while the port cannot say, so the line never promises minutes nobody computed.
+    // Blank while the port cannot say, so the line never promises minutes nobody computed; "measured" only when every
+    // kind of call the pass makes has seconds stored on the model.
     private static String estimateLine(
             final Messages messages, final @Nullable NamesEstimate estimate, final @Nullable BookBrief brief) {
         if (estimate == null || brief == null) {
             return "";
         }
-        final String dial = messages.get(RunMode.dialKey(brief.dial()));
+        if (estimate.measured()) {
+            return messages.get(MessageKey.NAMES_STYLE_AUTO_ESTIMATE_MEASURED, estimate.minutesHigh());
+        }
         return estimate.minutesLow() == estimate.minutesHigh()
-                ? messages.get(MessageKey.NAMES_STYLE_AUTO_ESTIMATE_ONE, estimate.minutesLow(), dial)
+                ? messages.get(MessageKey.NAMES_STYLE_AUTO_ESTIMATE_ONE, estimate.minutesLow())
                 : messages.get(
-                        MessageKey.NAMES_STYLE_AUTO_ESTIMATE, estimate.minutesLow(), estimate.minutesHigh(), dial);
+                        MessageKey.NAMES_STYLE_AUTO_ESTIMATE_RANGE, estimate.minutesLow(), estimate.minutesHigh());
     }
 }

@@ -66,7 +66,7 @@ and the owner's decisions recorded in the proposal's assumptions.
 
 ### D1 — Packages and class sizes
 
-Anchored to `docs/implementation_plan/01_MODULE_INVENTORY.md#inventory`; rows marked *planned* there become real.
+Anchored to `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md#inventory`; rows marked *planned* there become real.
 
 | Module | Package | Holds |
 |---|---|---|

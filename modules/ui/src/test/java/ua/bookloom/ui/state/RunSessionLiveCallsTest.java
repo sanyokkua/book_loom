@@ -1,6 +1,7 @@
 package ua.bookloom.ui.state;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.time.Duration;
@@ -13,8 +14,7 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallSegment;
 import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
-import ua.bookloom.api.pipeline.MemoryKind;
-import ua.bookloom.api.pipeline.MemoryUpdated;
+import ua.bookloom.api.pipeline.ChapterSummaryKept;
 import ua.bookloom.api.pipeline.PromptSection;
 
 /** The two calls of the live panel as the run session hands them to the mirror. */
@@ -119,14 +119,19 @@ class RunSessionLiveCallsTest extends LiveSessionTestBase {
         assertThat(Objects.requireNonNull(calls().current()).callId()).isEqualTo(1);
     }
 
-    // IF the run's own summary refresh did not reach the published calls, THEN the summary line would stay stale.
+    // IF the run's kept summary did not reach the published rows, THEN the card would never list it.
     @Test
-    void memoryUpdatedSummary_thenTick_publishesTheSummaryVersion() {
+    void chapterSummaryKept_thenTick_publishesItsRowAfterTheChaptersRows() {
         final RunSession session = session();
+        session.onEvent(started("s-1", "ch1 · p1", "Source 1"));
 
-        session.onEvent(new MemoryUpdated(MemoryKind.SUMMARY, "3"));
+        session.onEvent(new ChapterSummaryKept("unit-1#0", 1, 1, "Він знайшов листа."));
         tick(session);
 
-        assertThat(calls().summaryVersion()).isEqualTo(3);
+        assertThat(calls().rows())
+                .extracting(LiveRow::segmentId, LiveRow::stage)
+                .containsExactly(
+                        tuple("s-1", LiveRow.Stage.QUEUED),
+                        tuple("chapter-summary:unit-1#0", LiveRow.Stage.SUMMARISED));
     }
 }

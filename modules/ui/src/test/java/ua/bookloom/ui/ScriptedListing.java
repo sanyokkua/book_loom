@@ -23,13 +23,13 @@ final class ScriptedListing {
     private final List<Boolean> onFxThread = new CopyOnWriteArrayList<>();
     private final Map<Path, Integer> decided = new ConcurrentHashMap<>();
     private volatile @Nullable AppError failure;
-    private volatile @Nullable Error thrown;
+    private volatile @Nullable RuntimeException thrown;
     private volatile Supplier<List<ProjectSummary>> answer = this::decidedSummaries;
 
     Result<List<ProjectSummary>> list() {
         calls.incrementAndGet();
         onFxThread.add(Platform.isFxApplicationThread());
-        final Error error = thrown;
+        final RuntimeException error = thrown;
         if (error != null) {
             throw error;
         }
@@ -45,7 +45,7 @@ final class ScriptedListing {
         failure = Objects.requireNonNull(error, "error");
     }
 
-    void throwOnList(final Error error) {
+    void throwOnList(final RuntimeException error) {
         thrown = Objects.requireNonNull(error, "error");
     }
 

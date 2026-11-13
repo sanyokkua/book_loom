@@ -22,7 +22,7 @@ import ua.bookloom.api.project.TermType;
  * What a person who read the book says the model should conclude about it: the Book Brief's fields, who narrates and
  * each main character's type and gender. The owner writes one per book of the local gold set ({@code *.gold.json}
  * under {@code BOOKLOOM_CORPUS_DIR}, with {@code book} naming the file beside it); every committed judgement fixture
- * carries one for its invented book. The format is in {@code docs/DEVELOPMENT.md#judgement-evals}.
+ * carries one for its invented book. The format is in {@code docs/evaluation/eval-suites.md}.
  *
  * @param book the book file, relative to the gold file's directory; null in a committed fixture, whose book is inline
  * @param sourceLanguage the book's language

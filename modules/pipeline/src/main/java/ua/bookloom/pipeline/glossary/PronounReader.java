@@ -39,8 +39,6 @@ final class PronounReader {
     private static final int LOOK_BACK = 40;
     // The word right before a use, joined to it by blanks only: a capitalised one makes a longer name.
     private static final Pattern WORD_BEFORE = Pattern.compile("(\\p{L}[\\p{L}\\p{M}'’ʼ]*\\.?)\\p{Zs}+$");
-    // What opens a sentence: the text's start or a closing mark, with any quotation mark or bracket after it.
-    private static final Pattern SENTENCE_OPENING = Pattern.compile("(?:^|[.!?…][\"'”’»)\\]]*)[\\s\"'“‘«(]*$");
 
     private final Pattern name;
     private final String probe;
@@ -77,6 +75,35 @@ final class PronounReader {
             return null;
         }
         return new PronounReader(namePattern(term), probeOf(term), tables, language, openingTitle(term, language));
+    }
+
+    /**
+     * The uses of a name that follow a form of address showing a gender, for a book whose language is not known: no
+     * pronoun table can be read then, but the forms of address of every bundled language still show the gender.
+     *
+     * @param term the glossary term
+     * @param text the visible text to read
+     * @return a mention for each use after such a form, in reading order; never null
+     */
+    static List<Mention> titledUses(final String term, final String text) {
+        final List<Mention> uses = new ArrayList<>();
+        if (term.isBlank()) {
+            return uses;
+        }
+        final Matcher found = namePattern(term).matcher(text);
+        while (found.find()) {
+            final Matcher before =
+                    WORD_BEFORE.matcher(text.substring(Math.max(0, found.start() - LOOK_BACK), found.start()));
+            final String word = before.find() ? before.group(1) : "";
+            final int end = found.end();
+            final int start = found.start();
+            if (!word.isEmpty()) {
+                GenderedTitles.genderOf(word, null)
+                        .ifPresent(gender ->
+                                uses.add(new Mention(start, null, null, new Pronoun(bare(word), gender, end))));
+            }
+        }
+        return uses;
     }
 
     // A name of two words or more that opens with a gendered form of address has that gender at every use.
@@ -221,9 +248,7 @@ final class PronounReader {
             if (titled != null) {
                 return new Mention(start, null, null, new Pronoun(bare(word), titled, end));
             }
-            final boolean opensSentence = SENTENCE_OPENING
-                    .matcher(text.substring(0, from + before.start(1)))
-                    .find();
+            final boolean opensSentence = SentenceOpening.endsAtOpening(text.substring(0, from + before.start(1)));
             if (isNameWord(word) && (!opensSentence || namedElsewhere.test(word))) {
                 return null;
             }
@@ -252,26 +277,23 @@ final class PronounReader {
         int terminators = 0;
         boolean sentenceStart = false;
         Pronoun object = null;
-        while (token.find()) {
+        boolean ended = false;
+        while (!ended && token.find()) {
             final String word = token.group();
             if (TERMINATOR.matcher(word).matches()) {
                 terminators++;
                 sentenceStart = true;
-                if (terminators > 1) {
-                    break;
+                ended = terminators > 1;
+            } else {
+                final String lower = word.toLowerCase(Locale.ROOT);
+                final Gender subject = tables.subjectGender(lower);
+                if (subject != null) {
+                    return new Mention(start, new Pronoun(lower, subject, end + token.end()), object);
                 }
-                continue;
+                object = object == null ? objectOf(lower, end + token.end()) : object;
+                ended = isAnotherName(word, sentenceStart);
+                sentenceStart = false;
             }
-            final String lower = word.toLowerCase(Locale.ROOT);
-            final Gender subject = tables.subjectGender(lower);
-            if (subject != null) {
-                return new Mention(start, new Pronoun(lower, subject, end + token.end()), object);
-            }
-            object = object == null ? objectOf(lower, end + token.end()) : object;
-            if (isAnotherName(word, sentenceStart)) {
-                break;
-            }
-            sentenceStart = false;
         }
         return new Mention(start, null, object);
     }

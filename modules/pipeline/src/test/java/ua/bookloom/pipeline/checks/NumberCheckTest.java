@@ -6,6 +6,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.pipeline.qa.CheckLevel;
 
 /** Every multi-digit number of the source is in the target, in whatever grouping the target language uses. */
 class NumberCheckTest {
@@ -18,6 +19,7 @@ class NumberCheckTest {
         assertThat(found).hasSize(1);
         assertThat(found.getFirst().kind()).isEqualTo(FindingKind.NUMBER_CHANGED);
         assertThat(found.getFirst().blocking()).isFalse();
+        assertThat(found.getFirst().level()).isEqualTo(CheckLevel.REPAIR);
         assertThat(found.getFirst().span().text()).isEqualTo("48");
         assertThat(found.getFirst().explanation()).contains("408").contains("48");
     }
@@ -32,7 +34,10 @@ class NumberCheckTest {
                 "It weighs 3.5 kilos.|Це важить 3,5 кілограма.",
                 "In 1973 it began.|У 1973 році це почалося.",
                 "Room 7 was empty.|Кімната сім була порожня.",
-                "There were 12 bars.|Було дванадцять зливків."
+                "He paid forty coins.|Він заплатив сорок монет.",
+                "It weighed 3.5 kilos.|Воно важило 3,5 кіло.",
+                "1,200 soldiers marched.|1 200 солдатів марширувало.",
+                "He left at 5.|Він пішов о 5."
             })
     void find_sameNumberInAnyGroupingOrSpelledOut_isClean(final String source, final String target) {
         assertThat(NumberCheck.find(source, target)).isEmpty();
@@ -52,8 +57,52 @@ class NumberCheckTest {
     }
 
     @Test
-    void find_sourceWithoutNumbers_isClean() {
-        assertThat(NumberCheck.find("The vault was empty.", "Сховище було порожнє 5 хвилин."))
+    void check_leadingNumberChanged_blocks() {
+        final List<CheckFinding> found = NumberCheck.find("4. The night pass", "5. Нічний перевал");
+
+        assertThat(found).singleElement().satisfies(finding -> {
+            assertThat(finding.level()).isEqualTo(CheckLevel.BLOCK);
+            assertThat(finding.blocking()).isTrue();
+            assertThat(finding.explanation()).contains("4").contains("5");
+        });
+    }
+
+    @Test
+    void check_leadingNumberMissing_isLeftToTheTypographyRestore() {
+        assertThat(NumberCheck.find("4. The night pass", "Нічний перевал")).isEmpty();
+    }
+
+    @Test
+    void check_leadingRomanNumeralChanged_blocks() {
+        assertThat(NumberCheck.find("IV. The pass", "V. Перевал"))
+                .singleElement()
+                .satisfies(finding -> assertThat(finding.level()).isEqualTo(CheckLevel.BLOCK));
+    }
+
+    @Test
+    void check_twoDigitMissing_repair() {
+        final List<CheckFinding> found = NumberCheck.find("They lived in 42 rooms.", "Вони жили у кімнатах.");
+
+        assertThat(found).singleElement().satisfies(finding -> {
+            assertThat(finding.level()).isEqualTo(CheckLevel.REPAIR);
+            assertThat(finding.explanation()).contains("42");
+        });
+    }
+
+    @Test
+    void check_extraNumber_note() {
+        final List<CheckFinding> found = NumberCheck.find("He waited.", "Він чекав 5 хвилин.");
+
+        assertThat(found).singleElement().satisfies(finding -> {
+            assertThat(finding.level()).isEqualTo(CheckLevel.NOTE);
+            assertThat(finding.blocking()).isFalse();
+            assertThat(finding.span().text()).isEqualTo("5");
+        });
+    }
+
+    @Test
+    void check_oneDigitMissing_isNotRequired() {
+        assertThat(NumberCheck.find("Room 7 was empty.", "Кімната була порожня."))
                 .isEmpty();
     }
 }

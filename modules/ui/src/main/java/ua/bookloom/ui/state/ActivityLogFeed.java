@@ -2,24 +2,29 @@ package ua.bookloom.ui.state;
 
 import java.time.Duration;
 import java.time.LocalTime;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.ChapterSummaryKept;
+import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.ProofreadItem;
+import ua.bookloom.api.pipeline.ProofreadWindowRead;
 import ua.bookloom.api.pipeline.RecoveryWaiting;
-import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentStarted;
+import ua.bookloom.api.project.ProofreadOutcome;
 import ua.bookloom.ui.i18n.MessageKey;
 
 /**
@@ -31,13 +36,12 @@ import ua.bookloom.ui.i18n.MessageKey;
 @Slf4j
 final class ActivityLogFeed {
 
-    static final String STAGE_STARTED = "stageStarted";
-    static final String PAUSED = "paused";
-    static final String RESUMED = "resumed";
-    static final String FINISHED = "finished";
+    static final String PAUSED_KEY = "paused";
+    static final String RESUMED_KEY = "resumed";
+    static final String FINISHED_KEY = "finished";
     static final String RESUME_AFTER_ERROR = "resume";
     static final String GLOSSARY = "glossary";
-    static final String MEMORY = "memory";
+    static final String MEMORY_KEY = "memory";
 
     /** A chunk holds a handful of segments, so far fewer locators than this are ever looked up after their start. */
     static final int MAX_LOCATORS = 256;
@@ -45,8 +49,6 @@ final class ActivityLogFeed {
     private static final long SECONDS_PER_MINUTE = 60;
 
     private final Map<String, String> locators = new LinkedHashMap<>();
-    // The round each segment in repair is in, so a call's line can say which round it belongs to.
-    private final Map<String, Integer> rounds = new HashMap<>();
     private boolean pausedOnError;
 
     void segmentStarted(final SegmentStarted event) {
@@ -55,19 +57,15 @@ final class ActivityLogFeed {
         if (locators.size() > MAX_LOCATORS) {
             locators.remove(locators.keySet().iterator().next());
         }
-        // A segment the run left undecided (a stop, a skip mid-round) never clears its round, so bound those too.
-        if (rounds.size() > MAX_LOCATORS) {
-            rounds.clear();
-        }
     }
 
     /**
-     * How many segments' locators and repair rounds are held.
+     * How many segments' locators are held.
      *
-     * @return the larger of the two counts, never more than {@link #MAX_LOCATORS} plus one
+     * @return the count, never more than {@link #MAX_LOCATORS} plus one
      */
     int heldSegments() {
-        return Math.max(locators.size(), rounds.size());
+        return locators.size();
     }
 
     String locatorOf(final String segmentId) {
@@ -80,7 +78,6 @@ final class ActivityLogFeed {
     }
 
     Optional<LogEntry> decided(final SegmentDecided event) {
-        rounds.remove(event.segmentId());
         final String locator = locatorOf(event.segmentId());
         return switch (event.status()) {
             case ACCEPTED -> Optional.of(new LogEntry(LogKind.ACCEPTED, List.of(locator)));
@@ -111,12 +108,9 @@ final class ActivityLogFeed {
 
     LogEntry modelCall(final ModelCallFinished event) {
         final String locator = callLocator(event.segmentIds());
-        final String round =
-                event.segmentId() == null ? "0" : String.valueOf(rounds.getOrDefault(event.segmentId(), 0));
         final List<String> args = List.of(
                 WaitingCall.tokenOf(event.kind()),
                 locator.isEmpty() ? "" : " · " + locator,
-                round,
                 String.valueOf(event.attempt()),
                 clock(event.elapsed()));
         final ErrorCode failure = event.failure();
@@ -135,31 +129,18 @@ final class ActivityLogFeed {
         return LogEntry.of(
                 LogKind.RETRIED,
                 MessageKey.LOG_CALL_FAILED,
-                List.of(args.get(0), args.get(1), args.get(2), args.get(3), args.get(4), failure.name()));
+                List.of(args.get(0), args.get(1), args.get(2), args.get(3), failure.name()));
     }
 
-    // A directed fix repairs a segment and a structure or placeholder repair sends it again, so both are lines every
+    // A repair repairs a segment and a structure or placeholder repair sends it again, so both are lines every
     // reader sees; any other answered call is a technical line.
     private static LogEntry answered(final CallKind kind, final List<String> args) {
         log.trace("an answered {} call is logged", kind);
         return switch (kind) {
-            case DIRECTED_FIX -> LogEntry.of(LogKind.REPAIRED, MessageKey.LOG_MODEL_CALL, args);
-            case STRUCTURAL_REPAIR, PLACEHOLDER_REPAIR -> LogEntry.of(LogKind.RETRIED, MessageKey.LOG_MODEL_CALL, args);
+            case REPAIR -> LogEntry.of(LogKind.REPAIRED, MessageKey.LOG_MODEL_CALL, args);
+            case STRUCTURAL_REPAIR -> LogEntry.of(LogKind.RETRIED, MessageKey.LOG_MODEL_CALL, args);
             default -> LogEntry.technical(LogKind.MILESTONE, MessageKey.LOG_MODEL_CALL, args);
         };
-    }
-
-    LogEntry roundStarted(final RoundStarted event) {
-        rounds.put(event.segmentId(), event.round());
-        final String finding = event.blockingFinding();
-        return LogEntry.technical(
-                LogKind.MILESTONE,
-                MessageKey.LOG_ROUND,
-                List.of(
-                        locatorOf(event.segmentId()),
-                        String.valueOf(event.round()),
-                        String.valueOf(event.rounds()),
-                        finding == null ? "none" : finding.toLowerCase(Locale.ROOT)));
     }
 
     private static String clock(final Duration elapsed) {
@@ -168,26 +149,61 @@ final class ActivityLogFeed {
     }
 
     LogEntry memory(final MemoryUpdated event) {
+        log.debug("log: memory updated: {}", event.kind());
         return switch (event.kind()) {
             case GLOSSARY -> new LogEntry(LogKind.MEMORY, List.of(GLOSSARY, event.label()));
-            case TM -> new LogEntry(LogKind.MEMORY, List.of(MEMORY, event.label()));
-            case SUMMARY -> new LogEntry(LogKind.SUMMARY, List.of(event.label()));
+            case TM -> new LogEntry(LogKind.MEMORY, List.of(MEMORY_KEY, event.label()));
         };
     }
 
-    LogEntry stageStarted() {
-        return milestone(STAGE_STARTED);
+    // The summary's text is book text: the entry and the line name only the chapter and its size.
+    LogEntry summaryKept(final ChapterSummaryKept kept) {
+        log.debug("log: chapter {} summary kept with {} sentences", kept.chapter(), kept.sentences());
+        return new LogEntry(LogKind.SUMMARY, List.of(String.valueOf(kept.chapter())));
+    }
+
+    LogEntry windowRead(final ProofreadWindowRead read) {
+        final Map<ProofreadOutcome, Long> counts = read.items().stream()
+                .collect(Collectors.groupingBy(
+                        ProofreadItem::outcome, () -> new EnumMap<>(ProofreadOutcome.class), Collectors.counting()));
+        final String span = WindowSpan.of(read.items());
+        log.debug("log: proofread window {} read in round {}: {}", span, read.round(), counts);
+        return new LogEntry(
+                LogKind.PROOF,
+                List.of(
+                        span,
+                        count(counts, ProofreadOutcome.KEPT),
+                        count(counts, ProofreadOutcome.PROPOSED),
+                        count(counts, ProofreadOutcome.REJECTED),
+                        count(counts, ProofreadOutcome.UNCHANGED)));
+    }
+
+    private static String count(final Map<ProofreadOutcome, Long> counts, final ProofreadOutcome outcome) {
+        return String.valueOf(counts.getOrDefault(outcome, 0L));
+    }
+
+    /**
+     * The line naming the stage that started, worded as the stage chip words it.
+     *
+     * @param stage the stage
+     * @param round the Proofread round of a two-round reading, else 0
+     * @return the entry; arguments: 0 the stage's name, 1 the round
+     */
+    LogEntry stageStarted(final JobStage stage, final int round) {
+        log.debug("log: stage {} round {} started", stage, round);
+        return LogEntry.of(
+                LogKind.MILESTONE, MessageKey.LOG_STAGE_STARTED, List.of(stage.name(), String.valueOf(round)));
     }
 
     LogEntry paused(final Paused event) {
         pausedOnError = event.reason() == PauseReason.ON_ERROR;
-        return milestone(PAUSED);
+        return milestone(PAUSED_KEY);
     }
 
     LogEntry resumed() {
         final boolean afterError = pausedOnError;
         pausedOnError = false;
-        return afterError ? new LogEntry(LogKind.RETRIED, List.of(RESUME_AFTER_ERROR, "")) : milestone(RESUMED);
+        return afterError ? new LogEntry(LogKind.RETRIED, List.of(RESUME_AFTER_ERROR, "")) : milestone(RESUMED_KEY);
     }
 
     /**
@@ -226,7 +242,7 @@ final class ActivityLogFeed {
     }
 
     LogEntry finished() {
-        return milestone(FINISHED);
+        return milestone(FINISHED_KEY);
     }
 
     private static LogEntry milestone(final String token) {

@@ -1,5 +1,7 @@
 package ua.bookloom.ui.state;
 
+import static ua.bookloom.util.contract.ArgNames.OS_NAME;
+
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
@@ -37,7 +39,7 @@ final class OsCommand {
      * @return the program followed by its arguments; never empty
      */
     static List<String> forReveal(final String osName, final Path file) {
-        Objects.requireNonNull(osName, "osName");
+        Objects.requireNonNull(osName, OS_NAME);
         Objects.requireNonNull(file, "file");
         final String normalized = osName.toLowerCase(Locale.ROOT);
         if (normalized.startsWith(MAC_PREFIX)) {
@@ -58,7 +60,7 @@ final class OsCommand {
      * @return the program followed by its arguments; never empty
      */
     static List<String> forOpen(final String osName, final Path file) {
-        Objects.requireNonNull(osName, "osName");
+        Objects.requireNonNull(osName, OS_NAME);
         Objects.requireNonNull(file, "file");
         final String normalized = osName.toLowerCase(Locale.ROOT);
         if (normalized.startsWith(MAC_PREFIX)) {
@@ -80,7 +82,7 @@ final class OsCommand {
      *     otherwise
      */
     static boolean succeeded(final String osName, final String program, final int exitCode) {
-        Objects.requireNonNull(osName, "osName");
+        Objects.requireNonNull(osName, OS_NAME);
         Objects.requireNonNull(program, "program");
         if (exitCode == 0) {
             return true;

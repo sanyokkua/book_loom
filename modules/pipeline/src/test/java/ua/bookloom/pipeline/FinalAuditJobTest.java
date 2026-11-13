@@ -25,7 +25,6 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
-import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewFilter;
 import ua.bookloom.api.pipeline.ReviewMode;
@@ -110,7 +109,7 @@ class FinalAuditJobTest {
                 brief("en", "uk"));
         book.stores()
                 .glossary()
-                .add(new GlossaryEntry("g1", book.id(), "Nell", "Нелл", TermType.CHARACTER, Gender.UNKNOWN, false));
+                .add(GlossaryEntry.of("g1", book.id(), "Nell", "Нелл", TermType.CHARACTER, Gender.UNKNOWN, false));
         report(batchedJob(book, new ScriptedModel(replacements), new RunRequest(book.id(), ReviewMode.UNATTENDED))
                 .run());
         return book;
@@ -181,7 +180,10 @@ class FinalAuditJobTest {
                         run.stores().openProjects(),
                         run.stores().projects(),
                         run.stores().segments(),
-                        run.deferrals())
+                        run.deferrals(),
+                        run.stores().promptFrames(),
+                        run.stores().glossary(),
+                        run.stores().lexicon())
                 .queue(run.id(), ReviewFilter.SUSPICIOUS)
                 .data());
         final ReviewCounts counts = ReviewCounting.count(stored(run), Set.of());
@@ -232,15 +234,14 @@ class FinalAuditJobTest {
     }
 
     @Test
-    void after_checkThatThrows_leavesTheCompletedRunAndItsRecordsAlone() {
+    void run_checkThatThrows_leavesTheRunAndItsRecordsAlone() {
         final TestProject run = finished(Map.of());
         final List<SegmentRecord> before = stored(run);
         final WordValidator broken = (target, language) -> {
             throw new IllegalStateException("the dictionary is gone");
         };
 
-        assertThatCode(() -> RunAudit.after(JobState.COMPLETED, run.stores(), broken, run.id()))
-                .doesNotThrowAnyException();
+        assertThatCode(() -> RunAudit.run(run.stores(), broken, run.id())).doesNotThrowAnyException();
         assertThat(stored(run)).isEqualTo(before);
     }
 }

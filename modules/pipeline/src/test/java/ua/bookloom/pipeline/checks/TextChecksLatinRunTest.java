@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import ua.bookloom.api.document.UnitRole;
 
 /** The Latin-run check and the kept terms that exempt a run from it (15j.J1). */
 class TextChecksLatinRunTest {
@@ -21,6 +24,69 @@ class TextChecksLatinRunTest {
                 List.of("Danny Vosk"));
 
         assertThat(found).extracting(CheckFinding::kind).doesNotContain(FindingKind.LATIN_RUN);
+    }
+
+    // IF the residue check also counted the English words inside a Latin run, THEN one copied phrase would be two
+    // findings and the repair would be told twice.
+    @Test
+    void run_latinRunHoldingEnglishFunctionWords_isOnlyTheLatinRun() {
+        final List<CheckFinding> found = TextChecks.run(
+                "She said it was the end of the road for them.",
+                "Вона тихо сказала братові, що для них це вже was the end of the road назавжди.",
+                "en",
+                "uk",
+                List.of(),
+                List.of());
+
+        assertThat(found)
+                .extracting(CheckFinding::kind)
+                .contains(FindingKind.LATIN_RUN)
+                .doesNotContain(FindingKind.FUNCTION_WORD_RESIDUE);
+    }
+
+    private static final String PUBLISHER_SOURCE = "Published in Northfield by Harbor Lane Press.";
+    private static final String PUBLISHER_TARGET = "Видано в Нортфілді видавництвом Harbor Lane Press.";
+
+    // IF front matter were checked like prose, THEN a publisher's line on a copyright page would be blocked for
+    // Latin that is meant to stay.
+    @ParameterizedTest
+    @EnumSource(
+            value = UnitRole.class,
+            names = {"FRONT_MATTER", "BACK_MATTER"})
+    void run_latinPublisherLineOutsideTheBody_isNotALatinRun(final UnitRole role) {
+        final List<CheckFinding> found =
+                TextChecks.run(PUBLISHER_SOURCE, PUBLISHER_TARGET, "en", "uk", List.of(), List.of(), role);
+
+        assertThat(found).extracting(CheckFinding::kind).doesNotContain(FindingKind.LATIN_RUN);
+    }
+
+    @Test
+    void run_sameLatinPublisherLineInABodyUnit_isStillALatinRun() {
+        final List<CheckFinding> found =
+                TextChecks.run(PUBLISHER_SOURCE, PUBLISHER_TARGET, "en", "uk", List.of(), List.of(), UnitRole.BODY);
+
+        assertThat(found)
+                .filteredOn(finding -> finding.kind() == FindingKind.LATIN_RUN)
+                .extracting(finding -> finding.span().text())
+                .containsExactly("Harbor Lane Press");
+    }
+
+    // The sign is a symbol, not a letter: it ends the run, so the words before it are still the run and still block in
+    // a body unit (a brand left in Latin is a copied phrase under any policy but Keep original).
+    @Test
+    void run_trademarkSignAfterALatinBrandInABodyUnit_endsTheRunAndTheBrandStillBlocks() {
+        final List<CheckFinding> found = TextChecks.run(
+                "He bought Harbor Lane™ tea at the corner shop.",
+                "Він купив чай Harbor Lane™ у крамниці на розі.",
+                "en",
+                "uk",
+                List.of(),
+                List.of());
+
+        assertThat(found)
+                .filteredOn(finding -> finding.kind() == FindingKind.LATIN_RUN)
+                .extracting(finding -> finding.span().text())
+                .containsExactly("Harbor Lane");
     }
 
     @Test

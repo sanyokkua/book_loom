@@ -1,13 +1,14 @@
 package ua.bookloom.pipeline.glossary;
 
-import java.util.ArrayList;
+import static ua.bookloom.util.contract.ArgNames.INDEX;
+
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
@@ -16,13 +17,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.GlossaryRepository;
-import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
-import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.index.Occurrences;
 import ua.bookloom.pipeline.index.WordCounts;
-import ua.bookloom.util.text.GlossaryKeys;
 import ua.bookloom.util.text.JunkRules;
 
 /**
@@ -117,7 +115,7 @@ public final class FrequencyScan {
             final int minCount,
             @Nullable final String sourceLanguage,
             final boolean forReading) {
-        Objects.requireNonNull(index, "index");
+        Objects.requireNonNull(index, INDEX);
         log.debug(
                 "Name scan over {} segments, minimum count {}, language {}, for reading {}",
                 ordinals.size(),
@@ -126,7 +124,8 @@ public final class FrequencyScan {
                 forReading);
         final List<Occurrences.Read> read = index.scanReads(ordinals, sourceLanguage);
         final WordCounts counts = WordCounts.of(read);
-        final Map<String, NameCandidate> tallies = cleanTallies(read, counts, sourceLanguage);
+        final Map<String, NameCandidate> tallies =
+                cleanTallies(read, MidSentenceCredit.of(counts, sourceLanguage), counts, sourceLanguage);
         final List<NameCandidate> kept = keep(tallies, counts, forReading ? index : null, minCount, sourceLanguage);
         final List<NameCandidate> candidates = CandidateTriage.apply(index, kept, minCount);
         log.debug(
@@ -141,18 +140,24 @@ public final class FrequencyScan {
     }
 
     private static Map<String, NameCandidate> cleanTallies(
-            final List<Occurrences.Read> read, final WordCounts counts, @Nullable final String sourceLanguage) {
+            final List<Occurrences.Read> read,
+            final Predicate<String> credit,
+            final WordCounts counts,
+            @Nullable final String sourceLanguage) {
         final Set<String> stopWords = StopWords.of(sourceLanguage);
         final List<String> suffixes = NameAliases.suffixesOf(sourceLanguage);
         final NounUses nouns = NounUses.of(read, sourceLanguage);
         final Map<String, NameCandidate> tallies = PluralNouns.fold(
                 NameAliases.fold(
-                        CaseVariants.fold(StopWordHeads.add(
-                                NameTally.of(read, word -> isNameLike(word, counts, stopWords), sourceLanguage),
+                        NameGroups.group(
+                                CaseVariants.fold(StopWordHeads.add(
+                                        NameTally.of(read, word -> isNameLike(word, credit, stopWords), sourceLanguage),
+                                        read,
+                                        counts,
+                                        stopWords,
+                                        sourceLanguage)),
                                 read,
-                                counts,
-                                stopWords,
-                                sourceLanguage)),
+                                sourceLanguage),
                         suffixes),
                 nouns,
                 suffixes);
@@ -206,11 +211,9 @@ public final class FrequencyScan {
     }
 
     private static boolean isNameLike(
-            final Occurrences.Word word, final WordCounts counts, final Set<String> stopWords) {
+            final Occurrences.Word word, final Predicate<String> credit, final Set<String> stopWords) {
         final String key = word.key();
-        return word.capitalised()
-                && !stopWords.contains(key)
-                && (!word.initial() || counts.midSentence(key) >= CREDIT_MIN_MID_SENTENCE);
+        return word.capitalised() && !stopWords.contains(key) && (!word.initial() || credit.test(key));
     }
 
     // A common word by its lower-case share is dropped, unless a reading follows (its book index given) and its
@@ -304,13 +307,33 @@ public final class FrequencyScan {
             final List<Integer> ordinals,
             @Nullable final String sourceLanguage,
             final GlossaryRepository glossary) {
+        return found(projectId, index, ordinals, sourceLanguage, glossary).map(ScanEntries.Found::proposals);
+    }
+
+    /**
+     * As {@link #newTerms}, with the forms the scan found for held entries that they do not list yet, so the unit-end
+     * scan can store them.
+     *
+     * @param projectId the project whose glossary is read; never null
+     * @param index the project's book index; never null
+     * @param ordinals the ordinals of the segments to scan, in reading order; never null
+     * @param sourceLanguage the BCP 47 tag of the book's language, or null when it is not known
+     * @param glossary where the entries and the removal memory are read; nothing is written
+     * @return the proposals and the held entries' new forms; or the read's error
+     */
+    public static Result<ScanEntries.Found> found(
+            final String projectId,
+            final BookIndex index,
+            final List<Integer> ordinals,
+            @Nullable final String sourceLanguage,
+            final GlossaryRepository glossary) {
         Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(index, "index");
+        Objects.requireNonNull(index, INDEX);
         Objects.requireNonNull(ordinals, "ordinals");
         Objects.requireNonNull(glossary, "glossary");
+        final List<NameCandidate> found = candidates(index, ordinals, PROPOSAL_MIN_COUNT, sourceLanguage);
         return glossary.all(projectId)
-                .flatMap(held -> unheldEntries(
-                        projectId, candidates(index, ordinals, PROPOSAL_MIN_COUNT, sourceLanguage), glossary, held));
+                .flatMap(held -> ScanEntries.of(projectId, found, glossary, held, sourceLanguage));
     }
 
     /**
@@ -331,7 +354,7 @@ public final class FrequencyScan {
             @Nullable final String sourceLanguage,
             final GlossaryRepository glossary) {
         Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(index, "index");
+        Objects.requireNonNull(index, INDEX);
         Objects.requireNonNull(ordinals, "ordinals");
         Objects.requireNonNull(glossary, "glossary");
         final List<NameCandidate> found = candidates(index, ordinals, PROPOSAL_MIN_COUNT, sourceLanguage, true);
@@ -340,60 +363,7 @@ public final class FrequencyScan {
                 .map(NameCandidate::term)
                 .collect(Collectors.toSet());
         return glossary.all(projectId)
-                .flatMap(held -> unheldEntries(projectId, found, glossary, held))
-                .map(entries -> new ScanProposals(entries, readingOnly));
-    }
-
-    private static Result<List<GlossaryEntry>> unheldEntries(
-            final String projectId,
-            final List<NameCandidate> candidates,
-            final GlossaryRepository glossary,
-            final List<GlossaryEntry> held) {
-        final Set<String> heldTerms = keysOf(held);
-        final List<GlossaryEntry> proposals = new ArrayList<>();
-        int skippedHeld = 0;
-        int skippedRemoved = 0;
-        for (final NameCandidate candidate : candidates) {
-            final String lowerCased = GlossaryKeys.of(candidate.term());
-            if (heldTerms.contains(lowerCased)) {
-                skippedHeld++;
-                continue;
-            }
-            final Result<Boolean> removed = glossary.wasRemoved(projectId, candidate.term());
-            if (removed.isErr()) {
-                return Result.err(Objects.requireNonNull(removed.error(), "error"));
-            }
-            if (Boolean.TRUE.equals(removed.data())) {
-                skippedRemoved++;
-                continue;
-            }
-            proposals.add(entryFor(projectId, candidate));
-            heldTerms.add(lowerCased);
-        }
-        log.debug(
-                "Name proposals for project {}: {} made, {} skipped as held or a case variant already proposed, {} as removed",
-                projectId,
-                proposals.size(),
-                skippedHeld,
-                skippedRemoved);
-        return Result.ok(proposals);
-    }
-
-    private static Set<String> keysOf(final List<GlossaryEntry> entries) {
-        final Set<String> terms = new HashSet<>();
-        entries.forEach(entry -> terms.add(GlossaryKeys.of(entry.term())));
-        return terms;
-    }
-
-    private static GlossaryEntry entryFor(final String projectId, final NameCandidate candidate) {
-        return new GlossaryEntry(
-                        GlossaryIds.of(projectId, candidate.term()),
-                        projectId,
-                        candidate.term(),
-                        null,
-                        TermType.OTHER,
-                        Gender.UNKNOWN,
-                        false)
-                .withAliases(candidate.aliases());
+                .flatMap(held -> ScanEntries.of(projectId, found, glossary, held, sourceLanguage))
+                .map(entries -> new ScanProposals(entries.proposals(), readingOnly));
     }
 }

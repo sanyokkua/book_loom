@@ -12,11 +12,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.SamplingParams;
+import ua.bookloom.llm.client.MessageShaper;
 import ua.bookloom.llm.http.HttpReply;
 
 /**
@@ -37,6 +39,7 @@ public final class CapabilityRejections {
 
     // The order is the precedence when one reply names several sent settings.
     private static final List<RejectedCapability> PRECEDENCE = List.of(
+            RejectedCapability.SYSTEM_ROLE,
             RejectedCapability.REASONING_CONTROL,
             RejectedCapability.STRUCTURED_OUTPUT,
             RejectedCapability.OUTPUT_FIELD,
@@ -93,7 +96,30 @@ public final class CapabilityRejections {
     public static @Nullable RejectedCapability fromMapped(
             Result<?> mapped, HttpReply reply, ChatRequest request, ProviderKind kind) {
         final AppError error = mapped.error();
-        return error != null && error.code() == ErrorCode.validation ? from(reply, request, kind) : null;
+        if (error == null || error.code() != ErrorCode.validation) {
+            return null;
+        }
+        final @Nullable RejectedCapability byRow = byReason(error, request);
+        return byRow != null ? byRow : from(reply, request, kind);
+    }
+
+    // A template's refusal of the message layout, or a server's refusal of the answer schema, comes with any status (a
+    // Jinja exception is often a 500, "structured output is unavailable" a 501), so it is read from the reason its row
+    // gave, and counts only when the request can be changed.
+    private static @Nullable RejectedCapability byReason(AppError error, ChatRequest request) {
+        final String reason = FailureReason.tokenIn(error.details());
+        final boolean schema = request.responseFormat() != null;
+        final @Nullable RejectedCapability found =
+                switch (FailureReason.in(error.details()).orElse(FailureReason.UNCLASSIFIED)) {
+                    case SYSTEM_ROLE_UNSUPPORTED ->
+                        MessageShaper.hasSystem(request) ? RejectedCapability.SYSTEM_ROLE : null;
+                    case TEMPLATE_REJECTED -> MessageShaper.hasRuns(request) ? RejectedCapability.ROLE_ORDER : null;
+                    case GRAMMAR_TOO_LARGE, SCHEMA_INVALID, STRUCTURED_UNAVAILABLE ->
+                        schema ? RejectedCapability.STRUCTURED_OUTPUT : null;
+                    default -> null;
+                };
+        log.debug("Refusal by reason check reason={} schemaSent={} matched={}", reason, schema, found);
+        return found;
     }
 
     private static EnumSet<RejectedCapability> sent(ChatRequest request, ProviderKind kind) {
@@ -102,6 +128,7 @@ public final class CapabilityRejections {
         addIf(sent, RejectedCapability.SEED, request.seed() != null);
         addIf(sent, RejectedCapability.STRUCTURED_OUTPUT, request.responseFormat() != null);
         addIf(sent, RejectedCapability.REASONING_CONTROL, request.reasoningEnabled() != null);
+        addIf(sent, RejectedCapability.SYSTEM_ROLE, MessageShaper.hasSystem(request));
         addIf(sent, RejectedCapability.NUM_CTX, kind == ProviderKind.OLLAMA && request.contextWindow() != null);
         addIf(
                 sent,
@@ -125,7 +152,7 @@ public final class CapabilityRejections {
 
     private static Map<RejectedCapability, Pattern> patterns() {
         final Map<RejectedCapability, Pattern> byCapability = new EnumMap<>(RejectedCapability.class);
-        byCapability.put(RejectedCapability.REASONING_CONTROL, pattern("think|reasoning_effort|reasoning"));
+        byCapability.put(RejectedCapability.REASONING_CONTROL, pattern("think(?:ing)?|reasoning_effort|reasoning"));
         byCapability.put(
                 RejectedCapability.STRUCTURED_OUTPUT,
                 pattern("format|response_format|json[ _-]?schema|structured[ _-]?output"));
@@ -137,6 +164,7 @@ public final class CapabilityRejections {
         byCapability.put(RejectedCapability.REPEAT_PENALTY, pattern("repeat_penalty"));
         byCapability.put(RejectedCapability.SEED, pattern("seed"));
         byCapability.put(RejectedCapability.NUM_CTX, pattern("num_ctx"));
+        byCapability.put(RejectedCapability.SYSTEM_ROLE, pattern("system[ _-]?role"));
         return byCapability;
     }
 

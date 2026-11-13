@@ -43,11 +43,11 @@ class CorpusVerificationTest {
     // WHEN the merge gate runs with a corpus directory configured, THEN the verification does
     // not run, because it is excluded from `check` by its own tag.
     //
-    // `@Tag` sits on this ONE method rather than on the class. It is the only test here that needs a real corpus;
-    // the other seven prove the requirement's remaining scenarios against hand-built `@TempDir` fixtures and need
-    // nothing the checkout does not have. Tagging the class excluded those proofs from `check` too, which left the
-    // requirement's distinguishing clause — that a run can tell "nothing threw" from "nothing changed" — with no
-    // proof that any gate actually executes.
+    // The corpus tag sits on this one method rather than on the class. It is the only test here that needs a real
+    // corpus; the other seven prove the requirement's remaining scenarios against hand-built temporary-folder
+    // fixtures and need nothing the checkout does not have. Tagging the class excluded those proofs from check too,
+    // which left the requirement's distinguishing clause (a run can tell "nothing threw" from "nothing changed")
+    // with no proof that any gate actually executes.
     @Test
     @Tag("corpus")
     void verify_localCorpusConfigured_recordsEveryBooksOutcome() throws IOException {
@@ -86,7 +86,8 @@ class CorpusVerificationTest {
     void assumeTrue_corpusDirNotResolved_abortsRatherThanFailingSoTheSweepNeverRuns() {
         final Optional<Path> corpusDir = resolveCorpusDir(null);
 
-        assertThatThrownBy(() -> Assumptions.assumeTrue(corpusDir.isPresent(), "no corpus configured"))
+        final var arg1 = corpusDir.isPresent();
+        assertThatThrownBy(() -> Assumptions.assumeTrue(arg1, "no corpus configured"))
                 .isInstanceOf(TestAbortedException.class);
     }
 

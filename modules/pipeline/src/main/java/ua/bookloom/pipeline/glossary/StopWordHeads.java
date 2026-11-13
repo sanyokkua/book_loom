@@ -57,7 +57,7 @@ final class StopWordHeads {
         for (final Occurrences.Read segment : read) {
             Occurrences.runs(segment, StopWordHeads::isHeadLike).stream()
                     .filter(found ->
-                            found.term().indexOf(' ') > 0 && startsWithStopWord(found.term(), stopWords, articles))
+                            found.term().indexOf(' ') >= 1 && startsWithStopWord(found.term(), stopWords, articles))
                     .forEach(found -> heads.merge(
                             found.term(),
                             new NameCandidate(found.term(), 1, found.sentence()),

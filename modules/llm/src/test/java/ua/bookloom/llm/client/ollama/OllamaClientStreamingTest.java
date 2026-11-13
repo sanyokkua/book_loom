@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -83,6 +84,8 @@ class OllamaClientStreamingTest {
                 client(Duration.ofSeconds(2)).chat(MODEL_ID, draft()).result();
 
         assertThat(result.data())
+                .usingRecursiveComparison()
+                .ignoringFields("rawBody")
                 .isEqualTo(new ChatResponse("Hello", FinishReason.STOP, new TokenUsage(12, 2, Duration.ofMillis(1))));
         server.verify(
                 postRequestedFor(urlEqualTo(CHAT_PATH)).withRequestBody(matchingJsonPath("$.stream", equalTo("true"))));
@@ -181,12 +184,12 @@ class OllamaClientStreamingTest {
 
     @Test
     void maxLines_cappedRequest_isTwiceTheCapPlusTheMargin() {
-        assertThat(OllamaClient.maxLines(MODEL_ID, capped(RUNAWAY_CAP))).isEqualTo(104L);
+        assertThat(ThinkingLines.maxLines(capped(RUNAWAY_CAP))).isEqualTo(104L);
     }
 
     @Test
     void maxLines_noCapNoContext_isUnbounded() {
-        assertThat(OllamaClient.maxLines(MODEL_ID, new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")))))
+        assertThat(ThinkingLines.maxLines(new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")))))
                 .isEqualTo(Long.MAX_VALUE);
     }
 
@@ -208,12 +211,12 @@ class OllamaClientStreamingTest {
                 post(urlEqualTo(CHAT_PATH)).willReturn(response.withHeader("Content-Type", "application/x-ndjson")));
     }
 
-    private void awaitRequest() throws InterruptedException {
+    private void awaitRequest() {
         final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
         while (System.nanoTime() < deadline && server.getAllServeEvents().isEmpty()) {
-            Thread.sleep(10);
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(10));
         }
-        Thread.sleep(200);
+        LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(200));
     }
 
     // A draft expecting 400 tokens may take 200 s in all, while the provider's configured timeout is the idle gap.
@@ -240,7 +243,7 @@ class OllamaClientStreamingTest {
                 cap,
                 cap,
                 null,
-                CallKind.DIRECTED_FIX);
+                CallKind.REPAIR);
     }
 
     private OllamaClient client(Duration requestTimeout) {

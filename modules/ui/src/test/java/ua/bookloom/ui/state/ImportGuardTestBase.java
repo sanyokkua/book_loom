@@ -60,7 +60,8 @@ abstract class ImportGuardTestBase extends RunnerTestBase {
                 new RecordingErrorPresenter(),
                 new DirectExecutor(),
                 new ActivityTracker(new StateMirror())));
-        guard = new ImportGuard(mirror, runner, imports, current, prompt, projects, new DirectExecutor(), toasts);
+        guard = new ImportGuard(
+                new RunAccess(mirror, runner), imports, current, prompt, projects, new DirectExecutor(), toasts);
     }
 
     /** A stored project of {@code name} whose book content has {@code hash}. */

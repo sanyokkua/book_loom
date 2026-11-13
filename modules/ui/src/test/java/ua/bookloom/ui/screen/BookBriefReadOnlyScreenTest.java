@@ -74,7 +74,7 @@ class BookBriefReadOnlyScreenTest extends BriefRunScreenTestBase {
         publishRun(RunState.RUNNING, 10);
 
         assertThat(required("brief-columns").isDisabled()).isTrue();
-        assertThat(CONTROLS)
+        assertThat(List.copyOf(CONTROLS))
                 .allSatisfy(id -> assertThat(required(id).isDisabled()).as(id).isTrue());
     }
 

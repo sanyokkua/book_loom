@@ -1,5 +1,7 @@
 package ua.bookloom.ui.screen;
 
+import static ua.bookloom.ui.theme.StyleClasses.MUTED;
+
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -74,14 +76,14 @@ final class StructureSegmentsPane extends VBox {
             final Messages messages,
             final StructureTextPane reading,
             final ReadOnlyBooleanProperty technical) {
+        Objects.requireNonNull(model, "model");
         super(SPACING);
         this.technical = Objects.requireNonNull(technical, "technical");
-        Objects.requireNonNull(model, "model");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.reading = Objects.requireNonNull(reading, "reading");
         this.numbers = NumberFormat.getIntegerInstance(messages.locale());
         header.setId("structure-segments-header");
-        header.getStyleClass().add("muted");
+        header.getStyleClass().add(MUTED);
         final StackPane stack = listStack();
         VBox.setVgrow(stack, Priority.ALWAYS);
         getChildren().addAll(header, filters(), stack);
@@ -110,7 +112,7 @@ final class StructureSegmentsPane extends VBox {
         });
         Tips.install(messages, kinds, MessageKey.STRUCTURE_KIND_HINT);
         shown.setId("structure-segments-shown");
-        shown.getStyleClass().add("muted");
+        shown.getStyleClass().add(MUTED);
         shown.managedProperty().bind(shown.visibleProperty());
         shown.setVisible(false);
         search.textProperty().addListener((observed, was, now) -> refilter());
@@ -129,7 +131,7 @@ final class StructureSegmentsPane extends VBox {
         Tips.install(messages, list, MessageKey.STRUCTURE_SEGMENTS_HINT);
         list.getSelectionModel().selectedItemProperty().addListener((observed, was, now) -> picked(now));
         note.setId("structure-segments-state");
-        note.getStyleClass().add("muted");
+        note.getStyleClass().add(MUTED);
         note.setWrapText(true);
         note.setMouseTransparent(true);
         note.managedProperty().bind(note.visibleProperty());

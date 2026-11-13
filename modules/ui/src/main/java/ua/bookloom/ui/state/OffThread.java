@@ -38,7 +38,7 @@ final class OffThread {
             Result<T> answer;
             try {
                 answer = work.get();
-            } catch (Throwable thrown) {
+            } catch (Exception thrown) {
                 log.error("the project service threw instead of returning a result while trying to {}", what, thrown);
                 answer = Result.err(AppErrors.unexpected(failed, thrown));
             }

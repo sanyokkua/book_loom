@@ -29,7 +29,14 @@ class StorageSettingsTest {
     private final RecordingErrorPresenter errors = new RecordingErrorPresenter();
 
     private StorageSettings settings() {
-        return new StorageSettings(storage, projects, revealer, chooser, errors, Runnable::run, Runnable::run, CLOCK);
+        return new StorageSettings(
+                storage,
+                projects,
+                revealer,
+                chooser,
+                errors,
+                new StorageSettings.Threads(Runnable::run, Runnable::run),
+                CLOCK);
     }
 
     @Test
@@ -118,8 +125,7 @@ class StorageSettingsTest {
         settings.backup();
 
         assertThat(chooser.initials()).hasSize(1);
-        assertThat(chooser.initials().getFirst().getFileName().toString())
-                .isEqualTo("bookloom-backup-20261023-080509.db");
+        assertThat(chooser.initials().getFirst().getFileName()).hasToString("bookloom-backup-20261023-080509.db");
     }
 
     // IF a second click started a second copy, THEN two writers would race for one file name.
@@ -127,8 +133,14 @@ class StorageSettingsTest {
     void backup_clickedTwiceWhileRunning_oneCopyAndBusyUntilDone() {
         chooser.answer(COPY);
         final java.util.ArrayDeque<Runnable> pool = new java.util.ArrayDeque<>();
-        final StorageSettings settings =
-                new StorageSettings(storage, projects, revealer, chooser, errors, pool::add, Runnable::run, CLOCK);
+        final StorageSettings settings = new StorageSettings(
+                storage,
+                projects,
+                revealer,
+                chooser,
+                errors,
+                new StorageSettings.Threads(pool::add, Runnable::run),
+                CLOCK);
 
         settings.backup();
         settings.backup();
@@ -149,10 +161,11 @@ class StorageSettingsTest {
                 revealer,
                 chooser,
                 errors,
-                task -> {
-                    throw new java.util.concurrent.RejectedExecutionException("stopped");
-                },
-                Runnable::run,
+                new StorageSettings.Threads(
+                        task -> {
+                            throw new java.util.concurrent.RejectedExecutionException("stopped");
+                        },
+                        Runnable::run),
                 CLOCK);
 
         settings.load();

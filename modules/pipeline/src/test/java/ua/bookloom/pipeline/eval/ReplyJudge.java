@@ -5,9 +5,9 @@ import java.util.Objects;
 import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import ua.bookloom.pipeline.heal.AcceptanceRule;
 import ua.bookloom.pipeline.heal.DraftJudge;
 import ua.bookloom.pipeline.heal.DraftOutcome;
-import ua.bookloom.pipeline.heal.SoftFindings;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
@@ -59,6 +59,8 @@ final class ReplyJudge {
         }
         final DraftJudge.Judged judged = DraftJudge.judge(drafted, project.loop(), project.gate());
         return new Verdict(
-                true, judged.accepted(), !SoftFindings.fixableIn(judged.qa()).isEmpty());
+                true,
+                judged.accepted(),
+                !AcceptanceRule.decide(judged.qa()).repair().isEmpty());
     }
 }

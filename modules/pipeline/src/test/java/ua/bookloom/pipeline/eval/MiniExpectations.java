@@ -15,7 +15,7 @@ import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.TermType;
 
 /**
- * What the mini eval book must come to ({@code eval/mini/expectations.json}): the checks every segment must pass, the
+ * What the mini eval book must come to ({@code eval/datasets/<id>/expectations.json}): the checks every segment must pass, the
  * checks of single segments and groups, and what the glossary must hold after the names pass. Each carries the defect
  * it guards, so a reader sees which owner-run defect a failing expectation is the return of.
  *
@@ -26,28 +26,82 @@ import ua.bookloom.api.project.TermType;
 @JsonIgnoreProperties(ignoreUnknown = true)
 record MiniExpectations(List<Expectation> every, List<Expectation> segments, List<GlossaryExpectation> glossary) {
 
-    private static final String RESOURCE = "/eval/mini/expectations.json";
-
     /** What a segment check tests. */
     enum CheckKind {
         /** The target holds no Latin word but the listed ones. */
-        NO_LATIN_EXCEPT,
+        NO_LATIN_EXCEPT(Level.SOFT),
         /** The target holds no letter only Russian has. */
-        NO_RUSSIAN_LETTERS,
+        NO_RUSSIAN_LETTERS(Level.SOFT),
         /** The target matches every listed regular expression. */
-        MATCHES,
+        MATCHES(Level.SOFT),
         /** The target matches none of the listed regular expressions. */
-        ABSENT,
+        ABSENT(Level.SOFT),
         /** The segment ended with a usable target and was not flagged. */
-        NOT_FLAGGED,
+        NOT_FLAGGED(Level.SOFT),
         /** The segment carries no stored finding raised by any of the listed checks (a {@code raisedBy} name). */
-        NO_FINDING,
+        NO_FINDING(Level.SOFT),
         /** No past-tense word after the narrator's {@code я} is feminine. */
-        NARRATOR_MALE,
+        NARRATOR_MALE(Level.SOFT),
         /** The target is at least the listed share of the source's length. */
-        MIN_RATIO,
+        MIN_RATIO(Level.SOFT),
         /** The targets of a group of segments address one listener in one register (ти or Ви, not both). */
-        ADDRESS_SAME
+        ADDRESS_SAME(Level.SOFT),
+        /** The target holds no combining acute accent (U+0301), the stress mark a glossary seed may carry. */
+        NO_STRESS_MARK(Level.HARD),
+        /** The target starts with the heading number the case author wrote as the first argument. */
+        HEADING_NUMBER(Level.HARD),
+        /** The target holds the negation word (first argument) at least as many times as the second argument. */
+        NEGATION_KEPT(Level.HARD),
+        /** The target holds every figure the arguments list, as written. */
+        NUMBERS_KEPT(Level.HARD),
+        /** The target holds exactly the listed protection tokens, in any order. */
+        PLACEHOLDERS(Level.HARD),
+        /** The target holds no letter outside the alphabet of the language tag in the first argument. */
+        TARGET_ALPHABET(Level.HARD),
+        /** The target holds no letter of a script other than Cyrillic and Latin. */
+        FOREIGN_SCRIPT(Level.HARD),
+        /** The target is not the source line (compared without case, spacing or edge punctuation). */
+        NO_SOURCE_LINE(Level.HARD),
+        /** The glossary holds exactly one entry filed under the listed forms of one lemma. */
+        GLOSSARY_ONE_ENTRY(Level.HARD),
+        /** The entry filed under the listed forms has the gender in the last argument. */
+        GLOSSARY_GENDER(Level.HARD),
+        /** At most one of the listed spellings (stems) occurs across the targets of the group. */
+        ONE_SPELLING_PER_LEMMA(Level.HARD),
+        /** The target holds none of the source-only words the case author listed. */
+        SOURCE_ONLY_WORDS(Level.SOFT),
+        /** The target starts with a dash when the source line does. */
+        DIALOGUE_DASH(Level.SOFT),
+        /** The target holds one of the listed vocative forms. */
+        VOCATIVE(Level.SOFT),
+        /** The target holds one of the wanted narrator forms and none of those marked with a leading {@code !}. */
+        NARRATOR_GENDER(Level.SOFT),
+        /** A run-level check: no recorded call names a map entry outside its window or a block-8 name the book has not said yet. */
+        WINDOW_INJECTION(Level.HARD),
+        /**
+         * A run-level check (a floor of 0 from task 13.1): no proofread change was kept while a check count on the kept
+         * text is higher than on the text before.
+         */
+        PROOFREAD_NEVER_WORSE(Level.HARD);
+
+        private final Level level;
+
+        CheckKind(final Level level) {
+            this.level = level;
+        }
+
+        /** Whether a failure of this check is a floor of zero or only reported against the baseline. */
+        Level level() {
+            return level;
+        }
+
+        /** How hard a grader's failure counts. */
+        enum Level {
+            /** A floor of zero from the group that builds the behaviour. */
+            HARD,
+            /** Compared with the baseline only. */
+            SOFT
+        }
     }
 
     /**
@@ -132,12 +186,14 @@ record MiniExpectations(List<Expectation> every, List<Expectation> segments, Lis
         glossary = glossary == null ? List.of() : List.copyOf(glossary);
     }
 
-    static MiniExpectations load() {
-        try (InputStream in = MiniExpectations.class.getResourceAsStream(RESOURCE)) {
+    /** The expectations of the dataset folder {@code eval/datasets/<dataset>}. */
+    static MiniExpectations load(final String dataset) {
+        final String resource = "/eval/datasets/" + dataset + "/expectations.json";
+        try (InputStream in = MiniExpectations.class.getResourceAsStream(resource)) {
             return JsonMapper.builder()
                     .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
                     .build()
-                    .readValue(Objects.requireNonNull(in, RESOURCE), MiniExpectations.class);
+                    .readValue(Objects.requireNonNull(in, resource), MiniExpectations.class);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

@@ -19,4 +19,5 @@ module ua.bookloom.util {
     exports ua.bookloom.util.lang;
     exports ua.bookloom.util.log;
     exports ua.bookloom.util.text;
+    exports ua.bookloom.util.contract;
 }

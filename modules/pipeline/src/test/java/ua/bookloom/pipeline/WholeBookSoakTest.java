@@ -22,7 +22,7 @@ class WholeBookSoakTest {
 
     private static final int PARAGRAPHS = 3_700;
     private static final long SEED = 7L;
-    private static final int OUTAGE_AT_CALL = 2_000;
+    private static final int OUTAGE_AT_CALL = 400;
 
     @TempDir
     private Path tempDir;
@@ -43,6 +43,7 @@ class WholeBookSoakTest {
         SoakReport.print(shape.name(), outcome);
         SoakAssertions.assertFinishedAndDecided(outcome);
         SoakAssertions.assertEveryFaultAnswered(outcome);
+        SoakAssertions.assertPlainProofreadReplyChangedNothing(outcome, exported);
         SoakAssertions.assertBounded(outcome);
         SoakAssertions.assertRetainedPerSegment(outcome);
         SoakAssertions.assertNoLeftoverPlaceholders(exported);

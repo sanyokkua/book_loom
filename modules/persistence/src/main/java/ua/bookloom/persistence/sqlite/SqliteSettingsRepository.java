@@ -1,5 +1,7 @@
 package ua.bookloom.persistence.sqlite;
 
+import static ua.bookloom.util.contract.ArgNames.SETTING;
+
 import com.google.inject.Inject;
 import java.util.Map;
 import java.util.Objects;
@@ -28,7 +30,7 @@ public final class SqliteSettingsRepository implements SettingsRepository {
 
     @Override
     public <T> Result<Optional<T>> get(final AppSetting<T> setting) {
-        Objects.requireNonNull(setting, "setting");
+        Objects.requireNonNull(setting, SETTING);
         return db.read("settings get", h -> {
             final Optional<String> raw = h.createQuery("SELECT value FROM settings WHERE key = :key")
                     .bind("key", setting.key())
@@ -42,7 +44,7 @@ public final class SqliteSettingsRepository implements SettingsRepository {
 
     @Override
     public <T> Result<T> put(final AppSetting<T> setting, final T value) {
-        Objects.requireNonNull(setting, "setting");
+        Objects.requireNonNull(setting, SETTING);
         Objects.requireNonNull(value, "value");
         return db.write("settings put", h -> {
             h.createUpdate(UPSERT)
@@ -57,7 +59,7 @@ public final class SqliteSettingsRepository implements SettingsRepository {
 
     @Override
     public Result<Boolean> remove(final AppSetting<?> setting) {
-        Objects.requireNonNull(setting, "setting");
+        Objects.requireNonNull(setting, SETTING);
         return db.write("settings remove", h -> {
             final boolean removed = h.createUpdate("DELETE FROM settings WHERE key = :key")
                             .bind("key", setting.key())
@@ -83,8 +85,8 @@ public final class SqliteSettingsRepository implements SettingsRepository {
 
     private static String typeOf(final Object value) {
         return switch (value) {
-            case Boolean ignored -> "boolean";
-            case Enum<?> ignored -> "enum";
+            case Boolean _ -> "boolean";
+            case Enum<?> _ -> "enum";
             default -> "string";
         };
     }

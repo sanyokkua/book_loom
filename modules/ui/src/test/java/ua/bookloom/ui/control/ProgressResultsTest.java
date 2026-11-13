@@ -3,27 +3,34 @@ package ua.bookloom.ui.control;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.stream.IntStream;
+import javafx.event.ActionEvent;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TextField;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.state.ChangeKind;
-import ua.bookloom.ui.state.ChangeOperation;
 import ua.bookloom.ui.state.ChangeOrigin;
-import ua.bookloom.ui.state.ChangeResults;
 import ua.bookloom.ui.state.ChangeRow;
 import ua.bookloom.ui.state.ChangeSection;
-import ua.bookloom.ui.state.LiveCalls;
 
 /**
  * The Results view of the progress dialog: the header with its counts, steps and time, the Changes tab with its rows
  * and columns, the Steps tab with each stage's requests, and the lines for a pass that changed nothing or was stopped.
  */
 class ProgressResultsTest extends ProgressResultsTestBase {
+
+    private static final int MANY_ROWS = 30;
+    private static final double LIST_BOTTOM_PADDING = 40;
+    // Tall enough that the dialog has more room than the 420 px the list was once capped at, and short enough for the
+    // headless screen.
+    private static final double TALL_WINDOW_WIDTH = 1280;
+    private static final double TALL_WINDOW_HEIGHT = 780;
 
     // IF the header gave counts only, THEN the person could not tell how large and how long the operation was.
     @Test
@@ -68,7 +75,7 @@ class ProgressResultsTest extends ProgressResultsTestBase {
     // IF the Steps tab were missing, THEN a person could not see where the minutes of the pass went.
     @Test
     void tabs_opened_areChangesThenSteps() {
-        show(ofPass(new int[] {0, 6, 0, 3, 25, 4, 2, 0}, added(0, "Mid")));
+        show(ofPass(new int[] {0, 6, 0, 0, 3, 25, 4, 2, 0, 0}, added(0, "Mid")));
 
         final TabPane tabs = (TabPane) required("results-tabs");
 
@@ -79,15 +86,15 @@ class ProgressResultsTest extends ProgressResultsTestBase {
                 .isZero();
     }
 
-    // IF the Steps tab listed requests, THEN a pass of forty calls would bury its eight stages.
+    // IF the Steps tab listed requests, THEN a pass of forty calls would bury its ten stages.
     @Test
-    void tabs_stepsSelected_listsTheEightStepsWithTheirCounts() {
-        show(ofPass(new int[] {0, 6, 0, 3, 25, 4, 2, 0}, added(0, "Mid")));
+    void tabs_stepsSelected_listsTheTenStepsWithTheirCounts() {
+        show(ofPass(new int[] {0, 6, 0, 0, 3, 25, 4, 2, 0, 0}, added(0, "Mid")));
 
         selectTab(1);
 
         final ListView<?> steps = (ListView<?>) required("results-steps");
-        assertThat(ThemeTestSupport.onFx(() -> steps.getItems().size())).isEqualTo(8);
+        assertThat(ThemeTestSupport.onFx(() -> steps.getItems().size())).isEqualTo(10);
         assertThat(texts())
                 .contains(
                         "Find candidates in the book",
@@ -99,27 +106,86 @@ class ProgressResultsTest extends ProgressResultsTestBase {
     }
 
     // IF a name the pass could not give a target stayed unlisted, THEN the person would find it only by scanning the
-    // table.
+    // table; as rows they type the target right there.
     @ParameterizedTest(name = "noRows={0}")
     @ValueSource(booleans = {false, true})
-    void show_namesWithoutATarget_areListedForThePersonWhateverTheOutcome(final boolean noRows) {
-        final ChangeResults results = new ChangeResults(
-                ChangeOperation.NAME_REVIEW,
-                false,
-                noRows ? List.of() : items(added(0, "Mid")),
-                LiveCalls.EMPTY,
-                List.of("Hale", "Well"));
+    void show_namesWithoutATarget_areRowsToTypeInUnderTheirHeadingWhateverTheOutcome(final boolean noRows) {
+        final List<ChangeRow> without = List.of(untargeted(10, "Hale"), untargeted(11, "Well"));
 
-        show(results);
+        show(noRows ? withUntargeted(without) : withUntargeted(without, added(0, "Mid")));
 
-        assertThat(texts()).contains("Still without a target (2): Hale, Well. Give each one in the glossary.");
+        assertThat(texts()).contains("Still without a target (2)", "Hale", "Well");
+        assertThat(fields()).hasSize(noRows ? 2 : 3);
+    }
+
+    // IF a typed target stayed in the dialog, THEN the person would have to find the glossary row to give it.
+    @Test
+    void edit_targetTypedOnAnUntargetedRow_isWrittenThroughTheGlossaryEdit() {
+        show(withUntargeted(List.of(untargeted(10, "Hale"))));
+
+        type(0, "Хейл");
+
+        assertThat(typed).containsExactly("NAMES:key-Hale=Хейл");
+    }
+
+    // IF only untargeted rows could be edited, THEN a wrong suggestion in a changed row would need the table.
+    @Test
+    void edit_targetTypedOnAnAddedNameAndATerm_isWrittenToEachOwnTable() {
+        show(results(false, added(0, "Mid"), addedTerm(1, "Hale", "Хейл")));
+
+        type(0, "Мід");
+        type(1, "Гейл");
+
+        assertThat(typed).containsExactly("NAMES:key-Mid=Мід", "TERMS:Hale=Гейл");
     }
 
     @Test
-    void show_everyNameHasATarget_listsNoUntargetedLine() {
-        show(results(false, added(0, "Mid")));
+    void edit_untouchedField_writesNothing() {
+        show(withUntargeted(List.of(untargeted(10, "Hale"))));
 
-        assertThat(texts()).noneMatch(text -> text.startsWith("Still without a target"));
+        onFx(() -> fields().getFirst().fireEvent(new ActionEvent()));
+
+        assertThat(typed).isEmpty();
+    }
+
+    // IF the list kept its 420 px cap, THEN in a dialog with less room the body scrolled and the last row and the
+    // Change badges were clipped under the footer.
+    @Test
+    void list_moreRowsThanFit_fillsTheRoomTheDialogHasWithoutPushingPastItsBody() {
+        resizeScene(TALL_WINDOW_WIDTH, TALL_WINDOW_HEIGHT);
+        show(results(false, manyAdded()));
+
+        final ListView<?> list = (ListView<?>) required("results-list");
+        final javafx.scene.Node body = scene.getRoot().lookup(".dialog-body");
+        final javafx.scene.Node heads = required("results-columns");
+        final double[] edges = ThemeTestSupport.onFx(() -> new double[] {
+            body.localToScene(body.getLayoutBounds()).getMaxY()
+                    - list.localToScene(list.getLayoutBounds()).getMaxY(),
+            list.getWidth() - heads.getLayoutBounds().getWidth()
+        });
+
+        assertThat(edges[0]).as("room left under the list").isBetween(0.0, LIST_BOTTOM_PADDING);
+        assertThat(edges[1]).as("columns as wide as the list").isZero();
+    }
+
+    private static ChangeRow[] manyAdded() {
+        return IntStream.range(0, MANY_ROWS)
+                .mapToObj(index -> added(index, "A" + index))
+                .toArray(ChangeRow[]::new);
+    }
+
+    private List<TextField> fields() {
+        return ThemeTestSupport.onFx(() -> scene.getRoot().lookupAll("#results-target").stream()
+                .map(TextField.class::cast)
+                .toList());
+    }
+
+    private void type(final int index, final String text) {
+        onFx(() -> {
+            final TextField field = fields().get(index);
+            field.setText(text);
+            field.fireEvent(new ActionEvent());
+        });
     }
 
     // IF text finds and model additions shared one "Added" heading, THEN the person could not tell what needed no

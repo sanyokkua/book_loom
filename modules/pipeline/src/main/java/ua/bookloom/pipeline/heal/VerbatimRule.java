@@ -56,7 +56,10 @@ public enum VerbatimRule {
                 VisibleText.visible(Normalizer.normalize(Tokens.replace(shownText, ""), Normalizer.Form.NFC));
         final String letters = lettersOf(visible);
         if (letters.isEmpty()) {
-            return hasLockedTerm ? LOCKED_TERM : visible.isEmpty() ? NO_TEXT : SYMBOLS;
+            if (hasLockedTerm) {
+                return LOCKED_TERM;
+            }
+            return visible.isEmpty() ? NO_TEXT : SYMBOLS;
         }
         if (ROMAN.matcher(letters).matches() && hasNoDigit(visible)) {
             return ROMAN_NUMERAL;

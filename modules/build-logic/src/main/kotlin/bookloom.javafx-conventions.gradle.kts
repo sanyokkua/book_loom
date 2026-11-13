@@ -3,7 +3,7 @@
 // This is a separate plugin rather than a conditional inside `bookloom.java-conventions` on purpose. It makes the
 // FX-free core structural instead of conventional: a core module cannot drift into a JavaFX dependency, because
 // acquiring one would mean deliberately applying a plugin it has no reason to apply
-// (docs/specification/04_Build_and_Release/01_BUILD_AND_TOOLING.md#javafx-plugin, DD-06).
+// (docs/spec_baseline/specification/04_Build_and_Release/01_BUILD_AND_TOOLING.md#javafx-plugin, DD-06).
 
 import org.gradle.api.artifacts.VersionCatalogsExtension
 

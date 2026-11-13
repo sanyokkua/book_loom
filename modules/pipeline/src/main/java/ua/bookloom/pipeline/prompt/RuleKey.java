@@ -1,7 +1,7 @@
 package ua.bookloom.pipeline.prompt;
 
 /** The prose rules a language or pair file may state, in the order they are shown, each under its label. */
-enum RuleKey {
+public enum RuleKey {
     QUOTES("quotes", "Quotes"),
     DIALOGUE("dialogue", "Dialogue"),
     APOSTROPHE("apostrophe", "Apostrophe"),

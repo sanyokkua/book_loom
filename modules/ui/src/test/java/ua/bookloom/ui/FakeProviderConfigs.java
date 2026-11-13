@@ -15,6 +15,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 
 /**
  * A hand-written {@link ProviderConfigs} holding the two built-in presets, listing them sorted by id the way the real
@@ -29,7 +30,7 @@ public final class FakeProviderConfigs implements ProviderConfigs {
     private final AtomicInteger saves = new AtomicInteger();
     private volatile boolean failSaves;
 
-    /** The two presets: {@code ollama} on port 11434 and {@code lmstudio} on port 1234. */
+    /** The two presets: {@code ollama} on port 11434 and {@code lmstudio} on port 1234, stored as LM Studio. */
     public FakeProviderConfigs() {
         save(new ProviderConfig(
                 "ollama",
@@ -37,12 +38,14 @@ public final class FakeProviderConfigs implements ProviderConfigs {
                 URI.create("http://localhost:11434"),
                 ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
                 ProviderConfig.DEFAULT_REQUEST_TIMEOUT));
+        // The real registry's preset is stored as LM Studio, so its notes come from the engine, never the port.
         save(new ProviderConfig(
-                "lmstudio",
-                ProviderKind.OPENAI_COMPATIBLE,
-                URI.create("http://localhost:1234/v1"),
-                ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
-                ProviderConfig.DEFAULT_REQUEST_TIMEOUT));
+                        "lmstudio",
+                        ProviderKind.OPENAI_COMPATIBLE,
+                        URI.create("http://localhost:1234/v1"),
+                        ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
+                        ProviderConfig.DEFAULT_REQUEST_TIMEOUT)
+                .withEngine(ServerEngine.LM_STUDIO));
     }
 
     @Override

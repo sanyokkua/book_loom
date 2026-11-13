@@ -116,7 +116,8 @@ public enum RunRow {
         if (in.notice() != null || !in.model().chosen()) {
             return CANNOT_START;
         }
-        if (in.total() > 0 && in.decided() >= in.total()) {
+        // A book whose segments are all decided still continues while its Proofread stage has windows left.
+        if (in.total() > 0 && in.decided() >= in.total() && in.proofread() == null) {
             return finished(in);
         }
         return in.decided() > 0 ? READY_TO_CONTINUE : READY;

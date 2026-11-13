@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.glossary;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -12,8 +14,8 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.QualityDial;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.pipeline.glossary.NameWindows.Evidence;
 import ua.bookloom.pipeline.glossary.NamesPlan.Candidate;
 import ua.bookloom.pipeline.glossary.ReadingVerdict.Decision;
@@ -72,7 +74,7 @@ final class NameReadings {
      * @param verdicts the code's verdicts on the entries read
      * @param unread the open entries the plan does not read, for the batched review, in glossary order
      * @param readings what the calls read of each entry read, by entry id: a speaking name or a brand in any of its
-     *     calls is one
+     *     calls is one, and the first window any call cited as explaining the name is its explanation
      */
     record Outcome(List<Verdict> verdicts, List<GlossaryEntry> unread, Map<String, Reading> readings) {
 
@@ -109,7 +111,7 @@ final class NameReadings {
                 log.warn(
                         "Names reading stopped at entry {}: a call failed",
                         candidate.entry().id());
-                return Result.err(Objects.requireNonNull(read.error(), "error"));
+                return Result.err(Objects.requireNonNull(read.error(), ERROR));
             }
             byId.put(candidate.entry().id(), Objects.requireNonNull(read.data(), "read"));
         }
@@ -128,7 +130,7 @@ final class NameReadings {
         for (final List<Window> group : plan.calls(plan.windowsOf(entry, in.story()))) {
             final Result<Reading> answered = reading.read(subject, group, in.frame(), in.calls());
             if (answered.isErr()) {
-                return Result.err(Objects.requireNonNull(answered.error(), "error"));
+                return Result.err(Objects.requireNonNull(answered.error(), ERROR));
             }
             read.add(new ReadCall(group, Objects.requireNonNull(answered.data(), "reading")));
         }
@@ -158,7 +160,7 @@ final class NameReadings {
                     midSentence(entry, counts));
             final Result<Decision> verdict = verdicts.verdict(facts, in.frame(), in.calls());
             if (verdict.isErr()) {
-                return Result.err(Objects.requireNonNull(verdict.error(), "error"));
+                return Result.err(Objects.requireNonNull(verdict.error(), ERROR));
             }
             decided.add(verdictOf(entry, Objects.requireNonNull(verdict.data(), "decision")));
         }
@@ -182,8 +184,17 @@ final class NameReadings {
                             entry.term(),
                             List.of(),
                             calls.stream().anyMatch(Reading::speaking),
-                            calls.stream().anyMatch(Reading::brand)));
+                            calls.stream().anyMatch(Reading::brand),
+                            calls.stream()
+                                    .map(Reading::explanation)
+                                    .filter(text -> !text.isEmpty())
+                                    .findFirst()
+                                    .orElse("")));
         }
+        log.debug(
+                "Names reading: {} of {} entries read have a window that explains the name",
+                readings.values().stream().filter(Reading::explainsName).count(),
+                readings.size());
         return readings;
     }
 
@@ -215,7 +226,7 @@ final class NameReadings {
                 decision.type(),
                 decision.gender(),
                 decision.quote(),
-                decision.origin() == GenderOrigin.VERIFIED,
+                decision.origin() == Origin.BOOK,
                 true,
                 decision.noEvidence());
     }

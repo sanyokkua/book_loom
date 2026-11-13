@@ -2,6 +2,7 @@ package ua.bookloom.ui.state;
 
 import java.util.Objects;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 
 /**
  * One provider as the settings list shows it.
@@ -12,8 +13,11 @@ import ua.bookloom.api.llm.ProviderKind;
  * @param hostPort the endpoint's host and port without scheme or path, e.g. {@code localhost:11434}; the host alone
  *     when the URL names no port
  * @param displayName the name the person gave the provider; blank when it has none and the catalogue names it
+ * @param engine the engine requests are shaped for: the person's "Treat this server as…" choice, else the detected
+ *     one ({@link ua.bookloom.api.llm.ProviderConfig#effectiveEngine()})
  */
-public record ProviderRow(String id, ProviderKind kind, String endpoint, String hostPort, String displayName) {
+public record ProviderRow(
+        String id, ProviderKind kind, String endpoint, String hostPort, String displayName, ServerEngine engine) {
 
     /** Rejects a row that names no provider, kind or endpoint. */
     public ProviderRow {
@@ -22,5 +26,6 @@ public record ProviderRow(String id, ProviderKind kind, String endpoint, String 
         Objects.requireNonNull(endpoint, "endpoint");
         Objects.requireNonNull(hostPort, "hostPort");
         Objects.requireNonNull(displayName, "displayName");
+        Objects.requireNonNull(engine, "engine");
     }
 }

@@ -32,7 +32,6 @@ import ua.bookloom.api.pipeline.SegmentOutcomeNote;
 import ua.bookloom.api.pipeline.StepResult;
 import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
-import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.StepAnnouncer;
@@ -63,18 +62,8 @@ public final class JobModelCalls implements ModelCalls {
     private final IntSupplier window;
     private final CallSnapshots snapshots;
     private final StepAnnouncer steps;
+    private final boolean inRun;
     private final AtomicInteger callSeq = new AtomicInteger();
-
-    /**
-     * Creates a seam for calls made against the default window, such as a glossary scan before any run.
-     */
-    public JobModelCalls(
-            final Function<Runnable, ChatModel> guard,
-            final Consumer<JobEvent> announce,
-            final Clock clock,
-            final String targetLanguage) {
-        this(guard, announce, clock, targetLanguage, ContextBudget.DEFAULT_WINDOW);
-    }
 
     /**
      * Creates the run's model-call seam.
@@ -121,9 +110,14 @@ public final class JobModelCalls implements ModelCalls {
                 clock,
                 targetLanguage,
                 window,
-                new CallSnapshots(Objects.requireNonNull(announce, "announce"), locators),
-                StepAnnouncer.silent());
+                new Variation(
+                        new CallSnapshots(Objects.requireNonNull(announce, "announce"), locators),
+                        StepAnnouncer.silent(),
+                        false));
     }
+
+    /** What differs between a seam and its copies: the snapshots, the step announcer and whether it is in a run. */
+    private record Variation(CallSnapshots snapshots, StepAnnouncer steps, boolean inRun) {}
 
     private JobModelCalls(
             final Function<Runnable, ChatModel> guard,
@@ -131,21 +125,36 @@ public final class JobModelCalls implements ModelCalls {
             final Clock clock,
             final String targetLanguage,
             final IntSupplier window,
-            final CallSnapshots snapshots,
-            final StepAnnouncer steps) {
+            final Variation variation) {
         this.guard = Objects.requireNonNull(guard, "guard");
         this.announce = announce;
         this.clock = Objects.requireNonNull(clock, "clock");
         this.targetLanguage = Objects.requireNonNull(targetLanguage, "targetLanguage");
         this.window = Objects.requireNonNull(window, "window");
-        this.snapshots = snapshots;
-        this.steps = steps;
+        this.snapshots = variation.snapshots();
+        this.steps = variation.steps();
+        this.inRun = variation.inRun();
     }
 
     /** This seam announcing the steps a timeout resend adds through {@code steps}; all else is shared. */
     public JobModelCalls withSteps(final StepAnnouncer steps) {
         return new JobModelCalls(
-                guard, announce, clock, targetLanguage, window, snapshots, Objects.requireNonNull(steps, "steps"));
+                guard,
+                announce,
+                clock,
+                targetLanguage,
+                window,
+                new Variation(snapshots, Objects.requireNonNull(steps, "steps"), inRun));
+    }
+
+    /**
+     * This seam as a translation run's own: each call asks the server to keep the model loaded, so a pause for review
+     * does not unload it. A names pass, a brief, a file name, an export or a review retry never asks it.
+     *
+     * @return a seam whose calls keep the model loaded; all else is shared
+     */
+    public JobModelCalls inRun() {
+        return new JobModelCalls(guard, announce, clock, targetLanguage, window, new Variation(snapshots, steps, true));
     }
 
     @Override
@@ -197,24 +206,29 @@ public final class JobModelCalls implements ModelCalls {
         Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(segmentIds, "segmentIds");
         Objects.requireNonNull(asked, "request");
-        final int tokens = window.getAsInt();
-        final ChatRequest request = asked.contextWindow() == null
-                ? asked
-                : asked.sizedTo(tokens, Math.max(1, tokens / OUTPUT_WINDOW_DIVISOR));
+        final ChatRequest request = sized(asked);
         log.debug(
-                "Model call sized kind={} window={} asked={} cap={}",
+                "Model call sized kind={} window={} asked={} cap={} keepLoaded={}",
                 kind,
                 request.contextWindow(),
                 asked.contextWindow(),
-                request.maxOutputTokens());
+                request.maxOutputTokens(),
+                request.keepLoaded());
         final Attempts attempts = new Attempts(
-                new Call(kind, List.copyOf(segmentIds), summaryOf(request)),
+                new RunCall(kind, List.copyOf(segmentIds), summaryOf(request)),
                 snapshots.open(kind, segmentIds, descriptor, request.messages()));
         final Result<ChatResponse> result = guard.apply(
                         () -> log.debug("Model call going out kind={} segmentIds={}", kind, segmentIds))
                 .chat(request, attempts);
         attempts.ended(result);
         return result;
+    }
+
+    // One size for every call to the model, whatever it was built with, and a reply capped at half of it.
+    private ChatRequest sized(final ChatRequest asked) {
+        final int tokens = window.getAsInt();
+        final ChatRequest request = asked.sizedTo(tokens, Math.max(1, tokens / OUTPUT_WINDOW_DIVISOR));
+        return inRun ? request.keptLoaded() : request;
     }
 
     @Override
@@ -232,31 +246,16 @@ public final class JobModelCalls implements ModelCalls {
         return new RequestSummary(chars, request.contextWindow(), request.maxOutputTokens());
     }
 
-    /**
-     * What every attempt of one call shares.
-     *
-     * @param kind what the call is for
-     * @param segmentIds the segments it is about
-     * @param summary the request's size as first built; an attempt's own cap may be lower
-     */
-    private record Call(CallKind kind, List<String> segmentIds, RequestSummary summary) {
-
-        @Nullable
-        String soleSegment() {
-            return segmentIds.size() == 1 ? segmentIds.getFirst() : null;
-        }
-    }
-
     /** Hears one call's attempts on the job thread and turns each into a start and a finish. */
     private final class Attempts implements CallAttemptListener {
 
-        private final Call call;
+        private final RunCall call;
         private final CallSnapshots.@Nullable Shown shown;
         private @Nullable CallAttempt current;
         private @Nullable Instant startedAt;
         private final ResendSteps resends;
 
-        Attempts(final Call call, final CallSnapshots.@Nullable Shown shown) {
+        Attempts(final RunCall call, final CallSnapshots.@Nullable Shown shown) {
             this.call = call;
             this.shown = shown;
             this.resends = new ResendSteps(steps, callSeq.incrementAndGet(), call.soleSegment());
@@ -340,7 +339,7 @@ public final class JobModelCalls implements ModelCalls {
             announce.accept(done);
             resends.ended(StepResult.DONE);
             if (shown != null) {
-                shown.answered(reply.content(), done.usage(), done.elapsed());
+                shown.answered(reply.content(), done.usage(), done.elapsed(), reply.rawBody());
             }
         }
 

@@ -9,13 +9,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewFilter;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.ui.ReviewDeskFixtures;
 import ua.bookloom.ui.ReviewFixtures;
 import ua.bookloom.ui.TooltipProbe;
+import ua.bookloom.ui.state.ReviewViewModel;
 
-/** The desk's list: the three filters and their counts, the markers, the lines and the second-look explanation. */
+/** The desk's list: the five filters and their counts, the markers, the lines and the second-look explanation. */
 class ReviewDeskListTest extends ReviewDeskTestBase {
 
     private void openWithFourAndThree() throws Exception {
@@ -23,17 +25,72 @@ class ReviewDeskListTest extends ReviewDeskTestBase {
         openDeskWith(ReviewDeskFixtures.fourToReview(), ReviewDeskFixtures.worthASecondLook());
     }
 
-    // IF the three filters did not show their counts, THEN the person could not tell how much is waiting in each.
+    // Four to review, three worth a second look, two changed by proofread and one waiting on a gender.
+    private void openWithFourThreeTwoOne() throws Exception {
+        desk.willAnswerQueue(ReviewFilter.ALL_SEGMENTS, ReviewDeskFixtures.keptAsSource(7));
+        desk.willAnswerQueue(
+                ReviewFilter.CHANGED_BY_PROOFREAD,
+                List.of(ReviewFixtures.keptRewrite(), ReviewFixtures.withUserEdit()));
+        desk.willAnswerQueue(ReviewFilter.WAITING_ON_GENDER, List.of(ReviewFixtures.accepted()));
+        desk.willAnswerSegment(ReviewFixtures.keptRewrite());
+        openDeskWith(ReviewDeskFixtures.fourToReview(), ReviewDeskFixtures.worthASecondLook());
+        // The desk reads its counts again when it is shown afresh, as a person reopening it would see them.
+        desk.willAnswerCounts(new ReviewCounts(100, 90, 0, 4, 0, 0, 0, 0, 0, 3, 0, 2, 1));
+        onFx(() -> injector.getInstance(ReviewViewModel.class).refreshCount());
+    }
+
+    // IF the filters did not show their counts, THEN the person could not tell how much is waiting in each.
     @ParameterizedTest
-    @CsvSource({"ALL_FLAGGED,To review (4)", "SUSPICIOUS,Worth a second look (3)", "ALL_SEGMENTS,All segments"})
-    void filter_eachOfThree_readsItsWordAndCount(final ReviewFilter filter, final String words) throws Exception {
-        openWithFourAndThree();
+    @CsvSource({
+        "ALL_FLAGGED,To review (4)",
+        "SUSPICIOUS,Worth a second look (3)",
+        "CHANGED_BY_PROOFREAD,Changed by proofread (2)",
+        "WAITING_ON_GENDER,Waiting on a gender (1)",
+        "ALL_SEGMENTS,All segments"
+    })
+    void filter_eachOfFive_readsItsWordAndCount(final ReviewFilter filter, final String words) throws Exception {
+        openWithFourThreeTwoOne();
 
         chooseFilter(filter);
 
-        assertThat(textOf("review-filter")).contains(words);
+        awaitFx(() -> textOf("review-filter").contains(words));
         assertThat(fx(() -> filterBox().getItems()))
-                .containsExactly(ReviewFilter.ALL_FLAGGED, ReviewFilter.SUSPICIOUS, ReviewFilter.ALL_SEGMENTS);
+                .containsExactly(
+                        ReviewFilter.ALL_FLAGGED,
+                        ReviewFilter.SUSPICIOUS,
+                        ReviewFilter.CHANGED_BY_PROOFREAD,
+                        ReviewFilter.WAITING_ON_GENDER,
+                        ReviewFilter.ALL_SEGMENTS);
+    }
+
+    // IF a kept rewrite showed no verdict, THEN the person could not see what the last pass changed or why.
+    @Test
+    void changedByProofread_keptRewrite_showsTheVerdictAndTheDiff() throws Exception {
+        openWithFourThreeTwoOne();
+
+        chooseFilter(ReviewFilter.CHANGED_BY_PROOFREAD);
+        awaitFx(() -> "ch4 · p07".equals(selectedLocator()));
+
+        awaitFx(() -> optional("review-proofread-verdict") != null);
+        assertThat(labelText("review-proofread-verdict")).isEqualTo("Proofread · kept: gender of Ліна is female");
+        assertThat(labelText("review-proofread-removed")).isEqualTo("− Ліна сказав.");
+        assertThat(labelText("review-proofread-added")).isEqualTo("+ Ліна сказала.");
+    }
+
+    // IF the diff showed the text before in another form than the text after, THEN a person would read the book's
+    // markup or the stored mark tokens as a change the proofread made.
+    @Test
+    void changedByProofread_keptRewriteWithMarks_showsBothSidesWithNumberedMarks() throws Exception {
+        desk.willAnswerQueue(ReviewFilter.CHANGED_BY_PROOFREAD, List.of(ReviewFixtures.keptRewriteWithMarks()));
+        desk.willAnswerSegment(ReviewFixtures.keptRewriteWithMarks());
+        openWithFourAndThree();
+
+        chooseFilter(ReviewFilter.CHANGED_BY_PROOFREAD);
+        awaitFx(() -> "ch4 · p08".equals(selectedLocator()));
+
+        awaitFx(() -> optional("review-proofread-removed") != null);
+        assertThat(labelText("review-proofread-removed")).isEqualTo("− ⟦0⟧Ліна⟦1⟧ сказав.");
+        assertThat(labelText("review-proofread-added")).isEqualTo("+ ⟦0⟧Ліна⟦1⟧ сказала.");
     }
 
     // IF All segments were offered only after an Unattended run, THEN a person who chose Assisted could not browse.
@@ -52,7 +109,7 @@ class ReviewDeskListTest extends ReviewDeskTestBase {
         openDeskWith(List.of(ReviewFixtures.wrongLanguage()), List.of());
 
         assertThat(labelText("review-worst")).isEqualTo("part of it may be in another language");
-        assertThat(fx(() -> ((javafx.scene.control.Label) rowList().lookup(".review-row-line")).getText()))
+        assertThat(fx(((javafx.scene.control.Label) rowList().lookup(".review-row-line"))::getText))
                 .startsWith("part of it may be in another language");
     }
 
@@ -116,8 +173,8 @@ class ReviewDeskListTest extends ReviewDeskTestBase {
     // explains itself on hover in the language of the window, on the list and on the closed box.
     @ParameterizedTest
     @CsvSource(delimiter = '|', textBlock = """
-            en | Accepted segments that a last check of the finished book still doubts
-            uk | Прийняті сегменти, які остання перевірка готової книги ще ставить під сумнів
+            en | Accepted segments that the audit or the Proofread stage still doubts
+            uk | Прийняті сегменти, які аудит або вичитка ще ставлять під сумнів
             """)
     void secondLookFilter_selected_explainsItselfOnHover(final String language, final String start) throws Exception {
         useLocale(Locale.forLanguageTag(language));

@@ -21,9 +21,9 @@ stack trace, a credential, an authorization header, a request body or a response
 IF the failure is marked as worth retrying, THEN the dialog SHALL offer to retry alongside dismissing it.
 
 **Source:** FR-NOTIF-03a, FR-NOTIF-03b, FR-NOTIF-03c
-(`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#error-dialog`), FR-NOTIF-04b
-(`#typed-error-surface`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-error-with-details`,
-`docs/specification/02_Architecture/09_ERROR_HANDLING.md#ui-surfacing`.
+(`docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#error-dialog`), FR-NOTIF-04b
+(`#typed-error-surface`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-error-with-details`,
+`docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#ui-surfacing`.
 In plain words: the summary is for the person and the details are for whoever they forward it to, which is why
 the details are present but folded away rather than absent. The cause is excluded outright because it is the one
 part of a failure that was never filtered — it is the original throwable, and it can carry anything that was in
@@ -67,8 +67,8 @@ build: a book was opened, at success severity; a provider passed its check, at s
 at success severity; a run finished with at least one flagged segment, at warning severity; and a model listing
 could not be read, at warning severity.
 
-**Source:** FR-NOTIF-01 (`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#toasts`), FR-A11Y-8,
-FR-THEME-10 (`docs/specification/01_Product/09_THEMING.md#status-colours`).
+**Source:** FR-NOTIF-01 (`docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#toasts`), FR-A11Y-8,
+FR-THEME-10 (`docs/spec_baseline/specification/01_Product/09_THEMING.md#status-colours`).
 In plain words: four severities, four status roles, one mapping — so a person learns the colour once and it
 means the same thing on a chip, a banner and a message. The last sentence is why a blocking failure always gets
 a dialog as well: a transient message is gone in seconds, and somebody looking away has then lost the only
@@ -113,9 +113,9 @@ keep the counts the run had reached.
 The provider-error state SHALL NOT open a dialog, because the run's own screen is already showing the failure and
 a dialog over it would say the same thing twice.
 
-**Source:** FR-NOTIF-02 (`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#banners`), FR-NOTIF-04c
-(`#typed-error-surface`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`,
-`docs/specification/02_Architecture/09_ERROR_HANDLING.md#ui-surfacing`.
+**Source:** FR-NOTIF-02 (`docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#banners`), FR-NOTIF-04c
+(`#typed-error-surface`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`,
+`docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#ui-surfacing`.
 In plain words: the commonest failure by far is that the model server is not running, and the useful response is
 a route to the screen where that is fixed — not a stack trace and not a dead progress bar. Keeping the counts
 means the person can see how much was done before it fell over, which is also the only record of it, since
@@ -148,8 +148,8 @@ The application SHALL choose a failure's surface from the typed code it carries,
   and SHALL NOT end a run or open a dialog.
 
 **Source:** FR-NOTIF-04a, FR-NOTIF-04c
-(`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#typed-error-surface`), `#error-code-categories`,
-`docs/specification/02_Architecture/09_ERROR_HANDLING.md#ui-surfacing`.
+(`docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#typed-error-surface`), `#error-code-categories`,
+`docs/spec_baseline/specification/02_Architecture/09_ERROR_HANDLING.md#ui-surfacing`.
 In plain words: without this table, "the run returned an error" matches every state a screen has, and the
 commonest mistake of all — a destination that already exists — plausibly renders as "the model server is
 unreachable", which sends the person to fix a machine that was never broken. Naming all fifteen codes is what

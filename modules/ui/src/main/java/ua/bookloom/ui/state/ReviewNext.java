@@ -13,7 +13,7 @@ import ua.bookloom.api.pipeline.SegmentView;
 /**
  * Which segment the review desk shows after an action: a decision (Accept, Save my edit) and Leave for later move on to
  * the next listed segment after this one, in the order the list showed, so the desk never keeps showing a segment that
- * has left the list (a segment left for later stays listed, marked); Skip goes where the desk moved on to; the other actions (Revert, Retry, a proposal) stay on the
+ * has left the list (a segment left for later stays listed, marked); the other actions (Revert, Retry, a proposal) stay on the
  * segment, which still needs the person. Kept apart from {@link ReviewViewModel} so that class stays a readable size.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it

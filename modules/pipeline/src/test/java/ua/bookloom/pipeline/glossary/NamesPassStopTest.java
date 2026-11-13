@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.glossary.GlossaryServiceFixtures.PROJECT;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.NamesEstimate;
 import ua.bookloom.api.pipeline.NamesPass;
@@ -108,17 +110,32 @@ class NamesPassStopTest extends NamesPassTestBase {
     // words, and two rendering batches each for names and terms with their re-asks — 17 calls, one to two minutes
     // at Balanced's 3.5-5.7 s a call (15i.M1).
     @Test
-    void estimate_seededBookAtBalanced_isSeventeenCallsAndOneToTwoMinutes() {
+    void estimate_seededBookAtBalanced_isEighteenCallsAndTwoMinutes() {
         seeded("uk", NamePolicy.TRANSLITERATE);
 
-        final Result<NamesEstimate> estimate = fixture.pass().estimate(PROJECT);
+        final Result<NamesEstimate> estimate = fixture.pass().estimate(PROJECT, Map.of());
 
-        assertThat(estimate.data()).isEqualTo(new NamesEstimate(17, 1, 2));
+        assertThat(estimate.data())
+                .isEqualTo(new NamesEstimate(
+                        18,
+                        Map.of(
+                                CallKind.TERM_READING,
+                                12,
+                                CallKind.REVIEW_TERMS,
+                                1,
+                                CallKind.NAME_KNOWLEDGE,
+                                1,
+                                CallKind.SUGGEST_TARGETS,
+                                4),
+                        2,
+                        2,
+                        false));
     }
 
     @Test
     void estimate_unknownProject_answersValidation() {
-        assertThat(Objects.requireNonNull(fixture.pass().estimate("ghost").error())
+        assertThat(Objects.requireNonNull(
+                                fixture.pass().estimate("ghost", Map.of()).error())
                         .code())
                 .isEqualTo(ErrorCode.validation);
     }

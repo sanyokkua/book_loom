@@ -23,6 +23,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.document.BookProfile;
 import ua.bookloom.api.pipeline.CallSegment;
 import ua.bookloom.api.pipeline.CallSnapshot;
+import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.control.DurationText;
 import ua.bookloom.ui.i18n.Messages;
@@ -50,6 +51,7 @@ public final class RunStateSource {
     private final ReviewViewModel review;
     private final Messages messages;
     private final BriefProject briefProject;
+    private final ProofreadStanding standing;
     private final ReadOnlyObjectWrapper<RunStateView> view = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyBooleanWrapper projectOpen = new ReadOnlyBooleanWrapper();
     private final ReadOnlyObjectWrapper<ModelChoice> model = new ReadOnlyObjectWrapper<>(ModelChoice.NONE);
@@ -67,7 +69,8 @@ public final class RunStateSource {
      * @param current the open project
      * @param review the count of flagged segments
      * @param messages the catalogue the time left and the program's name are worded from
-     * @param briefProject the open project's stored name, which the title bar shows as the Brief does
+     * @param project the open project's stored name, which the title bar shows as the Brief does, and where its
+     *     Proofread stage stands, which a Continue line names
      */
     @Inject
     public RunStateSource(
@@ -77,8 +80,10 @@ public final class RunStateSource {
             final CurrentProject current,
             final ReviewViewModel review,
             final Messages messages,
-            final BriefProject briefProject) {
-        this.briefProject = Objects.requireNonNull(briefProject, "briefProject");
+            final ProjectStanding project) {
+        Objects.requireNonNull(project, "project");
+        this.standing = project.proofread();
+        this.briefProject = project.briefProject();
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.translating = Objects.requireNonNull(translating, "translating");
         this.settings = Objects.requireNonNull(settings, "settings");
@@ -100,6 +105,7 @@ public final class RunStateSource {
                 mirror.live().throughput(),
                 mirror.live().waitingCall(),
                 mirror.live().calls(),
+                mirror.live().stage(),
                 mirror.live().suspicious(),
                 mirror.review().recovery(),
                 mirror.review().providerError(),
@@ -113,6 +119,7 @@ public final class RunStateSource {
                 current.book(),
                 current.brief(),
                 briefProject.name(),
+                standing.tally(),
                 review.flaggedCount());
         inputs.forEach(input -> input.addListener(refresh));
     }
@@ -180,7 +187,9 @@ public final class RunStateSource {
      */
     public StopFigures stopFigures() {
         final RunStateInputs in = inputs(model.get());
-        return new StopFigures(in.decided(), in.total(), in.inFlight());
+        final RunStage stage = mirror.live().stage().get();
+        final boolean proofreading = stage != null && stage.stage() == JobStage.PROOFREAD;
+        return new StopFigures(in.decided(), in.total(), in.inFlight(), proofreading);
     }
 
     /**
@@ -188,16 +197,17 @@ public final class RunStateSource {
      *
      * @param decided the segments done and saved
      * @param total the segments in all
-     * @param inFlight the segments being translated now, which are translated next time
+     * @param inFlight the segments being worked on now, which are worked on again next time
+     * @param proofreading whether the run is in its Proofread stage, where the segments in flight are being proofread
      */
-    public record StopFigures(int decided, int total, int inFlight) {}
+    public record StopFigures(int decided, int total, int inFlight, boolean proofreading) {}
 
     private void refresh() {
         final ModelChoice choice = modelChoice();
         model.set(choice);
         final OpenedBook book = current.book().get();
         final String runFile = mirror.runFileName().get();
-        projectName.set(book != null ? titleName(book) : runFile == null ? "" : runFile);
+        projectName.set(book != null ? titleName(book) : Objects.toString(runFile, ""));
         final RunStateInputs in = inputs(choice);
         decidedSegments.set(in.decided());
         totalSegments.set(in.total());
@@ -254,7 +264,9 @@ public final class RunStateSource {
                 translating.controls().get(),
                 translating.otherWork().get(),
                 span(call, waiting),
-                null);
+                null,
+                standing.tally().get(),
+                mirror.live().stage().get());
     }
 
     // The desk reads the stored count, which lags the run's last flush; while the run decides, its own figure counts
@@ -281,7 +293,12 @@ public final class RunStateSource {
         final RunFigures figures = mirror.figures().get();
         final int total = figures.total();
         final int decided = Math.max(0, total - figures.remaining());
-        return new Counts(decided, total, mirror.live().progress().get().percent());
+        // A paused or ended run states what is decided; the ledger's bar also counts drafts made ahead of their
+        // decisions.
+        final int percent = state.isSettled()
+                ? percentOf(decided, total)
+                : mirror.live().progress().get().percent();
+        return new Counts(decided, total, percent);
     }
 
     private static int percentOf(final int decided, final int total) {

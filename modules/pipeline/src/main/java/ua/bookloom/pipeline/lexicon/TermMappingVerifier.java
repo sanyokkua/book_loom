@@ -11,17 +11,13 @@ import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.LexiconEntry;
-import ua.bookloom.pipeline.glossary.IdentityRule;
-import ua.bookloom.pipeline.glossary.IdentityRule.Kept;
 
 /**
- * Checks the {@code terms} a model reported for one translated item, so only what the text proves is counted. A pair
- * holds when its source term is on the closed key-term list, occurs in the source, and every significant word of its
- * rendering has its stem in the target — an inflected rendering ({@code господаря} for {@code господар}) passes, a
- * word the model never wrote does not. A model that names a rendering it did not use, or a term the item lacks, adds
- * nothing to the lexicon.
+ * Checks claimed renderings of terms against one translated text, so only what the text proves holds (the name checks
+ * ask it through {@link AlternationGuard}). A pair holds when its source term is on the closed list, occurs in the
+ * source, and every significant word of its rendering has its stem in the target — an inflected rendering
+ * ({@code господаря} for {@code господар}) passes, a word the text never holds does not.
  *
  * <p>The stem is a prefix, since the target language is open and no morphology is bundled: a long word may lose its
  * last three letters, a short one fewer, and the target word may be at most three letters longer than the rendering's.
@@ -46,7 +42,7 @@ public final class TermMappingVerifier {
         }
     }
 
-    private static final Pattern WORD = Pattern.compile("[\\p{L}\\p{M}\\p{N}]+(?:['’ʼ-][\\p{L}\\p{M}\\p{N}]+)*");
+    private static final Pattern WORD = Pattern.compile("[\\p{L}\\p{M}\\p{N}]+(?:['’ʼ-][\\p{L}\\p{M}\\p{N}]+){0,32}");
     private static final Pattern DOUBLED = Pattern.compile("(\\p{L})\\1");
     private static final int MIN_SIGNIFICANT_LETTERS = 3;
     private static final int LONG_WORD = 8;
@@ -63,24 +59,10 @@ public final class TermMappingVerifier {
     private static final char VOWEL_SWAP = '>';
 
     /**
-     * Keeps the pairs a text proves.
-     *
-     * @param claimed the non-null terms the model reported for the item, each with the rendering it says it wrote
-     * @param keyTerms the non-null closed list the model was asked about
-     * @param source the non-null item's source text, tokens removed
-     * @param target the non-null item's translated text, tokens removed
-     * @return the verified pairs, each named by the spelling of the key-term list; never null, empty when none holds
-     */
-    public static List<Pair> verify(
-            final Map<String, String> claimed, final List<String> keyTerms, final String source, final String target) {
-        return verify(claimed, keyTerms, source, target, List.of());
-    }
-
-    /**
      * Keeps the pairs a text proves, for a target language whose names decline and derive adjectives.
      *
      * @param claimed the non-null terms the model reported for the item, each with the rendering it says it wrote
-     * @param keyTerms the non-null closed list the model was asked about
+     * @param keyTerms the non-null closed list of terms a claim may name
      * @param source the non-null item's source text, tokens removed
      * @param target the non-null item's translated text, tokens removed
      * @param alternations the non-null groups of letters a stem's last letter swaps among before a suffix (such as
@@ -93,31 +75,6 @@ public final class TermMappingVerifier {
             final String source,
             final String target,
             final List<String> alternations) {
-        return verify(claimed, keyTerms, source, target, alternations, null, null);
-    }
-
-    /**
-     * Keeps the pairs a text proves and the one identity rule allows (15i.N6): a rendering that is the term itself,
-     * across the two languages' scripts, is a leftover and no rendering to learn.
-     *
-     * @param claimed the non-null terms the model reported for the item, each with the rendering it says it wrote
-     * @param keyTerms the non-null closed list the model was asked about
-     * @param source the non-null item's source text, tokens removed
-     * @param target the non-null item's translated text, tokens removed
-     * @param alternations the non-null groups of letters a stem's last letter swaps among before a suffix; empty for a
-     *     language with no data
-     * @param sourceTag the source language tag; null when it is not known, which leaves the identity rule silent
-     * @param targetTag the target language tag; null when it is not known, which leaves the identity rule silent
-     * @return the verified pairs, each named by the spelling of the key-term list; never null, empty when none holds
-     */
-    public static List<Pair> verify(
-            final Map<String, String> claimed,
-            final List<String> keyTerms,
-            final String source,
-            final String target,
-            final List<String> alternations,
-            @Nullable final String sourceTag,
-            @Nullable final String targetTag) {
         Objects.requireNonNull(claimed, "claimed");
         Objects.requireNonNull(alternations, "alternations");
         Objects.requireNonNull(keyTerms, "keyTerms");
@@ -128,7 +85,6 @@ public final class TermMappingVerifier {
         for (final Map.Entry<String, String> claim : claimed.entrySet()) {
             listed(keyTerms, claim.getKey())
                     .filter(term -> TermMatch.occursIn(term, source))
-                    .filter(term -> isNotACopy(term, claim.getValue(), sourceTag, targetTag))
                     .filter(term -> renderingHolds(claim.getValue(), targetWords, alternations))
                     .ifPresentOrElse(
                             term -> verified.add(new Pair(term, claim.getValue().strip())),
@@ -139,18 +95,6 @@ public final class TermMappingVerifier {
         }
         log.trace("Term pairs verified {} of {}", verified.size(), claimed.size());
         return verified;
-    }
-
-    private static boolean isNotACopy(
-            final String term,
-            final String rendering,
-            @Nullable final String sourceTag,
-            @Nullable final String targetTag) {
-        final boolean isCopy = IdentityRule.refuses(term, rendering, sourceTag, targetTag, Kept.NOT_KEPT);
-        if (isCopy) {
-            log.debug("Term pair dropped: the rendering is the source spelling across scripts");
-        }
-        return !isCopy;
     }
 
     private static Optional<String> listed(final List<String> keyTerms, final String claimedTerm) {
@@ -247,9 +191,9 @@ public final class TermMappingVerifier {
     }
 
     private static int stemLength(final int length) {
-        final int cut =
-                length >= LONG_WORD ? LONG_CUT : length >= MEDIUM_WORD ? MEDIUM_CUT : length >= SHORT_WORD ? 1 : 0;
-        return Math.max(Math.min(STEM_FLOOR, length), length - cut);
+        final int cut = cutFor(length);
+        final int floor = Math.min(STEM_FLOOR, length);
+        return Math.max(floor, length - cut);
     }
 
     // A hyphenated target word counts whole and by each part (З-Зерубін holds Зерубін); a rendering stays whole.
@@ -272,5 +216,15 @@ public final class TermMappingVerifier {
 
     private static Stream<String> withParts(final String word) {
         return word.indexOf('-') < 0 ? Stream.of(word) : Stream.concat(Stream.of(word), Stream.of(word.split("-")));
+    }
+
+    private static int cutFor(final int length) {
+        if (length >= LONG_WORD) {
+            return LONG_CUT;
+        }
+        if (length >= MEDIUM_WORD) {
+            return MEDIUM_CUT;
+        }
+        return length >= SHORT_WORD ? 1 : 0;
     }
 }

@@ -5,6 +5,7 @@ import java.time.Clock;
 import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.ReviewMode;
@@ -13,7 +14,6 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 
 /** Jobs whose recovery waits and watchdog cadence a test scripts. */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -31,22 +31,16 @@ final class TimedJobs {
             final RecoveryTimer timer,
             final RunTicks ticks) {
         final TranslationJobImpl job = new TranslationJobImpl(
-                project.documents(),
                 new RunRequest(project.id(), ReviewMode.UNATTENDED),
-                model,
-                new ObjectMapper(),
-                new PromptTemplates(),
+                new JobTools(project.documents(), model, new ObjectMapper(), new PromptTemplates()),
                 project.stores(),
-                TranslationJobTestSupport.qualityLoop(),
-                TranslationJobTestSupport.SPLITTER,
-                ConsistencyPassFixture.over(project),
-                clock,
-                new UuidIdSource(),
-                timer,
-                ticks,
-                BatchDrafter.NO_BATCHING,
-                WordValidator.none(),
-                RequestDefaultsSource.environmentOnly());
+                new RunChecks(
+                        TranslationJobTestSupport.qualityLoop(),
+                        TranslationJobTestSupport.SPLITTER,
+                        ProofreadFixture.over(project),
+                        WordValidator.none()),
+                new RunPacing(clock, new UuidIdSource(), timer, ticks, BatchDrafter.NO_BATCHING),
+                new RunLogFacts(CallLedger.none(), "unknown"));
         job.pauseAt(Set.of(PausePoint.ON_ERROR));
         return job;
     }

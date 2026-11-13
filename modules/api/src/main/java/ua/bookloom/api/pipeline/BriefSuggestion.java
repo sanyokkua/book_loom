@@ -1,16 +1,19 @@
 package ua.bookloom.api.pipeline;
 
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
+import ua.bookloom.api.project.StoryShape;
 
 /**
  * What the model suggests for the tone and style of a Book Brief after reading passages of the book. Every field is a
@@ -28,6 +31,10 @@ import ua.bookloom.api.project.Register;
  * @param languageProposal the language most of the passages read are written in, as a language tag, when the brief's
  *     source language is Auto; only a proposal the person may take, never applied; null when a source is chosen or no
  *     language has a strict majority
+ * @param storyShape whether the chapters tell one story or separate ones, as the synthesis answered it, or null when it
+ *     gave no shape the brief can hold; always stored as likely (design D6)
+ * @param storyShapeQuotes the story shape's quotes, each found in the window it names; never null, empty unless two
+ *     different windows hold one each
  */
 public record BriefSuggestion(
         @Nullable String genre,
@@ -37,7 +44,26 @@ public record BriefSuggestion(
         NarratorPerson narrator,
         Gender narratorGender,
         Map<BriefField, FieldEvidence> evidence,
-        @Nullable String languageProposal) {
+        @Nullable String languageProposal,
+        @Nullable StoryShape storyShape,
+        List<ShapeQuote> storyShapeQuotes) {
+
+    /**
+     * One quote the story shape stands on.
+     *
+     * @param sample the window the quote was found in, numbered from one
+     * @param quote the book's own words in that window; never blank
+     */
+    public record ShapeQuote(int sample, String quote) {
+
+        /** Rejects a window number below one and a missing quote. */
+        public ShapeQuote {
+            Objects.requireNonNull(quote, "quote");
+            if (sample < 1) {
+                throw new IllegalArgumentException("sample " + sample);
+            }
+        }
+    }
 
     private static final Pattern THIRD_PERSON = Pattern.compile("(?iU)third[- ]person|\\bтрет\\p{L}*\\s+особ");
     private static final Pattern FIRST_PERSON = Pattern.compile("(?iU)first[- ]person|\\bперш\\p{L}*\\s+особ");
@@ -49,6 +75,41 @@ public record BriefSuggestion(
         Objects.requireNonNull(narratorGender, "narratorGender");
         Objects.requireNonNull(evidence, "evidence");
         evidence = Map.copyOf(evidence);
+        storyShapeQuotes = List.copyOf(Objects.requireNonNull(storyShapeQuotes, "storyShapeQuotes"));
+    }
+
+    /**
+     * A suggestion that has read no story shape.
+     *
+     * @param genre the genre, or null when none was decided
+     * @param register the suggested register
+     * @param voiceEra the voice and era phrase, or null
+     * @param audience the likely readers, or null
+     * @param narrator who tells the story
+     * @param narratorGender the first-person narrator's gender
+     * @param evidence what each field stands on
+     * @param languageProposal the proposed source language tag, or null
+     */
+    public BriefSuggestion(
+            @Nullable String genre,
+            Register register,
+            @Nullable String voiceEra,
+            @Nullable String audience,
+            NarratorPerson narrator,
+            Gender narratorGender,
+            Map<BriefField, FieldEvidence> evidence,
+            @Nullable String languageProposal) {
+        this(
+                genre,
+                register,
+                voiceEra,
+                audience,
+                narrator,
+                narratorGender,
+                evidence,
+                languageProposal,
+                null,
+                List.of());
     }
 
     /**
@@ -142,7 +203,9 @@ public record BriefSuggestion(
                 current.person(),
                 fillsGender ? narratorGender : current.gender(),
                 kept,
-                languageProposal);
+                languageProposal,
+                storyShape,
+                storyShapeQuotes);
     }
 
     // Pending quotes only wait for a first-person narrator whose gender nobody knows.
@@ -172,10 +235,49 @@ public record BriefSuggestion(
             final List<String> pending = proof == null || proof.isKept() ? List.of() : proof.quotes();
             return new Narrator(narrator, narratorGender, Narrator.GenderOrigin.NONE, pending);
         }
-        if (proof == null || !proof.isKept() || proof.quotes().isEmpty()) {
+        if (proof == null
+                || !proof.isKept()
+                || proof.isLikely()
+                || proof.quotes().isEmpty()) {
             return new Narrator(narrator, narratorGender, Narrator.GenderOrigin.SUGGESTED, List.of());
         }
         return new Narrator(narrator, narratorGender, Narrator.GenderOrigin.VERIFIED, proof.quotes());
+    }
+
+    /**
+     * The brief fields this suggestion fills with only the model's most probable value, which the brief marks likely
+     * until the person confirms or changes them ({@code specs/book-brief/spec.md} "Mark a suggested field likely unless
+     * its basis holds"): a field whose evidence is {@link FieldEvidence.Basis#LIKELY}, the narrator when its gender
+     * is only suggested, and the story shape whenever there is one, because it is stored as likely until the person
+     * confirms it however many windows support it (design D6).
+     *
+     * @return never null; empty when every filled field stands on a basis the code checked
+     */
+    public Set<ua.bookloom.api.project.BriefField> likelyFields() {
+        final Set<ua.bookloom.api.project.BriefField> likely = EnumSet.noneOf(ua.bookloom.api.project.BriefField.class);
+        evidence.forEach((field, proof) -> {
+            if (proof.isLikely()) {
+                likely.add(briefFieldOf(field));
+            }
+        });
+        if (narrator != NarratorPerson.UNSPECIFIED && suggestedNarrator().hasSuggestedGender()) {
+            likely.add(ua.bookloom.api.project.BriefField.NARRATOR);
+        }
+        if (storyShape != null) {
+            likely.add(ua.bookloom.api.project.BriefField.STORY_SHAPE);
+        }
+        return Set.copyOf(likely);
+    }
+
+    private static ua.bookloom.api.project.BriefField briefFieldOf(final BriefField field) {
+        return switch (field) {
+            case GENRE -> ua.bookloom.api.project.BriefField.GENRE;
+            case REGISTER -> ua.bookloom.api.project.BriefField.REGISTER;
+            case VOICE -> ua.bookloom.api.project.BriefField.VOICE_ERA;
+            case AUDIENCE -> ua.bookloom.api.project.BriefField.AUDIENCE;
+            case NARRATOR, NARRATOR_GENDER -> ua.bookloom.api.project.BriefField.NARRATOR;
+            case STORY_SHAPE -> ua.bookloom.api.project.BriefField.STORY_SHAPE;
+        };
     }
 
     private static boolean contradicts(final NarratorPerson person, final String voice) {

@@ -1,5 +1,7 @@
 package ua.bookloom.persistence.memory;
 
+import static ua.bookloom.util.contract.ArgNames.SETTING;
+
 import com.google.inject.Inject;
 import java.util.Map;
 import java.util.Objects;
@@ -22,38 +24,38 @@ public final class InMemorySettingsRepository implements SettingsRepository {
 
     @Override
     public <T> Result<Optional<T>> get(final AppSetting<T> setting) {
-        Objects.requireNonNull(setting, "setting");
+        Objects.requireNonNull(setting, SETTING);
         try {
             final String raw = values.get(setting.key());
             final Optional<T> value = Optional.ofNullable(setting.parse(raw));
             log.debug("Setting read key={} stored={} present={}", setting.key(), raw != null, value.isPresent());
             return Result.ok(value);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
 
     @Override
     public <T> Result<T> put(final AppSetting<T> setting, final T value) {
-        Objects.requireNonNull(setting, "setting");
+        Objects.requireNonNull(setting, SETTING);
         Objects.requireNonNull(value, "value");
         try {
             values.put(setting.key(), setting.format(value));
             log.debug("Setting stored key={}", setting.key());
             return Result.ok(value);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
 
     @Override
     public Result<Boolean> remove(final AppSetting<?> setting) {
-        Objects.requireNonNull(setting, "setting");
+        Objects.requireNonNull(setting, SETTING);
         try {
             final boolean removed = values.remove(setting.key()) != null;
             log.debug("Setting removed key={} existed={}", setting.key(), removed);
             return Result.ok(removed);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -63,7 +65,7 @@ public final class InMemorySettingsRepository implements SettingsRepository {
         try {
             log.debug("Settings listed count={}", values.size());
             return Result.ok(Map.copyOf(values));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }

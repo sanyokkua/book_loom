@@ -29,9 +29,12 @@ public final class LiveSection {
             new ReadOnlyObjectWrapper<>(ProgressFigures.Figures.NONE);
     private final ReadOnlyIntegerWrapper sourceKept = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper suspicious = new ReadOnlyIntegerWrapper();
+    private final ReadOnlyIntegerWrapper changedByProofread = new ReadOnlyIntegerWrapper();
+    private final ReadOnlyIntegerWrapper waitingOnGender = new ReadOnlyIntegerWrapper();
     private final ReadOnlyObjectWrapper<@Nullable WaitingCall> waitingCall = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<ConnectionStatus> connection =
             new ReadOnlyObjectWrapper<>(ConnectionStatus.UNKNOWN);
+    private final ReadOnlyObjectWrapper<@Nullable RunStage> stage = new ReadOnlyObjectWrapper<>();
     private boolean counting;
     private final ObservableList<FlaggedRow> queue = FXCollections.observableArrayList();
     private final ObservableList<FlaggedRow> readOnlyQueue = FXCollections.unmodifiableObservableList(queue);
@@ -82,6 +85,24 @@ public final class LiveSection {
     }
 
     /**
+     * The stage the run is in, which the title bar's chip and the Translating strip show.
+     *
+     * @return a read-only property holding {@code null} while no run is at work; read on the FX thread
+     */
+    public ReadOnlyObjectProperty<@Nullable RunStage> stage() {
+        return stage.getReadOnlyProperty();
+    }
+
+    /**
+     * Shows the stage the run is in, or withdraws it when the run ends.
+     *
+     * @param now the stage, or {@code null} once the run has ended
+     */
+    public void publishStage(final @Nullable RunStage now) {
+        Platform.runLater(() -> stage.set(now));
+    }
+
+    /**
      * Shows the request the run waits on, or withdraws it. Not logged: called once a second while a wait lasts.
      *
      * @param call the request, or {@code null} to withdraw the notice
@@ -116,6 +137,38 @@ public final class LiveSection {
      */
     public ReadOnlyIntegerProperty suspicious() {
         return suspicious.getReadOnlyProperty();
+    }
+
+    /**
+     * How many segments the Proofread stage changed, kept or proposed, as the review desk last counted them.
+     *
+     * @return the read-only count, zero until counted; read on the FX thread
+     */
+    public ReadOnlyIntegerProperty changedByProofread() {
+        return changedByProofread.getReadOnlyProperty();
+    }
+
+    /**
+     * How many segments wait on a gender, as the review desk last counted them.
+     *
+     * @return the read-only count, zero until counted; read on the FX thread
+     */
+    public ReadOnlyIntegerProperty waitingOnGender() {
+        return waitingOnGender.getReadOnlyProperty();
+    }
+
+    /**
+     * Shows the counts of the review desk's proofread lists.
+     *
+     * @param changed the segments Changed by proofread lists
+     * @param waiting the segments Waiting on a gender lists
+     */
+    public void publishProofreadLists(final int changed, final int waiting) {
+        log.debug("publishing the proofread lists: {} changed, {} waiting on a gender", changed, waiting);
+        Platform.runLater(() -> {
+            changedByProofread.set(changed);
+            waitingOnGender.set(waiting);
+        });
     }
 
     /**
@@ -217,7 +270,10 @@ public final class LiveSection {
         progress.set(ProgressFigures.Figures.NONE);
         sourceKept.set(0);
         suspicious.set(0);
+        changedByProofread.set(0);
+        waitingOnGender.set(0);
         waitingCall.set(null);
+        stage.set(null);
         connection.set(ConnectionStatus.UNKNOWN);
         queue.clear();
     }

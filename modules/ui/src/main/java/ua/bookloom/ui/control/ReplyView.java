@@ -64,9 +64,10 @@ public final class ReplyView extends CopyablePane {
                 clipboard,
                 this::plainText,
                 this::isExpanded,
-                MessageKey.LIVE_CALL_REPLY_TIP,
-                MessageKey.LIVE_CALL_REPLY_COPY,
-                MessageKey.LIVE_CALL_REPLY_COPY_TIP);
+                new RawBlock.Keys(
+                        MessageKey.LIVE_CALL_REPLY_TIP,
+                        MessageKey.LIVE_CALL_REPLY_COPY,
+                        MessageKey.LIVE_CALL_REPLY_COPY_TIP));
         expandedProperty().addListener((observed, was, now) -> rawBlock.refill());
         hideSection();
     }

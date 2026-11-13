@@ -70,9 +70,10 @@ public final class PromptView extends CopyablePane {
                 clipboard,
                 this::plainSent,
                 this::isExpanded,
-                MessageKey.LIVE_CALL_PROMPT_FULL_TITLE_TIP,
-                MessageKey.LIVE_CALL_PROMPT_SENT_COPY,
-                MessageKey.LIVE_CALL_PROMPT_SENT_COPY_TIP);
+                new RawBlock.Keys(
+                        MessageKey.LIVE_CALL_PROMPT_FULL_TITLE_TIP,
+                        MessageKey.LIVE_CALL_PROMPT_SENT_COPY,
+                        MessageKey.LIVE_CALL_PROMPT_SENT_COPY_TIP));
         expandedProperty().addListener((observed, was, now) -> sentBlock.refill());
         hideSection();
     }

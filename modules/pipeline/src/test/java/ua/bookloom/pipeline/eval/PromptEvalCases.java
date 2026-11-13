@@ -5,22 +5,18 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NamePolicy;
-import ua.bookloom.api.project.QaFinding;
-import ua.bookloom.api.project.Severity;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.eval.EvalCase.Draft;
 import ua.bookloom.pipeline.eval.EvalCase.Expect;
-import ua.bookloom.pipeline.eval.EvalCase.Fix;
 import ua.bookloom.pipeline.eval.EvalCase.Repair;
 import ua.bookloom.pipeline.eval.EvalCase.RepairStep;
-import ua.bookloom.pipeline.eval.EvalCase.Review;
 import ua.bookloom.pipeline.eval.EvalCase.Suggest;
 import ua.bookloom.pipeline.eval.EvalCase.SuggestedName;
 
 /**
  * The fixed English → Ukrainian case set: the shapes a real book sends a small model — dialogue with a locked name,
  * headings, number- and symbol-only paragraphs, drop caps, nested emphasis, footnote references, a kept foreign run,
- * glossary names, a long sentence and text that reads like an instruction to the model — plus review and directed-fix
+ * glossary names, a long sentence and text that reads like an instruction to the model — plus repair
  * cases, and one batch of the fixture book's names given suggested targets. A locked name or a kept run reaches the
  * model as one standalone token, as it does in a run.
  */
@@ -173,30 +169,6 @@ final class PromptEvalCases {
             // survive.
             new Draft("long-paragraph-medium", LONG_MEDIUM, List.of(), Expect.containing("17")),
             new Draft("long-paragraph-long", LONG_LONG, List.of(), Expect.containing("(?s)63.*61")),
-            new Fix(
-                    "fix-echo",
-                    "He opened the ⟦g0⟧old⟦g1⟧ door.",
-                    "He opened the ⟦g0⟧old⟦g1⟧ door.",
-                    List.of(new QaFinding("language", Severity.MEDIUM, "echo similarity 1.0 at or above 0.9", "echo")),
-                    Expect.containing("(?iu)стар")),
-            new Fix(
-                    "fix-missing-token",
-                    "She closed the ⟦g0⟧heavy⟦g1⟧ book and sighed.",
-                    "Вона закрила важку книгу і зітхнула.",
-                    List.of(new QaFinding("markup", Severity.HIGH, "missing ⟦g0⟧ ⟦g1⟧", "placeholder")),
-                    Expect.translate()),
-            new Fix(
-                    "fix-omission",
-                    "He left the house at dawn and walked to the river.",
-                    "Він вийшов з дому на світанку.",
-                    List.of(new QaFinding("omission", Severity.MEDIUM, "drops 'and walked to the river'", "reviewer")),
-                    Expect.containing("(?iu)річ")),
-            new Fix(
-                    "fix-refusal",
-                    "He opened the old door.",
-                    "He opened the old door.",
-                    List.of(new QaFinding("meaning", Severity.HIGH, "the reply refused the task", "refusal")),
-                    Expect.containing("(?iu)відчин")),
             new Repair(
                     "repair-placeholder",
                     RepairStep.PLACEHOLDER,
@@ -209,26 +181,6 @@ final class PromptEvalCases {
                     "He opened the old door.",
                     "{\"translation\": \"Він відчинив старі двері.\"}",
                     Expect.containing("(?iu)відчин")),
-            new Review(
-                    "review-door",
-                    "He opened the ⟦g0⟧old⟦g1⟧ door.",
-                    "Він відчинив ⟦g0⟧старі⟦g1⟧ двері.",
-                    "Він зачинив ⟦g0⟧нові⟦g1⟧ вікна."),
-            new Review(
-                    "review-omission",
-                    "She walked slowly to the harbour, where the ships were waiting in the fog.",
-                    "Вона повільно пішла до гавані, де в тумані чекали кораблі.",
-                    "Вона пішла."),
-            new Review(
-                    "review-untranslated",
-                    "The magician raised his staff and spoke a single word.",
-                    "Чарівник підняв свій посох і промовив одне-єдине слово.",
-                    "The magician raised his staff and spoke a single word."),
-            new Review(
-                    "review-meaning",
-                    "Nobody in the city had ever seen the djinni smile.",
-                    "Ніхто в місті ніколи не бачив, щоб джин усміхався.",
-                    "Усі в місті щодня бачили, як джин плаче."),
             new Suggest(
                     "suggest",
                     NamePolicy.TRANSLITERATE,

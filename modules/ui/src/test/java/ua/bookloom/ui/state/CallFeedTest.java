@@ -5,11 +5,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
+import ua.bookloom.api.pipeline.StepChanged;
+import ua.bookloom.api.pipeline.StepKind;
+import ua.bookloom.api.pipeline.StepResult;
+import ua.bookloom.api.pipeline.StepState;
+import ua.bookloom.api.pipeline.StepsPlanned;
 
 /** The model calls of a glossary scan or a setup proposal reach the busy card of that work. */
 class CallFeedTest {
@@ -100,5 +106,29 @@ class CallFeedTest {
         final LiveCalls shown = tracker.running().getFirst().calls();
         assertThat(shown.recent()).extracting(CallSnapshot::callId).containsExactly(1L, 2L, 3L);
         assertThat(shown.rows()).isEmpty();
+    }
+
+    // IF a call were tied to the step running when the screen next looked, THEN two calls in one flush would swap
+    // places; the feed ties each to the request announced just before it.
+    @Test
+    void accept_requestsInTheOrderAPassAnnouncesThem_tiesEachCallToItsRequest() {
+        final ActivityTracker.Handle handle = tracker.begin(ActivityKind.NAMES_PASS, null);
+        final CallFeed feed = new CallFeed(handle, () -> AT);
+
+        feed.accept(new StepsPlanned(StepKind.STAGE, 10, false));
+        feed.accept(request(0, StepState.STARTED));
+        feed.accept(new CallSnapshotUpdated(call(1, CallKind.NAME_KNOWLEDGE)));
+        feed.accept(request(0, StepState.ENDED));
+        feed.accept(request(1, StepState.STARTED));
+        feed.accept(new CallSnapshotUpdated(call(2, CallKind.NAME_KNOWLEDGE)));
+        feed.accept(new CallSnapshotUpdated(call(1, CallKind.NAME_KNOWLEDGE)));
+
+        assertThat(tracker.running().getFirst().calls().requestOf())
+                .containsExactlyInAnyOrderEntriesOf(Map.of(1L, "REQUEST:0", 2L, "REQUEST:1"));
+    }
+
+    private static StepChanged request(final int index, final StepState state) {
+        return new StepChanged(
+                StepKind.REQUEST, "names", index, state, null, state == StepState.ENDED ? StepResult.DONE : null);
     }
 }

@@ -40,7 +40,7 @@ class AddressFormsTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"en", "pl", "ru", "de", "xx"})
+    @ValueSource(strings = {"en", "pl", "de", "xx"})
     void forms_languageWithoutTheKeys_areEmpty(final String tag) {
         assertThat(AddressForms.informal(tag)).isEmpty();
         assertThat(AddressForms.formal(tag)).isEmpty();

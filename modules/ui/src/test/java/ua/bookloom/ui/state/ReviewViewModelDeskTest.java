@@ -100,8 +100,7 @@ class ReviewViewModelDeskTest extends ReviewViewModelTestBase {
                 .noneMatch(call -> call.startsWith("accept(")
                         || call.startsWith("saveEdit(")
                         || call.startsWith("revert(")
-                        || call.startsWith("retry(")
-                        || call.startsWith("skip("));
+                        || call.startsWith("retry("));
         assertThat(onFx(() -> review.rows().size())).isEqualTo(3);
         assertThat(onFx(() -> review.flaggedCount().get())).isEqualTo(3);
     }

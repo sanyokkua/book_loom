@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -21,9 +22,9 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
-import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.notify.Reporting;
 import ua.bookloom.ui.notify.ToastOccasion;
 import ua.bookloom.ui.notify.Toasts;
 
@@ -55,11 +56,13 @@ public final class TranslatingViewModel {
     private final TranslationRunner runner;
     private final CurrentProject current;
     private final SettingsViewModel settings;
+    private final RunSubject subject;
     private final RunStarter starter;
     private final Toasts toasts;
     private final ErrorPresenter errors;
     private final ReadOnlyBooleanWrapper preparing = new ReadOnlyBooleanWrapper(false);
     private final PendingCount pending;
+    private final BooleanBinding workRemains;
     private final ReadOnlyObjectWrapper<Controls> controls = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable RunNotice> notice = new ReadOnlyObjectWrapper<>();
     private final ObjectBinding<@Nullable ActivityKind> otherWork;
@@ -71,67 +74,69 @@ public final class TranslatingViewModel {
         }
     };
     private final ChangeListener<RunState> onRunState = (observed, was, now) -> onRunStateChanged(now);
-    private final ChangeListener<String> onModelText = (observed, was, now) -> onModelTextChanged();
-    private final ChangeListener<@Nullable OpenedBook> onOpenedBook = (observed, was, now) -> onBookChanged(now);
-    private final ChangeListener<@Nullable BookBrief> onBrief = (observed, was, now) -> onBriefChanged(now);
     private final ChangeListener<@Nullable AppError> onProviderError = (observed, was, now) -> onPausedOnError(now);
 
     /**
      * Registers the completion listener on the mirror and derives the first set of controls.
      *
-     * @param mirror the state every run publishes into and this view model observes
-     * @param runner the runner that owns the one active run
-     * @param current the open book a run is started on
-     * @param settings where the provider and model come from
-     * @param starter what builds a run on the open book and starts it
-     * @param toasts where a finished run is announced
-     * @param errors where a failure whose code is assigned the blocking dialog is shown
+     * @param run the state every run publishes into and this view model observes, and the runner that owns the one
+     *     active run
+     * @param subject the open book a run is started on, and where the provider and model come from
+     * @param launch what builds a run on the open book and starts it, and what a continued run asks about the model
+     *     before anything is prepared
+     * @param reporting where a finished run is announced, and where a failure whose code is assigned the blocking
+     *     dialog is shown
      * @param desk where the count of undecided segments is read
      * @param executor the daemon executor that read runs on, never the FX thread
      * @param activities the model work under way, which holds start and resume while it runs
-     * @param guard what a continued run asks about the model before anything is prepared
      */
     @Inject
     public TranslatingViewModel(
-            final StateMirror mirror,
-            final TranslationRunner runner,
-            final CurrentProject current,
-            final SettingsViewModel settings,
-            final RunStarter starter,
-            final Toasts toasts,
-            final ErrorPresenter errors,
+            final RunAccess run,
+            final RunSubject subject,
+            final RunLaunch launch,
+            final Reporting reporting,
             final ReviewDesk desk,
             @BackgroundExecutor final ExecutorService executor,
-            final ActivityTracker activities,
-            final ContinueGuard guard) {
-        this.guard = Objects.requireNonNull(guard, "guard");
-        this.mirror = Objects.requireNonNull(mirror, "mirror");
-        this.runner = Objects.requireNonNull(runner, "runner");
-        this.current = Objects.requireNonNull(current, "current");
-        this.settings = Objects.requireNonNull(settings, "settings");
-        this.starter = Objects.requireNonNull(starter, "starter");
-        this.toasts = Objects.requireNonNull(toasts, "toasts");
-        this.errors = Objects.requireNonNull(errors, "errors");
+            final ActivityTracker activities) {
+        this.guard = Objects.requireNonNull(launch, "launch").guard();
+        this.mirror = Objects.requireNonNull(run, "run").mirror();
+        this.runner = run.runner();
+        this.current = Objects.requireNonNull(subject, "subject").current();
+        this.settings = subject.settings();
+        this.subject = subject;
+        this.starter = launch.starter();
+        this.toasts = Objects.requireNonNull(reporting, "reporting").toasts();
+        this.errors = reporting.errors();
         this.pending = new PendingCount(desk, executor);
+        // A finished book still has work while segments are pending, its Proofread stage has windows left, or its code
+        // part has a renamed target to sweep or a deferral to settle.
+        this.workRemains = pending.remains()
+                .or(subject.proofread().tally().isNotNull())
+                .or(subject.proofread().codeWorkLeft());
         this.missingInputs = new MissingInputNotice(notice, current, settings);
         // The run's own registration is not other work: while it translates, start and resume are not offered anyway.
         final ObjectBinding<@Nullable ActivityKind> blocker = activities.blocker(ActivityKind.TRANSLATION);
         this.otherWork = Bindings.createObjectBinding(
                 () -> blocker.get() == ActivityKind.TRANSLATION ? null : blocker.get(), blocker);
         refreshControls();
+        follow();
+        missingInputs.briefChanged(current.brief().get());
+        log.debug("translating view model ready");
+    }
+
+    private void follow() {
         preparing.addListener((observed, was, now) -> refreshControls());
-        pending.remains().addListener((observed, was, now) -> refreshControls());
+        workRemains.addListener((observed, was, now) -> refreshControls());
         mirror.runState().addListener((observed, was, now) -> refreshControls());
         otherWork.addListener((observed, was, now) -> refreshControls());
         mirror.review().retryInFlight().addListener((observed, was, now) -> refreshControls());
         mirror.review().recovery().addListener(onRecovery);
         mirror.runState().addListener(onRunState);
-        settings.model().addListener(onModelText);
-        current.book().addListener(onOpenedBook);
-        current.brief().addListener(onBrief);
+        settings.model().addListener((observed, was, now) -> missingInputs.modelTextChanged());
+        current.book().addListener((observed, was, now) -> missingInputs.bookChanged(now));
+        current.brief().addListener((observed, was, now) -> missingInputs.briefChanged(now));
         mirror.review().providerError().addListener(onProviderError);
-        missingInputs.briefChanged(current.brief().get());
-        log.debug("translating view model ready");
     }
 
     /**
@@ -222,6 +227,15 @@ public final class TranslatingViewModel {
     }
 
     /**
+     * What the run is started on, so the ready card can follow the chosen model's quant chip.
+     *
+     * @return the open book, the settings and the chip
+     */
+    public RunSubject subject() {
+        return subject;
+    }
+
+    /**
      * Starts a run from the brief and the chosen model, if the state allows it. Returns at once; the run is prepared in
      * the background and appears through the mirror. A start with no book or no model starts nothing and publishes a
      * notice naming the first of them that is missing. FX thread only.
@@ -268,18 +282,6 @@ public final class TranslatingViewModel {
         }
     }
 
-    private void onModelTextChanged() {
-        missingInputs.modelTextChanged();
-    }
-
-    private void onBookChanged(final @Nullable OpenedBook book) {
-        missingInputs.bookChanged(book);
-    }
-
-    private void onBriefChanged(final @Nullable BookBrief brief) {
-        missingInputs.briefChanged(brief);
-    }
-
     private boolean offered(final String control, final ControlState state) {
         final boolean enabled = state.isEnabled();
         log.debug(
@@ -303,17 +305,28 @@ public final class TranslatingViewModel {
 
     private void launch(final ModelSelection model, final boolean announce) {
         log.debug("launching the run with {}/{}", model.providerId(), model.modelId());
-        starter.start(model, failure -> finishPreparing(failure, announce));
+        starter.start(model, prepared -> finishPreparing(prepared, announce));
     }
 
-    /** Clears the busy flag on the FX thread, then routes the failure, if any, to the surface its code is assigned. */
-    private void finishPreparing(final @Nullable AppError failure, final boolean announce) {
+    /**
+     * Clears the busy flag on the FX thread, then routes the failure, if any, to the surface its code is assigned; a
+     * started run on a model the server loads with its own settings says so, without stopping anything.
+     */
+    private void finishPreparing(final RunStarter.Prepared prepared, final boolean announce) {
         Platform.runLater(() -> {
             preparing.set(false);
+            final AppError failure = prepared.failure();
             if (failure != null) {
                 route(failure);
-            } else if (announce) {
+                return;
+            }
+            if (announce) {
                 toasts.raise(ToastOccasion.RUN_STARTED);
+            }
+            log.debug(
+                    "run started: the model loads with the server's own settings {}", prepared.loadsWithOwnSettings());
+            if (prepared.loadsWithOwnSettings()) {
+                toasts.raise(ToastOccasion.MODEL_LOADS_OWN_SETTINGS);
             }
         });
     }
@@ -341,15 +354,15 @@ public final class TranslatingViewModel {
         final Controls table = state == RunState.PAUSED
                         && RecoveryState.waits(mirror.review().recovery().get())
                 ? Controls.waitingForProvider()
-                : Controls.of(state, preparing.get(), pending.remains().get());
+                : Controls.of(state, preparing.get(), workRemains.get());
         final boolean held =
                 otherWork.get() != null || mirror.review().retryInFlight().get();
         final Controls next = held ? table.heldByOtherWork() : table;
         log.debug(
-                "controls for state {} preparing {} pending remain {} other work {}: {}",
+                "controls for state {} preparing {} work remains {} other work {}: {}",
                 state,
                 preparing.get(),
-                pending.remains().get(),
+                workRemains.get(),
                 otherWork.get(),
                 next);
         controls.set(next);

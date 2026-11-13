@@ -1,6 +1,7 @@
 package ua.bookloom.ui.screen;
 
 import com.google.inject.Inject;
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -32,6 +33,7 @@ import ua.bookloom.ui.dialog.ConfirmPrompt;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.notify.Reporting;
 import ua.bookloom.ui.notify.ToastOccasion;
 import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.state.CurrentProject;
@@ -97,47 +99,39 @@ public final class ImportController {
     /**
      * Receives the collaborators the injector owns.
      *
-     * @param viewModel the state this screen shows
-     * @param guard what a chosen file goes through before it is opened, so a translation that can continue is not
-     *     replaced unasked
-     * @param messages the catalogue the built parts are worded from
-     * @param navigator where Continue leads
+     * @param parts the state this screen shows, what a chosen file goes through before it is opened, and the fold and
+     *     the text browser shown under the verdict of an open book
+     * @param context the open book, whose structure the screen shows beside its details, the catalogue the built parts
+     *     are worded from, and where Continue leads
      * @param confirm the question asked before Cancel drops a project that holds work
      * @param progress the steps already done, which tell whether the project holds work
      * @param mirror the run's state, since a run that began is work too
-     * @param project the open book, whose structure the screen shows beside its details
-     * @param bookView the fold and the text browser shown under the verdict of an open book
-     * @param errors where a damaged file's Details shows the typed reason
      * @param projectsView the Projects list, searched for the book that is already stored
-     * @param toasts where a dropped folder is refused at once
+     * @param reporting where a damaged file's Details shows the typed reason, and where a dropped folder is refused at
+     *     once
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
     @Inject
     public ImportController(
-            final ImportViewModel viewModel,
-            final ImportGuard guard,
-            final Messages messages,
-            final Navigator navigator,
+            final ImportParts parts,
+            final ScreenContext context,
             final ConfirmPrompt confirm,
             final WorkflowProgress progress,
             final StateMirror mirror,
-            final CurrentProject project,
-            final ImportBookView bookView,
-            final ErrorPresenter errors,
             final ProjectsViewModel projectsView,
-            final Toasts toasts) {
-        this.toasts = Objects.requireNonNull(toasts, "toasts");
+            final Reporting reporting) {
+        this.toasts = Objects.requireNonNull(reporting, "reporting").toasts();
         this.confirm = Objects.requireNonNull(confirm, "confirm");
         this.progress = Objects.requireNonNull(progress, "progress");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
-        this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
-        this.guard = Objects.requireNonNull(guard, "guard");
-        this.messages = Objects.requireNonNull(messages, "messages");
-        this.navigator = Objects.requireNonNull(navigator, "navigator");
-        this.project = Objects.requireNonNull(project, "project");
-        this.bookView = Objects.requireNonNull(bookView, "bookView");
-        this.errors = Objects.requireNonNull(errors, "errors");
+        this.viewModel = Objects.requireNonNull(parts, "parts").viewModel();
+        this.guard = parts.guard();
+        this.messages = Objects.requireNonNull(context, "context").messages();
+        this.navigator = context.navigator();
+        this.project = context.project();
+        this.bookView = parts.bookView();
+        this.errors = reporting.errors();
         this.projectsView = Objects.requireNonNull(projectsView, "projectsView");
         this.verdictView = new ImportVerdictView(
                 messages,
@@ -215,7 +209,7 @@ public final class ImportController {
         markDropzone(false);
         if (droppable) {
             // java.io.File appears only here, where the Dragboard hands it over; it becomes a Path at once.
-            openDropped(board.getFiles().stream().map(file -> file.toPath()).toList());
+            openDropped(board.getFiles().stream().map(File::toPath).toList());
         }
         event.setDropCompleted(droppable);
         event.consume();
@@ -279,9 +273,9 @@ public final class ImportController {
     }
 
     private void showDetails() {
-        if (viewModel.state().get() instanceof ImportState.Refused refused) {
-            log.debug("details of the refusal of {} requested", refused.fileName());
-            errors.present(refused.error());
+        if (viewModel.state().get() instanceof ImportState.Refused(var fileName, var error)) {
+            log.debug("details of the refusal of {} requested", fileName);
+            errors.present(error);
         }
     }
 

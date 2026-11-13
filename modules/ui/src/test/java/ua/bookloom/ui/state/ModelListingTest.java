@@ -295,7 +295,7 @@ class ModelListingTest extends SettingsViewModelTestBase {
     // IF an answer that was in flight when the listing was discarded were still published, THEN the discarded list
     // would come back.
     @Test
-    void discard_answerInFlight_isDroppedWithNoNote() throws InterruptedException, TimeoutException {
+    void discard_answerInFlight_isDroppedWithNoNote() throws InterruptedException {
         catalog = ScriptedModelCatalog.gated("stale-model");
         final CountingPool pool = useCountingPool();
         final ModelListing listing = newModelListing();

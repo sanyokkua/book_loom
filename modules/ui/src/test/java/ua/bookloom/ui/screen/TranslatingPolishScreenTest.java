@@ -52,12 +52,12 @@ class TranslatingPolishScreenTest extends TranslatingScreenTestBase {
         final LiveRow row = new LiveRow("s-1-1", "ch7 · p101", "Text.", null, Stage.IN_CALL, null, List.of(), callId);
         showLive(LiveRowFixtures.calls(
                 LiveCallFixtures.waiting(callId, 2, "Text.", LiveCallFixtures.smallPrompt()), List.of(row)));
-        onFx(() -> ((ToggleButton) required("translating-live-mode-detailed")).fire());
+        onFx(((ToggleButton) required("translating-live-mode-detailed"))::fire);
         WaitForAsyncUtils.waitForFxEvents();
     }
 
     private boolean isExpanded(final String id) {
-        return ThemeTestSupport.onFx(() -> ((TitledPane) required(id)).isExpanded());
+        return ThemeTestSupport.onFx(((TitledPane) required(id))::isExpanded);
     }
 
     // IF the prompt the person opened closed itself whenever they looked at another step, THEN they would have to

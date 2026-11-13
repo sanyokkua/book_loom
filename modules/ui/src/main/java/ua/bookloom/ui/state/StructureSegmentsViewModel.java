@@ -159,7 +159,7 @@ public final class StructureSegmentsViewModel {
                 log.debug("unit {} holds {} segment(s); listing {}", part.unitId(), all.size(), part);
                 chunks += append(rows, part.of(all));
             }
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             log.error("the project service threw instead of returning the segments", thrown);
             return new StructureSegments.Failed(ErrorCode.internal);
         }

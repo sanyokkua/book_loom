@@ -242,8 +242,8 @@ class EpubWriterTest {
         final Document unopened = new Document(
                 "never-registered", BookFormat.EPUB, null, null, null, null, "deadbeef", Map.of(), List.of());
 
-        assertThatThrownBy(() -> writer.write(unopened, tempDir.resolve("out.epub"), "uk"))
-                .isInstanceOf(DocumentNotOpenException.class);
+        final var arg1 = tempDir.resolve("out.epub");
+        assertThatThrownBy(() -> writer.write(unopened, arg1, "uk")).isInstanceOf(DocumentNotOpenException.class);
     }
 
     private static Document withSegmentTargets(Document document, Map<Integer, String> targetsByOrder) {
@@ -340,8 +340,8 @@ class EpubWriterTest {
         final StringBuilder spine = new StringBuilder();
         for (int i = 1; i <= chapterCount; i++) {
             manifest.append(
-                    "<item id=\"c0%d\" href=\"c0%d.xhtml\" media-type=\"application/xhtml+xml\"/>\n".formatted(i, i));
-            spine.append("<itemref idref=\"c0%d\"/>\n".formatted(i));
+                    "<item id=\"c0%d\" href=\"c0%d.xhtml\" media-type=\"application/xhtml+xml\"/>%n".formatted(i, i));
+            spine.append("<itemref idref=\"c0%d\"/>%n".formatted(i));
         }
         return """
                 <?xml version="1.0" encoding="UTF-8"?>

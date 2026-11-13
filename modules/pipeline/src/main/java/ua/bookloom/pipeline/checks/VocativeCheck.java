@@ -39,18 +39,11 @@ final class VocativeCheck {
         final AlternationGuard guard = AlternationGuard.over(target, renderingsOf(glossaryPairs));
         for (final String pair : glossaryPairs) {
             final int at = pair.indexOf(ARROW);
-            if (at <= 0) {
-                continue;
-            }
-            final String term = pair.substring(0, at).strip();
-            final String rendering = pair.substring(at + ARROW.length()).strip();
-            if (!isName(term)
-                    || KeyTermScan.isTitle(term, sourceLanguage)
-                    || rendering.isEmpty()
-                    || !isCalledOut(source, term)) {
-                continue;
-            }
-            if (!guard.holds(term, rendering, source, alternations)) {
+            final String term = at <= 0 ? "" : pair.substring(0, at).strip();
+            final String rendering =
+                    at <= 0 ? "" : pair.substring(at + ARROW.length()).strip();
+            if (isCalledOutName(term, rendering, source, sourceLanguage)
+                    && !guard.holds(term, rendering, source, alternations)) {
                 log.debug("Vocative check: a called-out name is missing from the target");
                 found.add(new CheckFinding(
                         FindingKind.VOCATIVE_MISSING,
@@ -63,9 +56,18 @@ final class VocativeCheck {
         return found;
     }
 
+    // A pair with no arrow gives an empty term, which is no name.
+    private static boolean isCalledOutName(
+            final String term, final String rendering, final String source, @Nullable final String sourceLanguage) {
+        return isName(term)
+                && !KeyTermScan.isTitle(term, sourceLanguage)
+                && !rendering.isEmpty()
+                && isCalledOut(source, term);
+    }
+
     private static List<String> renderingsOf(final List<String> glossaryPairs) {
         return glossaryPairs.stream()
-                .filter(pair -> pair.indexOf(ARROW) > 0)
+                .filter(pair -> pair.indexOf(ARROW) >= 1)
                 .map(pair ->
                         pair.substring(pair.indexOf(ARROW) + ARROW.length()).strip())
                 .toList();

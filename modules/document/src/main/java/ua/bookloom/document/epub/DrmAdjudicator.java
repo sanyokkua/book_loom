@@ -114,7 +114,7 @@ final class DrmAdjudicator {
                 }
             }
             return false;
-        } catch (DrmRefusedException malformedManifest) {
+        } catch (DrmRefusedException _) {
             return true;
         }
     }
@@ -148,7 +148,7 @@ final class DrmAdjudicator {
                             .build(new ByteArrayInputStream(xmlContent))
                             .getRootElement(),
                     ns);
-        } catch (JDOMException | IOException malformed) {
+        } catch (JDOMException | IOException _) {
             return false;
         }
     }
@@ -245,7 +245,7 @@ final class DrmAdjudicator {
         try {
             decoded.write(Integer.parseInt(path.substring(index + 1, index + PERCENT_ESCAPE_LENGTH), HEX_RADIX));
             return index + PERCENT_ESCAPE_LENGTH;
-        } catch (NumberFormatException malformedEscape) {
+        } catch (NumberFormatException _) {
             decoded.write('%');
             return index + 1;
         }

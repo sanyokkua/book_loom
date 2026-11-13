@@ -134,7 +134,7 @@ Source: FR-DOC-MD-4 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-05
 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), EC-MD-1
 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), DD-43
 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-43-canonical-round-trip`), ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`).
+(`docs/spec_baseline/adr/ADR-0031-masked-text-is-character-data.md`).
 
 #### Scenario: Link delimiters cannot be detached from their label
 

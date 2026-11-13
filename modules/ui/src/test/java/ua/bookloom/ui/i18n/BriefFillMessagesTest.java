@@ -32,7 +32,7 @@ class BriefFillMessagesTest {
                 Arguments.of(MessageKey.BRIEF_STEPS_GROUP, "uk", "Кроки"),
                 Arguments.of(MessageKey.BRIEF_DECIDES_NO_QUOTE, "en", "no quote — not used"),
                 Arguments.of(MessageKey.BRIEF_DECIDES_READERS, "en", "Who reads it · voice"),
-                Arguments.of(MessageKey.BRIEF_STEP_SYNTHESIS, "en", "Decide genre, readers and voice"),
+                Arguments.of(MessageKey.BRIEF_STEP_SYNTHESIS, "en", "Decide genre, readers, voice and story shape"),
                 Arguments.of(MessageKey.BRIEF_STEP_KNOWLEDGE, "en", "What the model knows about the book"),
                 Arguments.of(
                         MessageKey.BRIEF_DIALOG_WRITES_NOTHING,
@@ -40,9 +40,26 @@ class BriefFillMessagesTest {
                         "Nothing is written to the brief until you apply it."));
     }
 
+    static Stream<Arguments> storyShapeWords() {
+        return Stream.of(
+                Arguments.of(MessageKey.BRIEF_DECIDES_STORY_SHAPE, "en", "Story shape"),
+                Arguments.of(MessageKey.BRIEF_DECIDES_STORY_SHAPE, "uk", "Будова книги"),
+                Arguments.of(MessageKey.BRIEF_STORY_SHAPE_ONE, "en", "One story"),
+                Arguments.of(MessageKey.BRIEF_STORY_SHAPE_ONE, "uk", "Одна історія"),
+                Arguments.of(MessageKey.BRIEF_STORY_SHAPE_SEPARATE, "en", "Separate stories"),
+                Arguments.of(MessageKey.BRIEF_STORY_SHAPE_SEPARATE, "uk", "Окремі історії"),
+                Arguments.of(MessageKey.BRIEF_SUMMARIES, "en", "Chapter summaries"),
+                Arguments.of(MessageKey.BRIEF_SUMMARIES, "uk", "Підсумки розділів"),
+                Arguments.of(
+                        MessageKey.BRIEF_SUMMARIES_SUGGESTED_ON, "en", "Suggested: on — the chapters tell one story"),
+                Arguments.of(MessageKey.BRIEF_SUMMARIES_SUGGESTED_OFF, "en", "Suggested: off — separate stories"),
+                Arguments.of(
+                        MessageKey.BRIEF_SUMMARIES_SUGGESTED_OFF, "uk", "Пропонується: вимкнено — окремі історії"));
+    }
+
     // IF a word of the new surfaces were missing in one language, THEN that session would show a bare key.
     @ParameterizedTest(name = "{0} in {1}")
-    @MethodSource("plainWords")
+    @MethodSource({"plainWords", "storyShapeWords"})
     void get_newBriefWords_readAsAgreedInEachLanguage(final MessageKey key, final String tag, final String expected) {
         assertThat(messagesFor(tag).get(key)).isEqualTo(expected);
     }
@@ -73,6 +90,21 @@ class BriefFillMessagesTest {
     void get_agreement_followsThePluralRulesOfTheLanguage(
             final String tag, final int agreeing, final int samples, final String expected) {
         assertThat(messagesFor(tag).get(MessageKey.BRIEF_DECIDES_AGREE, agreeing, samples))
+                .isEqualTo(expected);
+    }
+
+    // IF the count ignored the plural, THEN "3 завершених розділів" would read wrong to a Ukrainian reader.
+    @ParameterizedTest(name = "{0}: {1}")
+    @CsvSource({
+        "en, 1, 1 finished chapter will be summarised before the next passage.",
+        "en, 12, 12 finished chapters will be summarised before the next passage.",
+        "uk, 1, 1 завершений розділ буде підсумовано перед наступним уривком.",
+        "uk, 3, 3 завершені розділи буде підсумовано перед наступним уривком.",
+        "uk, 5, 5 завершених розділів буде підсумовано перед наступним уривком.",
+        "uk, 21, 21 завершений розділ буде підсумовано перед наступним уривком."
+    })
+    void summariesPending_ukPlurals(final String tag, final int chapters, final String expected) {
+        assertThat(messagesFor(tag).get(MessageKey.BRIEF_SUMMARIES_PENDING, chapters))
                 .isEqualTo(expected);
     }
 }

@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
+import ua.bookloom.util.text.Edges;
 
 /**
  * What one brief suggestion call reads: one contiguous window of the book's story, and the share of its letters that
@@ -30,7 +31,7 @@ record BookSample(
     private static final Pattern SPACES = Pattern.compile("\\s+");
     private static final Pattern LINES = Pattern.compile("\\R");
     private static final Pattern ELISION = Pattern.compile("\\.\\.\\.|…");
-    private static final Pattern EDGES = Pattern.compile("^[\\s\"'.,;:!?-]+|[\\s\"'.,;:!?-]+$");
+    private static final String EDGE_CHARACTERS = " \t\n\u000B\f\r\"'.,;:!?-";
     private static final int MAX_PERCENT = 100;
     private static final String PASSAGE_LABEL = "Passage 1: ";
 
@@ -104,7 +105,7 @@ record BookSample(
         int from = 0;
         boolean anyPart = false;
         for (final String raw : ELISION.splitAsStream(quote).toList()) {
-            final String part = EDGES.matcher(normalized(raw)).replaceAll("");
+            final String part = Edges.strip(normalized(raw), EDGE_CHARACTERS);
             if (part.codePoints().noneMatch(Character::isLetter)) {
                 continue;
             }

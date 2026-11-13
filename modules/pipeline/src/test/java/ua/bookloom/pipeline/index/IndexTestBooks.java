@@ -12,6 +12,7 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.SkeletonHandle;
+import ua.bookloom.api.document.StructureNode;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.document.UnitRole;
 
@@ -36,6 +37,14 @@ public final class IndexTestBooks {
     /** A document declared English holding the units in the given reading order. */
     public static Document document(final Unit... units) {
         return new Document("invented", BookFormat.EPUB, "en", null, null, null, "hash", Map.of(), List.of(units));
+    }
+
+    /** A navigation that lists every unit whole, in reading order, the way a book with one file per chapter does. */
+    public static List<StructureNode> navigation(final Document document) {
+        return document.units().stream()
+                .map(unit ->
+                        new StructureNode(unit.id(), unit.id(), unit.segments().size(), List.of()))
+                .toList();
     }
 
     /** A document of one body unit of paragraphs. */

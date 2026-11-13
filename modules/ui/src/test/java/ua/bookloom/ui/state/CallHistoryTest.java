@@ -9,6 +9,8 @@ import java.util.stream.LongStream;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallSnapshot;
+import ua.bookloom.api.pipeline.CallState;
+import ua.bookloom.api.pipeline.StepResult;
 import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -28,7 +30,7 @@ class CallHistoryTest {
         final List<CallSnapshot> calls =
                 LongStream.rangeClosed(71, 120).mapToObj(CallHistoryTest::call).toList();
 
-        final ProgressDialogModel model = CallHistory.modelOf(calls, NOW, MESSAGES);
+        final ProgressDialogModel model = CallHistory.modelOf(calls, NOW, MESSAGES, ProgressDialogModel.Mode.SIMPLE);
 
         assertThat(model.rows()).hasSize(50);
         assertThat(model.rows().get(0).label()).isEqualTo("Translate");
@@ -39,22 +41,44 @@ class CallHistoryTest {
                 .isEqualTo("reply 120");
     }
 
-    // IF a row showed the pipeline's prompt name (draft-batch-json, placeholder-repair), THEN the person would read a
+    // IF a row showed the pipeline's prompt name (draft-batch-json, repair), THEN the person would read a
     // machine code where the live card says what the call did.
     @Test
     void modelOf_callsWithPromptNamesAsLabels_namesEachRowByItsKindInWords() {
         final CallSnapshot batch = ChunkFixtures.draft(1, CallKind.DRAFT, 1, 2).answered("{}", null, Duration.ZERO);
-        final CallSnapshot repair =
-                ChunkFixtures.draft(2, CallKind.PLACEHOLDER_REPAIR, 1).answered("{}", null, Duration.ZERO);
+        final CallSnapshot repair = ChunkFixtures.draft(2, CallKind.REPAIR, 1).answered("{}", null, Duration.ZERO);
 
-        final ProgressDialogModel model = CallHistory.modelOf(List.of(batch, repair), NOW, MESSAGES);
+        final ProgressDialogModel model =
+                CallHistory.modelOf(List.of(batch, repair), NOW, MESSAGES, ProgressDialogModel.Mode.SIMPLE);
 
-        assertThat(model.rows()).extracting(StepEntry::label).containsExactly("Translate", "Placeholder repair");
+        assertThat(model.rows()).extracting(StepEntry::label).containsExactly("Translate", "Repair");
+    }
+
+    // IF a call cut off by Stop read as failed, THEN the person would see an error where they pressed Stop.
+    @Test
+    void modelOf_callCutOffByStop_endsAsStoppedNotFailed() {
+        final CallSnapshot cut = ChunkFixtures.draft(1, CallKind.DRAFT, 1).ended(CallState.CANCELLED, Duration.ZERO);
+
+        final ProgressDialogModel model =
+                CallHistory.modelOf(List.of(cut), NOW, MESSAGES, ProgressDialogModel.Mode.SIMPLE);
+
+        assertThat(model.rows()).extracting(StepEntry::result).containsExactly(StepResult.STOPPED);
     }
 
     // IF a run with no call opened a dialog with a phantom row, THEN the list would show a call that never happened.
     @Test
     void modelOf_noCalls_hasNoSteps() {
-        assertThat(CallHistory.modelOf(List.of(), NOW, MESSAGES).rows()).isEmpty();
+        assertThat(CallHistory.modelOf(List.of(), NOW, MESSAGES, ProgressDialogModel.Mode.SIMPLE)
+                        .rows())
+                .isEmpty();
+    }
+
+    // IF the calls dialog ignored "Show technical details", THEN a person who asked for them would open it in Simple.
+    @Test
+    void modelOf_detailedAsked_opensInDetailed() {
+        final ProgressDialogModel model =
+                CallHistory.modelOf(List.of(call(1)), NOW, MESSAGES, ProgressDialogModel.Mode.DETAILED);
+
+        assertThat(model.mode().get()).isEqualTo(ProgressDialogModel.Mode.DETAILED);
     }
 }

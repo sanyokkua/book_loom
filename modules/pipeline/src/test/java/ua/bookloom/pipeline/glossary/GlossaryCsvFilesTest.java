@@ -27,7 +27,7 @@ import ua.bookloom.persistence.InMemoryPersistenceModule;
 class GlossaryCsvFilesTest {
 
     private static final GlossaryEntry MILTON =
-            new GlossaryEntry("p1:milton", PROJECT, "Milton", "Мілтон", TermType.PLACE, Gender.UNKNOWN, false);
+            GlossaryEntry.of("p1:milton", PROJECT, "Milton", "Мілтон", TermType.PLACE, Gender.UNKNOWN, false);
 
     @TempDir
     private Path dir;

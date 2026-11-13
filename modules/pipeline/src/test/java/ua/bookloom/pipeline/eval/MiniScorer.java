@@ -11,12 +11,13 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.checks.GenderChecks;
 import ua.bookloom.pipeline.eval.MiniExpectations.CheckKind;
+import ua.bookloom.pipeline.eval.MiniExpectations.CheckKind.Level;
 import ua.bookloom.pipeline.eval.MiniExpectations.Expectation;
 import ua.bookloom.pipeline.eval.MiniExpectations.GlossaryExpectation;
 import ua.bookloom.pipeline.eval.MiniRun.Outcome;
@@ -31,7 +32,7 @@ import ua.bookloom.pipeline.eval.MiniRun.Outcome;
 final class MiniScorer {
 
     /** What one check found: nothing to report when it holds, else why not. */
-    private record Verdict(boolean ok, String detail) {
+    record Verdict(boolean ok, String detail) {
 
         static Verdict pass(final String detail) {
             return new Verdict(true, detail);
@@ -43,6 +44,8 @@ final class MiniScorer {
     }
 
     private static final String NARRATOR_RULES = "uk";
+    private static final char STRESS_MARK = '\u0301';
+    private static final Pattern TOKEN = Pattern.compile("⟦[^⟧]*⟧");
     private static final Pattern LATIN_WORD = Pattern.compile("\\p{IsLatin}{2,}");
     private static final Pattern LATIN_LETTER = Pattern.compile("\\p{IsLatin}");
     private static final Pattern CYRILLIC_LETTER = Pattern.compile("\\p{IsCyrillic}");
@@ -77,11 +80,11 @@ final class MiniScorer {
                 .forEach(results::add);
         expectations.segments().stream()
                 .filter(e -> applies(e.policies(), run.policy()))
-                .map(e -> result(e.id(), e.defect(), segment(e, run)))
+                .map(e -> segmentResult(e, run))
                 .forEach(results::add);
         expectations.glossary().stream()
                 .filter(e -> applies(e.policies(), run.policy()))
-                .map(e -> result(e.id(), e.defect(), glossary(e, run)))
+                .map(e -> result(e.id(), e.defect(), Level.SOFT, glossary(e, run), List.of(), List.of()))
                 .forEach(results::add);
         return List.copyOf(results);
     }
@@ -90,9 +93,29 @@ final class MiniScorer {
         return policies.isEmpty() || policies.contains(policy);
     }
 
-    private static MiniResult result(final String id, final String defect, final Verdict verdict) {
+    private static MiniResult result(
+            final String id,
+            final String defect,
+            final Level level,
+            final Verdict verdict,
+            final List<String> blocks,
+            final List<String> failing) {
         log.debug("Mini expectation {} passed={} {}", id, verdict.ok(), verdict.detail());
-        return new MiniResult(id, defect, verdict.ok(), verdict.detail());
+        return new MiniResult(id, defect, verdict.ok(), verdict.detail(), level, blocks, failing);
+    }
+
+    private static MiniResult segmentResult(final Expectation expectation, final MiniRun run) {
+        final Verdict verdict = segment(expectation, run);
+        final List<String> blocks = MiniGraders.isRunLevel(expectation.check())
+                ? List.of()
+                : expectation.segment() == null ? expectation.group() : List.of(expectation.segment());
+        return result(
+                expectation.id(),
+                expectation.defect(),
+                expectation.check().level(),
+                verdict,
+                blocks,
+                verdict.ok() ? List.of() : blocks);
     }
 
     private static MiniResult everyBlock(final Expectation expectation, final MiniRun run) {
@@ -106,10 +129,19 @@ final class MiniScorer {
         final String detail = failing.isEmpty()
                 ? "all " + run.outcomes().size() + " segments"
                 : "failing: " + String.join(", ", failing);
-        return result(expectation.id(), expectation.defect(), new Verdict(covered && failing.isEmpty(), detail));
+        return result(
+                expectation.id(),
+                expectation.defect(),
+                expectation.check().level(),
+                new Verdict(covered && failing.isEmpty(), detail),
+                List.copyOf(run.outcomes().keySet()),
+                failing);
     }
 
     private static Verdict segment(final Expectation expectation, final MiniRun run) {
+        if (MiniGraders.isGlossaryLevel(expectation.check())) {
+            return MiniGraders.glossary(expectation, run.glossary());
+        }
         final List<String> ids = expectation.segment() == null ? expectation.group() : List.of(expectation.segment());
         final List<Outcome> outcomes =
                 ids.stream().map(run.outcomes()::get).filter(Objects::nonNull).toList();
@@ -131,6 +163,11 @@ final class MiniScorer {
         if (first.target() == null) {
             return Verdict.fail("no target stored");
         }
+        return grade(expectation, outcomes, joined);
+    }
+
+    private static Verdict grade(final Expectation expectation, final List<Outcome> outcomes, final String joined) {
+        final Outcome first = outcomes.get(0);
         return switch (expectation.check()) {
             case NO_LATIN_EXCEPT -> noLatin(joined, expectation.args());
             case NO_RUSSIAN_LETTERS -> noRussianLetters(joined);
@@ -140,6 +177,21 @@ final class MiniScorer {
             case MIN_RATIO ->
                 minRatio(first, Double.parseDouble(expectation.args().get(0)));
             case ADDRESS_SAME -> addressSame(joined);
+            case NO_STRESS_MARK -> noStressMark(joined);
+            case HEADING_NUMBER -> headingNumber(joined, expectation.args().get(0));
+            case NEGATION_KEPT -> negationKept(joined, expectation.args());
+            case NUMBERS_KEPT -> numbersKept(joined, expectation.args());
+            case PLACEHOLDERS -> placeholders(joined, expectation.args());
+            case TARGET_ALPHABET -> MiniGraders.targetAlphabet(joined, expectation.args());
+            case FOREIGN_SCRIPT -> MiniGraders.foreignScript(joined);
+            case NO_SOURCE_LINE -> MiniGraders.noSourceLine(first.source(), Objects.requireNonNull(first.target()));
+            case SOURCE_ONLY_WORDS -> MiniGraders.sourceOnlyWords(joined, expectation.args());
+            case DIALOGUE_DASH -> MiniGraders.dialogueDash(first.source(), Objects.requireNonNull(first.target()));
+            case VOCATIVE -> MiniGraders.vocative(joined, expectation.args());
+            case NARRATOR_GENDER -> MiniGraders.narratorGender(joined, expectation.args());
+            case ONE_SPELLING_PER_LEMMA -> MiniGraders.oneSpelling(joined, expectation.args());
+            case GLOSSARY_ONE_ENTRY, GLOSSARY_GENDER -> throw new IllegalStateException("glossary level");
+            case WINDOW_INJECTION, PROOFREAD_NEVER_WORSE -> throw new IllegalStateException("run level");
             case NOT_FLAGGED, NO_FINDING -> throw new IllegalStateException("handled above");
         };
     }
@@ -202,6 +254,42 @@ final class MiniScorer {
                 : Verdict.fail("%.2f of the source, wanted %.2f".formatted(actual, ratio));
     }
 
+    private static Verdict noStressMark(final String target) {
+        return target.indexOf(STRESS_MARK) < 0 ? Verdict.pass("none") : Verdict.fail("stress mark U+0301 in target");
+    }
+
+    private static Verdict headingNumber(final String target, final String number) {
+        return target.strip().startsWith(number)
+                ? Verdict.pass("starts with " + number)
+                : Verdict.fail("does not start with " + number);
+    }
+
+    private static Verdict negationKept(final String target, final List<String> args) {
+        final int wanted = Integer.parseInt(args.get(1));
+        final Pattern word = Pattern.compile(
+                "(?<![\\p{L}])" + Pattern.quote(args.get(0)) + "(?![\\p{L}])",
+                Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+        final long found = word.matcher(target).results().count();
+        return found >= wanted
+                ? Verdict.pass(found + " x " + args.get(0))
+                : Verdict.fail(found + " x " + args.get(0) + ", wanted " + wanted);
+    }
+
+    private static Verdict numbersKept(final String target, final List<String> figures) {
+        final List<String> missing =
+                figures.stream().filter(f -> !target.contains(f)).toList();
+        return missing.isEmpty() ? Verdict.pass("all figures kept") : Verdict.fail("figures lost: " + missing);
+    }
+
+    private static Verdict placeholders(final String target, final List<String> tokens) {
+        final List<String> found =
+                TOKEN.matcher(target).results().map(m -> m.group()).sorted().toList();
+        final List<String> wanted = tokens.stream().sorted().toList();
+        return found.equals(wanted)
+                ? Verdict.pass("tokens " + wanted)
+                : Verdict.fail("tokens " + found + ", wanted " + wanted);
+    }
+
     private static Verdict addressSame(final String targets) {
         final boolean informal = INFORMAL.matcher(targets).find();
         final boolean formal = FORMAL.matcher(targets).find();
@@ -229,7 +317,7 @@ final class MiniScorer {
             final GlossaryExpectation expectation, final List<GlossaryEntry> glossary) {
         return expectation.terms().stream()
                 .flatMap(term -> glossary.stream()
-                        .filter(e -> e.term().equals(term) || e.aliases().contains(term)))
+                        .filter(e -> e.term().equals(term) || e.forms().contains(term)))
                 .findFirst();
     }
 
@@ -288,7 +376,7 @@ final class MiniScorer {
     }
 
     private static boolean isSettled(final GlossaryEntry entry) {
-        return entry.gender() != Gender.UNKNOWN && entry.genderOrigin() != GenderOrigin.SUGGESTED;
+        return entry.gender() != Gender.UNKNOWN && entry.genderOrigin() != Origin.LIKELY;
     }
 
     private static boolean isCyrillic(final String target) {

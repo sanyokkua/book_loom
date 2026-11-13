@@ -4,24 +4,28 @@ import com.google.inject.Singleton;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.UnaryOperator;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.project.ChapterSummary;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.ExportRecord;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.Project;
-import ua.bookloom.api.project.RollingSummary;
+import ua.bookloom.api.project.PromptFrame;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TmEntry;
+import ua.bookloom.persistence.GlossaryIndex;
 import ua.bookloom.util.text.GlossaryKeys;
 
 /**
@@ -45,12 +49,13 @@ final class InMemoryStore {
     private final Map<String, ProjectSegments> segmentsByProject = new ConcurrentHashMap<>();
     private final Map<String, ProjectGlossary> glossaryByProject = new ConcurrentHashMap<>();
     private final Map<String, Map<String, TmEntry>> tmByProject = new ConcurrentHashMap<>();
-    private final Map<String, RollingSummary> summaryByProject = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, ChapterSummary>> summaryByProject = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Deferral>> deferralsByProject = new ConcurrentHashMap<>();
     private final Map<String, ExportRecord> exportByProject = new ConcurrentHashMap<>();
     private final Map<String, RunRecord> latestRunByProject = new ConcurrentHashMap<>();
     private final Map<String, Map<String, LexiconEntry>> lexiconByProject = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> lexiconRemovedByProject = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, PromptFrame>> framesByProject = new ConcurrentHashMap<>();
 
     ReadWriteLock lock() {
         return lock;
@@ -87,7 +92,11 @@ final class InMemoryStore {
         return tmByProject.computeIfAbsent(projectId, id -> new ConcurrentHashMap<>());
     }
 
-    Map<String, RollingSummary> summaries() {
+    /**
+     * Returns the chapter summaries by project, each project's held in the order its chapters were first saved; a
+     * project's map is replaced by a changed copy, never changed in place, so a reader holds a stable map.
+     */
+    Map<String, Map<String, ChapterSummary>> summaries() {
         return summaryByProject;
     }
 
@@ -137,6 +146,11 @@ final class InMemoryStore {
         return lexiconRemovedByProject.computeIfAbsent(projectId, id -> ConcurrentHashMap.newKeySet());
     }
 
+    /** Returns a project's prompt frames keyed by hash, creating an empty table on first use. */
+    Map<String, PromptFrame> frames(final String projectId) {
+        return framesByProject.computeIfAbsent(projectId, id -> new ConcurrentHashMap<>());
+    }
+
     /**
      * Forgets everything kept under a project id, as the SQLite schema's cascade does when a project is deleted. The
      * caller holds the write lock.
@@ -151,6 +165,7 @@ final class InMemoryStore {
         latestRunByProject.remove(projectId);
         lexiconByProject.remove(projectId);
         lexiconRemovedByProject.remove(projectId);
+        framesByProject.remove(projectId);
     }
 
     /**
@@ -169,7 +184,7 @@ final class InMemoryStore {
     }
 
     /**
-     * One project's glossary: entries by id, a lookup by {@link GlossaryKeys} for the duplicate rule,
+     * One project's glossary: entries by id, a lookup by {@link GlossaryKeys} over lemmas and forms for the duplicate rule,
      * and the set of term keys removed this session so a re-proposed name is not silently re-added.
      */
     static final class ProjectGlossary {
@@ -186,10 +201,13 @@ final class InMemoryStore {
             return removedKeys;
         }
 
+        // The lemma first, else the first entry in insertion order that lists the key as a form.
         Optional<GlossaryEntry> findByKey(final String key) {
-            return byId.values().stream()
-                    .filter(entry -> GlossaryKeys.of(entry.term()).equals(key))
-                    .findFirst();
+            return GlossaryIndex.of(allInInsertionOrder()).find(key);
+        }
+
+        Optional<GlossaryEntry> holderOf(final GlossaryEntry entry) {
+            return GlossaryIndex.of(allInInsertionOrder()).holderOf(entry);
         }
 
         void put(final GlossaryEntry entry) {
@@ -231,11 +249,11 @@ final class InMemoryStore {
      */
     static final class ProjectSegments {
 
-        private volatile List<String> orderedIds = List.of();
+        private final AtomicReference<List<String>> orderedIds = new AtomicReference<>(List.of());
         private final Map<String, SegmentRecord> byId = new ConcurrentHashMap<>();
 
         List<String> orderedIds() {
-            return orderedIds;
+            return Objects.requireNonNull(orderedIds.get(), "orderedIds");
         }
 
         Map<String, SegmentRecord> byId() {
@@ -254,7 +272,7 @@ final class InMemoryStore {
                 byId.put(record.segmentId(), record);
                 ids.add(record.segmentId());
             }
-            orderedIds = List.copyOf(ids);
+            orderedIds.set(List.copyOf(ids));
         }
     }
 }

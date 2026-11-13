@@ -1,5 +1,7 @@
 package ua.bookloom.ui.i18n;
 
+import static ua.bookloom.util.contract.ArgNames.LOCALE;
+
 import com.google.inject.Singleton;
 import com.ibm.icu.text.Collator;
 import com.ibm.icu.util.ULocale;
@@ -39,7 +41,7 @@ public final class LanguageNames {
      * @return the 34 catalogue tags sorted by their names in {@code locale}; never null
      */
     public List<String> list(final Locale locale) {
-        Objects.requireNonNull(locale, "locale");
+        Objects.requireNonNull(locale, LOCALE);
         final Collator collator = Collator.getInstance(ULocale.forLocale(locale));
         final List<String> tags = Languages.all().stream()
                 .map(Language::tag)
@@ -59,7 +61,7 @@ public final class LanguageNames {
      */
     public String nameOf(final String tag, final Locale locale) {
         Objects.requireNonNull(tag, "tag");
-        Objects.requireNonNull(locale, "locale");
+        Objects.requireNonNull(locale, LOCALE);
         final Optional<Language> catalogued = Languages.byTag(tag);
         if (catalogued.isPresent() && Locale.ENGLISH.getLanguage().equals(locale.getLanguage())) {
             return catalogued.get().displayName();
@@ -112,7 +114,7 @@ public final class LanguageNames {
      * @return the language's tag, or empty for blank text and for text naming no recognised language
      */
     public Optional<String> parse(final @Nullable String text, final Locale locale) {
-        Objects.requireNonNull(locale, "locale");
+        Objects.requireNonNull(locale, LOCALE);
         if (text == null || text.isBlank()) {
             log.debug("language parse of blank text: empty");
             return Optional.empty();

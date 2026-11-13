@@ -30,7 +30,7 @@ final class PromptSections {
         while (block.find()) {
             plain(text.substring(from, block.start()), values, origin, sections);
             final String slot = block.group(1);
-            if (!values.getOrDefault(slot, "").isEmpty() && !PromptTemplates.isRuleGate(slot)) {
+            if (!values.getOrDefault(slot, "").isEmpty()) {
                 sections.add(blockSection(slot, block.group(2), values, origin));
             }
             from = block.end();

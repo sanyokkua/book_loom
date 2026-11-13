@@ -26,6 +26,10 @@ import org.jspecify.annotations.Nullable;
  * @param chatPath the chat path replacing the dialect's default (not allowed for Ollama), or null
  * @param headers extra headers; a credential-like header's value must be a {@code ${env:NAME}} reference
  * @param customModels model names added to the discovered list
+ * @param engine the server engine detected on Save, Test or Detect again; never read from a port
+ * @param engineChoice the person's "Treat this server as..." choice that detection never overwrites, or null
+ * @param engineVersion the version the server reported, or null when it did not say
+ * @param nativeOfferDeclined whether the person kept an OpenAI-compatible Ollama as is; detection never clears it
  */
 public record ProviderConfig(
         String id,
@@ -40,7 +44,11 @@ public record ProviderConfig(
         @Nullable String modelsPath,
         @Nullable String chatPath,
         Map<String, String> headers,
-        List<String> customModels) {
+        List<String> customModels,
+        ServerEngine engine,
+        @Nullable ServerEngine engineChoice,
+        @Nullable String engineVersion,
+        boolean nativeOfferDeclined) {
 
     /** Default time allowed to establish a provider connection. */
     public static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(10);
@@ -56,6 +64,7 @@ public record ProviderConfig(
         Objects.requireNonNull(connectTimeout, "connectTimeout");
         Objects.requireNonNull(requestTimeout, "requestTimeout");
         Objects.requireNonNull(auth, "auth");
+        Objects.requireNonNull(engine, "engine");
         headers = Map.copyOf(Objects.requireNonNull(headers, "headers"));
         customModels = List.copyOf(Objects.requireNonNull(customModels, "customModels"));
     }
@@ -80,7 +89,11 @@ public record ProviderConfig(
                 null,
                 null,
                 Map.of(),
-                List.of());
+                List.of(),
+                kind == ProviderKind.OLLAMA ? ServerEngine.OLLAMA : ServerEngine.GENERIC,
+                null,
+                null,
+                false);
     }
 
     /**
@@ -103,7 +116,11 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
     }
 
     /**
@@ -126,7 +143,11 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
     }
 
     /**
@@ -149,7 +170,11 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
     }
 
     /**
@@ -172,7 +197,11 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
     }
 
     /**
@@ -195,7 +224,11 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
     }
 
     /**
@@ -218,15 +251,14 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
     }
 
-    /**
-     * Returns a copy with the supplied model-list path.
-     *
-     * @param modelsPath the replacement path, or null for the dialect's default
-     * @return a copy with only {@code modelsPath} changed
-     */
+    /** Returns a copy with only {@code modelsPath} changed; null means the dialect's default. */
     public ProviderConfig withModelsPath(final @Nullable String modelsPath) {
         return new ProviderConfig(
                 id,
@@ -241,15 +273,14 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
     }
 
-    /**
-     * Returns a copy with the supplied chat path.
-     *
-     * @param chatPath the replacement path, or null for the dialect's default
-     * @return a copy with only {@code chatPath} changed
-     */
+    /** Returns a copy with only {@code chatPath} changed; null means the dialect's default. */
     public ProviderConfig withChatPath(final @Nullable String chatPath) {
         return new ProviderConfig(
                 id,
@@ -264,15 +295,14 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
     }
 
-    /**
-     * Returns a copy with the supplied extra headers.
-     *
-     * @param headers the replacement headers
-     * @return a copy with only {@code headers} changed
-     */
+    /** Returns a copy with only {@code headers} changed. */
     public ProviderConfig withHeaders(final Map<String, String> headers) {
         return new ProviderConfig(
                 id,
@@ -287,15 +317,14 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
     }
 
-    /**
-     * Returns a copy with the supplied custom model names.
-     *
-     * @param customModels the replacement names
-     * @return a copy with only {@code customModels} changed
-     */
+    /** Returns a copy with only {@code customModels} changed. */
     public ProviderConfig withCustomModels(final List<String> customModels) {
         return new ProviderConfig(
                 id,
@@ -310,6 +339,60 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
+    }
+
+    /** Returns a copy with only the detected engine changed. */
+    public ProviderConfig withEngine(final ServerEngine engine) {
+        return withEngine(engine, engineChoice, engineVersion);
+    }
+
+    /**
+     * Returns a copy with the three engine facts replaced; the declined Ollama offer is kept as it is.
+     *
+     * @param engine the detected engine
+     * @param engineChoice the person's "Treat this server as..." choice, or null for none
+     * @param engineVersion the version the server reported, or null when it did not say
+     * @return a copy with only {@code engine}, {@code engineChoice} and {@code engineVersion} changed
+     */
+    public ProviderConfig withEngine(
+            final ServerEngine engine,
+            final @Nullable ServerEngine engineChoice,
+            final @Nullable String engineVersion) {
+        return new ProviderConfig(
+                id,
+                kind,
+                baseUrl,
+                connectTimeout,
+                requestTimeout,
+                displayName,
+                auth,
+                apiKeyHeader,
+                credentialRef,
+                modelsPath,
+                chatPath,
+                headers,
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
+    }
+
+    /**
+     * What Detect again stores: the probes' engine and version, the person's choice dropped, and a declined Ollama
+     * offer kept declined, so the offer never returns and never shows as the person's choice.
+     */
+    public ProviderConfig detectedAgain(final ServerEngine engine, final @Nullable String engineVersion) {
+        return withEngine(engine, null, engineVersion);
+    }
+
+    /** Returns the person's choice when set, else the detected engine. */
+    public ServerEngine effectiveEngine() {
+        return engineChoice != null ? engineChoice : engine;
     }
 }

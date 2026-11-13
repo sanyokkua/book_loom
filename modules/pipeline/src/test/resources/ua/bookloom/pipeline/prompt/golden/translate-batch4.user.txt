@@ -1,0 +1,23 @@
+[Glossary — the book's renderings of the names and terms in this passage; write each name out as plain text in the target language]
+Hale → Гейл (character, male)
+
+[Established renderings of recurring terms — keep consistent]
+master → господар
+
+[Previous pairs — context only; do NOT translate or answer them]
+Source: Hale lived by the sea.
+Translation: Гейл жив біля моря.
+Source: He mended nets every morning.
+Translation: Щоранку він лагодив сіті.
+
+[Next item after the batch — context only; read it for pronouns and gender, do NOT translate or answer it]
+Night fell.
+
+Translate every item inside <Items> from English into Ukrainian. Return exactly one JSON object matching this schema: {"items":[{"id":"<id>","target":"<translation>"}]}
+
+<Items>
+<s id="1">Hale opened the door for the master.</s>
+<s id="2">1881</s>
+<s id="3">She smiled at him.</s>
+<s id="4">The master nodded.</s>
+</Items>

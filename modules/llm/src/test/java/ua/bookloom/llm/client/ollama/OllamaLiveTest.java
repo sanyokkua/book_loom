@@ -9,21 +9,27 @@ import java.util.Objects;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.llm.EngineDetection;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
+import ua.bookloom.llm.testing.LiveServers;
+import ua.bookloom.util.text.Slashes;
 
 /** Proves the native client against a configured, real local Ollama service. */
 @Tag("liveLocal")
@@ -52,9 +58,6 @@ class OllamaLiveTest {
         assertThat(content).isNotBlank().doesNotContain("<think>").doesNotContain("</think>");
     }
 
-    private static final int CACHE_PROMPT_REPEATS = 110;
-    private static final int CACHE_NUM_CTX = 8192;
-    private static final int CACHE_REPLY_CAP = 16;
     private static final String MODEL_ENV = "BOOKLOOM_LIVE_OLLAMA_MODEL";
     private static final String DEFAULT_MODEL = "gemma4:e4b-mlx";
     private static final String TOKEN_REPLY = "⟦g0⟧KEEP⟦g1⟧";
@@ -154,33 +157,18 @@ class OllamaLiveTest {
         assertThat(response.usage().generation()).isPositive();
     }
 
-    // The same long system prompt sent twice must be served from the server's prompt cache the second time (15h.C5).
-    @Test
-    void chat_sameSystemPromptTwice_secondReplyReportsCachedPromptTokens() {
-        final String system = "You are a careful assistant for the fictional town of Ashvale. "
-                + "The town keeps a ledger of lanterns, bridges and weather. ".repeat(CACHE_PROMPT_REPEATS);
+    // The engine is OLLAMA through the native address and through the /v1 shim.
+    @ParameterizedTest
+    @CsvSource({"OLLAMA, ''", "OPENAI_COMPATIBLE, /v1"})
+    void detectEngine_nativeAndV1Paths_bothReadOllama(final ProviderKind kind, final String suffix) {
+        final String origin = Objects.requireNonNull(System.getenv("BOOKLOOM_LIVE_OLLAMA_URL"));
+        final String address = Slashes.trimTrailing(origin) + suffix;
+        final ProviderConfig config = LiveServers.provider("ollama-live", kind, address, null);
 
-        chatWithSystem(system, "Say one word about lanterns.");
-        final ChatResponse second = chatWithSystem(system, "Say one word about bridges.");
+        final Result<EngineDetection> result = LiveServers.verifier(config).detectEngine(config);
 
-        assertThat(second.usage()).isNotNull();
-        assertThat(second.usage().cachedPrompt()).isNotNull().isGreaterThan(0);
-    }
-
-    private static ChatResponse chatWithSystem(String system, String user) {
-        final Result<ChatResponse> result = client().chat(
-                        modelId(),
-                        new ChatRequest(
-                                List.of(new ChatMessage(ChatRole.SYSTEM, system), new ChatMessage(ChatRole.USER, user)),
-                                0.0,
-                                null,
-                                null,
-                                CACHE_NUM_CTX,
-                                null,
-                                CACHE_REPLY_CAP))
-                .result();
-        assertThat(result.isOk()).as("Ollama chat result: " + result.error()).isTrue();
-        return Objects.requireNonNull(result.data(), "chat response");
+        assertThat(result.isOk()).as(address + ": " + result.error()).isTrue();
+        assertThat(Objects.requireNonNull(result.data()).engine()).as(address).isEqualTo(ServerEngine.OLLAMA);
     }
 
     private static OllamaClient client() {

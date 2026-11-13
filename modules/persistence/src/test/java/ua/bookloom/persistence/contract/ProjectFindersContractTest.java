@@ -8,6 +8,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.project.ExportRecord;
 import ua.bookloom.api.project.Project;
 
@@ -91,8 +92,25 @@ public abstract class ProjectFindersContractTest extends RepositoryContractTest 
         assertThat(repository.lastExport("b").data()).hasValue(first);
     }
 
+    // IF the summary were dropped on the way in or out, THEN a restart would lose "12 re-read, 3 waiting" on the tiles.
+    @Test
+    void recordExport_proofreadSummary_readsBackAfterReopen() {
+        final ProjectRepository repository = projectRepository();
+        repository.save(project("a", "h1", "One", "en", "uk"));
+        final ProofreadSummary summary = new ProofreadSummary(12, 3);
+
+        repository.recordExport("a", exportRecord("one.epub", summary));
+
+        assertThat(repository.lastExport("a").data())
+                .hasValueSatisfying(last -> assertThat(last.proofread()).isEqualTo(summary));
+    }
+
     private static ExportRecord exportRecord(final String file) {
+        return exportRecord(file, ProofreadSummary.NONE);
+    }
+
+    private static ExportRecord exportRecord(final String file, final ProofreadSummary proofread) {
         return new ExportRecord(
-                Instant.parse("2026-10-20T10:00:00Z"), Path.of(file), 74, 2, 0, 1, 50, 6, 74, List.of());
+                Instant.parse("2026-10-20T10:00:00Z"), Path.of(file), 74, 2, 0, 1, 50, 6, proofread, List.of());
     }
 }

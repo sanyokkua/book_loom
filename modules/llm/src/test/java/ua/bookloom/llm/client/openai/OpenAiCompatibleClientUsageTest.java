@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Iterator;
@@ -30,6 +31,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServedCall;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
@@ -97,6 +99,56 @@ class OpenAiCompatibleClientUsageTest {
                 .isEqualTo(new TokenUsage(640, 75, Duration.ofMillis(1900), Duration.ofMillis(400), 512));
     }
 
+    // llama-server reports its own timings: prompt reading in ms, the cache hit in tokens, the rate in tokens/s.
+    @Test
+    void chat_llamaServerTimings_carryPromptReadingCacheAndRate() {
+        stubChat("""
+                {"model":"google/gemma-4-e4b","choices":[{"message":{"content":"reply"},"finish_reason":"stop"}],"usage":{"prompt_tokens":2000,"completion_tokens":100},"timings":{"prompt_ms":812.5,"predicted_per_second":38.4,"cache_n":1840}}
+                """);
+
+        final TokenUsage usage = Objects.requireNonNull(
+                sendChat(client(scriptedNanoTime(0L, 9_000_000_000L)), messageOnlyRequest())
+                        .usage(),
+                "usage");
+
+        assertThat(usage.promptEval()).isEqualTo(Duration.ofNanos(812_500_000L));
+        assertThat(usage.cachedPrompt()).isEqualTo(1840);
+        assertThat(usage.generation()).isBetween(Duration.ofMillis(2603), Duration.ofMillis(2605));
+    }
+
+    // Timings alone make a usage; a figure the reply lacks (the generation time here) falls back to the wall clock.
+    @Test
+    void chat_llamaServerTimingsWithoutUsageBlock_stillCarriesUsage() {
+        stubChat("""
+                {"model":"google/gemma-4-e4b","choices":[{"message":{"content":"reply"},"finish_reason":"stop"}],"timings":{"prompt_ms":100.0,"cache_n":5}}
+                """);
+
+        final TokenUsage usage = Objects.requireNonNull(
+                sendChat(client(scriptedNanoTime(0L, 2_500_000_000L)), messageOnlyRequest())
+                        .usage(),
+                "usage");
+
+        assertThat(usage.promptEval()).isEqualTo(Duration.ofMillis(100));
+        assertThat(usage.cachedPrompt()).isEqualTo(5);
+        assertThat(usage.generation()).isEqualTo(Duration.ofMillis(2500));
+    }
+
+    // OpenRouter sends counts and a cost but no timing: the first token and prompt reading stay missing, never 0.
+    @Test
+    void chat_openRouterReplyWithoutTiming_leavesFirstTokenMissing() {
+        stubChat("""
+                {"model":"example/model-a","provider":"ExampleHost","choices":[{"message":{"content":"reply"},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":5,"cost":0.0004}}
+                """);
+
+        final TokenUsage usage = Objects.requireNonNull(
+                sendChat(client(scriptedNanoTime(0L, 1_000_000_000L)), messageOnlyRequest())
+                        .usage(),
+                "usage");
+
+        assertThat(usage.promptEval()).isNull();
+        assertThat(usage.cachedPrompt()).isNull();
+    }
+
     // No reported usage object means no token usage, whatever the measured duration was.
     @Test
     void chat_noUsageReported_carriesNullUsage() {
@@ -105,6 +157,29 @@ class OpenAiCompatibleClientUsageTest {
                 """);
 
         assertThat(sendChat(client(() -> 0L), messageOnlyRequest()).usage()).isNull();
+    }
+
+    // Free models report cost 0 or omit it: a present 0 is 0, an absent figure or slug stays missing.
+    @Test
+    void read_costAndSlugs_arePresentOnlyWhenReported() {
+        stubChat("""
+                {"id":"gen-1","model":"example/model-a","provider":"ExampleHost","choices":[{"message":{"content":"reply"},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":5,"cost":0.00042}}
+                """);
+        final ServedCall reported =
+                sendChat(client(() -> 0L), messageOnlyRequest()).served();
+        stubChat("""
+                {"model":"example/model-a","choices":[{"message":{"content":"reply"},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":5,"cost":0}}
+                """);
+        final ServedCall free = sendChat(client(() -> 0L), messageOnlyRequest()).served();
+        stubChat("""
+                {"choices":[{"message":{"content":"reply"},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":5}}
+                """);
+        final ServedCall absent =
+                sendChat(client(() -> 0L), messageOnlyRequest()).served();
+
+        assertThat(reported).isEqualTo(new ServedCall("ExampleHost", "example/model-a", new BigDecimal("0.00042")));
+        assertThat(free).isEqualTo(new ServedCall(null, "example/model-a", BigDecimal.ZERO));
+        assertThat(absent).isNull();
     }
 
     // A configured 1 s timeout is replaced by the 200 s a 400-token expectation scales to.

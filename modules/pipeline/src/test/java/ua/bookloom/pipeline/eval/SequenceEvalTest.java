@@ -3,7 +3,11 @@ package ua.bookloom.pipeline.eval;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -17,12 +21,12 @@ import ua.bookloom.api.project.Gender;
  * against a real model, measured for the defects that only a whole run shows. Local-only:
  * {@code scripts/eval-matrix.sh --suite sequence}, or {@code BOOKLOOM_EVAL_SUITE=sequence ./gradlew :pipeline:promptEval}
  * with {@code BOOKLOOM_EVAL_URL}, {@code BOOKLOOM_EVAL_PROVIDER}, {@code BOOKLOOM_EVAL_MODEL}, {@code BOOKLOOM_EVAL_DIAL}
- * (default {@code BALANCED}), {@code BOOKLOOM_EVAL_WINDOW} and {@code BOOKLOOM_EVAL_NARRATOR} ({@code unset}, the
+ * (default {@code BALANCED}), {@code BOOKLOOM_EVAL_WINDOW}, {@code BOOKLOOM_EVAL_REPEATS} (K repeats, seeds 1000 upwards; the run-level score is one minus the flagged rate) and {@code BOOKLOOM_EVAL_NARRATOR} ({@code unset}, the
  * default, is the real run's brief with no narrator; {@code set} is a first-person male narrator; {@code detect} runs
  * the narrator detector on the fixture and applies {@code BOOKLOOM_EVAL_NARRATOR_GENDER}, {@code male} by default, as
  * the Start question's answer would). It measures and
  * asserts no floor; 15e.4 records the thresholds. The report lands in
- * {@code build/reports/promptEval/<model>-sequence-<narrator>.json} and {@code .txt}.
+ * {@code build/reports/promptEval/<model>-sequence-en-uk-<dial>-<narrator>.json} and {@code .txt}.
  */
 @Slf4j
 @Tag("promptEval")
@@ -43,19 +47,53 @@ class SequenceEvalTest {
         final Gender detected = SequenceNarratorMode.parseGender(System.getenv("BOOKLOOM_EVAL_NARRATOR_GENDER"));
         final SequenceFixture fixture = SequenceFixture.load();
 
-        final SequenceRun run = new SequenceEval(fixture, dial, window, narrator, detected)
-                .run(PromptEvalTest.chatModel(model), workDir);
-        final SequenceReport report = new SequenceReport(new SequenceMeasure(fixture).measure(model, dial.name(), run));
+        final EvalRepeats.Runs<SequenceRun> runs = EvalRepeats.fromEnvironment(System.getenv())
+                .run(
+                        PromptEvalTest.chatModel(model),
+                        seeded -> new SequenceEval(fixture, dial, window, narrator, detected).run(seeded, repeatDir()),
+                        run -> 1 - measure(fixture, model, dial, run).flaggedRate());
+        final List<SequenceMetrics> repeats = runs.results().stream()
+                .map(each -> measure(fixture, model, dial, each))
+                .toList();
+        final SequenceRun run = runs.results().getFirst();
+        final SequenceReport report = new SequenceReport(repeats.getFirst());
 
-        write(model, narrator, report);
+        write(model, dial, narrator, report, new Repeats(runs.results(), runs.seeds(), repeats, runs.aggregates()));
         assertThat(run.segments()).as(report.table()).isNotEmpty();
     }
 
-    private static void write(final String model, final SequenceNarratorMode narrator, final SequenceReport report)
-            throws IOException {
-        final String name = model.replaceAll("[^A-Za-z0-9._-]", "_") + "-sequence-" + narrator.label();
-        EvalOutput.write(
-                EvalProvenance.capture("sequence", model, narrator.label()), name, report.table(), report.json());
-        log.info("Sequence eval report {}\n{}", name, report.table());
+    private Path repeatDir() {
+        try {
+            return Files.createTempDirectory(workDir, "repeat");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
+
+    private static SequenceMetrics measure(
+            final SequenceFixture fixture, final String model, final QualityDial dial, final SequenceRun run) {
+        return new SequenceMeasure(fixture).measure(model, dial.name(), run);
+    }
+
+    private static void write(
+            final String model,
+            final QualityDial dial,
+            final SequenceNarratorMode narrator,
+            final SequenceReport report,
+            final Repeats repeats)
+            throws IOException {
+        final String label = "en-uk-" + dial.name().toLowerCase(Locale.ROOT) + "-" + narrator.label();
+        final String name = model.replaceAll("[^A-Za-z0-9._-]", "_") + "-sequence-" + label;
+        EvalOutput.write(
+                EvalProvenance.capture("sequence", model, label).withAggregates(repeats.aggregates()),
+                name,
+                report.table() + "\n" + SequenceReport.repeatLines(repeats.metrics()),
+                report.json(repeats.runs(), repeats.seeds(), repeats.metrics()));
+        log.info(
+                "Sequence eval report {}\n{}\n{}", name, report.table(), SequenceReport.repeatLines(repeats.metrics()));
+    }
+
+    /** Every repeat's run and run-level figures; the first run's targets are the report's {@code outputs}. */
+    private record Repeats(
+            List<SequenceRun> runs, List<Integer> seeds, List<SequenceMetrics> metrics, List<Double> aggregates) {}
 }

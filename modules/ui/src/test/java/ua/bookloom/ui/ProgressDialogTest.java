@@ -136,17 +136,18 @@ class ProgressDialogTest extends ProgressWorkTestBase {
         assertThat(required("shell-activity").isVisible()).isTrue();
     }
 
-    // IF Escape on the export's last check asked "Cancel the export?", THEN hiding would cost a second answer.
+    // IF Escape on the export cancelled it without a word, THEN one key would throw away a half-written file.
     @Test
-    void escape_onExport_hidesWithoutAskingAQuestion() throws TimeoutException {
+    void escape_onExport_asksCancelTheExport() throws TimeoutException {
         begin(ActivityKind.EXPORT);
         awaitDialog();
 
         escape();
 
-        await(() -> !isDialogShown());
-        assertThat(scene.getRoot().lookup("#confirm-card")).isNull();
+        assertThat(textsUnder(required("confirm-card"))).contains("Cancel the export?");
         assertThat(cancelled).isEmpty();
+        onFx(((Button) required("confirm-yes"))::fire);
+        assertThat(cancelled).containsExactly("EXPORT");
     }
 
     // IF Escape only hid the brief's suggestion, THEN short work would end out of sight.
@@ -166,7 +167,7 @@ class ProgressDialogTest extends ProgressWorkTestBase {
         begin(ActivityKind.NAMES_PASS);
         awaitDialog();
 
-        onFx(() -> ((Button) required("progress-background")).fire());
+        onFx(((Button) required("progress-background"))::fire);
 
         await(() -> !isDialogShown());
         assertThat(injector.getInstance(HiddenWork.class).screen().get()).isEqualTo(ViewNames.NAMES_STYLE);
@@ -180,7 +181,7 @@ class ProgressDialogTest extends ProgressWorkTestBase {
         endSteps(names, 53);
         awaitDialog();
 
-        onFx(() -> ((Button) required("progress-background")).fire());
+        onFx(((Button) required("progress-background"))::fire);
 
         await(() -> !isDialogShown());
         assertThat(((Label) required("shell-activity-text")).getText()).isEqualTo("Preparing names · 53 %");
@@ -198,11 +199,13 @@ class ProgressDialogTest extends ProgressWorkTestBase {
         endSteps(names, 2);
         start(names, 2);
         awaitDialog();
+        await(() -> selectedIndex() == 2);
         clickOn(required("progress-step-0"));
-        onFx(() -> ((Button) required("progress-background")).fire());
+        await(() -> !follow().isSelected());
+        onFx(((Button) required("progress-background"))::fire);
         await(() -> !isDialogShown());
 
-        onFx(() -> ((Hyperlink) required("shell-activity-open")).fire());
+        onFx(((Hyperlink) required("shell-activity-open"))::fire);
 
         awaitDialog();
         assertThat(selectedIndex()).isZero();
@@ -255,12 +258,12 @@ class ProgressDialogTest extends ProgressWorkTestBase {
         begin(ActivityKind.EXPORT);
         awaitDialog();
 
-        onFx(() -> ((Button) required("progress-cancel")).fire());
+        onFx(((Button) required("progress-cancel"))::fire);
 
         assertThat(textsUnder(required("confirm-card"))).contains("Cancel the export?", "No file is written.");
         assertThat(isDialogShown()).isTrue();
         assertThat(cancelled).isEmpty();
-        onFx(() -> ((Button) required("confirm-yes")).fire());
+        onFx(((Button) required("confirm-yes"))::fire);
         assertThat(cancelled).containsExactly("EXPORT");
     }
 
@@ -333,15 +336,37 @@ class ProgressDialogTest extends ProgressWorkTestBase {
         awaitDialog();
 
         await(() -> required("progress-call").isVisible());
+        assertThat(required("progress-call").isVisible()).isTrue();
+    }
+
+    // IF a name call said "0 segments", THEN the line would claim a count of something the call does not work on.
+    @Test
+    void detailed_callWithNoSegments_saysNoSegmentCount() throws TimeoutException {
+        onFx(() -> injector.getInstance(ProgressDialogDefaults.class)
+                .initialMode()
+                .set(ProgressDialogModel.Mode.DETAILED));
+        final ActivityTracker.Handle brief = begin(ActivityKind.SUGGEST_STYLE);
+        plan(brief, 2);
+        start(brief, 0);
+        onFx(() -> brief.calls(new LiveCalls(call(CallKind.TERM_READING, List.of()), null, java.util.Map.of(), null)));
+        awaitDialog();
+
+        await(() -> required("progress-call").isVisible());
+        assertThat(((Label) required("progress-call")).getText()).isEqualTo("Call 42 · Name reading · attempt 1 of 2");
     }
 
     private static CallSnapshot call() {
-        final List<CallSegment> segments = IntStream.rangeClosed(1, 4)
-                .mapToObj(n -> new CallSegment("s" + n, "p" + n, "Line " + n + "."))
-                .toList();
+        return call(
+                CallKind.DRAFT,
+                IntStream.rangeClosed(1, 4)
+                        .mapToObj(n -> new CallSegment("s" + n, "p" + n, "Line " + n + "."))
+                        .toList());
+    }
+
+    private static CallSnapshot call(final CallKind kind, final List<CallSegment> segments) {
         return CallSnapshot.waiting(
                 42,
-                CallKind.DRAFT,
+                kind,
                 "draft-batch-json",
                 null,
                 segments,

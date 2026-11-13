@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.llm.ProviderConfig;
 
 /** A hand-written {@link ModelPickPrompt} that records each question and lets the test answer the last one. */
 public final class RecordingModelPickPrompt implements ModelPickPrompt {
@@ -17,8 +18,11 @@ public final class RecordingModelPickPrompt implements ModelPickPrompt {
 
     @Override
     public void ask(
-            final String providerId, final List<String> modelIds, final Consumer<String> use, final Runnable notNow) {
-        asked.add(new Asked(providerId, List.copyOf(modelIds)));
+            final ProviderConfig provider,
+            final List<String> modelIds,
+            final Consumer<String> use,
+            final Runnable notNow) {
+        asked.add(new Asked(provider.id(), List.copyOf(modelIds)));
         onUse = use;
         onNotNow = notNow;
     }

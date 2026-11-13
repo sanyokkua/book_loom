@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.project;
 
+import static ua.bookloom.util.contract.ArgNames.PROJECT_ID;
+
 import com.google.inject.Inject;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -10,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookInspection;
 import ua.bookloom.api.document.BookInspector;
@@ -23,8 +24,10 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SettingsRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.BookRelocation;
+import ua.bookloom.api.pipeline.ChapterTally;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.ProjectChange;
 import ua.bookloom.api.pipeline.ProjectOpening;
@@ -40,6 +43,7 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
+import ua.bookloom.pipeline.run.BriefKeyRecheck;
 
 /**
  * Imports a book once, keeps it open in {@link OpenProjects} and answers every later question from the stored
@@ -59,6 +63,8 @@ public final class ProjectServiceImpl implements ProjectService {
     private final RunRepository runs;
     private final ProjectCopies copies;
     private final SettingsRepository settings;
+    private final BriefKeyRecheck rechecks;
+    private final SummaryRepository summaries;
 
     @Override
     public Result<ImportedBook> create(final Path source) {
@@ -79,8 +85,8 @@ public final class ProjectServiceImpl implements ProjectService {
                 return Result.ok(new ImportedBook(null, inspection, null, null));
             }
             return openAndStore(source, inspection);
-        } catch (Throwable cause) {
-            return Result.err(internalError("import the book", cause));
+        } catch (Exception cause) {
+            return Result.err(ProjectErrors.internalError("import the book", cause));
         }
     }
 
@@ -88,14 +94,14 @@ public final class ProjectServiceImpl implements ProjectService {
     public Result<List<ProjectSummary>> list() {
         try {
             return new ProjectSummaries(documents, projects, segments, runs).list();
-        } catch (Throwable cause) {
-            return Result.err(internalError("list the projects", cause));
+        } catch (Exception cause) {
+            return Result.err(ProjectErrors.internalError("list the projects", cause));
         }
     }
 
     @Override
     public Result<ProjectOpening> open(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         try {
             log.debug("open project={}", projectId);
             return findProject(projectId)
@@ -109,8 +115,8 @@ public final class ProjectServiceImpl implements ProjectService {
                                             project.brief(),
                                             document,
                                             count)));
-        } catch (Throwable cause) {
-            return Result.err(internalError("open the project", cause));
+        } catch (Exception cause) {
+            return Result.err(ProjectErrors.internalError("open the project", cause));
         }
     }
 
@@ -120,7 +126,7 @@ public final class ProjectServiceImpl implements ProjectService {
 
     @Override
     public Result<ProjectChange> updateBrief(final String projectId, final BookBrief brief) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(brief, "brief");
         try {
             log.debug(
@@ -129,40 +135,43 @@ public final class ProjectServiceImpl implements ProjectService {
                     brief.dial(),
                     brief.sourceLanguage(),
                     brief.targetLanguage());
-            return findProject(projectId).flatMap(project -> new ProjectRenames(projects).updateBrief(project, brief));
-        } catch (Throwable cause) {
-            return Result.err(internalError("update the brief", cause));
+            return findProject(projectId)
+                    .flatMap(project -> new ProjectRenames(projects)
+                            .updateBrief(project, brief)
+                            .map(change -> rechecks.after(project.brief(), change)));
+        } catch (Exception cause) {
+            return Result.err(ProjectErrors.internalError("update the brief", cause));
         }
     }
 
     @Override
     public Result<ProjectChange> rename(final String projectId, final @Nullable String name) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         try {
             log.debug("rename project={} automatic={}", projectId, name == null);
             return findProject(projectId).flatMap(project -> new ProjectRenames(projects).rename(project, name));
-        } catch (Throwable cause) {
-            return Result.err(internalError("rename the project", cause));
+        } catch (Exception cause) {
+            return Result.err(ProjectErrors.internalError("rename the project", cause));
         }
     }
 
     @Override
     public Result<ProjectChange> makeSecondTranslation(
             final String projectId, final BookBrief brief, final String name) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(brief, "brief");
         Objects.requireNonNull(name, "name");
         try {
             log.debug("makeSecondTranslation project={}", projectId);
             return findProject(projectId).flatMap(project -> new ProjectRenames(projects).named(project, brief, name));
-        } catch (Throwable cause) {
-            return Result.err(internalError("make a second translation", cause));
+        } catch (Exception cause) {
+            return Result.err(ProjectErrors.internalError("make a second translation", cause));
         }
     }
 
     @Override
     public Result<Boolean> remove(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         try {
             log.debug("remove project={}", projectId);
             return findProject(projectId).flatMap(project -> {
@@ -173,15 +182,15 @@ public final class ProjectServiceImpl implements ProjectService {
                 log.info("project removed project={}", projectId);
                 return projects.delete(projectId);
             });
-        } catch (Throwable cause) {
-            return Result.err(internalError("remove the project", cause));
+        } catch (Exception cause) {
+            return Result.err(ProjectErrors.internalError("remove the project", cause));
         }
     }
 
     @Override
     public Result<ProjectChange> translateInto(
             final String projectId, final String target, final @Nullable String name) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(target, "target");
         try {
             log.debug("translateInto project={} target={} typedName={}", projectId, target, name != null);
@@ -190,84 +199,97 @@ public final class ProjectServiceImpl implements ProjectService {
                         ProjectNames.translatedCopy(source, ids.newId(), target, name, clock.instant());
                 return new ProjectTranslations(projects, copies).copyUnlessClash(source, candidate);
             });
-        } catch (Throwable cause) {
-            return Result.err(internalError("translate the book into another language", cause));
+        } catch (Exception cause) {
+            return Result.err(ProjectErrors.internalError("translate the book into another language", cause));
         }
     }
 
     @Override
     public Result<BookRelocation> relocate(final String projectId, final Path chosen) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(chosen, "chosen");
         try {
             log.debug("relocate project={}", projectId);
             return findProject(projectId).flatMap(project -> opener().relocate(project, chosen));
-        } catch (Throwable cause) {
-            return Result.err(internalError("find the book file", cause));
+        } catch (Exception cause) {
+            return Result.err(ProjectErrors.internalError("find the book file", cause));
         }
     }
 
     @Override
     public Result<BookPlan> plan(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         try {
             final Document document = openProjects.get(projectId);
             if (document == null) {
-                return Result.err(unknownProject(projectId));
+                return Result.err(ProjectErrors.unknownProject(projectId));
             }
-            return findProject(projectId).map(project -> UnitChunks.plan(projectId, document, project.brief()));
-        } catch (Throwable cause) {
-            return Result.err(internalError("plan the book", cause));
+            return findProject(projectId)
+                    .map(project -> UnitChunks.plan(projectId, document, project.brief(), chaptersOf(project)));
+        } catch (Exception cause) {
+            return Result.err(ProjectErrors.internalError("plan the book", cause));
+        }
+    }
+
+    @Override
+    public Result<ChapterTally> chapterTally(final String projectId) {
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        try {
+            log.debug("chapterTally project={}", projectId);
+            return findProject(projectId).flatMap(new ChapterTallies(segments, summaries, openProjects)::tally);
+        } catch (Exception cause) {
+            return Result.err(ProjectErrors.internalError("count the finished chapters", cause));
         }
     }
 
     @Override
     public Result<List<SegmentPreview>> segments(final String projectId, final String unitId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(unitId, "unitId");
         try {
             log.debug("segments project={} unit={}", projectId, unitId);
             final Document document = openProjects.get(projectId);
             if (document == null) {
-                return Result.err(unknownProject(projectId));
+                return Result.err(ProjectErrors.unknownProject(projectId));
             }
             final Unit unit = document.units().stream()
                     .filter(candidate -> candidate.id().equals(unitId))
                     .findFirst()
                     .orElse(null);
             if (unit == null) {
-                return Result.err(unknownUnit(unitId));
+                return Result.err(ProjectErrors.unknownUnit(unitId));
             }
             return findProject(projectId)
-                    .map(project -> UnitChunks.previews(unit, project.brief(), SegmentLocators.of(document)));
-        } catch (Throwable cause) {
-            return Result.err(internalError("list the segments", cause));
+                    .map(project -> UnitChunks.previews(
+                            unit, project.brief(), SegmentLocators.of(document), chaptersOf(project)));
+        } catch (Exception cause) {
+            return Result.err(ProjectErrors.internalError("list the segments", cause));
         }
     }
 
     @Override
     public Result<RoundTripReport> roundTrip(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         try {
             return findProject(projectId)
                     .flatMap(project -> new RoundTripCheck(inspector, documents).run(projectId, project.source()));
-        } catch (Throwable cause) {
-            return Result.err(internalError("run the round-trip check", cause));
+        } catch (Exception cause) {
+            return Result.err(ProjectErrors.internalError("run the round-trip check", cause));
         }
     }
 
     @Override
     public Result<Boolean> close(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         try {
             log.debug("close project={}", projectId);
             final Document document = openProjects.remove(projectId);
             if (document == null) {
-                return Result.err(unknownProject(projectId));
+                return Result.err(ProjectErrors.unknownProject(projectId));
             }
             return documents.close(document);
-        } catch (Throwable cause) {
-            return Result.err(internalError("close the project", cause));
+        } catch (Exception cause) {
+            return Result.err(ProjectErrors.internalError("close the project", cause));
         }
     }
 
@@ -334,10 +356,10 @@ public final class ProjectServiceImpl implements ProjectService {
             final BookBrief brief,
             final Document document,
             final int segmentCount) {
-        final BookIndex index = buildIndex(id, document);
+        final BookIndex index = StoredBooks.index(id, document);
         final NarratorHint hint = NarratorDetector.detect(document, SourceLanguage.forAnalysis(brief, document))
                 .orElse(null);
-        openProjects.put(id, document, index);
+        openProjects.put(id, document, index, profile.structure());
         log.info(
                 "book imported path={} format={} units={} segments={} project={}",
                 source,
@@ -348,21 +370,15 @@ public final class ProjectServiceImpl implements ProjectService {
         return new ImportedBook(id, inspection, profile, brief, hint);
     }
 
-    // Built, like the narrator hint, before the book is registered, so a failure leaves nothing open.
-    private static BookIndex buildIndex(final String projectId, final Document document) {
-        final BookIndex index = BookIndex.of(document);
-        log.info(
-                "book index built project={} segments={} words={} millis={}",
-                projectId,
-                index.size(),
-                index.distinctWords(),
-                index.buildMillis());
-        return index;
+    // Found by the run's own rule, so the planned chunks end where the run's will.
+    private ChapterBoundaries chaptersOf(final Project project) {
+        return Objects.requireNonNull(openProjects.chapters(project.id(), project.brief()), "chapters of an open book");
     }
 
     private Result<Project> findProject(final String projectId) {
         return projects.find(projectId)
-                .flatMap(found -> found.map(Result::ok).orElseGet(() -> Result.err(unknownProject(projectId))));
+                .flatMap(found ->
+                        found.map(Result::ok).orElseGet(() -> Result.err(ProjectErrors.unknownProject(projectId))));
     }
 
     // A project with no target cannot hold a translation, so importing the book again reuses it.
@@ -376,25 +392,5 @@ public final class ProjectServiceImpl implements ProjectService {
 
     private static AppError errorOf(final Result<?> result) {
         return Objects.requireNonNull(result.error(), "error");
-    }
-
-    private static AppError unknownProject(final String projectId) {
-        log.warn("unknown project={}", projectId);
-        return AppError.of(
-                ErrorCode.validation,
-                "This project is not open",
-                "No open project has this id; import the book again.");
-    }
-
-    private static AppError unknownUnit(final String unitId) {
-        log.warn("unknown unit={}", unitId);
-        return AppError.of(
-                ErrorCode.validation, "This part of the book is not known", "The book has no part with this id.");
-    }
-
-    private static AppError internalError(final String action, final Throwable cause) {
-        log.error("Failed to {}", action, cause);
-        return AppError.of(
-                ErrorCode.internal, "The project service failed", "The book could not be processed.", null, cause);
     }
 }

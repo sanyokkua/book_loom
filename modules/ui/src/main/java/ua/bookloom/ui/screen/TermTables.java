@@ -5,8 +5,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import javafx.application.Platform;
 import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
@@ -15,10 +17,18 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.css.PseudoClass;
+import javafx.scene.Node;
+import javafx.scene.control.ButtonBase;
+import javafx.scene.control.ComboBoxBase;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lombok.AccessLevel;
@@ -39,6 +49,8 @@ final class TermTables {
     private static final double ROW_HEIGHT = 46;
     private static final PseudoClass CHANGED = PseudoClass.getPseudoClass("changed");
     private static final String LISTENER_KEY = "term-table-card-listener-";
+    private static final double SCROLL_BAR_ROOM = 16;
+    private static final String START_WIDTH_KEY = "term-table-start-width";
 
     static <R> TableView<R> of(
             final Messages messages,
@@ -68,10 +80,99 @@ final class TermTables {
         table.setFixedCellSize(ROW_HEIGHT);
         table.setPlaceholder(EmptyState.of(messages, id, texts, search.textProperty(), emptyActions));
         table.setFocusTraversable(false);
+        keyboardFollowsTheRow(table);
         VBox.setVgrow(table, Priority.ALWAYS);
         table.getColumns().addAll(rows.columns());
+        scrollAcrossWhenNarrow(table);
         refreshWhenChanged(table, rows);
         return table;
+    }
+
+    // A press on a row's plain part, or a cell's label, takes the keyboard from whichever recycled cell's field had it
+    // and hands it to the pressed row's own target field (after the table has taken its own focus), so what is typed
+    // next goes to the row clicked and never to another; a row with no field leaves it on the table. F2 or Enter on
+    // the selected row opens its field.
+    private static void keyboardFollowsTheRow(final TableView<?> table) {
+        table.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
+            if (!(event.getTarget() instanceof Node target) || !isEditor(target, table)) {
+                table.requestFocus();
+                rowOf(event.getTarget(), table).ifPresent(row -> Platform.runLater(() -> focusFieldOf(row)));
+            }
+        });
+        table.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.F2 || event.getCode() == KeyCode.ENTER) {
+                focusFieldOfSelectedRow(table);
+                event.consume();
+            }
+        });
+    }
+
+    private static Optional<TableRow<?>> rowOf(final Object target, final TableView<?> table) {
+        for (Object at = target; at instanceof Node node && !node.equals(table); at = node.getParent()) {
+            if (node instanceof TableRow<?> row) {
+                return Optional.of(row);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static void focusFieldOf(final TableRow<?> row) {
+        if (!row.isEmpty()) {
+            row.lookupAll(".text-field").stream().findFirst().ifPresent(Node::requestFocus);
+        }
+    }
+
+    private static boolean isEditor(final Node target, final TableView<?> table) {
+        for (Node at = target; at != null && !at.equals(table); at = at.getParent()) {
+            if (at instanceof TextInputControl || at instanceof ComboBoxBase || at instanceof ButtonBase) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void focusFieldOfSelectedRow(final TableView<?> table) {
+        final int selected = table.getSelectionModel().getSelectedIndex();
+        table.lookupAll(".table-row-cell").stream()
+                .map(TableRow.class::cast)
+                .filter(row -> row.getIndex() == selected && !row.isEmpty())
+                .findFirst()
+                .flatMap(row -> row.lookupAll(".text-field").stream().findFirst())
+                .ifPresent(Node::requestFocus);
+    }
+
+    // The fitting policy never shows a horizontal scroll bar: on a table narrower than its columns' minimum widths it
+    // keeps every column at its minimum and leaves the last ones (the glossary's Gender and remove cross) out of reach.
+    // Below that width the table scrolls across instead, its columns at their minimum widths so the scroll is short,
+    // and every column stays reachable; with room again each column gets back its starting width and the table fits.
+    // Runs on every resize: no logging.
+    private static void scrollAcrossWhenNarrow(final TableView<?> table) {
+        final ChangeListener<Number> onWidth = (observed, was, now) -> {
+            final boolean fits = fitsWithoutScrolling(table);
+            final boolean fitting = !TableView.UNCONSTRAINED_RESIZE_POLICY.equals(table.getColumnResizePolicy());
+            if (fits != fitting) {
+                table.getVisibleLeafColumns().forEach(column -> startOrMinimum(column, fits));
+                table.setColumnResizePolicy(
+                        fits
+                                ? TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN
+                                : TableView.UNCONSTRAINED_RESIZE_POLICY);
+            }
+        };
+        table.widthProperty().addListener(onWidth);
+    }
+
+    private static void startOrMinimum(final TableColumnBase<?, ?> column, final boolean starting) {
+        final Object start = column.getProperties().computeIfAbsent(START_WIDTH_KEY, _ -> column.getPrefWidth());
+        column.setPrefWidth(starting ? (Double) start : column.getMinWidth());
+    }
+
+    // The room a vertical scroll bar takes is kept free, so a long list does not push the last column out of view.
+    private static boolean fitsWithoutScrolling(final TableView<?> table) {
+        final double needed = table.getVisibleLeafColumns().stream()
+                .mapToDouble(TableColumnBase::getMinWidth)
+                .sum();
+        final double room = table.getWidth() - table.snappedLeftInset() - table.snappedRightInset() - SCROLL_BAR_ROOM;
+        return needed <= room;
     }
 
     /** A row the last operation changed wears the {@code :changed} pseudo-class, which the theme draws as a left edge. */
@@ -139,8 +240,9 @@ final class TermTables {
     private static <R> void refreshWhenChanged(final TableView<R> table, final TermTableCard.Rows<R> rows) {
         final List<ObservableValue<? extends Number>> triggers = new ArrayList<>(rows.refreshOn());
         triggers.add(rows.marks().revision());
+        final TypingGuard guard = TypingGuard.of(table);
         for (int at = 0; at < triggers.size(); at++) {
-            final ChangeListener<Number> onChange = (observed, was, now) -> table.refresh();
+            final ChangeListener<Number> onChange = (observed, was, now) -> guard.redraw();
             table.getProperties().put(LISTENER_KEY + at, onChange);
             triggers.get(at).addListener(new WeakChangeListener<>(onChange));
         }

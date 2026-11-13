@@ -17,7 +17,6 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.pipeline.memory.ProtectedMask;
-import ua.bookloom.pipeline.prompt.DraftContext;
 
 /** A review retry's draft carries the person's note and, when asked, the draft's lower temperature. */
 class SegmentTranslatorRetryTest {
@@ -38,7 +37,7 @@ class SegmentTranslatorRetryTest {
         final Segment segment = doorSegment();
 
         DraftStepFixtures.segmentTranslator(documents(), model, BookFormat.MARKDOWN, "uk", "en")
-                .translate(segment, DraftContext.empty(), ProtectedMask.none(segment.masked()), NOTE, true);
+                .translate(segment, null, ProtectedMask.none(segment.masked()), NOTE, true);
 
         assertThat(model.requests())
                 .extracting(
@@ -57,7 +56,7 @@ class SegmentTranslatorRetryTest {
         final Segment segment = doorSegment();
 
         DraftStepFixtures.segmentTranslator(documents(), model, BookFormat.MARKDOWN, "uk", "en")
-                .translate(segment, DraftContext.empty(), ProtectedMask.none(segment.masked()), "", false);
+                .translate(segment, null, ProtectedMask.none(segment.masked()), "", false);
 
         assertThat(model.requests().getFirst().temperature()).isEqualTo(0.2);
         assertThat(userMessage(model.requests().getFirst())).doesNotContain("[Extra instruction]");

@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.document.SegmentStatus;
@@ -33,5 +34,13 @@ class DeskMarkerTest {
     void of_statusLaterAndKept_choosesTheMarker(
             final SegmentStatus status, final boolean later, final boolean kept, final DeskMarker expected) {
         assertThat(DeskMarker.of(viewOf(status, kept), later)).isEqualTo(expected);
+    }
+
+    // IF a rewrite the Proofread stage kept were marked "your edit", THEN the person would take the machine's change
+    // for their own and never think to check it.
+    @Test
+    void of_revisedByAKeptProofreadRewrite_isProofreadNotYourEdit() {
+        assertThat(DeskMarker.of(ReviewFixtures.keptRewrite(), false)).isEqualTo(DeskMarker.PROOFREAD);
+        assertThat(DeskMarker.of(ReviewFixtures.withUserEdit(), false)).isNotEqualTo(DeskMarker.PROOFREAD);
     }
 }

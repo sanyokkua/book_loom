@@ -1,5 +1,8 @@
 package ua.bookloom.ui.screen;
 
+import java.util.List;
+import java.util.stream.Collectors;
+import javafx.application.Platform;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.css.PseudoClass;
 import javafx.geometry.Pos;
@@ -13,10 +16,12 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.controlsfx.control.ToggleSwitch;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.TargetIssue;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.i18n.GlossaryLabels;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.NamesStyleViewModel;
@@ -75,12 +80,24 @@ final class GlossaryCells {
         }
     }
 
-    /** The source term; a changed row is marked by the table's row edge, so nothing else shares the cell. */
-    static final class TermCell extends EntryCell<Label> {
+    /**
+     * The source term, and a meaning chip when the name's meaning is kept as a note; a changed row is marked by the
+     * table's row edge, so nothing else shares the cell.
+     */
+    static final class TermCell extends EntryCell<HBox> {
 
-        TermCell() {
-            super(withFullText(new Label()));
-            control().getStyleClass().add("glossary-term");
+        private final Messages messages;
+        private final Label term = withFullText(new Label());
+        private final Label meaning;
+
+        TermCell(final Messages messages) {
+            super(new HBox(BADGE_SPACING));
+            this.messages = messages;
+            term.getStyleClass().add("glossary-term");
+            meaning = chip(messages, MessageKey.NAMES_STYLE_MEANING, MessageKey.NAMES_STYLE_MEANING_TIP);
+            meaning.getStyleClass().add("glossary-meaning");
+            control().setAlignment(Pos.CENTER_LEFT);
+            control().getChildren().addAll(term, meaning);
         }
 
         // The cell may cut a long term; its whole text is the hover.
@@ -89,9 +106,27 @@ final class GlossaryCells {
         }
 
         @Override
-        void show(final Label shown, final GlossaryEntry entry) {
-            shown.setText(entry.term());
+        void show(final HBox shown, final GlossaryEntry entry) {
+            term.setText(entry.term());
+            final String note = entry.meaning();
+            showIf(meaning, note != null);
+            if (note != null) {
+                Tips.rewordOnHover(meaning, messages.get(MessageKey.NAMES_STYLE_MEANING_TIP, note));
+            }
         }
+    }
+
+    /** A small chip that explains itself on hover; shown only where a row has what it marks. */
+    static Label chip(final Messages messages, final MessageKey text, final MessageKey tip) {
+        final Label chip = Tips.installOnHover(messages, new Label(messages.get(text)), tip);
+        chip.getStyleClass().addAll("chip", "glossary-chip");
+        chip.setMinWidth(Region.USE_PREF_SIZE);
+        return chip;
+    }
+
+    static void showIf(final Node node, final boolean shown) {
+        node.setVisible(shown);
+        node.setManaged(shown);
     }
 
     /** The action that removes the row, in the table's last column. */
@@ -117,31 +152,35 @@ final class GlossaryCells {
     }
 
     /**
-     * The target as a text field that writes on Enter and on losing focus. A target the model suggested is slanted and
-     * badged, with a tick that accepts it; Enter on an untouched suggestion accepts it too.
+     * The target as a text field that writes on Enter and on losing focus, its origin chip (person, book, rule or
+     * likely), the review flags the service computed for it, and for a suggestion a tick that accepts it. A target the
+     * model suggested is slanted and its chip reads likely; Enter on an untouched suggestion accepts it too.
      */
     static final class TargetCell extends EntryCell<HBox> {
 
         private static final PseudoClass SUGGESTED = PseudoClass.getPseudoClass("suggested");
 
+        private final Messages messages;
         private final NamesStyleViewModel model;
         private final TextField field;
-        private final Label badge;
+        private final Label origin;
+        private final Label flag;
         private final Button accept;
         private @Nullable String syncedId;
         private String syncedText = "";
 
         TargetCell(final Messages messages, final NamesStyleViewModel model, final ObservableBooleanValue frozen) {
             super(new HBox(BADGE_SPACING));
+            this.messages = messages;
             this.model = model;
             field = Tips.installOnHover(messages, new TextField(), MessageKey.NAMES_STYLE_COLUMN_TARGET_TIP);
             field.setPromptText(messages.get(MessageKey.NAMES_STYLE_NO_TARGET));
-            badge = Tips.installOnHover(
-                    messages,
-                    new Label(messages.get(MessageKey.NAMES_STYLE_SUGGESTED_BADGE)),
-                    MessageKey.NAMES_STYLE_SUGGESTED_BADGE_TIP);
-            badge.getStyleClass().addAll("chip", "glossary-suggested-badge");
-            badge.setMinWidth(Region.USE_PREF_SIZE);
+            origin = chip(messages, MessageKey.NAMES_STYLE_SUGGESTED_BADGE, MessageKey.NAMES_STYLE_ORIGIN_EXPLAINED);
+            origin.getStyleClass().add("glossary-origin");
+            flag = chip(messages, MessageKey.NAMES_STYLE_ISSUE_OBLIQUE_ENDING, MessageKey.NAMES_STYLE_FLAG_EXPLAINED);
+            flag.getStyleClass().addAll("chip-warn", "glossary-review-flag");
+            // A long flag gives way to the field; its whole words are the hover.
+            flag.setMinWidth(Region.USE_COMPUTED_SIZE);
             accept = Tips.installOnHover(messages, new Button("✓"), MessageKey.NAMES_STYLE_ACCEPT_TIP);
             accept.getStyleClass().addAll("btn-ghost", "glossary-accept");
             accept.setAccessibleText(messages.get(MessageKey.NAMES_STYLE_ACCEPT));
@@ -152,11 +191,25 @@ final class GlossaryCells {
             field.focusedProperty().addListener((observed, was, now) -> {
                 if (!now) {
                     commit();
+                    typingEnded();
                 }
             });
+            field.textProperty().addListener((observed, was, now) -> typingBegan());
             control().setAlignment(Pos.CENTER_LEFT);
-            control().getChildren().addAll(field, badge, accept);
+            control().getChildren().addAll(field, origin, flag, accept);
             control().disableProperty().bind(frozen);
+        }
+
+        private void typingBegan() {
+            if (field.isFocused() && getTableView() != null) {
+                TypingGuard.of(getTableView()).typing(true);
+            }
+        }
+
+        private void typingEnded() {
+            if (getTableView() != null) {
+                TypingGuard.of(getTableView()).typing(false);
+            }
         }
 
         private void onEnter() {
@@ -175,47 +228,80 @@ final class GlossaryCells {
             }
         }
 
+        // The text is written for the row it was typed for, which is the cell's remembered row, never the one the cell
+        // shows by now.
         private void commit() {
-            final GlossaryEntry shown = getItem();
             final String typed = field.getText();
-            if (shown == null || !shown.id().equals(syncedId) || typed.equals(syncedText)) {
+            if (syncedId == null || typed.equals(syncedText)) {
                 return;
             }
             syncedText = typed;
-            model.setTarget(shown.id(), typed);
+            model.setTarget(syncedId, typed);
+        }
+
+        // A recycled cell that is handed another row while its field has the keyboard: what was typed is written for
+        // its own row, later, outside the table's layout pass, and the keyboard goes back to the table.
+        private void leaveRowBeingEdited(final String nextId) {
+            if (!field.isFocused() || nextId.equals(syncedId)) {
+                return;
+            }
+            final String ownId = syncedId;
+            final String typed = field.getText();
+            if (ownId != null && !typed.equals(syncedText)) {
+                Platform.runLater(() -> model.setTarget(ownId, typed));
+            }
+            if (getTableView() != null) {
+                getTableView().requestFocus();
+            }
         }
 
         @Override
         void show(final HBox shown, final GlossaryEntry entry) {
-            syncedId = entry.id();
-            syncedText = entry.target() == null ? "" : entry.target();
-            field.setText(syncedText);
+            leaveRowBeingEdited(entry.id());
+            final boolean typing = field.isFocused() && entry.id().equals(syncedId);
+            if (!typing) {
+                syncedId = entry.id();
+                syncedText = entry.target() == null ? "" : entry.target();
+                field.setText(syncedText);
+            }
             final boolean suggested = entry.isSuggested();
             field.pseudoClassStateChanged(SUGGESTED, suggested);
-            badge.setVisible(suggested);
-            badge.setManaged(suggested);
-            accept.setVisible(suggested);
-            accept.setManaged(suggested);
-        }
-    }
-
-    /** The lock as a switch, written as soon as it is turned. */
-    static final class LockCell extends EntryCell<ToggleSwitch> {
-
-        LockCell(final Messages messages, final NamesStyleViewModel model, final ObservableBooleanValue frozen) {
-            super(Tips.installOnHover(messages, new ToggleSwitch(), MessageKey.NAMES_STYLE_COLUMN_LOCKED_TIP));
-            control().disableProperty().bind(frozen);
-            control().selectedProperty().addListener((observed, was, now) -> {
-                final GlossaryEntry shown = getItem();
-                if (!isSyncing() && shown != null) {
-                    model.setLocked(shown.id(), now);
-                }
-            });
+            showOrigin(entry, suggested);
+            showFlags(model.suggestions().reviewFlagsOf(entry.id()));
+            showIf(accept, suggested);
         }
 
-        @Override
-        void show(final ToggleSwitch shown, final GlossaryEntry entry) {
-            shown.setSelected(entry.locked());
+        // A suggestion's chip says likely and how a suggestion is used; any other target's says who produced it.
+        private void showOrigin(final GlossaryEntry entry, final boolean suggested) {
+            final Origin from = entry.targetOrigin();
+            showIf(origin, from != null);
+            if (from == null) {
+                return;
+            }
+            origin.setText(GlossaryLabels.origin(messages, from));
+            origin.getStyleClass().remove("glossary-suggested-badge");
+            if (suggested) {
+                origin.getStyleClass().add("glossary-suggested-badge");
+            }
+            Tips.rewordOnHover(
+                    origin,
+                    messages.get(
+                            suggested
+                                    ? MessageKey.NAMES_STYLE_SUGGESTED_BADGE_TIP
+                                    : MessageKey.NAMES_STYLE_ORIGIN_EXPLAINED));
+        }
+
+        private void showFlags(final List<TargetIssue> issues) {
+            showIf(flag, !issues.isEmpty());
+            if (issues.isEmpty()) {
+                return;
+            }
+            final String words = issues.stream()
+                    .map(issue -> GlossaryLabels.issue(messages, issue))
+                    .distinct()
+                    .collect(Collectors.joining(", "));
+            flag.setText(words);
+            Tips.rewordOnHover(flag, messages.get(MessageKey.NAMES_STYLE_FLAG_EXPLAINED, words));
         }
     }
 }

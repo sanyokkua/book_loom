@@ -1,0 +1,32 @@
+flowchart TD
+    A["Take next chunk<br/>(whole paragraphs, closed on the token budget)"] --> TM{"TM context match?<br/>(same text + same neighbours)"}
+    TM -- " yes — reuse saved translation<br/>(skip the draft) " --> D
+    TM -- " no — exact and fuzzy matches<br/>become hints in the window block " --> B["Context builder plans the prompt<br/>fixed system part: role, rules chosen once per book, style sheet, examples<br/>last user message: scene card, map lines, previous pairs, task, items, reminder"]
+    B --> FIT["Fit to the model window and tier budgets<br/>drop order: next source, old summaries, old pairs, map lines, batch items"]
+    FIT --> C["Model translates a batch<br/>(JSON out, keyed by segment id;<br/>batch size comes from the model profile)"]
+    C --> IDM{"All segment ids<br/>present once?"}
+    IDM -- " missing ids " --> PS["Per-segment calls<br/>for the missing ids only"]
+    PS --> D
+    IDM -- yes --> D["Restore tags & locked names<br/>put lost marks back by code<br/>check placeholders are intact"]
+    D --> E["Code repairs & automatic checks<br/>language? nothing dropped? names right? tags ok?<br/>every finding has a level: block, repair or note"]
+    E --> F{"Hard gates pass and<br/>no block-level finding?"}
+    F -- yes --> K{"Any repair-level<br/>finding left?"}
+    K -- no --> ACC["Accept<br/>(note-level findings = audit mark)"]
+    K -- yes --> R
+    F -- no --> R["The one repair"]
+    R --> M{"Dial: Fast?"}
+    M -- " no (Balanced, Max) " --> R2["One repair call<br/>same system part, names every defect with its quoted span"]
+    M -- " yes (Fast) " --> R3["No fixing call<br/>only lost marks: one plain re-draft"]
+    R2 --> NW{"Hard gates pass and<br/>never-worse gate keeps it?"}
+    R3 --> NW
+    NW -- " yes — keep the new text " --> LEFT
+    NW -- " no — keep the old text " --> LEFT{"Findings left<br/>on the text that stays"}
+    LEFT -- " block level " --> FLAG["Flag that segment<br/>for optional review"]
+    LEFT -- " repair level " --> PROOF["Accept with proofread mark"]
+    LEFT -- " note level or none " --> ACC
+    ACC --> SAVE["Save: translation + glossary + summary + memory<br/>(crash-safe); record deferrals<br/>for the Proofread stage"]
+    PROOF --> SAVE
+    FLAG --> SAVE
+    style ACC fill: #d4edda, stroke: #28a745
+    style PROOF fill: #d4edda, stroke: #28a745
+    style FLAG fill: #fff3cd, stroke: #e0a800

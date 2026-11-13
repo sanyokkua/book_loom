@@ -1,9 +1,15 @@
 package ua.bookloom.pipeline.glossary;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+import static ua.bookloom.util.contract.ArgNames.MODEL;
+import static ua.bookloom.util.contract.ArgNames.PROGRESS;
+import static ua.bookloom.util.contract.ArgNames.PROJECT_ID;
+
 import com.google.inject.Inject;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -20,22 +26,24 @@ import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
+import ua.bookloom.api.pipeline.AcceptReport;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.pipeline.TargetIssue;
 import ua.bookloom.api.pipeline.UnknownGender;
 import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.api.project.Deferral;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.MeaningChoice;
 import ua.bookloom.api.project.Project;
-import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.project.OpenProjects;
-import ua.bookloom.pipeline.revision.DeferralRegister;
 
 /**
  * The one port Names &amp; style edits the glossary through. Every way in — the table, the Add term dialog and a CSV
@@ -48,25 +56,23 @@ public final class GlossaryServiceImpl implements GlossaryService {
 
     static final String LOCKED_NEEDS_TARGET = "A locked term needs a target.";
 
-    /** How many line numbers an import's warning names; the count says how many there were. */
-    private static final int LOGGED_LINES = 20;
-
     private final GlossaryRepository glossary;
     private final SegmentRepository segments;
     private final DeferralRepository deferrals;
     private final ProjectRepository projects;
     private final OpenProjects openProjects;
     private final GlossaryModelScans modelScans;
+    private final SummaryRepository summaries;
 
     @Override
     public Result<List<GlossaryEntry>> entries(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         return guarded("entries", projectId, () -> glossary.all(projectId));
     }
 
     @Override
     public Result<List<UnknownGender>> unknownGenders(final String projectId, final int minMentions) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         return guarded(
                 "unknownGenders",
                 projectId,
@@ -75,34 +81,34 @@ public final class GlossaryServiceImpl implements GlossaryService {
 
     @Override
     public Result<EntryChanges<GlossaryEntry>> scan(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         return guarded("scan", projectId, () -> runScan(projectId).map(EntryChanges::ofAdded));
     }
 
     @Override
     public Result<EntryChanges<GlossaryEntry>> prescan(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(model, "model");
-        Objects.requireNonNull(progress, "progress");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(model, MODEL);
+        Objects.requireNonNull(progress, PROGRESS);
         return guarded("prescan", projectId, () -> modelScans.prescan(projectId, model, progress));
     }
 
     @Override
     public Result<GlossaryReviewReport> review(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(model, "model");
-        Objects.requireNonNull(progress, "progress");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(model, MODEL);
+        Objects.requireNonNull(progress, PROGRESS);
         return guarded("review", projectId, () -> modelScans.review(projectId, model, progress));
     }
 
     @Override
     public Result<EntryChanges<GlossaryEntry>> translate(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(model, "model");
-        Objects.requireNonNull(progress, "progress");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(model, MODEL);
+        Objects.requireNonNull(progress, PROGRESS);
         return guarded(
                 "translate",
                 projectId,
@@ -110,20 +116,56 @@ public final class GlossaryServiceImpl implements GlossaryService {
     }
 
     @Override
+    public Result<AcceptReport> acceptSuggested(final String projectId) {
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        return guarded("acceptSuggested", projectId, () -> acceptValid(projectId));
+    }
+
+    @Override
+    public Result<Map<String, List<TargetIssue>>> reviewFlags(final String projectId) {
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        return guarded("reviewFlags", projectId, () -> {
+            final BookBrief brief = briefOf(projectId);
+            return ReviewFlags.of(glossary, projectId, brief, analysisOf(projectId, brief));
+        });
+    }
+
+    @Override
+    public Result<List<GlossaryEntry>> meaningQuestions(final String projectId) {
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        return guarded("meaningQuestions", projectId, () -> MeaningQuestions.pending(glossary, projectId));
+    }
+
+    @Override
+    public Result<List<GlossaryEntry>> answerMeaning(final String projectId, final Map<String, MeaningChoice> answers) {
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(answers, "answers");
+        return guarded("answerMeaning", projectId, () -> MeaningQuestions.answer(glossary, projectId, answers));
+    }
+
+    @Override
+    public Result<List<GlossaryEntry>> answerGenders(final String projectId, final Map<String, Gender> answers) {
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(answers, "answers");
+        return guarded(
+                "answerGenders", projectId, () -> GenderAnswers.store(glossary, projectId, answers, this::updateEntry));
+    }
+
+    @Override
     public Result<GlossaryEntry> add(final GlossaryEntry entry) {
         Objects.requireNonNull(entry, "entry");
-        return guarded("add", entry.projectId(), () -> addEntry(entry));
+        return guarded("add", entry.projectId(), () -> addEntry(cleaned(entry)));
     }
 
     @Override
     public Result<GlossaryEntry> update(final GlossaryEntry entry) {
         Objects.requireNonNull(entry, "entry");
-        return guarded("update", entry.projectId(), () -> updateEntry(entry));
+        return guarded("update", entry.projectId(), () -> updateEntry(cleaned(entry)));
     }
 
     @Override
     public Result<Boolean> remove(final String projectId, final String entryId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(entryId, "entryId");
         return guarded("remove", projectId, () -> {
             final Result<Boolean> removed = glossary.remove(projectId, entryId);
@@ -134,14 +176,14 @@ public final class GlossaryServiceImpl implements GlossaryService {
 
     @Override
     public Result<GlossaryImportReport> importCsv(final String projectId, final Path source) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(source, "source");
         return guarded("importCsv", projectId, () -> readAndImport(projectId, source));
     }
 
     @Override
     public Result<Path> exportCsv(final String projectId, final Path destination) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(destination, "destination");
         return guarded("exportCsv", projectId, () -> writeExport(projectId, destination));
     }
@@ -190,13 +232,44 @@ public final class GlossaryServiceImpl implements GlossaryService {
                 .orElse(null);
     }
 
+    private Result<AcceptReport> acceptValid(final String projectId) {
+        final BookBrief brief = briefOf(projectId);
+        final String target = brief == null ? null : brief.targetLanguage();
+        if (brief == null || target == null) {
+            log.warn("Accept suggested project={} refused: no target language is chosen", projectId);
+            return Result.err(AppError.of(
+                    ErrorCode.validation,
+                    "No target language",
+                    "Choose the target language before accepting the suggestions."));
+        }
+        return new SuggestionAcceptance(glossary, this::recordTermChange)
+                .accept(projectId, brief, target, analysisOf(projectId, brief));
+    }
+
+    private @Nullable String analysisOf(final String projectId, @Nullable final BookBrief brief) {
+        final Document document = openProjects.get(projectId);
+        final String fallback = brief == null ? null : brief.sourceLanguage();
+        return document == null ? fallback : languageOf(brief, document);
+    }
+
+    // A typed or edited target is stored without the stress marks its language asks to remove; a target left blank by
+    // that is no target, so a locked entry is then refused like one typed empty.
+    private GlossaryEntry cleaned(final GlossaryEntry entry) {
+        final String target = entry.target();
+        final String clean = TargetText.clean(target, TargetText.targetLanguageOf(projects, entry.projectId()));
+        if (Objects.equals(clean, target) || clean == null) {
+            return entry;
+        }
+        return entry.isSuggested() && !clean.isBlank() ? entry.withSuggestedTarget(clean) : entry.withTarget(clean);
+    }
+
     private Result<GlossaryEntry> addEntry(final GlossaryEntry entry) {
         if (isLockedWithoutTarget(entry)) {
             return refuseLockedWithoutTarget(entry);
         }
         final Result<Optional<GlossaryEntry>> held = glossary.findByTerm(entry.projectId(), entry.term());
         if (held.isErr()) {
-            return Result.err(Objects.requireNonNull(held.error(), "error"));
+            return Result.err(Objects.requireNonNull(held.error(), ERROR));
         }
         if (Objects.requireNonNull(held.data(), "held").isPresent()) {
             log.warn("Glossary add refused: term already held project={}", entry.projectId());
@@ -217,7 +290,7 @@ public final class GlossaryServiceImpl implements GlossaryService {
         }
         final Result<List<GlossaryEntry>> all = glossary.all(entry.projectId());
         if (all.isErr()) {
-            return Result.err(Objects.requireNonNull(all.error(), "error"));
+            return Result.err(Objects.requireNonNull(all.error(), ERROR));
         }
         final Optional<GlossaryEntry> before = Objects.requireNonNull(all.data(), "all").stream()
                 .filter(held -> held.id().equals(entry.id()))
@@ -240,21 +313,12 @@ public final class GlossaryServiceImpl implements GlossaryService {
 
     private Result<GlossaryEntry> recordTermChange(final GlossaryEntry before, final GlossaryEntry after) {
         log.debug("Glossary update project={} entryId={} stored", after.projectId(), after.id());
-        if (Objects.equals(before.target(), after.target())) {
-            return Result.ok(after);
-        }
-        final Result<List<SegmentRecord>> decided = segments.all(after.projectId());
-        if (decided.isErr()) {
-            return Result.err(Objects.requireNonNull(decided.error(), "error"));
-        }
-        for (final Deferral deferral :
-                DeferralRegister.termChanged(before, after, Objects.requireNonNull(decided.data(), "decided"))) {
-            final Result<Deferral> added = deferrals.add(deferral);
-            if (added.isErr()) {
-                return Result.err(Objects.requireNonNull(added.error(), "error"));
-            }
-        }
-        return Result.ok(after);
+        return TermChanges.recordWrite(
+                new TermChanges.Stores(deferrals, summaries, openProjects),
+                segments,
+                before,
+                after,
+                TargetText.targetLanguageOf(projects, after.projectId()));
     }
 
     private Result<List<GlossaryEntry>> addAll(final List<GlossaryEntry> entries) {
@@ -262,7 +326,7 @@ public final class GlossaryServiceImpl implements GlossaryService {
         for (final GlossaryEntry entry : entries) {
             final Result<GlossaryEntry> stored = glossary.add(entry);
             if (stored.isErr()) {
-                return Result.err(Objects.requireNonNull(stored.error(), "error"));
+                return Result.err(Objects.requireNonNull(stored.error(), ERROR));
             }
             added.add(entry);
         }
@@ -275,43 +339,22 @@ public final class GlossaryServiceImpl implements GlossaryService {
                         glossary, rows -> rowsImport(projectId).apply(projectId, rows))
                 .importFrom(projectId, source);
         if (report.isOk()) {
-            logImport(projectId, source, Objects.requireNonNull(report.data(), "report"));
+            GlossaryCsvFiles.logImport(projectId, source, Objects.requireNonNull(report.data(), "report"));
         }
         return report;
-    }
-
-    private static void logImport(final String projectId, final Path source, final GlossaryImportReport report) {
-        // One line per kind, not per row: a file of 5,000 bad rows must not write 5,000 warnings.
-        if (!report.malformedLines().isEmpty()) {
-            log.warn(
-                    "Glossary import path={} malformed={} problems={} lines={}",
-                    source,
-                    report.malformedLines().size(),
-                    report.problems(),
-                    report.malformedLines().stream().limit(LOGGED_LINES).toList());
-        }
-        if (!report.refusedLines().isEmpty()) {
-            log.warn(
-                    "Glossary import path={} refused={} ({}) lines={}",
-                    source,
-                    report.refusedLines().size(),
-                    LOCKED_NEEDS_TARGET,
-                    report.refusedLines().stream().limit(LOGGED_LINES).toList());
-        }
-        log.info(
-                "Glossary imported project={} path={} imported={} malformed={} refused={} duplicates={}",
-                projectId,
-                source,
-                report.imported(),
-                report.malformedLines().size(),
-                report.refusedLines().size(),
-                report.duplicates());
     }
 
     private GlossaryRowsImport rowsImport(final String projectId) {
         final Document document = openProjects.get(projectId);
         final String language = document == null ? null : languageOf(briefOf(projectId), document);
-        return new GlossaryRowsImport(glossary, segments, deferrals, language);
+        return new GlossaryRowsImport(
+                glossary,
+                segments,
+                deferrals,
+                summaries,
+                openProjects,
+                language,
+                TargetText.targetLanguageOf(projects, projectId));
     }
 
     private Result<Path> writeExport(final String projectId, final Path destination) {
@@ -320,11 +363,8 @@ public final class GlossaryServiceImpl implements GlossaryService {
     }
 
     private static boolean isLockedWithoutTarget(final GlossaryEntry entry) {
-        return entry.locked() && isBlank(entry.target());
-    }
-
-    private static boolean isBlank(@Nullable final String target) {
-        return target == null || target.isBlank();
+        final String target = entry.target();
+        return entry.locked() && (target == null || target.isBlank());
     }
 
     private static Result<GlossaryEntry> refuseLockedWithoutTarget(final GlossaryEntry entry) {
@@ -345,7 +385,7 @@ public final class GlossaryServiceImpl implements GlossaryService {
         log.debug("Glossary {} project={}", action, projectId);
         try {
             return body.get();
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal, "Glossary failed", "The glossary could not be updated.", null, cause);
             log.error(

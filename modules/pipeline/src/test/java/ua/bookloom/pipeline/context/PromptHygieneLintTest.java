@@ -8,25 +8,23 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
-import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
-import ua.bookloom.api.project.TermType;
-import ua.bookloom.pipeline.chunk.Chunk;
+import ua.bookloom.pipeline.PlannedPrompts;
 import ua.bookloom.pipeline.context.PromptLint.Facts;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
+import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.pipeline.prompt.NameRules;
 import ua.bookloom.pipeline.prompt.PromptBreakdown;
 import ua.bookloom.pipeline.prompt.PromptName;
@@ -61,8 +59,6 @@ class PromptHygieneLintTest {
             Map.entry("lexiconTerms", "master → господар"),
             Map.entry("keyTerms", "master, imp"),
             Map.entry("memoryHint", "He left. → Він пішов."),
-            Map.entry("precedingTargets", "Один."),
-            Map.entry("followingTarget", "Три."),
             Map.entry("previous", "Двері були відчинені."),
             Map.entry("fileName", "George Orwell. Animal Farm. 1945"),
             Map.entry("title", "Animal Farm"),
@@ -80,8 +76,8 @@ class PromptHygieneLintTest {
             Map.entry("passFocus", "This is a second pass over text already reviewed once."),
             Map.entry("rejectedReply", "not json"),
             Map.entry("diagnostic", "the reply is not a JSON object"),
-            Map.entry("rejectedTarget", "Гейл і Моро відчинили двері."),
-            Map.entry("gateNote", "a token was dropped"),
+            Map.entry("previousAttempt", "Гейл і Моро відчинили двері."),
+            Map.entry("defects", "markup (HIGH): a token was dropped"),
             Map.entry(
                     "pairs",
                     "<Pair id=\"s1\"><Source>" + SOURCE + "</Source><Candidate>" + TARGET + "</Candidate></Pair>"),
@@ -92,22 +88,23 @@ class PromptHygieneLintTest {
             Map.entry("sourceLanguage", "English (en)"),
             Map.entry("targetLanguage", "Ukrainian (uk)"),
             Map.entry("existingTerms", "Milton"),
+            Map.entry("names", "- Hale\n- Moreau"),
             Map.entry("terms", "Hale (3 uses) — Hale and Moreau opened the old door."),
             Map.entry("term", "Hale — 7 mentions — pronouns after it: he ×4"),
             Map.entry("windows", "[1] [[Hale]] and Moreau opened the old door.\nHe went in first."),
-            Map.entry(
-                    "calls",
-                    "Call 1 — name, person in 6 of 6 windows\n[1] [[Hale]] opened the old door.\n"
-                            + "Call 2 — name, place in 5 of 6 windows\n[2] They rode into [[Hale]] at dusk."),
+            Map.entry("calls", """
+                    Call 1 — name, person in 6 of 6 windows
+                    [1] [[Hale]] opened the old door.
+                    Call 2 — name, place in 5 of 6 windows
+                    [2] They rode into [[Hale]] at dusk."""),
             Map.entry("chapterSource", SOURCE),
-            Map.entry("chapterTarget", TARGET),
-            Map.entry("previousSummary", "Hale searches for his brother."),
+            Map.entry("mapLines", "Hale → Гейл"),
+            Map.entry("previousPart", "Гейл шукає брата."),
             Map.entry("items", "<s id=\"1\">" + SOURCE + " ⟦g0⟧ ⟦g1⟧</s>"),
             Map.entry("passage", SOURCE + " ⟦g0⟧ ⟦g1⟧"),
             Map.entry("itemTokens", "1: ⟦g0⟧ ⟦g1⟧"),
             Map.entry("characters", "Hale — a man"),
             Map.entry("precedingPairs", "Source: He left.\nTranslation: Він пішов."),
-            Map.entry("relevantPairs", "Source: Hale kept the key.\nTranslation: Гейл тримав ключ."),
             Map.entry("nextSource", "He came back."),
             Map.entry("year", "1945"),
             Map.entry("publisher", "Secker and Warburg"),
@@ -135,10 +132,7 @@ class PromptHygieneLintTest {
     }
 
     @ParameterizedTest
-    @EnumSource(
-            value = PromptName.class,
-            names = {"STRUCTURAL_REPAIR", "PLACEHOLDER_REPAIR"},
-            mode = EnumSource.Mode.EXCLUDE)
+    @EnumSource(PromptName.class)
     void staticPrefix_everyCall_isTheSameBytesForTwoCalls(final PromptName name) {
         final String first = system(name);
         final String second = system(name);
@@ -150,16 +144,9 @@ class PromptHygieneLintTest {
     @ParameterizedTest
     @MethodSource("ua.bookloom.pipeline.prompt.V1Languages#languages")
     void render_languageRulesOfEveryV1Language_passTheLintAsTargetAndAsSource(final String tag) {
-        final CallFrame asTarget =
-                new CallFrame("en", tag, StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
-        final CallFrame asSource =
-                new CallFrame(tag, "uk", StyleSheet.from(BookBrief.defaults(tag)), ForeignPassagePolicy.KEEP);
-
-        assertThat(PromptLint.violations(TEMPLATES.renderSystem(PromptName.DRAFT, asTarget), SAMPLE_FACTS))
+        assertThat(PromptLint.violations(LanguageRules.bundled().section("en", tag), SAMPLE_FACTS))
                 .isEmpty();
-        assertThat(PromptLint.violations(TEMPLATES.renderSystem(PromptName.REVIEWER, asTarget), SAMPLE_FACTS))
-                .isEmpty();
-        assertThat(PromptLint.violations(TEMPLATES.renderSystem(PromptName.REVIEWER, asSource), SAMPLE_FACTS))
+        assertThat(PromptLint.violations(LanguageRules.bundled().section(tag, "uk"), SAMPLE_FACTS))
                 .isEmpty();
     }
 
@@ -167,38 +154,10 @@ class PromptHygieneLintTest {
     @MethodSource("ua.bookloom.pipeline.prompt.V1Languages#pairs")
     void render_languageRulesOfEveryPair_passTheLint(final String pair) {
         final int dash = pair.indexOf('-');
-        final CallFrame frame = new CallFrame(
-                pair.substring(0, dash),
-                pair.substring(dash + 1),
-                StyleSheet.from(BookBrief.defaults(pair.substring(0, dash))),
-                ForeignPassagePolicy.KEEP);
 
-        assertThat(PromptLint.violations(TEMPLATES.renderSystem(PromptName.REVIEWER, frame), SAMPLE_FACTS))
-                .isEmpty();
-    }
-
-    @Test
-    void render_draftBuiltThroughTheAssembler_passesTheLint() {
-        final List<String> earlier = List.of("Один.", "Два.");
-        final Chunk chunk = ContextFixtures.chunk("Hale opened the door.", "Baker Street was dark.");
-        final Segment segment = chunk.segments().getFirst();
-        final List<GlossaryEntry> glossary = List.of(
-                ContextFixtures.entry("Hale", "Гейл", TermType.CHARACTER, Gender.MALE, false),
-                ContextFixtures.entry("Milton", "Мілтон", TermType.PLACE, Gender.UNKNOWN, false),
-                ContextFixtures.entry("Moreau", null, TermType.CHARACTER, Gender.MALE, false));
-        final ContextPackage assembled = ContextPackageAssembler.assemble(
-                chunk,
-                segment,
-                ContextFixtures.mask(segment, glossary),
-                ContextFixtures.NO_MEMORY,
-                ContextFixtures.inputs("Hale searches for his brother.", 2, glossary, earlier));
-
-        final List<ChatMessage> messages = new DraftPromptBuilder(TEMPLATES, FRAME)
-                .messagesFor(segment, assembled.draftContext(), segment.masked());
-
-        assertThat(text(messages)).contains("Гейл").doesNotContain("Мілтон", "Moreau");
         assertThat(PromptLint.violations(
-                        text(messages), new Facts(segment.masked(), earlier, List.of("Старий розділ."))))
+                        LanguageRules.bundled().section(pair.substring(0, dash), pair.substring(dash + 1)),
+                        SAMPLE_FACTS))
                 .isEmpty();
     }
 
@@ -261,6 +220,12 @@ class PromptHygieneLintTest {
     }
 
     private static List<ChatMessage> messages(final PromptName name, final boolean withOptional) {
+        if (PlannedPrompts.PLANNED.contains(name)) {
+            return PlannedPrompts.messages(name, SOURCE + " ⟦g0⟧ ⟦g1⟧");
+        }
+        if (PlannedPrompts.ANALYSIS.contains(name)) {
+            return PlannedPrompts.analysisMessages(name, FRAME, taskValues(name, withOptional));
+        }
         final List<ChatMessage> messages = new ArrayList<>();
         if (name.systemSlots().isPresent()) {
             messages.add(new ChatMessage(ChatRole.SYSTEM, system(name).strip()));
@@ -270,24 +235,42 @@ class PromptHygieneLintTest {
     }
 
     private static String system(final PromptName name) {
-        return name == PromptName.SUGGEST_TARGETS
-                ? TEMPLATES.renderSystem(
-                        name, FRAME, Map.of("nameRule", NameRules.bundled().rule(NamePolicy.TRANSLITERATE, "uk")))
-                : TEMPLATES.renderSystem(name, FRAME);
+        if (PlannedPrompts.PLANNED.contains(name)) {
+            return PlannedPrompts.plan(name, SOURCE).systemText();
+        }
+        if (PlannedPrompts.ANALYSIS.contains(name)) {
+            return messages(name, true).getFirst().content();
+        }
+        return TEMPLATES.renderSystem(name, FRAME);
+    }
+
+    // An analysis task's own slots; the frame fills its languages and examples.
+    private static Map<String, String> taskValues(final PromptName name, final boolean withOptional) {
+        final Set<String> slots = new HashSet<>(name.userSlots().required());
+        if (withOptional) {
+            slots.addAll(name.userSlots().optional());
+        }
+        slots.removeAll(PlannedPrompts.FRAME_SLOTS);
+        final Map<String, String> values = new HashMap<>();
+        slots.forEach(slot -> values.put(slot, sample(slot)));
+        return values;
     }
 
     private static String user(final PromptName name, final boolean withOptional) {
         final Map<String, String> values = new HashMap<>();
-        name.userSlots().required().forEach(slot -> values.put(slot, sample(name, slot)));
+        name.userSlots().required().forEach(slot -> values.put(slot, sample(slot)));
         if (withOptional) {
-            name.userSlots().optional().forEach(slot -> values.put(slot, sample(name, slot)));
+            name.userSlots().optional().forEach(slot -> values.put(slot, sample(slot)));
         }
         return TEMPLATES.renderUser(name, values);
     }
 
-    private static String sample(final PromptName name, final String slot) {
+    private static String sample(final String slot) {
+        if ("nameRule".equals(slot)) {
+            return NameRules.bundled().rule(NamePolicy.TRANSLITERATE, "uk");
+        }
         if ("text".equals(slot)) {
-            return name == PromptName.DRAFT ? SOURCE : TARGET;
+            return TARGET;
         }
         final String value = SAMPLES.get(slot);
         assertThat(value).as("a realistic sample for slot %s", slot).isNotNull();

@@ -1,8 +1,14 @@
 package ua.bookloom.pipeline.project;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.io.IOException;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -30,6 +36,8 @@ import ua.bookloom.api.pipeline.RoundTripReport;
 final class RoundTripCheck {
 
     private static final String UNDETERMINED_LANGUAGE = "und";
+    private static final String TEMP_PREFIX = "bookloom-roundtrip-";
+    private static final Set<PosixFilePermission> OWNER_ONLY = PosixFilePermissions.fromString("rwx------");
 
     private final BookInspector inspector;
     private final DocumentPort documents;
@@ -52,17 +60,17 @@ final class RoundTripCheck {
             final Result<Document> opened = documents.open(source);
             original = opened.data();
             if (original == null) {
-                return Result.err(Objects.requireNonNull(opened.error(), "error"));
+                return Result.err(Objects.requireNonNull(opened.error(), ERROR));
             }
             final Path written = directory.resolve(source.getFileName().toString());
             final Result<Path> writeResult = write(original, written);
             if (writeResult.isErr()) {
-                return Result.err(Objects.requireNonNull(writeResult.error(), "error"));
+                return Result.err(Objects.requireNonNull(writeResult.error(), ERROR));
             }
             final Result<Document> reopened = documents.open(written);
             copy = reopened.data();
             if (copy == null) {
-                return Result.err(Objects.requireNonNull(reopened.error(), "error"));
+                return Result.err(Objects.requireNonNull(reopened.error(), ERROR));
             }
             return compare(projectId, original, copy);
         } finally {
@@ -82,11 +90,11 @@ final class RoundTripCheck {
     private Result<RoundTripReport> compare(final String projectId, final Document original, final Document copy) {
         final Result<BookProfile> originalProfile = inspector.profile(original);
         if (originalProfile.isErr()) {
-            return Result.err(Objects.requireNonNull(originalProfile.error(), "error"));
+            return Result.err(Objects.requireNonNull(originalProfile.error(), ERROR));
         }
         final Result<BookProfile> copyProfile = inspector.profile(copy);
         if (copyProfile.isErr()) {
-            return Result.err(Objects.requireNonNull(copyProfile.error(), "error"));
+            return Result.err(Objects.requireNonNull(copyProfile.error(), ERROR));
         }
         final Set<String> copyIds =
                 Objects.requireNonNull(copyProfile.data(), "profile").resourceIds();
@@ -140,9 +148,15 @@ final class RoundTripCheck {
                 .sum();
     }
 
+    // The folder is owner-only (rwx------) where the file system knows POSIX permissions, and elsewhere the system
+    // temporary folder's own access rules apply. It is not beside the source, which may sit in a read-only folder.
     private static Path createDirectory() {
+        final FileAttribute<?>[] ownerOnly =
+                FileSystems.getDefault().supportedFileAttributeViews().contains("posix")
+                        ? new FileAttribute<?>[] {PosixFilePermissions.asFileAttribute(OWNER_ONLY)}
+                        : new FileAttribute<?>[0];
         try {
-            return Files.createTempDirectory("bookloom-roundtrip-");
+            return Files.createTempDirectory(TEMP_PREFIX, ownerOnly);
         } catch (IOException cause) {
             throw new IllegalStateException("cannot create the round-trip directory", cause);
         }

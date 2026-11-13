@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.glossary;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import java.util.ArrayList;
@@ -11,31 +13,29 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.ToIntFunction;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
-import ua.bookloom.api.project.TargetOrigin;
+import ua.bookloom.api.project.Origin;
+import ua.bookloom.api.project.TargetState;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.glossary.PreScanReplies.Proposal;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Kind;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Verdict;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
@@ -50,24 +50,46 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
  * person already has.
  */
 @Slf4j
-@RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class PreScan {
 
     /** How many candidates one call carries, so a long book stays inside the model's context. */
     static final int BATCH_SIZE = 40;
 
-    private final PromptTemplates templates;
+    private final ContextBuilder builder;
     private final ObjectMapper mapper;
     private final GlossaryRepository glossary;
     private final TermReview verdicts;
     private final SuggestTargets suggestions;
 
     /**
+     * Builds its requests on the ANALYSIS frame (design D8) from the catalogue's task templates.
+     *
+     * @param templates the non-null prompt catalogue
+     * @param mapper the non-null object mapper
+     * @param glossary the non-null glossary repository
+     * @param verdicts the non-null term review
+     * @param suggestions the non-null suggest targets
+     */
+    @Inject
+    public PreScan(
+            final PromptTemplates templates,
+            final ObjectMapper mapper,
+            final GlossaryRepository glossary,
+            final TermReview verdicts,
+            final SuggestTargets suggestions) {
+        this.builder = new ContextBuilder(Objects.requireNonNull(templates, "templates"));
+        this.mapper = Objects.requireNonNull(mapper, "mapper");
+        this.glossary = Objects.requireNonNull(glossary, "glossary");
+        this.verdicts = Objects.requireNonNull(verdicts, "verdicts");
+        this.suggestions = Objects.requireNonNull(suggestions, "suggestions");
+    }
+
+    /**
      * Asks the model about the book's candidate names and adds what it proposes to the glossary.
      *
      * @param projectId the project whose glossary receives the entries; never null
      * @param story the segments whose capitalised words are the candidates; never null, may be empty
-     * @param frame the run's language pair and style, for the system message
+     * @param frame the run's language pair, whose source the role of the call names
      * @param policy the Book Brief's name policy, which the suggested targets follow
      * @param calls the seam every model call goes through
      * @return the changes: the entries added, unlocked, each with a suggested target where the model gave one — a term the glossary
@@ -87,7 +109,7 @@ public final class PreScan {
         Objects.requireNonNull(calls, "calls");
         try {
             return run(projectId, story, frame, policy, calls).map(EntryChanges::ofAdded);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal, "Name scan failed", "The model name scan could not be completed.", null, cause);
             log.error("Unexpected pre-scan failure project={} code={}", projectId, error.code(), cause);
@@ -118,7 +140,7 @@ public final class PreScan {
         final String existing = existingTerms(Objects.requireNonNull(held.data(), "held"));
         final Result<Collection<Proposal>> proposals = ask(candidates, existing, frame, calls);
         if (proposals.isErr()) {
-            final AppError failed = Objects.requireNonNull(proposals.error(), "error");
+            final AppError failed = Objects.requireNonNull(proposals.error(), ERROR);
             log.info("Model pre-scan finished project={} ok=false code={}", projectId, failed.code());
             return Result.err(failed);
         }
@@ -159,7 +181,8 @@ public final class PreScan {
         final GlossaryEntry proposed = verdict.entry();
         final TermType type = verdict.type() == TermType.OTHER ? proposed.type() : verdict.type();
         final GlossaryEntry judged = ReviewCommit.guessed(
-                proposed.withType(TermType.OTHER).withInferredGender(Gender.UNKNOWN), verdict.withType(type));
+                proposed.withType(TermType.OTHER, proposed.typeOrigin()).withInferredGender(Gender.UNKNOWN),
+                verdict.withType(type));
         if (judged.gender() == Gender.UNKNOWN && proposed.gender() != Gender.UNKNOWN) {
             log.debug("Pre-scan entry {} keeps the proposal's gender as a suggestion", proposed.id());
             return judged.withSuggestedGender(proposed.gender());
@@ -216,7 +239,7 @@ public final class PreScan {
         for (final GlossaryEntry entry : entries) {
             final Result<GlossaryEntry> stored = glossary.add(entry);
             if (stored.isErr()) {
-                return Result.err(Objects.requireNonNull(stored.error(), "error"));
+                return Result.err(Objects.requireNonNull(stored.error(), ERROR));
             }
             added.add(Objects.requireNonNull(stored.data(), "stored"));
         }
@@ -233,7 +256,7 @@ public final class PreScan {
             final List<NameCandidate> batch = candidates.subList(from, Math.min(candidates.size(), from + BATCH_SIZE));
             final Result<List<Proposal>> answered = runBatch(index, batch, existing, frame, calls);
             if (answered.isErr()) {
-                return Result.err(Objects.requireNonNull(answered.error(), "error"));
+                return Result.err(Objects.requireNonNull(answered.error(), ERROR));
             }
             for (final Proposal proposal : Objects.requireNonNull(answered.data(), "proposals")) {
                 proposals.putIfAbsent(PreScanReplies.key(proposal.candidate().term()), proposal);
@@ -248,15 +271,19 @@ public final class PreScan {
             final String existing,
             final CallFrame frame,
             final ModelCalls calls) {
-        final List<ChatMessage> messages = messagesFor(batch, existing, frame);
-        final ChatRequest request = ChatRequests.build(
-                PromptName.PRESCAN, messages, OutputLimit.forPrescan(batch.size()), false, frame.requestDefaults());
-        log.trace("Pre-scan batch {} messages {}", index, messages);
-        final Result<ChatResponse> reply =
-                calls.callAbout(CallKind.PRESCAN, List.of(), request, CallDescriptor.whole(PromptName.PRESCAN));
+        final ChatRequest request = requestFor(batch, existing, frame);
+        log.trace("Pre-scan batch {} messages {}", index, request.messages());
+        final CallDescriptor asked = CallDescriptor.asking(
+                PromptName.PRESCAN, batch.stream().map(NameCandidate::term).toList());
+        final Result<ChatResponse> reply = calls.callAbout(CallKind.PRESCAN, List.of(), request, asked);
         if (reply.isErr()) {
-            final AppError error = Objects.requireNonNull(reply.error(), "error");
-            log.warn("Pre-scan batch {} of size {} failed code={}", index, batch.size(), error.code());
+            final AppError error = Objects.requireNonNull(reply.error(), ERROR);
+            log.warn(
+                    "Pre-scan batch {} of size {} failed code={} reason={}",
+                    index,
+                    batch.size(),
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return Result.err(error);
         }
         final String content = Objects.requireNonNull(reply.data(), "reply").content();
@@ -265,21 +292,21 @@ public final class PreScan {
         batch.forEach(candidate -> byKey.put(PreScanReplies.key(candidate.term()), candidate));
         final List<Proposal> proposals = PreScanReplies.read(mapper, content, byKey);
         log.debug("Pre-scan batch {} answered: size={} proposals={}", index, batch.size(), proposals.size());
+        calls.answered(PreScanReplies.shown(batch, proposals));
         return Result.ok(proposals);
     }
 
-    private List<ChatMessage> messagesFor(
-            final List<NameCandidate> batch, final String existing, final CallFrame frame) {
+    private ChatRequest requestFor(final List<NameCandidate> batch, final String existing, final CallFrame frame) {
         final String lines = String.join(
                 "\n",
                 batch.stream()
                         .map(candidate -> candidate.term() + " — " + candidate.firstSentence())
                         .toList());
-        final String system = templates.renderSystem(PromptName.PRESCAN, frame).strip();
-        final String user = templates
-                .renderUser(PromptName.PRESCAN, Map.of("candidates", lines, "existingTerms", existing))
-                .strip();
-        return List.of(new ChatMessage(ChatRole.SYSTEM, system), new ChatMessage(ChatRole.USER, user));
+        return builder.analysisRequest(
+                PromptName.PRESCAN,
+                frame,
+                Map.of("candidates", lines, "existingTerms", existing),
+                OutputLimit.forPrescan(batch.size()));
     }
 
     /** The proposals as entries, leaving out a term the glossary holds or the person removed. */
@@ -304,7 +331,7 @@ public final class PreScan {
             }
             final Result<Boolean> removed = glossary.wasRemoved(projectId, term);
             if (removed.isErr()) {
-                return Result.err(Objects.requireNonNull(removed.error(), "error"));
+                return Result.err(Objects.requireNonNull(removed.error(), ERROR));
             }
             if (!heldKeys.contains(PreScanReplies.key(term)) && !Boolean.TRUE.equals(removed.data())) {
                 fresh.add(entryOf(projectId, proposal));
@@ -324,14 +351,22 @@ public final class PreScan {
                 GlossaryIds.of(projectId, term),
                 projectId,
                 term,
+                proposal.candidate().aliases(),
+                false,
+                null,
+                TargetState.PINNED,
                 null,
                 proposal.type(),
+                null,
+                Origin.LIKELY,
                 proposal.gender(),
+                Origin.LIKELY,
                 false,
-                TargetOrigin.PERSON,
-                GenderOrigin.SUGGESTED,
                 false,
-                proposal.candidate().aliases());
+                null,
+                null,
+                null,
+                0);
     }
 
     private static String existingTerms(final List<GlossaryEntry> held) {

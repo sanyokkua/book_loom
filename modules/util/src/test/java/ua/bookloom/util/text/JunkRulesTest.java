@@ -1,7 +1,9 @@
 package ua.bookloom.util.text;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
+import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -15,6 +17,15 @@ class JunkRulesTest {
             strings = {"BRANWICK", "NASA", "OK", "T-shirt", "X-ray", "Yellow Pages", "Larkspur Books", "Random House"})
     void isJunk_printingNoteAllCapsOrInitialCompound_isDropped(final String term) {
         assertThat(JunkRules.isJunk(term)).isTrue();
+    }
+
+    @Test
+    void isPrintingNote_longPathologicalLine_answersWithoutBlowingUp() {
+        final String line = "a".repeat(50_000) + "@" + "b".repeat(50_000);
+
+        assertTimeoutPreemptively(
+                Duration.ofSeconds(5),
+                () -> assertThat(JunkRules.isPrintingNote(line)).isFalse());
     }
 
     @ParameterizedTest

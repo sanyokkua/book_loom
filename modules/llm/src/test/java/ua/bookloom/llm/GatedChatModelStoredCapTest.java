@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -22,9 +23,12 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
@@ -75,7 +79,18 @@ class GatedChatModelStoredCapTest {
         server.stubFor(post(urlEqualTo(chatPath))
                 .willReturn(aResponse().withStatus(200).withBody(reply)));
         repository.save(new ModelSettings(
-                PROVIDER, MODEL, TemperatureChoice.CHOOSE, null, null, 128, field, List.of(), null, null));
+                PROVIDER,
+                MODEL,
+                TemperatureChoice.CHOOSE,
+                null,
+                null,
+                128,
+                field,
+                List.of(),
+                Map.of(),
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault()));
 
         model(kind, basePath).chat(uncapped());
 
@@ -97,7 +112,10 @@ class GatedChatModelStoredCapTest {
                 null,
                 null,
                 null,
-                null);
+                null,
+                null,
+                null,
+                false);
     }
 
     private GatedChatModel model(final ProviderKind kind, final String basePath) {

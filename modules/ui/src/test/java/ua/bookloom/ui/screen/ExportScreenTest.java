@@ -8,7 +8,6 @@ import java.util.Locale;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextField;
-import org.controlsfx.control.ToggleSwitch;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -18,8 +17,8 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.RecordingFileChooser;
@@ -75,6 +74,17 @@ class ExportScreenTest extends ExportScreenTestBase {
         WaitForAsyncUtils.waitForFxEvents();
     }
 
+    @Test
+    void screen_afterExportWithWaitingSegments_checkListStatesTheProofreadSummary() throws TimeoutException {
+        desk.willAnswerCounts(counts(68));
+        openEpubAndShowExport();
+
+        exportBook(new ExportReport(
+                Path.of("Frankenstein.uk.epub"), 70, 72, 0, 0, 50, 6, List.of(), 70, new ProofreadSummary(12, 3), 0));
+
+        assertThat(textOf("export-check-proofread")).contains("Proofread: 12 segments re-read, 3 waiting for you");
+    }
+
     private static ExportReport report(final int written, final int auto, final int reviewed) {
         return new ExportReport(
                 Path.of("Frankenstein.uk.epub"),
@@ -86,7 +96,7 @@ class ExportScreenTest extends ExportScreenTestBase {
                 reviewed,
                 List.of(),
                 written,
-                ConsistencySummary.NOT_RUN,
+                ProofreadSummary.NONE,
                 0);
     }
 
@@ -97,7 +107,7 @@ class ExportScreenTest extends ExportScreenTestBase {
         openEpubAndShowExport();
 
         exportBook(new ExportReport(
-                Path.of("Frankenstein.uk.epub"), 70, 72, 0, 0, 50, 6, List.of(), 70, ConsistencySummary.NOT_RUN, 0));
+                Path.of("Frankenstein.uk.epub"), 70, 72, 0, 0, 50, 6, List.of(), 70, ProofreadSummary.NONE, 0));
 
         assertThat(labelText("export-written-value")).isEqualTo("70 of 142");
         assertThat(textOf("export-written")).contains("segments written");
@@ -108,8 +118,8 @@ class ExportScreenTest extends ExportScreenTestBase {
         assertThat(isShown("export-open-book")).isTrue();
     }
 
-    private static ExportReport reportWith(final List<Path> sideFiles, final ConsistencySummary consistency) {
-        return new ExportReport(Path.of("Frankenstein.uk.epub"), 10, 0, 0, 0, 10, 0, sideFiles, 10, consistency, 0);
+    private static ExportReport reportWith(final List<Path> sideFiles, final ProofreadSummary proofread) {
+        return new ExportReport(Path.of("Frankenstein.uk.epub"), 10, 0, 0, 0, 10, 0, sideFiles, 10, proofread, 0);
     }
 
     // IF the written side files were not listed, THEN a person ticking three could not tell what was written.
@@ -119,40 +129,10 @@ class ExportScreenTest extends ExportScreenTestBase {
 
         exportBook(reportWith(
                 List.of(Path.of("/out/Frankenstein.uk.glossary.csv"), Path.of("/out/Frankenstein.uk.report.md")),
-                ConsistencySummary.NOT_RUN));
+                ProofreadSummary.NONE));
 
         assertThat(textOf("export-check-side-file-0")).contains("Frankenstein.uk.glossary.csv");
         assertThat(textOf("export-check-side-file-1")).contains("Frankenstein.uk.report.md");
-        assertThat(optional("export-check-consistency")).isNull();
-    }
-
-    // IF a pass that changed segments said nothing, THEN the person could not tell it had done anything.
-    @Test
-    void screen_afterConsistencyPassThatAdjusted_countsTheSegments() throws TimeoutException {
-        openEpubAndShowExport();
-
-        exportBook(reportWith(List.of(), new ConsistencySummary(ConsistencySummary.Status.RAN, 2, 1)));
-
-        assertThat(textOf("export-check-consistency")).contains("Consistency pass: 3 segments adjusted");
-    }
-
-    @Test
-    void screen_afterConsistencyPassThatChangedNothing_saysItRan() throws TimeoutException {
-        openEpubAndShowExport();
-
-        exportBook(reportWith(List.of(), new ConsistencySummary(ConsistencySummary.Status.RAN, 0, 0)));
-
-        assertThat(textOf("export-check-consistency")).contains("Consistency pass ran — nothing needed changing");
-    }
-
-    @Test
-    void screen_afterConsistencyPassWithNoModel_saysTheGenderStepWasSkipped() throws TimeoutException {
-        openEpubAndShowExport();
-
-        exportBook(reportWith(List.of(), new ConsistencySummary(ConsistencySummary.Status.RAN_WITHOUT_MODEL, 0, 0)));
-
-        assertThat(textOf("export-check-consistency"))
-                .contains("Consistency pass: the gender step was skipped — no model available");
     }
 
     // IF the file just written were named in the red refusal, THEN an export that went well would read as a failure
@@ -281,7 +261,7 @@ class ExportScreenTest extends ExportScreenTestBase {
     // IF the side files stayed usable while a run translates, THEN a person could choose outputs that cannot be
     // written.
     @Test
-    void screen_runRunning_showsSideFilesAndTheSwitchUnavailableAndExportBlockedWithTheNote() throws TimeoutException {
+    void screen_runRunning_showsSideFilesUnavailableAndExportBlockedWithTheNote() throws TimeoutException {
         openEpubAndShowExport();
 
         publish(RunState.RUNNING);
@@ -289,11 +269,17 @@ class ExportScreenTest extends ExportScreenTestBase {
         assertThat(((CheckBox) required("export-aux-glossary")).isDisabled()).isTrue();
         assertThat(((CheckBox) required("export-aux-bilingual")).isDisabled()).isTrue();
         assertThat(((CheckBox) required("export-aux-report")).isDisabled()).isTrue();
-        assertThat(((ToggleSwitch) required("export-aux-consistency")).isDisabled())
-                .isTrue();
-        assertThat(isShown("export-aux-consistency")).isTrue();
         assertThat(button("export-run").isDisabled()).isTrue();
         assertThat(labelText("export-run-hint")).isEqualTo("Pause or stop the translation to export");
+    }
+
+    // IF the retired last-check switch came back, THEN a person would be offered a pass the export no longer runs.
+    @Test
+    void screen_bookOpen_offersNoLastCheck() throws TimeoutException {
+        openEpubAndShowExport();
+
+        assertThat(optional("export-consistency-card")).isNull();
+        assertThat(optional("export-aux-consistency")).isNull();
     }
 
     // IF a pause did not free the choices again, THEN a paused run could never export.

@@ -50,7 +50,6 @@ public final class NarratorDetector {
 
     private static final int MIN_WORDS = 2;
     private static final Pattern TOKEN = Pattern.compile("⟦[^⟧]*⟧");
-    private static final Pattern SENTENCE_END = Pattern.compile("[.!?…]+\\s+|\\R+");
     private static final Pattern WORD = Pattern.compile("\\p{L}+");
     private static final char STRAIGHT_QUOTE = '"';
     private static final char SINGLE_OPEN = '‘';
@@ -189,9 +188,7 @@ public final class NarratorDetector {
             log.debug("Narrator detection: no chapter has {} narration sentences", MIN_SENTENCES);
             return Optional.empty();
         }
-        final NarratorHint.Person person = first.isEmpty()
-                ? NarratorHint.Person.THIRD
-                : first.size() == judged ? NarratorHint.Person.FIRST : NarratorHint.Person.MIXED;
+        final NarratorHint.Person person = personOf(first.size(), judged);
         final int sentences = tallies.stream().mapToInt(Tally::sentences).sum();
         final int firstPerson = tallies.stream().mapToInt(Tally::firstPerson).sum();
         return Optional.of(new NarratorHint(person, (double) firstPerson / sentences, first, judged));
@@ -210,9 +207,7 @@ public final class NarratorDetector {
         int sentences = 0;
         int firstPerson = 0;
         for (final String paragraph : paragraphs) {
-            for (final String sentence : SENTENCE_END
-                    .splitAsStream(narration(paragraph, languageTag))
-                    .toList()) {
+            for (final String sentence : SentenceBreaks.split(narration(paragraph, languageTag))) {
                 final List<String> words = words(sentence);
                 if (words.size() >= MIN_WORDS) {
                     sentences++;
@@ -328,6 +323,21 @@ public final class NarratorDetector {
         return -1;
     }
 
+    /**
+     * The body paragraphs of an opened book in reading order, formatting tokens removed: the text the narrator's own
+     * forms are counted in.
+     *
+     * @param document the non-null opened book; only its body units are read
+     * @return never null; empty when the book has no body paragraph
+     */
+    public static List<String> paragraphsOf(final Document document) {
+        Objects.requireNonNull(document, "document");
+        return chaptersOf(document).stream()
+                .flatMap(List::stream)
+                .map(paragraph -> TOKEN.matcher(paragraph).replaceAll(""))
+                .toList();
+    }
+
     private static List<List<String>> chaptersOf(final Document document) {
         final List<List<String>> chapters = new ArrayList<>();
         for (final Unit unit : document.units()) {
@@ -352,5 +362,12 @@ public final class NarratorDetector {
         if (!paragraphs.isEmpty()) {
             chapters.add(paragraphs);
         }
+    }
+
+    private static NarratorHint.Person personOf(final int firstCount, final int judged) {
+        if (firstCount == 0) {
+            return NarratorHint.Person.THIRD;
+        }
+        return firstCount == judged ? NarratorHint.Person.FIRST : NarratorHint.Person.MIXED;
     }
 }

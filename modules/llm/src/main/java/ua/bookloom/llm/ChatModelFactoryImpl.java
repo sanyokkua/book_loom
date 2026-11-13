@@ -9,12 +9,22 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
+import ua.bookloom.api.llm.ModelFacts;
+import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
+import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.llm.engine.EngineFacts;
 import ua.bookloom.llm.gate.InferenceGate;
+import ua.bookloom.llm.profile.ModelHosting;
+import ua.bookloom.llm.profile.ModelProfiles;
+import ua.bookloom.llm.profile.ObservedReasoning;
+import ua.bookloom.llm.profile.ProfileAdjustments;
+import ua.bookloom.llm.profile.ResolvedProfile;
 import ua.bookloom.llm.provider.ModelSettingsCache;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 import ua.bookloom.llm.provider.RefusalMemory;
@@ -37,6 +47,12 @@ public final class ChatModelFactoryImpl implements ChatModelFactory {
     private final ObjectMapper mapper;
     private final ModelSettingsCache modelSettings;
     private final RefusalMemory refusals;
+    private final CallLedger ledger;
+    private final BuiltWrongLog builtWrong;
+    private final CapIgnoredLog capIgnored;
+    private final ModelProfiles profiles;
+    private final EngineFacts engineFacts;
+    private final ObservedReasoning observed;
 
     @Override
     public Result<ChatModel> create(ModelSelection selection) {
@@ -44,7 +60,7 @@ public final class ChatModelFactoryImpl implements ChatModelFactory {
         Result<ChatModel> result;
         try {
             result = createModel(selection);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             result = Result.err(internalError(cause));
         }
         log.debug(
@@ -75,14 +91,63 @@ public final class ChatModelFactoryImpl implements ChatModelFactory {
                 registered.id(),
                 registered.kind(),
                 selection.modelId());
-        return Result.ok(new GatedChatModel(
+        return Result.ok(gated(registered, selection.modelId()));
+    }
+
+    private ChatModel gated(ProviderConfig registered, String modelId) {
+        return new GatedChatModel(
                 clientFactory.create(registered),
                 registered.id(),
-                selection.modelId(),
+                modelId,
                 gate,
                 retryPolicy,
-                modelSettings::current,
-                refusals));
+                new ModelSettingsSource(
+                        modelSettings::current,
+                        refusals,
+                        stored -> circumstances(
+                                registered,
+                                modelId,
+                                profiles.resolve(
+                                        registered.effectiveEngine(),
+                                        modelId,
+                                        requestFacts(
+                                                registered,
+                                                engineFacts
+                                                        .lastRead(registered.id(), modelId)
+                                                        .orElseGet(() -> engineFacts.withTemplateSwitch(
+                                                                registered, modelId, ModelFacts.unknown()))),
+                                        stored))),
+                new CallObservers(ledger, builtWrong, capIgnored, observed));
+    }
+
+    // Where the model runs and whether it was seen thinking are known at the call, not from its name or its facts.
+    private ResolvedProfile circumstances(ProviderConfig registered, String modelId, ResolvedProfile resolved) {
+        final boolean hosted = ModelHosting.isHosted(registered.baseUrl(), modelId);
+        final boolean thinking = observed.has(registered.id(), modelId);
+        final ModelProfile adjusted = ProfileAdjustments.of(resolved.profile(), hosted, thinking);
+        return adjusted.equals(resolved.profile())
+                ? resolved
+                : new ResolvedProfile(
+                        adjusted,
+                        resolved.identity(),
+                        resolved.match(),
+                        resolved.verdict(),
+                        resolved.warnings(),
+                        resolved.quant(),
+                        resolved.baseModel());
+    }
+
+    // The Ollama-native client sends the window on every request, so the window Ollama loaded the model with last does
+    // not bind the next call; every other connection gets the window the server fixed at load or start.
+    private static ModelFacts requestFacts(ProviderConfig registered, ModelFacts facts) {
+        if (registered.kind() != ProviderKind.OLLAMA || facts.loadedContext() == null) {
+            return facts;
+        }
+        log.debug(
+                "Loaded window set aside: the native client sends the window provider={} loaded={}",
+                registered.id(),
+                facts.loadedContext());
+        return facts.withoutLoadedContext();
     }
 
     private Result<ChatModel> rejected(ModelSelection selection, String message) {

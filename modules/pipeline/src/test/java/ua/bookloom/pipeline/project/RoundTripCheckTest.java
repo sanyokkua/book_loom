@@ -33,11 +33,13 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SettingsRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.UuidIdSource;
+import ua.bookloom.pipeline.run.BriefKeyRecheck;
 
 /** The zero-edit round trip over the real document module, with decorators that damage the written copy. */
 class RoundTripCheckTest {
@@ -123,6 +125,22 @@ class RoundTripCheckTest {
     }
 
     @Test
+    void roundTrip_sourceInReadOnlyFolder_stillRoundTrips() {
+        final RecordingPort port = new RecordingPort(injector.getInstance(DocumentPort.class), path -> {});
+        final Path book = book("en");
+        final java.io.File folder = Objects.requireNonNull(book.getParent()).toFile();
+        assertThat(folder.setWritable(false)).isTrue();
+        try {
+            final RoundTripReport report = roundTrip(port, book);
+
+            assertThat(report.structurePreserved()).isTrue();
+            assertThat(report.idsPreserved()).isTrue();
+        } finally {
+            assertThat(folder.setWritable(true)).isTrue();
+        }
+    }
+
+    @Test
     void roundTrip_unknownProject_answersValidation() {
         final ProjectServiceImpl service = service(injector.getInstance(DocumentPort.class));
 
@@ -157,7 +175,9 @@ class RoundTripCheckTest {
                         injector.getInstance(LexiconRepository.class),
                         injector.getInstance(SegmentRepository.class),
                         new UuidIdSource()),
-                injector.getInstance(SettingsRepository.class));
+                injector.getInstance(SettingsRepository.class),
+                new BriefKeyRecheck(injector.getInstance(SegmentRepository.class), new OpenProjects()),
+                injector.getInstance(SummaryRepository.class));
     }
 
     private Path book(@Nullable final String language) {
@@ -181,7 +201,16 @@ class RoundTripCheckTest {
     }
 
     private static void dropImage(final Path epub) {
-        rewrite(epub, name -> !name.equals(IMAGE), text -> text.replaceAll("<item [^>]*id=\"img1\"[^>]*/>", ""));
+        rewrite(epub, name -> !name.equals(IMAGE), RoundTripCheckTest::withoutImageItem);
+    }
+
+    // The manifest item whose id is img1: from its "<item " up to the first ">" after the id, which must end "/>".
+    private static String withoutImageItem(final String text) {
+        final int id = text.indexOf("id=\"img1\"");
+        final int start = id < 0 ? -1 : text.lastIndexOf("<item ", id);
+        final int end = id < 0 ? -1 : text.indexOf('>', id);
+        final boolean whole = start >= 0 && end > 0 && text.charAt(end - 1) == '/' && text.indexOf('>', start) == end;
+        return whole ? text.substring(0, start) + text.substring(end + 1) : text;
     }
 
     private static void dropSecondParagraph(final Path epub) {

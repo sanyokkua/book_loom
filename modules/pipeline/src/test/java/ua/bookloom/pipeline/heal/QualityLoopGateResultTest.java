@@ -25,8 +25,9 @@ import ua.bookloom.pipeline.TestDocuments;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
- * {@link QualityLoop}/{@link SegmentHealer}: what a failed round's gate finding does to the next round, and that the
- * masked form the gate answers — not the model's raw reply — is what gets evaluated and recorded.
+ * {@link QualityLoop}/{@link SegmentHealer}: the one repair names the draft's gate finding, a repair the gate refuses
+ * gets no second call, and the masked form the gate answers — not the model's raw reply — is what gets evaluated and
+ * recorded.
  */
 class QualityLoopGateResultTest {
 
@@ -36,38 +37,41 @@ class QualityLoopGateResultTest {
     private final DocumentPort documents = TestDocuments.documents();
     private final QualityLoop loop = QualityLoopFixtures.loop();
 
-    // A round whose reply fails the gate hands its finding to the next round in place of the same gate's older one.
+    // The repair names what the gate found in the draft; its own reply failing the gate again ends the segment.
     @Test
-    void nextDecision_roundFailsTheGate_nextRequestNamesTheRoundsFindingInsteadOfTheInitialOne() {
+    void nextDecision_repairFailsTheGate_namesTheDraftsFindingAndMakesNoSecondCall() {
         final Segment segment =
                 QualityLoopFixtures.markdownSegment(tempDir.resolve("notes.md"), "The *second* marked paragraph.");
-        final DraftOutcome.Drafted outcome = new DraftOutcome.Drafted(
-                segment, segment.masked(), List.of(), "x", null, null, gateFinding("initial-gate-note"));
+        final DraftOutcome.Drafted outcome = QualityLoopFixtures.repairing(new DraftOutcome.Drafted(
+                segment, segment.masked(), List.of(), "x", null, null, gateFinding("initial-gate-note")));
         final GateFunction gate = (unusedSegment, maskedReply) -> new GateResult.GateFailed(
                 gateFinding("round-gate-note"), AppError.of(ErrorCode.validation, "Placeholder mismatch", "bad"));
-        final ScriptedChatModel model =
-                new ScriptedChatModel().answer(readable("{\"target\":\"x\"}")).answer(readable("{\"target\":\"x\"}"));
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(readable("{\"items\":[{\"id\":\"1\",\"target\":\"x\"}]}"))
+                .answer(readable("{\"items\":[{\"id\":\"1\",\"target\":\"x\"}]}"));
 
         final ChunkDecider decider = start(outcome, ReviewMode.UNATTENDED, QualityDial.BALANCED, gate, model);
-        decider.nextDecision();
+        final SegmentOutcome result =
+                Objects.requireNonNull(decider.nextDecision().data());
 
-        assertThat(model.requests()).hasSize(2);
+        assertThat(model.requests()).hasSize(1);
         assertThat(userMessage(model, 0)).contains("initial-gate-note").doesNotContain("round-gate-note");
-        assertThat(userMessage(model, 1)).contains("round-gate-note").doesNotContain("initial-gate-note");
+        assertThat(result.status()).isEqualTo(SegmentStatus.FLAGGED);
     }
 
-    // The candidate a repair round is judged on is the gate's masked form: the model's ⟦g5⟧ is already a name.
+    // The candidate a repair is judged on is the gate's masked form: the model's ⟦g5⟧ is already a name.
     @Test
     void nextDecision_repairReplyRestoredByTheGate_isAcceptedAsRepairedWithTheGatesMaskedForm() {
         final Segment segment =
                 QualityLoopFixtures.markdownSegment(tempDir.resolve("echo.md"), "He opened the old door.");
-        final DraftOutcome.Drafted outcome = QualityLoopFixtures.drafted(segment, documents, "HE OPENED THE OLD DOOR.");
+        final DraftOutcome.Drafted outcome = QualityLoopFixtures.repairing(
+                QualityLoopFixtures.drafted(segment, documents, "HE OPENED THE OLD DOOR."));
         final GateFunction gate = (unusedSegment, maskedReply) ->
                 new GateResult.Restored("Він відчинив Гейл старі двері.", "Він відчинив Гейл старі двері.");
-        final ScriptedChatModel model =
-                new ScriptedChatModel().answer(readable("{\"target\":\"Він відчинив ⟦g5⟧ старі двері.\"}"));
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(readable("{\"items\":[{\"id\":\"1\",\"target\":\"Він відчинив ⟦g5⟧ старі двері.\"}]}"));
 
-        final ChunkDecider decider = start(outcome, ReviewMode.UNATTENDED, QualityDial.FAST, gate, model);
+        final ChunkDecider decider = start(outcome, ReviewMode.UNATTENDED, QualityDial.BALANCED, gate, model);
         final SegmentOutcome result =
                 Objects.requireNonNull(decider.nextDecision().data());
 
@@ -109,9 +113,7 @@ class QualityLoopGateResultTest {
             final QualityDial dial,
             final GateFunction gate,
             final ScriptedChatModel model) {
-        final Result<ChunkDecider> started =
-                loop.start(List.of(outcome), QualityLoopFixtures.settings(mode, dial), gate, calls(model));
-        return Objects.requireNonNull(started.data());
+        return loop.start(List.of(outcome), QualityLoopFixtures.settings(mode, dial), gate, calls(model));
     }
 
     private static String userMessage(final ScriptedChatModel model, final int request) {

@@ -12,6 +12,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.pipeline.index.Speech;
 import ua.bookloom.pipeline.prompt.Pronouns;
+import ua.bookloom.util.text.Edges;
 
 /**
  * Checks the quote a term reading gives for a gender (15i.N4): the vote stands only when the quote is in the window it
@@ -25,7 +26,6 @@ final class QuoteVote {
 
     private static final Pattern WORD = Pattern.compile("\\p{L}[\\p{L}\\p{M}'’ʼ]*");
     private static final Pattern BLANKS = Pattern.compile("\\s+");
-    private static final Pattern EDGES = Pattern.compile("^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$");
     private static final String APOSTROPHES = "'’ʼ";
     private static final String NOT_AFTER_LETTER = "(?<![\\p{L}\\p{M}\\p{N}])";
     private static final String NOT_BEFORE_LETTER = "(?![\\p{L}\\p{M}\\p{N}])";
@@ -69,7 +69,7 @@ final class QuoteVote {
      * @return {@code claimed} when the window bears the quote out, else {@link Gender#UNKNOWN}
      */
     Gender vote(final String quote, final Gender claimed, final String windowText) {
-        final String core = EDGES.matcher(quote).replaceAll("");
+        final String core = Edges.strip(quote, Edges::isNeitherLetterNorNumber);
         if (claimed == Gender.UNKNOWN || core.isEmpty()) {
             return Gender.UNKNOWN;
         }
@@ -91,7 +91,7 @@ final class QuoteVote {
      * @return {@code true} if the window holds the quote, {@code false} otherwise or when the quote has no letter
      */
     static boolean stands(final String quote, final String windowText) {
-        final String core = EDGES.matcher(quote).replaceAll("");
+        final String core = Edges.strip(quote, Edges::isNeitherLetterNorNumber);
         final boolean found =
                 !core.isEmpty() && patternOf(core).matcher(windowText).find();
         log.debug("Quote of {} characters stands in its window: {}", quote.length(), found);

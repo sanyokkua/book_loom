@@ -64,7 +64,7 @@ public final class ChangeResults {
     private final ChangeOperation operation;
     private final boolean stopped;
     private final List<ChangeRow> rows;
-    private final List<String> untargeted;
+    private final List<ChangeRow> untargeted;
     private final Map<Long, Reversal> reversals = new HashMap<>();
     private final LiveCalls calls;
     private final StepLog steps;
@@ -97,15 +97,15 @@ public final class ChangeResults {
      * @param stopped whether the person stopped it
      * @param items the rows with their reversals, in the order the dialog lists them
      * @param calls the model calls the operation made, for the dialog's folded section
-     * @param untargeted the terms still without a target, listed for the person to give; never null
+     * @param untargeted the names still without a target, as rows to give one in; never null
      */
     public ChangeResults(
             final ChangeOperation operation,
             final boolean stopped,
             final List<Item> items,
             final LiveCalls calls,
-            final List<String> untargeted) {
-        this(operation, stopped, items, calls, untargeted, StepLog.EMPTY, Duration.ZERO, false);
+            final List<ChangeRow> untargeted) {
+        this(operation, stopped, items, calls, untargeted, RunEnd.NONE);
     }
 
     /**
@@ -115,28 +115,26 @@ public final class ChangeResults {
      * @param stopped whether the person stopped it
      * @param items the rows with their reversals, in the order the dialog lists them
      * @param calls the model calls the operation made
-     * @param untargeted the terms still without a target, listed for the person to give; never null
-     * @param steps the steps the operation announced, for the Steps tab
-     * @param elapsed how long it ran by the activity tracker's clock, pauses included
-     * @param endedHidden whether its dialog was in the background when it ended, so its results open only on request
+     * @param untargeted the names still without a target, as rows to give one in; never null
+     * @param ending what the activity had shown when it ended: its steps, its time and where its dialog was
      */
     public ChangeResults(
             final ChangeOperation operation,
             final boolean stopped,
             final List<Item> items,
             final LiveCalls calls,
-            final List<String> untargeted,
-            final StepLog steps,
-            final Duration elapsed,
-            final boolean endedHidden) {
-        this.steps = Objects.requireNonNull(steps, "steps");
-        this.elapsed = Objects.requireNonNull(elapsed, "elapsed");
-        this.endedHidden = endedHidden;
+            final List<ChangeRow> untargeted,
+            final RunEnd ending) {
+        this.steps = Objects.requireNonNull(ending, "ending").steps();
+        this.elapsed = ending.elapsed();
+        this.endedHidden = ending.hidden();
         this.untargeted = List.copyOf(Objects.requireNonNull(untargeted, "untargeted"));
         this.operation = Objects.requireNonNull(operation, "operation");
         this.stopped = stopped;
         this.rows = items.stream().map(Item::row).toList();
-        items.forEach(item -> reversals.put(item.row().id(), item.reversal()));
+        items.stream()
+                .filter(item -> item.row().kind().isRevertible())
+                .forEach(item -> reversals.put(item.row().id(), item.reversal()));
         this.calls = Objects.requireNonNull(calls, "calls");
     }
 
@@ -150,11 +148,11 @@ public final class ChangeResults {
     }
 
     /**
-     * The terms the operation left without a target.
+     * The names the operation left without a target, as rows the person gives a target in.
      *
-     * @return the terms for the person to give a target; empty when none
+     * @return the rows, none of which can be put back; empty when none
      */
-    public List<String> untargeted() {
+    public List<ChangeRow> untargeted() {
         return untargeted;
     }
 
@@ -246,10 +244,12 @@ public final class ChangeResults {
     /**
      * Whether any row can still be put back.
      *
-     * @return {@code true} if a row is neither reverted nor waiting, {@code false} otherwise
+     * @return {@code true} if a row that can be put back is neither reverted nor waiting, {@code false} otherwise
      */
     public boolean hasRowsToRevert() {
-        return rows.stream().anyMatch(row -> !reverted.contains(row.id()) && !queued.contains(row.id()));
+        return rows.stream()
+                .filter(row -> row.kind().isRevertible())
+                .anyMatch(row -> !reverted.contains(row.id()) && !queued.contains(row.id()));
     }
 
     /**
@@ -270,7 +270,7 @@ public final class ChangeResults {
     /** Puts every row back, one after the other; the first failure stops the rest. */
     public void undoAll() {
         log.info("undo all of the {} results: {} rows", operation, rows.size());
-        rows.forEach(row -> revert(row.id()));
+        rows.stream().filter(row -> row.kind().isRevertible()).forEach(row -> revert(row.id()));
     }
 
     private void drain() {

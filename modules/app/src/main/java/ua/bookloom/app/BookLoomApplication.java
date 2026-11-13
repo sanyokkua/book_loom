@@ -168,7 +168,7 @@ public final class BookLoomApplication extends Application {
         fxThread.execute(() -> {
             try {
                 built.complete(build.get());
-            } catch (Throwable e) {
+            } catch (Exception | LinkageError e) {
                 built.completeExceptionally(e);
             }
         });

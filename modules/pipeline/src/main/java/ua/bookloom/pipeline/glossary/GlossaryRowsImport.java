@@ -11,10 +11,10 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
-import ua.bookloom.api.project.Deferral;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.pipeline.revision.DeferralRegister;
+import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.util.text.GlossaryKeys;
 
 /**
@@ -26,19 +26,28 @@ import ua.bookloom.util.text.GlossaryKeys;
  * @param glossary where the entries are stored
  * @param segments the decided segments a changed target is checked against
  * @param deferrals where a segment a changed target touches is deferred
+ * @param summaries the kept chapter summaries a changed pinned or locked target is written into
+ * @param openProjects where the segments naming an entry are read from, for a gender that arrives
  * @param languageTag the source language's tag for the name clusters, or null when it is not known
+ * @param targetLanguage the project's target language, whose file says whether a row's stress marks are removed; null
+ *     when none is chosen
  */
 @Slf4j
 record GlossaryRowsImport(
         GlossaryRepository glossary,
         SegmentRepository segments,
         DeferralRepository deferrals,
-        @Nullable String languageTag) {
+        SummaryRepository summaries,
+        OpenProjects openProjects,
+        @Nullable String languageTag,
+        @Nullable String targetLanguage) {
 
     GlossaryRowsImport {
         Objects.requireNonNull(glossary, "glossary");
         Objects.requireNonNull(segments, "segments");
         Objects.requireNonNull(deferrals, "deferrals");
+        Objects.requireNonNull(summaries, "summaries");
+        Objects.requireNonNull(openProjects, "openProjects");
     }
 
     /**
@@ -56,10 +65,13 @@ record GlossaryRowsImport(
     private Result<List<Integer>> store(
             final String projectId, final List<GlossaryCsv.Row> rows, final List<GlossaryEntry> held) {
         final Map<String, GlossaryEntry> byKey = new HashMap<>();
-        held.forEach(entry -> byKey.put(GlossaryKeys.of(entry.term()), entry));
+        // A row names an entry by its lemma, else by one of its forms ({@code Велемира} edits {@code Велемир}).
+        held.forEach(entry -> byKey.putIfAbsent(GlossaryKeys.of(entry.term()), entry));
+        held.forEach(entry -> entry.forms().forEach(form -> byKey.putIfAbsent(GlossaryKeys.of(form), entry)));
         final List<Integer> refused = new ArrayList<>();
         final List<EntryChange> changes = new ArrayList<>();
-        for (final GlossaryCsv.Row row : rows) {
+        for (final GlossaryCsv.Row written : rows) {
+            final GlossaryCsv.Row row = cleaned(written);
             if (row.locked() && (row.target() == null || row.target().isBlank())) {
                 refused.add(row.line());
                 continue;
@@ -76,8 +88,24 @@ record GlossaryRowsImport(
                 .map(shared -> List.copyOf(refused));
     }
 
+    // A row's target is stored without the stress marks its language asks to remove; one left blank is no target.
+    private GlossaryCsv.Row cleaned(final GlossaryCsv.Row row) {
+        final String clean = TargetText.clean(row.target(), targetLanguage);
+        if (Objects.equals(clean, row.target())) {
+            return row;
+        }
+        log.debug("Glossary rows import line {} target cleaned", row.line());
+        return new GlossaryCsv.Row(
+                row.line(),
+                row.term(),
+                clean == null || clean.isBlank() ? null : clean,
+                row.type(),
+                row.gender(),
+                row.locked());
+    }
+
     private static GlossaryEntry added(final String projectId, final GlossaryCsv.Row row) {
-        return new GlossaryEntry(
+        return GlossaryEntry.of(
                 GlossaryIds.of(projectId, row.term()),
                 projectId,
                 row.term(),
@@ -87,11 +115,11 @@ record GlossaryRowsImport(
                 row.locked());
     }
 
-    // A target the file changes defers the decided segments that used the old one, as an edit of the cell does.
+    // A target or an enforced gender the file changes defers the decided segments, as an edit of the cell does.
     private Result<Integer> deferChangedTargets(final String projectId, final List<EntryChange> changes) {
         final List<EntryChange> retargeted =
                 changes.stream().filter(GlossaryRowsImport::isRetargeted).toList();
-        log.debug("Glossary rows import project={} changedTargets={}", projectId, retargeted.size());
+        log.debug("Glossary rows import project={} changedEntries={}", projectId, retargeted.size());
         if (retargeted.isEmpty()) {
             return Result.ok(0);
         }
@@ -100,20 +128,19 @@ record GlossaryRowsImport(
 
     private static boolean isRetargeted(final EntryChange change) {
         final GlossaryEntry before = change.before();
-        return before != null && !Objects.equals(before.target(), change.after().target());
+        return before != null && TermChanges.touchesDecided(before, change.after());
     }
 
     private Result<Integer> deferAll(final List<EntryChange> retargeted, final List<SegmentRecord> decided) {
+        final TermChanges.Stores stores = new TermChanges.Stores(deferrals, summaries, openProjects);
         int added = 0;
         for (final EntryChange change : retargeted) {
-            for (final Deferral deferral : DeferralRegister.termChanged(
-                    Objects.requireNonNull(change.before(), "before"), change.after(), decided)) {
-                final Result<Deferral> stored = deferrals.add(deferral);
-                if (stored.isErr()) {
-                    return Result.err(Objects.requireNonNull(stored.error(), "error"));
-                }
-                added++;
+            final Result<Integer> recorded = TermChanges.record(
+                    stores, Objects.requireNonNull(change.before(), "before"), change.after(), decided, targetLanguage);
+            if (recorded.isErr()) {
+                return recorded;
             }
+            added += Objects.requireNonNull(recorded.data(), "recorded");
         }
         return Result.ok(added);
     }

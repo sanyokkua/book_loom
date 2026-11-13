@@ -20,9 +20,9 @@ WHERE the total is zero, the screen SHALL report the proportion complete as zero
 
 The screen SHALL NOT report a rate of progress or an estimated finishing time.
 
-**Source:** FR-ALGO-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`,
-`docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`.
+**Source:** FR-ALGO-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`),
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`,
+`docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`.
 In plain words: these four counts are what the engine actually reports, so these are what the dashboard shows.
 Throughput and a time estimate are drawn in the reference and are not derivable from what the engine emits, so
 they are refused rather than guessed — a made-up estimate on a run that takes hours is worse than no estimate.
@@ -70,9 +70,9 @@ value substituted into it.
 The log SHALL retain its most recent entries up to a fixed bound and SHALL drop the oldest first.
 
 **Source:** FR-NOTIF-6a, FR-NOTIF-6b
-(`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#activity-log`), FR-A11Y-6
-(`docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#accessibility`), FR-UI-08
-(`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`).
+(`docs/spec_baseline/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#activity-log`), FR-A11Y-6
+(`docs/spec_baseline/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#accessibility`), FR-UI-08
+(`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`).
 In plain words: the log is the only record of what a multi-hour run decided, and nothing is stored, so it is also
 the only record there will ever be. A fixed vocabulary is what makes it scannable — seven kinds a person learns
 once, rather than free-form sentences the engine happened to produce. Colour alone cannot carry the kind, because
@@ -118,9 +118,9 @@ SHALL treat the events emitted during the run as progress only.
 IF a run is refused before it begins and therefore emits no finishing event, THEN the screen SHALL still leave
 the running state and report the refusal.
 
-**Source:** FR-ALGO-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`),
+**Source:** FR-ALGO-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`),
 `docs/next_features.md` §14,
-`docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#state-mirror`.
+`docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#state-mirror`.
 In plain words: a run refused at the start — the destination already exists, or the book will not open — returns
 its error without ever emitting a finishing event. A screen that trusted only the event stream would sit spinning
 forever on the commonest mistake there is, which is exactly what the review of the command line predicted.
@@ -151,8 +151,8 @@ segment as a decision.
 The engine SHALL NOT interrupt any work other than a model request: neither the wait while paused nor the export
 is ever interrupted by a pause or a stop.
 
-**Source:** FR-RESUME-03, FR-RESUME-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`),
-`docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`.
+**Source:** FR-RESUME-03, FR-RESUME-05 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`),
+`docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`.
 In plain words: a local model can take minutes to answer, and a request that times out is retried up to three
 times. If Pause and Stop were only noticed between segments, pressing either would do nothing for as long as that
 takes — a hand run showed a Pause ignored for two minutes while a retry went to the provider, with the screen
@@ -200,8 +200,8 @@ segment's first draft, a structural repair and a placeholder repair are each the
 its own event. The client's own retries of one call — a timeout, a `Retry-After` wait — belong to that same call and
 SHALL NOT emit another event.
 
-**Source:** FR-ALGO-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`.
+**Source:** FR-ALGO-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`),
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`.
 In plain words: between two segment decisions the engine says nothing, and with a local model that gap can last
 minutes. Without a sign that a call went out, a screen cannot tell "the model is thinking" from "the run is stuck". A
 segment that needs a repair asks the model again, so it produces one event per ask. A provider client that retries a
@@ -242,8 +242,8 @@ pauses, resumes, finishes or is stopped, the dashboard SHALL stop showing the wa
 banner of the run's state instead; a call answered in under `10` seconds SHALL show no waiting text at all. The client's
 own retries of the same call are not a new model call, so the waiting text SHALL keep counting across them.
 
-**Source:** FR-ALGO-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`.
+**Source:** FR-ALGO-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`),
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`.
 In plain words: a hand run showed the counters standing still for minutes while one request waited on a slow
 model, and the dashboard looked hung. Ten seconds is longer than a normal answer from a local model, so the notice
 appears only when something is unusually slow and never flickers on a healthy run. The banners for pausing,

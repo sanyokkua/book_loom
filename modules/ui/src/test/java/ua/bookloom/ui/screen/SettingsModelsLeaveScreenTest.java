@@ -24,7 +24,7 @@ class SettingsModelsLeaveScreenTest extends SettingsModelsScreenTestBase {
     }
 
     private void changeTemperature() {
-        onFx(() -> ((javafx.scene.control.ToggleButton) required("models-temperature-omit")).fire());
+        onFx(((javafx.scene.control.ToggleButton) required("models-temperature-omit"))::fire);
     }
 
     private String storedChoice(final String model) {

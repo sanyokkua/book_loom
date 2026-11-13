@@ -19,7 +19,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 class GlossaryEntryNoEvidenceTest {
 
     private static GlossaryEntry unknown() {
-        return new GlossaryEntry("e1", "p1", "Wren", null, TermType.CHARACTER, Gender.UNKNOWN, false);
+        return GlossaryEntry.of("e1", "p1", "Wren", null, TermType.CHARACTER, Gender.UNKNOWN, false);
     }
 
     @Test
@@ -52,7 +52,7 @@ class GlossaryEntryNoEvidenceTest {
         final GlossaryEntry edited = unknown().withNoGenderEvidence().withGender(gender);
 
         assertThat(edited.noGenderEvidence()).isFalse();
-        assertThat(edited.genderOrigin()).isEqualTo(GenderOrigin.PERSON);
+        assertThat(edited.genderOrigin()).isEqualTo(Origin.USER);
     }
 
     // The person's edit back to "not specified" is their decision, not the scan's finding.
@@ -68,7 +68,7 @@ class GlossaryEntryNoEvidenceTest {
         final GlossaryEntry later = unknown().withNoGenderEvidence().withInferredGender(Gender.FEMALE);
 
         assertThat(later.noGenderEvidence()).isFalse();
-        assertThat(later.genderOrigin()).isEqualTo(GenderOrigin.VERIFIED);
+        assertThat(later.genderOrigin()).isEqualTo(Origin.BOOK);
     }
 
     @Test
@@ -76,7 +76,7 @@ class GlossaryEntryNoEvidenceTest {
         final GlossaryEntry later = unknown().withNoGenderEvidence().withSuggestedGender(Gender.FEMALE);
 
         assertThat(later.noGenderEvidence()).isFalse();
-        assertThat(later.genderOrigin()).isEqualTo(GenderOrigin.SUGGESTED);
+        assertThat(later.genderOrigin()).isEqualTo(Origin.LIKELY);
     }
 
     // Other edits (a target, a lock, a type, aliases) say nothing about the gender: the finding stays.
@@ -94,9 +94,9 @@ class GlossaryEntryNoEvidenceTest {
                 edit("withSuggestedTarget", entry -> entry.withSuggestedTarget("Врен")),
                 edit("withLocked", entry -> entry.withLocked(true)),
                 edit("withRuleLock", GlossaryEntry::withRuleLock),
-                edit("withType", entry -> entry.withType(TermType.CHARACTER)),
+                edit("withType", entry -> entry.withType(TermType.CHARACTER, Origin.USER)),
                 edit("accepted", GlossaryEntry::accepted),
-                edit("withAliases", entry -> entry.withAliases(List.of("Wrens"))));
+                edit("withForms", entry -> entry.withForms(List.of("Wrens"))));
     }
 
     private static Arguments edit(final String name, final UnaryOperator<GlossaryEntry> edit) {

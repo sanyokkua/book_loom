@@ -25,6 +25,7 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ConnectionStatus;
 import ua.bookloom.ui.state.RunMode;
 import ua.bookloom.ui.state.RunRow;
+import ua.bookloom.ui.state.RunStage;
 import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.RunStateView;
 import ua.bookloom.ui.state.StateMirror;
@@ -32,19 +33,22 @@ import ua.bookloom.ui.state.Throughput;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
- * The open project in the window's title bar: its name, the state text of its run-state row, the quality and review
+ * The open project in the window's title bar: its name, the state text of its run-state row, the stage chip while a
+ * run is at work or paused, the quality and review
  * mode, the time elapsed and the speed while translating, the AI-model chip (which opens the settings) and the one run
  * control, so a person can follow and pause the run from any screen.
  *
  * <p>Everything shown is read from the {@link RunStateSource} row, the same row the toolbar and the banners read, and
  * the control calls the view model's {@code pause} and {@code resume}, as the toolbar's buttons do, so the two places
  * always agree. A window narrower than the wide class hides the mode, the time and the speed, a compact one the name
- * ({@link PriorityRow}, {@link LayoutClass}). No line is logged for a redraw, because the elapsed time changes every second; only showing,
+ * ({@link PriorityRow}, {@link LayoutClass}); the stage chip gives way last of the droppable parts. No line is logged for a redraw, because the elapsed time changes every second; only showing,
  * hiding and a press are logged.
  */
 @Slf4j
 @Singleton
 public final class RunStatusBar {
+
+    private static final String RUN_STATUS_DETAIL = "run-status-detail";
 
     private static final double PART_SPACING = 12;
     // The project name shrinks to about twenty characters before any other part is hidden.
@@ -62,6 +66,7 @@ public final class RunStatusBar {
     private final PriorityRow view = new PriorityRow(PART_SPACING);
     private final Label projectName = new Label();
     private final FigureLabel stateText = new FigureLabel();
+    private final Label stageChip = new Label();
     private final Label modeText = new Label();
     // The state text (which holds the time left) and the two figures change every second; they are their own layout
     // roots, so a tick does not re-measure the bar.
@@ -104,6 +109,7 @@ public final class RunStatusBar {
         mirror.runMode().addListener(redraw);
         mirror.live().throughput().addListener(redraw);
         mirror.live().connection().addListener(redraw);
+        mirror.live().stage().addListener(redraw);
         // A figure is worded only while it is shown (a hidden label never laid out would re-measure the bar on every
         // tick), so it is worded again when a wider window brings it back.
         elapsed.visibleProperty().addListener(redraw);
@@ -127,15 +133,15 @@ public final class RunStatusBar {
         name(projectName, "shell-run-project", "run-status-text");
         name(stateText, "shell-run-state", "run-status-text");
         stateText.getStyleClass().add("run-status-state");
-        name(modeText, "shell-run-mode", "run-status-detail");
+        name(modeText, "shell-run-mode", RUN_STATUS_DETAIL);
         Tips.install(messages, modeText, MessageKey.SHELL_RUN_MODE_TIP);
-        name(elapsed, "shell-run-elapsed", "run-status-detail");
-        name(rate, "shell-run-rate", "run-status-detail");
+        name(elapsed, "shell-run-elapsed", RUN_STATUS_DETAIL);
+        name(rate, "shell-run-rate", RUN_STATUS_DETAIL);
         Tips.install(messages, rate, MessageKey.SHELL_RUN_RATE_TIP);
         projectName.setMinWidth(0);
         projectName.setTextOverrun(OverrunStyle.ELLIPSIS);
         Overrun.install(projectName);
-        for (final Label part : new Label[] {stateText, modeText, elapsed, rate}) {
+        for (final Label part : new Label[] {stateText, stageChip, modeText, elapsed, rate}) {
             part.setMinWidth(Region.USE_PREF_SIZE);
         }
         control.setId("shell-run-control");
@@ -145,7 +151,8 @@ public final class RunStatusBar {
         control.setOnAction(event -> press());
         Tips.install(messages, control, MessageKey.TRANSLATING_PAUSE_TIP);
         buildChip();
-        view.getChildren().addAll(projectName, stateText, modeText, elapsed, rate, chip, control);
+        buildStageChip();
+        view.getChildren().addAll(projectName, stateText, stageChip, modeText, elapsed, rate, chip, control);
         giveWay();
     }
 
@@ -153,9 +160,15 @@ public final class RunStatusBar {
     // name, then hides the rate, the mode and the elapsed time in that order. The state, the chip and the control stay.
     private void giveWay() {
         view.elastic(projectName, NAME_COMFORT);
-        view.droppable(rate, modeText, elapsed);
+        view.droppable(rate, modeText, elapsed, stageChip);
         view.dropBelow(LayoutClass.Width.WIDE, modeText, elapsed, rate);
         view.dropBelow(LayoutClass.Width.REGULAR, projectName);
+    }
+
+    private void buildStageChip() {
+        name(stageChip, "shell-run-stage", "run-status-stage");
+        stageChip.getStyleClass().addAll("chip", "chip-info");
+        Tips.install(messages, stageChip, MessageKey.SHELL_RUN_STAGE_TIP);
     }
 
     private void buildChip() {
@@ -199,6 +212,7 @@ public final class RunStatusBar {
             stateText.release();
         }
         stateText.setText(row.title().in(messages));
+        showStage(mirror.live().stage().get());
         showMode(mirror.runMode().get());
         showTimes(mirror.live().throughput().get(), row.row());
         showChip(row.chip());
@@ -213,6 +227,14 @@ public final class RunStatusBar {
         }
         view.setVisible(show);
         view.setManaged(show);
+    }
+
+    // The chip follows the run while it runs or is paused; the run session withdraws the stage when the run ends.
+    private void showStage(final @Nullable RunStage stage) {
+        view.want(stageChip, stage != null);
+        if (stage != null) {
+            stageChip.setText(StageWords.inWork(messages, stage));
+        }
     }
 
     private void showMode(final @Nullable RunMode mode) {

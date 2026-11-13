@@ -15,9 +15,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 
 /**
@@ -35,7 +35,7 @@ import ua.bookloom.api.project.TermType;
  * character are read from the entry that holds its name as its term or, failing that, as an alias, like the lost names. A cluster's spellings are counted word by word: each source word
  * of an entry whose target has as many words is paired with the target's word in its place, without case, and the
  * cluster counts the most renderings one source word got; a cluster with two or more members is consistent when its entries hold at most one
- * known gender. A gender is "verified" when its origin is {@link GenderOrigin#VERIFIED} (15i.N0).
+ * known gender. A gender is "verified" when its origin is {@link Origin#BOOK} (15i.N0).
  *
  * @param eligible the gold persons with {@link #MIN_MENTIONS} or more mentions
  * @param genderCorrect how many of them ended with the gold gender
@@ -256,7 +256,7 @@ record NamesScore(
         return entry != null
                 && entry.gender() != person.gender()
                 && entry.gender() != Gender.UNKNOWN
-                && entry.genderOrigin() == GenderOrigin.VERIFIED;
+                && entry.genderOrigin() == Origin.BOOK;
     }
 
     /** The whole-word, case-sensitive occurrences of {@code term} in {@code text}. */

@@ -5,6 +5,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -73,7 +74,9 @@ final class ImportVerdictView {
             case ALREADY -> controls.getChildren().add(showThem());
             case DRM, UNSUPPORTED, NO_TEXT -> controls.getChildren().add(chooseAnother());
             case DAMAGED -> controls.getChildren().addAll(chooseAnother(), details());
-            case READY, TWO_MARKS, UNRECOGNIZED -> {}
+            case READY, TWO_MARKS, UNRECOGNIZED -> {
+                // Nothing to act on: the verdict line alone says it.
+            }
         }
         if (!controls.getChildren().isEmpty()) {
             banner.addDetail(controls);
@@ -100,7 +103,7 @@ final class ImportVerdictView {
     }
 
     private void reading(final HBox controls) {
-        final ProgressBar bar = new ProgressBar(ProgressBar.INDETERMINATE_PROGRESS);
+        final ProgressBar bar = new ProgressBar(ProgressIndicator.INDETERMINATE_PROGRESS);
         bar.setId("import-verdict-bar");
         // The mockup's bar fills the line and Cancel sits at its end.
         bar.setMaxWidth(Double.MAX_VALUE);

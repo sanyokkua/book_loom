@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -91,7 +90,7 @@ class HttpExchangeTest {
     }
 
     @Test
-    void get_closedLocalPortMapsToUnreachable() throws IOException {
+    void get_closedLocalPortMapsToUnreachable() {
         final URI endpoint = closedEndpoint();
 
         final Result<HttpReply> result = exchange().get(config(endpoint, Duration.ofSeconds(2)), "/chat");
@@ -140,11 +139,11 @@ class HttpExchangeTest {
         input.put("X-Added", List.of("later"));
 
         assertThat(reply.headers()).containsEntry("X-Reply", List.of("first")).doesNotContainKey("X-Added");
-        assertThatThrownBy(() -> Objects.requireNonNull(reply.headers().get("X-Reply"), "header")
-                        .add("mutation"))
-                .isInstanceOf(UnsupportedOperationException.class);
-        assertThatThrownBy(() -> reply.headers().put("X-Added", List.of("mutation")))
-                .isInstanceOf(UnsupportedOperationException.class);
+        final var values = Objects.requireNonNull(reply.headers().get("X-Reply"), "header");
+        assertThatThrownBy(() -> values.add("mutation")).isInstanceOf(UnsupportedOperationException.class);
+        final var target = reply.headers();
+        final List<String> mutation = List.of("mutation");
+        assertThatThrownBy(() -> target.put("X-Added", mutation)).isInstanceOf(UnsupportedOperationException.class);
     }
 
     private HttpExchange exchange() {

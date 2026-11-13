@@ -28,8 +28,21 @@ final class ChangeRows {
     }
 
     ChangeRow added(final GlossaryEntry entry) {
+        return row(ChangeSection.NAMES, ChangeKind.ADDED, entry.term(), DASH, describe(entry), null, ChangeOrigin.MODEL)
+                .withEditable(editable(entry));
+    }
+
+    // A name the pass found and could not give a target: the person types one in the results.
+    ChangeRow untargeted(final GlossaryEntry entry) {
         return row(
-                ChangeSection.NAMES, ChangeKind.ADDED, entry.term(), DASH, describe(entry), null, ChangeOrigin.MODEL);
+                        ChangeSection.NAMES,
+                        ChangeKind.UNTARGETED,
+                        entry.term(),
+                        describe(entry),
+                        DASH,
+                        null,
+                        ChangeOrigin.MODEL)
+                .withEditable(editable(entry));
     }
 
     ChangeRow removed(final EntryChanges.Removal<GlossaryEntry> removal) {
@@ -46,17 +59,49 @@ final class ChangeRows {
 
     ChangeRow changed(final EntryChanges.Change<GlossaryEntry> change) {
         return row(
+                        ChangeSection.NAMES,
+                        ChangeKind.CHANGED,
+                        change.after().term(),
+                        describe(change.before()),
+                        describe(change.after()),
+                        change.reason(),
+                        ChangeOrigin.MODEL)
+                .withEditable(editable(change.after()));
+    }
+
+    // Accept all changes only a target's state, so its rows show the target with its state.
+    ChangeRow accepted(final EntryChanges.Change<GlossaryEntry> change) {
+        return row(
                 ChangeSection.NAMES,
                 ChangeKind.CHANGED,
                 change.after().term(),
-                describe(change.before()),
-                describe(change.after()),
-                change.reason(),
+                stated(change.before()),
+                stated(change.after()),
+                null,
                 ChangeOrigin.MODEL);
     }
 
+    ChangeRow left(final GlossaryEntry entry, final String reason) {
+        return row(
+                ChangeSection.NAMES,
+                ChangeKind.LEFT,
+                entry.term(),
+                stated(entry),
+                stated(entry),
+                reason,
+                ChangeOrigin.MODEL);
+    }
+
+    private String stated(final GlossaryEntry entry) {
+        return String.join(
+                SEPARATOR,
+                Objects.requireNonNullElse(entry.target(), DASH),
+                GlossaryLabels.state(messages, entry.targetState()));
+    }
+
     ChangeRow addedTerm(final LexiconEntry entry, final ChangeOrigin origin) {
-        return row(ChangeSection.TERMS, ChangeKind.ADDED, entry.term(), DASH, describe(entry), null, origin);
+        return row(ChangeSection.TERMS, ChangeKind.ADDED, entry.term(), DASH, describe(entry), null, origin)
+                .withEditable(editable(entry));
     }
 
     ChangeRow removedTerm(final EntryChanges.Removal<LexiconEntry> removal) {
@@ -73,13 +118,14 @@ final class ChangeRows {
 
     ChangeRow changedTerm(final EntryChanges.Change<LexiconEntry> change) {
         return row(
-                ChangeSection.TERMS,
-                ChangeKind.CHANGED,
-                change.after().term(),
-                describe(change.before()),
-                describe(change.after()),
-                change.reason(),
-                ChangeOrigin.MODEL);
+                        ChangeSection.TERMS,
+                        ChangeKind.CHANGED,
+                        change.after().term(),
+                        describe(change.before()),
+                        describe(change.after()),
+                        change.reason(),
+                        ChangeOrigin.MODEL)
+                .withEditable(editable(change.after()));
     }
 
     private ChangeRow row(
@@ -93,12 +139,24 @@ final class ChangeRows {
         return new ChangeRow(next++, kind, term, before, after, reason, origin, section);
     }
 
+    private EditableTarget editable(final GlossaryEntry entry) {
+        return new EditableTarget(entry.id(), Objects.requireNonNullElse(entry.target(), ""), details(entry));
+    }
+
+    private static EditableTarget editable(final LexiconEntry entry) {
+        return new EditableTarget(entry.term(), entry.established().orElse(""), "");
+    }
+
     private String describe(final GlossaryEntry entry) {
+        final String target = entry.target() == null || entry.target().isBlank()
+                ? messages.get(MessageKey.NAMES_STYLE_NO_TARGET)
+                : entry.target();
+        return String.join(SEPARATOR, target, details(entry));
+    }
+
+    // The words after the target: the type, and the gender when one is known.
+    private String details(final GlossaryEntry entry) {
         final List<String> parts = new ArrayList<>();
-        parts.add(
-                entry.target() == null || entry.target().isBlank()
-                        ? messages.get(MessageKey.NAMES_STYLE_NO_TARGET)
-                        : entry.target());
         parts.add(GlossaryLabels.type(messages, entry.type()));
         if (entry.gender() != Gender.UNKNOWN) {
             final String gender = GlossaryLabels.gender(messages, entry.gender());

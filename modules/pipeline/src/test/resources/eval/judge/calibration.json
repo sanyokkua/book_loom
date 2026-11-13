@@ -1,0 +1,15 @@
+{
+  "rubricHash": "d7b8b8ded24e",
+  "judgeModel": "gemma4:26b-mlx",
+  "dataset": "cal-1",
+  "split": "test",
+  "tpr": 1.0,
+  "tprWilsonLower": 0.510,
+  "tnr": 1.0,
+  "tnrWilsonLower": 0.701,
+  "positionConsistency": 0.818,
+  "tauB": 0.716,
+  "pairwiseAccuracy": 1.0,
+  "leftOut": 1,
+  "passed": false
+}

@@ -7,6 +7,7 @@ import java.util.Locale;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Button;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.ui.MemorySource;
 import ua.bookloom.ui.RecordingModelCatalog;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.ViewNames;
@@ -35,6 +36,8 @@ class ProjectsModelLineTest extends ProjectsScreenTestBase {
                 .engine(engine)
                 .catalog(catalog)
                 .modelPickPrompt(pick)
+                // The memory advice names model tags too; this test is about the probe's model line alone.
+                .memory(new MemorySource.Unknown())
                 .gated()
                 .build();
     }
@@ -49,11 +52,11 @@ class ProjectsModelLineTest extends ProjectsScreenTestBase {
     }
 
     private String footerText() {
-        return ua.bookloom.ui.ThemeTestSupport.onFx(() -> ((javafx.scene.control.Label) node("nav-footer")).getText());
+        return ua.bookloom.ui.ThemeTestSupport.onFx(((javafx.scene.control.Label) node("nav-footer"))::getText);
     }
 
     private void press(final String id) {
-        onFx(() -> ((Button) node(id)).fire());
+        onFx(((Button) node(id))::fire);
     }
 
     // IF the card said nothing while the programs were asked, THEN a slow first launch would look like a failure.
@@ -124,7 +127,8 @@ class ProjectsModelLineTest extends ProjectsScreenTestBase {
 
         awaitCardContains("No AI model found");
         assertThat(textOf(CARD))
-                .contains("Ollama is not open. Open the Ollama app, then press Try again.")
+                .contains(
+                        "BookLoom could not choose an AI model by itself. Press Try again, or choose the AI program and model in Settings.")
                 .doesNotContain("ready ✓");
         assertThat(((Button) node("projects-empty-tryagain")).getText()).isEqualTo("Try again");
         assertThat(((Button) node("projects-empty-tryagain")).isDisabled()).isFalse();
@@ -229,6 +233,7 @@ class ProjectsModelLineTest extends ProjectsScreenTestBase {
         ImportScreenTestBase.awaitFx(() -> !pick.asked().isEmpty());
 
         ImportScreenTestBase.awaitFx(() -> footerText().equals("Шукаємо модель ШІ..."));
+        assertThat(footerText()).isEqualTo("Шукаємо модель ШІ...");
     }
 
     @Test

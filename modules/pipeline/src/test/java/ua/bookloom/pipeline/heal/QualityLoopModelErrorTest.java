@@ -16,6 +16,8 @@ import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.ProofreadCoverage;
+import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.pipeline.ScriptedChatModel;
@@ -23,8 +25,8 @@ import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
- * {@link ChunkDecider}/{@link SegmentHealer}: every model or gate call a self-heal round makes can end the step
- * with an error other than one the design already routes to a flag — a self-heal call or a gate call
+ * {@link ChunkDecider}/{@link SegmentHealer}: every model or gate call the one repair makes can end the step with an
+ * error other than one the design already routes to a flag — the repair call or a gate call
  * answering something other than {@code emptyCompletion}/{@code contextWindow}/{@code validation} (I1, I3).
  */
 class QualityLoopModelErrorTest {
@@ -34,26 +36,25 @@ class QualityLoopModelErrorTest {
 
     private final QualityLoop loop = QualityLoopFixtures.loop();
 
-    // I1: a directed fix answering unreachable ends the step with that error, index unchanged; a retried
+    // I1: a repair answering unreachable ends the step with that error, index unchanged; a retried
     // nextDecision() call — with the model now able to answer — redoes the very same segment rather than skipping
     // it.
     @Test
-    void nextDecision_directedFixAnswersUnreachable_retryRedoesTheSameSegment() {
+    void nextDecision_repairAnswersUnreachable_retryRedoesTheSameSegment() {
         final String echo = SOURCE.toUpperCase(Locale.ROOT);
-        final DraftOutcome.Drafted outcome =
-                new DraftOutcome.Drafted(segment(), SOURCE, List.of(), echo, echo, echo, null);
+        final DraftOutcome.Drafted outcome = QualityLoopFixtures.repairing(
+                new DraftOutcome.Drafted(segment(), SOURCE, List.of(), echo, echo, echo, null));
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(Result.err(AppError.of(ErrorCode.unreachable, "Unreachable", "no route to host")))
                 .answer(readable(targetReply(GOOD_TARGET)));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.UNATTENDED,
-                new DialParameters(1, 1, 0, false, false, 4),
+                new DialParameters(RepairMode.ONE, ProofreadCoverage.NONE),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());
-        final ChunkDecider decider = Objects.requireNonNull(
-                loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model))
-                        .data());
+        final ChunkDecider decider =
+                loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model));
 
         final Result<SegmentOutcome> first = decider.nextDecision();
         assertThat(first.isErr()).isTrue();
@@ -67,22 +68,21 @@ class QualityLoopModelErrorTest {
         assertThat(decider.hasNext()).isFalse();
     }
 
-    // I3: a gate failure that is not `validation` ends the step rather than wasting the round.
+    // I3: a gate failure that is not `validation` ends the step rather than using up the repair.
     @Test
     void nextDecision_gateAnswersANonValidationError_endsTheStepWithThatError() {
         final String echo = SOURCE.toUpperCase(Locale.ROOT);
-        final DraftOutcome.Drafted outcome =
-                new DraftOutcome.Drafted(segment(), SOURCE, List.of(), echo, echo, echo, null);
+        final DraftOutcome.Drafted outcome = QualityLoopFixtures.repairing(
+                new DraftOutcome.Drafted(segment(), SOURCE, List.of(), echo, echo, echo, null));
         final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(GOOD_TARGET)));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.UNATTENDED,
-                new DialParameters(1, 1, 0, false, false, 4),
+                new DialParameters(RepairMode.ONE, ProofreadCoverage.NONE),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());
-        final ChunkDecider decider = Objects.requireNonNull(
-                loop.start(List.of(outcome), settings, QualityLoopFixtures.ALWAYS_INTERNAL_ERROR, calls(model))
-                        .data());
+        final ChunkDecider decider =
+                loop.start(List.of(outcome), settings, QualityLoopFixtures.ALWAYS_INTERNAL_ERROR, calls(model));
 
         final Result<SegmentOutcome> decision = decider.nextDecision();
 
@@ -109,7 +109,7 @@ class QualityLoopModelErrorTest {
     }
 
     private static String targetReply(final String target) {
-        return "{\"target\":\"" + target + "\"}";
+        return "{\"items\":[{\"id\":\"1\",\"target\":\"" + target + "\"}]}";
     }
 
     private static ModelCalls calls(final ScriptedChatModel model) {

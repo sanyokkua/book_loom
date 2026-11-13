@@ -2,7 +2,7 @@
 
 These rules apply to every task. The design decisions (D1–D14) and hooks (K1–K10) are in `design.md`. The behaviour
 of every screen, dialog and state is in this change's `specs/` (each task's **Satisfies** line names the requirement
-headings) and, for layout and look, in `docs/specification/mockups/README.md`. Paths without a module prefix are under
+headings) and, for layout and look, in `docs/spec_baseline/specification/mockups/README.md`. Paths without a module prefix are under
 `modules/<module>/src/main/java/ua/bookloom/<module>/`.
 
 - **Size.** This change is larger than the ~10-task norm (`AGENTS.md#how-work-is-planned`) because the owner asked for
@@ -38,7 +38,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     (`.claude/rules/logging.md`).
   - No log call inside a layout pass, a cell's `updateItem`, or a width or scroll listener.
 - **Compare (every task marked "Compare:").** This is README "For AI agents":
-  1. Serve the mockup with `python3 -m http.server 8799 --bind 127.0.0.1 --directory docs/specification/mockups`.
+  1. Serve the mockup with `python3 -m http.server 8799 --bind 127.0.0.1 --directory docs/spec_baseline/specification/mockups`.
   2. Capture the named states at 960×640 and 1920×1080, in light and dark, with the built-in browser (`go(…)`,
      `setRun(…)`, `openDialog(…)`, `setTheme(…)`).
   3. Capture the app in the same state, size and theme (`./gradlew :app:run`, or `scripts/e2e-fixture.sh` for a run
@@ -59,13 +59,13 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   one new outbound call is a documented exception and not a defect.
   - Files: `AGENTS.md` (the "Opening a book never needs the network…" non-negotiable), `.claude/rules/offline-and-privacy.md`
     (the first MUST and the first Reject-if: once, `127.0.0.1:11434` and `127.0.0.1:1234` only, a listing, silent,
-    ADR-0044), `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md` (NFR-OFFLINE-02/03/04 and
-    `#verification`), and DD-01 in `docs/specification/00_Foundation/04_DESIGN_DECISIONS.md`.
+    ADR-0044), `docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md` (NFR-OFFLINE-02/03/04 and
+    `#verification`), and DD-01 in `docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md`.
   - Also the same sentence in `01_VISION_AND_SCOPE.md` (V1, SC-IN-2, SC-CRIT-3), `01_QUALITY_ATTRIBUTES.md`
     (NFR-PRIV-01), `01_SYSTEM_ARCHITECTURE.md` (the invariant and the diagram label), `06_IMPLEMENTATION_STAGES.md`
     (F9), and FR-INFER-01 / FR-INFER-01a.
   - Also `AGENTS.md:114` and `openspec/config.yaml` (the offline invariant in `context` and the `apply` guidance
-    line), and `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md:331` ("exception not yet written").
+    line), and `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md:331` ("exception not yet written").
   - Mark ADR-0010 "Amended by ADR-0044".
   - Verify: `grep -rn "user-triggered" docs AGENTS.md .claude openspec/config.yaml .agents` shows each hit naming the
     exception; ArchUnit `no-http-in-core-except-llm` is unchanged. → docs
@@ -79,9 +79,9 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - `AGENTS.md:11` ("SQLite/JDBI/Flyway planned") and the Modules table line for `:persistence`.
   - `.claude/agents/tester.md:23`, `.agents/skills/testing-javafx/SKILL.md` (lines 44, 87, 204) and
     `.agents/skills/project-navigator/SKILL.md` (lines 38, 88).
-  - `docs/adr/README.md:32`, `docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md` (lines 154, 165, 238),
+  - `docs/spec_baseline/adr/README.md:32`, `docs/spec_baseline/specification/02_Architecture/02_MODULES_AND_LAYERING.md` (lines 154, 165, 238),
     `01_SYSTEM_ARCHITECTURE.md:93` (the Flyway label), `06_IMPLEMENTATION_STAGES.md:54`,
-    `05_Dependencies/03_LICENSING.md:52`, `docs/implementation_plan/01_MODULE_INVENTORY.md` (lines 224, 401, 408) and
+    `05_Dependencies/03_LICENSING.md:52`, `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md` (lines 224, 401, 408) and
     the `add-local-storage` row of `CHANGE_BACKLOG.md` (line 581).
   - `openspec/config.yaml`: the stack line and every other Flyway or migration line (the persistence rule lines and the
     task rule "real temp SQLite + Flyway").
@@ -238,7 +238,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     - `write_onFxNamedThread_throwsWhenPropertySet` (a plain thread named "JavaFX Application Thread").
   - Storage failures are `ErrorCode.internal` with the details `storage <operation>`.
   - Log: INFO open and schema, WARN rename-aside.
-  - Edit `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md` to the D9 schema and the pre-release rule, and fix
+  - Edit `docs/spec_baseline/specification/02_Architecture/06_DATA_MODEL_SQLITE.md` to the D9 schema and the pre-release rule, and fix
     its ADR link to `ADR-0009-persistence-sqlite.md`. → :persistence, docs
 - [x] 3.3 Add the JSON codec with mix-ins for the sealed types, so every stored record reads back equal while `:api`
   stays free of annotations.
@@ -1082,11 +1082,11 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - `AGENTS.md` "Where it stands": Projects, the full Settings, SQLite storage, continue after restart, the first-launch
     look.
   - The `AGENTS.md` Modules table (`:persistence`: SQLite + JDBI; Flyway from the first release).
-  - `docs/implementation_plan/CHANGE_BACKLOG.md`: mark this change done (its order is already recorded).
-  - `docs/implementation_plan/01_MODULE_INVENTORY.md`: the new packages `persistence.sqlite`, `ui` controls and state.
+  - `docs/spec_baseline/implementation_plan/CHANGE_BACKLOG.md`: mark this change done (its order is already recorded).
+  - `docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md`: the new packages `persistence.sqlite`, `ui` controls and state.
   - `IMPLEMENTED_REQUIREMENTS.md`: FR-THEME-4, FR-PROV-01, FR-EXPORT-04, FR-REVIEW-05, and the FR-PERSIST,
     FR-SETTINGS, FR-RESUME and FR-UI-06 lines this change builds.
-  - `docs/specification/00_Foundation/05_SPEC_INDEX.md`: the new anchors.
+  - `docs/spec_baseline/specification/00_Foundation/05_SPEC_INDEX.md`: the new anchors.
   - Verify: every link resolves (`grep` the cited anchors). → docs
 - [x] 9.2 Run the whole gate from clean, so the change is proven across every module with no exemption.
   - `./gradlew clean build check spotlessCheck` green; paste its tail.

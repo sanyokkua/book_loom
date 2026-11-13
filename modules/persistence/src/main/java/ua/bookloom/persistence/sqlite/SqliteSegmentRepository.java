@@ -1,5 +1,8 @@
 package ua.bookloom.persistence.sqlite;
 
+import static ua.bookloom.util.contract.ArgNames.KEPT_AUXILIARY_KINDS;
+import static ua.bookloom.util.contract.ArgNames.PROJECT_ID;
+
 import com.google.inject.Inject;
 import java.util.EnumMap;
 import java.util.List;
@@ -33,6 +36,10 @@ import ua.bookloom.api.project.SegmentRecord;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class SqliteSegmentRepository implements SegmentRepository {
 
+    private static final String PROJECT = "project";
+    private static final String SEGMENT = "segment";
+    private static final String STATUS = "status";
+
     private static final String INSERT = """
             INSERT INTO segments (project_id, segment_id, ord, unit_id, status, json)
             VALUES (:project, :segment, :ord, :unit, :status, :json)
@@ -53,12 +60,12 @@ public final class SqliteSegmentRepository implements SegmentRepository {
 
     @Override
     public Result<Integer> saveAll(final String projectId, final List<SegmentRecord> segments) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(segments, "segments");
         log.debug("Segments saveAll projectId={} count={}", projectId, segments.size());
         return db.write("segment saveAll", h -> {
             h.createUpdate("DELETE FROM segments WHERE project_id = :project")
-                    .bind("project", projectId)
+                    .bind(PROJECT, projectId)
                     .execute();
             if (!segments.isEmpty()) {
                 final PreparedBatch batch = h.prepareBatch(INSERT);
@@ -75,7 +82,7 @@ public final class SqliteSegmentRepository implements SegmentRepository {
 
     @Override
     public Result<Optional<SegmentRecord>> find(final String projectId, final String segmentId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(segmentId, "segmentId");
         log.debug("Segment find projectId={} segmentId={}", projectId, segmentId);
         return db.read("segment find", h -> findIn(h, projectId, segmentId));
@@ -84,8 +91,8 @@ public final class SqliteSegmentRepository implements SegmentRepository {
     @Override
     public Result<Optional<SegmentRecord>> firstPending(
             final String projectId, final Set<SegmentKind> keptAuxiliaryKinds) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(keptAuxiliaryKinds, "keptAuxiliaryKinds");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(keptAuxiliaryKinds, KEPT_AUXILIARY_KINDS);
         return db.read("segment firstPending", h -> {
             final Optional<SegmentRecord> first = byStatus(h, projectId, SegmentStatus.PENDING).stream()
                     .filter(record -> !record.isKeptAsSource(keptAuxiliaryKinds))
@@ -97,14 +104,14 @@ public final class SqliteSegmentRepository implements SegmentRepository {
 
     @Override
     public Result<SegmentCounts> countsByStatus(final String projectId, final Set<SegmentKind> keptAuxiliaryKinds) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(keptAuxiliaryKinds, "keptAuxiliaryKinds");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(keptAuxiliaryKinds, KEPT_AUXILIARY_KINDS);
         return db.read("segment countsByStatus", h -> {
             final Map<SegmentStatus, Integer> counts = new EnumMap<>(SegmentStatus.class);
             h.createQuery(STATUS_COUNTS)
-                    .bind("project", projectId)
+                    .bind(PROJECT, projectId)
                     .bind("aux", Unit.AUXILIARY_ID)
-                    .map((rs, ctx) -> Map.entry(SegmentStatus.valueOf(rs.getString("status")), rs.getInt("n")))
+                    .map((rs, ctx) -> Map.entry(SegmentStatus.valueOf(rs.getString(STATUS)), rs.getInt("n")))
                     .forEach(entry -> counts.put(entry.getKey(), entry.getValue()));
             int sourceKept = 0;
             for (final SegmentRecord record : query(h, projectId, "AND unit_id = :unit", "unit", Unit.AUXILIARY_ID)) {
@@ -122,8 +129,8 @@ public final class SqliteSegmentRepository implements SegmentRepository {
 
     @Override
     public Result<List<SegmentRecord>> flagged(final String projectId, final Set<SegmentKind> keptAuxiliaryKinds) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(keptAuxiliaryKinds, "keptAuxiliaryKinds");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(keptAuxiliaryKinds, KEPT_AUXILIARY_KINDS);
         return db.read("segment flagged", h -> {
             final List<SegmentRecord> flagged = byStatus(h, projectId, SegmentStatus.FLAGGED).stream()
                     .filter(record -> !record.isKeptAsSource(keptAuxiliaryKinds))
@@ -135,7 +142,7 @@ public final class SqliteSegmentRepository implements SegmentRepository {
 
     @Override
     public Result<List<SegmentRecord>> byUnit(final String projectId, final String unitId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(unitId, "unitId");
         log.debug("Segment byUnit projectId={} unitId={}", projectId, unitId);
         return db.read("segment byUnit", h -> query(h, projectId, "AND unit_id = :unit", "unit", unitId));
@@ -143,15 +150,15 @@ public final class SqliteSegmentRepository implements SegmentRepository {
 
     @Override
     public Result<List<SegmentRecord>> all(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         log.debug("Segment all projectId={}", projectId);
-        return db.read("segment all", h -> query(h, projectId, "", "project", projectId));
+        return db.read("segment all", h -> query(h, projectId, "", PROJECT, projectId));
     }
 
     @Override
     public Result<SegmentRecord> update(
             final String projectId, final String segmentId, final UnaryOperator<SegmentRecord> update) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(segmentId, "segmentId");
         Objects.requireNonNull(update, "update");
         return db.write("segment update", h -> updateIn(h, projectId, segmentId, update))
@@ -179,10 +186,10 @@ public final class SqliteSegmentRepository implements SegmentRepository {
             final String segmentId,
             final SegmentRecord record) {
         h.createUpdate(UPDATE)
-                .bind("project", projectId)
-                .bind("segment", segmentId)
+                .bind(PROJECT, projectId)
+                .bind(SEGMENT, segmentId)
                 .bind("unit", record.unitId())
-                .bind("status", record.status().name())
+                .bind(STATUS, record.status().name())
                 .bind("json", codec.write(record))
                 .execute();
     }
@@ -195,30 +202,30 @@ public final class SqliteSegmentRepository implements SegmentRepository {
     }
 
     private PreparedBatch bindRow(final PreparedBatch batch, final String projectId, final SegmentRecord record) {
-        return batch.bind("project", projectId)
-                .bind("segment", record.segmentId())
+        return batch.bind(PROJECT, projectId)
+                .bind(SEGMENT, record.segmentId())
                 .bind("unit", record.unitId())
-                .bind("status", record.status().name())
+                .bind(STATUS, record.status().name())
                 .bind("json", codec.write(record));
     }
 
     private Optional<SegmentRecord> findIn(final Handle h, final String projectId, final String segmentId) {
         return h.createQuery(SELECT + "AND segment_id = :segment")
-                .bind("project", projectId)
-                .bind("segment", segmentId)
+                .bind(PROJECT, projectId)
+                .bind(SEGMENT, segmentId)
                 .mapTo(String.class)
                 .findOne()
                 .map(json -> codec.read(json, SegmentRecord.class));
     }
 
     private List<SegmentRecord> byStatus(final Handle h, final String projectId, final SegmentStatus status) {
-        return query(h, projectId, "AND status = :status", "status", status.name());
+        return query(h, projectId, "AND status = :status", STATUS, status.name());
     }
 
     private List<SegmentRecord> query(
             final Handle h, final String projectId, final String filter, final String name, final String value) {
         return List.copyOf(h.createQuery(SELECT + filter + BY_ORDER)
-                .bind("project", projectId)
+                .bind(PROJECT, projectId)
                 .bind(name, value)
                 .mapTo(String.class)
                 .map(json -> codec.read(json, SegmentRecord.class))

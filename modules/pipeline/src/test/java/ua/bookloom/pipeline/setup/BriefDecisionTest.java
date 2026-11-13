@@ -56,11 +56,13 @@ class BriefDecisionTest {
 
     @Test
     void register_threeOfFourWindowsSayCasual_isCasualFromThreeOfFourPassages() {
-        final Decided<Register> decided = BriefDecision.register(windows(
-                says(BriefField.REGISTER, "casual", Q1),
-                says(BriefField.REGISTER, "casual", Q2),
-                says(BriefField.REGISTER, "casual", Q3),
-                says(BriefField.REGISTER, "formal", Q4)));
+        final Decided<Register> decided = BriefDecision.register(
+                windows(
+                        says(BriefField.REGISTER, "casual", Q1),
+                        says(BriefField.REGISTER, "casual", Q2),
+                        says(BriefField.REGISTER, "casual", Q3),
+                        says(BriefField.REGISTER, "formal", Q4)),
+                null);
 
         assertThat(decided.value()).isEqualTo(Register.CASUAL);
         assertThat(decided.evidence().basis()).isEqualTo(Basis.PASSAGES);
@@ -70,14 +72,17 @@ class BriefDecisionTest {
         assertThat(decided.evidence().describe()).isEqualTo("from 3 of 4 passages");
     }
 
-    // IF half the windows were a majority, THEN two windows of a mixed book could set its register for every call.
+    // IF half the windows were a majority, THEN two windows of a mixed book could set its register for every call; with
+    // no synthesis register either, the field stays neutral and uncertain.
     @Test
     void register_twoOfFourSayCasualAndTwoFormal_isNeutralAndUncertain() {
-        final Decided<Register> decided = BriefDecision.register(windows(
-                says(BriefField.REGISTER, "casual", Q1),
-                says(BriefField.REGISTER, "formal", Q2),
-                says(BriefField.REGISTER, "casual", Q3),
-                says(BriefField.REGISTER, "formal", Q4)));
+        final Decided<Register> decided = BriefDecision.register(
+                windows(
+                        says(BriefField.REGISTER, "casual", Q1),
+                        says(BriefField.REGISTER, "formal", Q2),
+                        says(BriefField.REGISTER, "casual", Q3),
+                        says(BriefField.REGISTER, "formal", Q4)),
+                null);
 
         assertThat(decided.value()).isEqualTo(Register.NEUTRAL);
         assertThat(decided.evidence().isKept()).isFalse();
@@ -85,12 +90,36 @@ class BriefDecisionTest {
         assertThat(decided.evidence().samples()).isEqualTo(4);
     }
 
+    // A split register takes the synthesis's most probable value, marked likely, so no field is left empty.
+    @Test
+    void register_split_takesTheSynthesisRegisterAsLikely() throws java.io.IOException {
+        final Decided<Register> decided = BriefDecision.register(
+                windows(
+                        says(BriefField.REGISTER, "casual", Q1),
+                        says(BriefField.REGISTER, "formal", Q2),
+                        says(BriefField.REGISTER, "casual", Q3),
+                        says(BriefField.REGISTER, "formal", Q4)),
+                new com.fasterxml.jackson.databind.ObjectMapper()
+                        .readTree(
+                                "{\"register\":{\"basis\":{\"knowledge\":false,\"passages\":[]},\"value\":\"neutral\"}}"));
+
+        assertThat(decided.value()).isEqualTo(Register.NEUTRAL);
+        assertThat(decided.evidence().basis()).isEqualTo(Basis.LIKELY);
+        assertThat(decided.evidence().quotes()).isEmpty();
+        assertThat(decided.evidence().isAgreed()).isFalse();
+    }
+
     // IF the windows that proved nothing were left out of the count, THEN two verified answers of four would be "2 of
     // 2" and decide the field.
     @Test
     void register_twoVerifiedAnswersAndTwoWindowsWithNone_isNeutralAndUncertain() {
-        final Decided<Register> decided = BriefDecision.register(windows(
-                says(BriefField.REGISTER, "casual", Q1), says(BriefField.REGISTER, "casual", Q2), nothing(), null));
+        final Decided<Register> decided = BriefDecision.register(
+                windows(
+                        says(BriefField.REGISTER, "casual", Q1),
+                        says(BriefField.REGISTER, "casual", Q2),
+                        nothing(),
+                        null),
+                null);
 
         assertThat(decided.value()).isEqualTo(Register.NEUTRAL);
         assertThat(decided.evidence().isKept()).isFalse();
@@ -100,11 +129,13 @@ class BriefDecisionTest {
     // A neutral register needs no quote: three windows saying so keep it, as a decision and not as a doubt.
     @Test
     void register_threeOfFourSayNeutral_isNeutralAndKept() {
-        final Decided<Register> decided = BriefDecision.register(windows(
-                says(BriefField.REGISTER, "neutral", ""),
-                says(BriefField.REGISTER, "neutral", ""),
-                says(BriefField.REGISTER, "neutral", ""),
-                says(BriefField.REGISTER, "formal", Q4)));
+        final Decided<Register> decided = BriefDecision.register(
+                windows(
+                        says(BriefField.REGISTER, "neutral", ""),
+                        says(BriefField.REGISTER, "neutral", ""),
+                        says(BriefField.REGISTER, "neutral", ""),
+                        says(BriefField.REGISTER, "formal", Q4)),
+                null);
 
         assertThat(decided.value()).isEqualTo(Register.NEUTRAL);
         assertThat(decided.evidence().isKept()).isTrue();

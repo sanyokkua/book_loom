@@ -11,14 +11,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
+import ua.bookloom.api.project.TargetState;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ScriptedChatModelFactory;
@@ -32,7 +35,7 @@ import ua.bookloom.ui.i18n.Messages;
 class NamesStyleViewModelTest extends FxTestBase {
 
     private static final String PROJECT = "p1";
-    private static final String NEEDS_TARGET = "A locked term needs a target.";
+    private static final String NEEDS_TARGET = "A pinned or locked term needs a target.";
 
     private ScriptedGlossaryService glossary;
     private ScriptedChatModelFactory models;
@@ -57,11 +60,8 @@ class NamesStyleViewModelTest extends FxTestBase {
         final Messages messages = injector.getInstance(Messages.class);
         final AtomicInteger next = new AtomicInteger();
         vm = onFx(() -> new NamesStyleViewModel(
-                glossary,
-                new ScriptedLexiconService(),
-                new ScriptedNamesPass(),
-                models,
-                settings,
+                new NamesServices(glossary, new ScriptedLexiconService(), new ScriptedNamesPass()),
+                new ModelAccess(models, settings),
                 new DirectExecutor(),
                 messages,
                 injector.getInstance(ActivityTracker.class),
@@ -69,15 +69,15 @@ class NamesStyleViewModelTest extends FxTestBase {
     }
 
     private static GlossaryEntry hale() {
-        return new GlossaryEntry("e1", PROJECT, "Hale", null, TermType.OTHER, Gender.UNKNOWN, false);
+        return GlossaryEntry.of("e1", PROJECT, "Hale", null, TermType.OTHER, Gender.UNKNOWN, false);
     }
 
     private static GlossaryEntry haleTranslated(final boolean locked) {
-        return new GlossaryEntry("e1", PROJECT, "Hale", "Гейл", TermType.OTHER, Gender.UNKNOWN, locked);
+        return GlossaryEntry.of("e1", PROJECT, "Hale", "Гейл", TermType.OTHER, Gender.UNKNOWN, locked);
     }
 
     private static GlossaryEntry chapter() {
-        return new GlossaryEntry("e2", PROJECT, "Chapter", null, TermType.TERM, Gender.NEUTER, false);
+        return GlossaryEntry.of("e2", PROJECT, "Chapter", null, TermType.TERM, Gender.NEUTER, false);
     }
 
     private static AppError refusal() {
@@ -124,28 +124,32 @@ class NamesStyleViewModelTest extends FxTestBase {
 
     // IF an edit did not reach the service, THEN the screen would show what the run never uses.
     @Test
-    void setTarget_thenSetLocked_updatesTheEntryEachTime() {
+    void setTarget_thenSetStateLocked_updatesTheEntryEachTime() {
         showWith(hale());
         glossary.willAnswer(Result.ok(haleTranslated(false)));
         glossary.willAnswer(Result.ok(haleTranslated(true)));
 
         run(() -> vm.setTarget("e1", "Гейл"));
-        run(() -> vm.setLocked("e1", true));
+        run(() -> vm.rowChanges().setState("e1", TargetState.LOCKED));
 
         assertThat(glossary.updated()).containsExactly(haleTranslated(false), haleTranslated(true));
         assertThat(rows()).containsExactly(haleTranslated(true));
     }
 
-    // IF a lock with no target were kept on screen, THEN a locked name with nothing to put back would vanish.
-    @Test
-    void setLocked_noTargetRefused_showsMessageAndKeepsTheSwitchOff() {
+    // IF a pinned or locked state with no target were kept, THEN a name with nothing to put back would vanish; the
+    // refusal needs no service call.
+    @ParameterizedTest
+    @EnumSource(
+            value = TargetState.class,
+            names = {"PINNED", "LOCKED"})
+    void setState_noTarget_isRefusedWithTheMessageAndChangesNothing(final TargetState state) {
         showWith(hale());
-        glossary.willAnswer(Result.err(refusal()));
 
-        run(() -> vm.setLocked("e1", true));
+        run(() -> vm.rowChanges().setState("e1", state));
 
         assertThat(noticeText()).isEqualTo(NEEDS_TARGET);
         assertThat(rows()).containsExactly(hale());
+        assertThat(glossary.updated()).isEmpty();
     }
 
     // IF a cleared target of a locked term stayed cleared on screen, THEN the table would disagree with the store.
@@ -268,11 +272,14 @@ class NamesStyleViewModelTest extends FxTestBase {
     // IF a duplicate were sent to the service, THEN the dialog would learn of it only by a round trip.
     @Test
     void add_termHeldIgnoringCase_refusesWithoutAskingTheService() {
-        showWith(new GlossaryEntry("e3", PROJECT, "Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true));
+        showWith(GlossaryEntry.of("e3", PROJECT, "Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true));
         final List<String> refused = new java.util.concurrent.CopyOnWriteArrayList<>();
 
-        run(() -> vm.add(
-                new NewTerm("justine", "Юстина", TermType.CHARACTER, Gender.FEMALE, false), () -> {}, refused::add));
+        run(() -> vm.rowChanges()
+                .add(
+                        new NewTerm("justine", "Юстина", TermType.CHARACTER, Gender.FEMALE, TargetState.PINNED),
+                        () -> {},
+                        refused::add));
 
         assertThat(refused).containsExactly("justine is already in the glossary");
         assertThat(glossary.added()).isEmpty();
@@ -281,11 +288,14 @@ class NamesStyleViewModelTest extends FxTestBase {
     // IF a possessive spelling of a held name were added, THEN the glossary would hold one name twice.
     @Test
     void add_possessiveOfAHeldTerm_refusesWithoutAskingTheService() {
-        showWith(new GlossaryEntry("e3", PROJECT, "Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true));
+        showWith(GlossaryEntry.of("e3", PROJECT, "Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true));
         final List<String> refused = new java.util.concurrent.CopyOnWriteArrayList<>();
 
-        run(() ->
-                vm.add(new NewTerm("Justine’s", "", TermType.CHARACTER, Gender.FEMALE, false), () -> {}, refused::add));
+        run(() -> vm.rowChanges()
+                .add(
+                        new NewTerm("Justine’s", "", TermType.CHARACTER, Gender.FEMALE, TargetState.PINNED),
+                        () -> {},
+                        refused::add));
 
         assertThat(refused).containsExactly("Justine’s is already in the glossary");
         assertThat(glossary.added()).isEmpty();
@@ -297,7 +307,11 @@ class NamesStyleViewModelTest extends FxTestBase {
         showWith();
         final List<String> refused = new java.util.concurrent.CopyOnWriteArrayList<>();
 
-        run(() -> vm.add(new NewTerm("Justine", "", TermType.CHARACTER, Gender.FEMALE, true), () -> {}, refused::add));
+        run(() -> vm.rowChanges()
+                .add(
+                        new NewTerm("Justine", "", TermType.CHARACTER, Gender.FEMALE, TargetState.LOCKED),
+                        () -> {},
+                        refused::add));
 
         assertThat(refused).containsExactly(NEEDS_TARGET);
         assertThat(glossary.added()).isEmpty();
@@ -308,14 +322,15 @@ class NamesStyleViewModelTest extends FxTestBase {
     void add_newTerm_storesItUnderANewIdAndShowsTheRow() {
         showWith();
         final GlossaryEntry stored =
-                new GlossaryEntry("new-1", PROJECT, "Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true);
+                GlossaryEntry.of("new-1", PROJECT, "Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true);
         glossary.willAnswer(Result.ok(stored));
         final AtomicInteger added = new AtomicInteger();
 
-        run(() -> vm.add(
-                new NewTerm("Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true),
-                added::incrementAndGet,
-                message -> {}));
+        run(() -> vm.rowChanges()
+                .add(
+                        new NewTerm("Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, TargetState.LOCKED),
+                        added::incrementAndGet,
+                        message -> {}));
 
         assertThat(glossary.added()).containsExactly(stored);
         assertThat(added).hasValue(1);
@@ -328,24 +343,31 @@ class NamesStyleViewModelTest extends FxTestBase {
     void add_dialogWithAChosenGender_sendsTheGenderAsThePersons() {
         showWith();
         glossary.willAnswer(Result.ok(
-                new GlossaryEntry("new-1", PROJECT, "Justine", null, TermType.CHARACTER, Gender.FEMALE, false)));
+                GlossaryEntry.of("new-1", PROJECT, "Justine", null, TermType.CHARACTER, Gender.FEMALE, false)));
 
-        run(() ->
-                vm.add(new NewTerm("Justine", "", TermType.CHARACTER, Gender.FEMALE, false), () -> {}, message -> {}));
+        run(() -> vm.rowChanges()
+                .add(
+                        new NewTerm("Justine", "", TermType.CHARACTER, Gender.FEMALE, TargetState.PINNED),
+                        () -> {},
+                        message -> {}));
 
         assertThat(glossary.added())
                 .singleElement()
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(Gender.FEMALE, GenderOrigin.PERSON);
+                .containsExactly(Gender.FEMALE, Origin.USER);
     }
 
     @Test
     void add_dialogWithNoGender_sendsNoGenderOrigin() {
         showWith();
-        glossary.willAnswer(Result.ok(
-                new GlossaryEntry("new-1", PROJECT, "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false)));
+        glossary.willAnswer(
+                Result.ok(GlossaryEntry.of("new-1", PROJECT, "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false)));
 
-        run(() -> vm.add(new NewTerm("Hale", "", TermType.CHARACTER, Gender.UNKNOWN, false), () -> {}, message -> {}));
+        run(() -> vm.rowChanges()
+                .add(
+                        new NewTerm("Hale", "", TermType.CHARACTER, Gender.UNKNOWN, TargetState.PINNED),
+                        () -> {},
+                        message -> {}));
 
         assertThat(glossary.added())
                 .singleElement()
@@ -357,17 +379,17 @@ class NamesStyleViewModelTest extends FxTestBase {
     // open to the next review.
     @Test
     void setGender_overAVerifiedGender_sendsTheNewGenderAsThePersons() {
-        final GlossaryEntry held = new GlossaryEntry(
+        final GlossaryEntry held = GlossaryEntry.of(
                         "e1", PROJECT, "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false)
                 .withInferredGender(Gender.MALE);
         showWith(held);
         glossary.willAnswer(Result.ok(held.withGender(Gender.FEMALE)));
 
-        run(() -> vm.setGender("e1", Gender.FEMALE));
+        run(() -> vm.rowChanges().setGender("e1", Gender.FEMALE));
 
         assertThat(glossary.updated())
                 .singleElement()
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(Gender.FEMALE, GenderOrigin.PERSON);
+                .containsExactly(Gender.FEMALE, Origin.USER);
     }
 }

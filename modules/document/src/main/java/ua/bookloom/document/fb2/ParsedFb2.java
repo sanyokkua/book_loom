@@ -1,6 +1,7 @@
 package ua.bookloom.document.fb2;
 
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 import org.jdom2.Element;
@@ -28,7 +29,7 @@ import ua.bookloom.document.model.AuxiliarySlots;
  * @param byteOrderMark the mark the source began with, exactly as found, or empty when it had none — written back
  *     first, because some readers rely on it to choose the encoding
  */
-@SuppressWarnings("ArrayRecordComponent") // a small immutable-by-convention byte prefix, copied on entry and on read
+@SuppressWarnings("ArrayRecordComponent") // copied on entry and exit; equality reads the content, toString the length.
 record ParsedFb2(
         org.jdom2.Document document,
         String sourceName,
@@ -39,6 +40,52 @@ record ParsedFb2(
         Map<String, AuxiliarySlots> auxiliarySlotsByHandleId,
         boolean crlfLineEndings,
         byte[] byteOrderMark) {
+    @Override
+    public boolean equals(final Object other) {
+        return other
+                        instanceof
+                        ParsedFb2(
+                                var oDocument,
+                                var oSourceName,
+                                var oZipMemberName,
+                                var oCharset,
+                                var oDeclaredEncodingName,
+                                var oBodiesByHandleId,
+                                var oAuxiliarySlotsByHandleId,
+                                var oCrlfLineEndings,
+                                var oByteOrderMark)
+                && Objects.equals(document, oDocument)
+                && Objects.equals(sourceName, oSourceName)
+                && Objects.equals(zipMemberName, oZipMemberName)
+                && Objects.equals(charset, oCharset)
+                && Objects.equals(declaredEncodingName, oDeclaredEncodingName)
+                && Objects.equals(bodiesByHandleId, oBodiesByHandleId)
+                && Objects.equals(auxiliarySlotsByHandleId, oAuxiliarySlotsByHandleId)
+                && crlfLineEndings == oCrlfLineEndings
+                && Arrays.equals(byteOrderMark, oByteOrderMark);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(
+                document,
+                sourceName,
+                zipMemberName,
+                charset,
+                declaredEncodingName,
+                bodiesByHandleId,
+                auxiliarySlotsByHandleId,
+                crlfLineEndings,
+                Arrays.hashCode(byteOrderMark));
+    }
+
+    @Override
+    public String toString() {
+        return "ParsedFb2[document=" + document + ", sourceName=" + sourceName + ", zipMemberName=" + zipMemberName
+                + ", charset=" + charset + ", declaredEncodingName=" + declaredEncodingName + ", bodiesByHandleId="
+                + bodiesByHandleId + ", auxiliarySlotsByHandleId=" + auxiliarySlotsByHandleId + ", crlfLineEndings="
+                + crlfLineEndings + ", byteOrderMark=" + byteOrderMark.length + "]";
+    }
 
     ParsedFb2 {
         Objects.requireNonNull(document, "document");

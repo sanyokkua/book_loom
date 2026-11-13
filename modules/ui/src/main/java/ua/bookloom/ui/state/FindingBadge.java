@@ -13,15 +13,16 @@ import ua.bookloom.ui.i18n.MessageKey;
  * The one short word a flagged row carries: why the segment was flagged, chosen from its main finding.
  *
  * <p>The main finding is the one of highest severity; on a tie a name outranks a wrong language, which outranks an
- * omission, which outranks any other kind. Kinds are compared in lower case because the reviewer writes them itself; its {@code terminology} is a name that was not honoured too.
+ * omission, which outranks any other kind. Kinds are compared in lower case because a record stored before the per-chunk reviewer was removed may hold one the model wrote itself; its {@code terminology} is a name that was not honoured too.
  */
 public enum FindingBadge {
     /** A locked or glossary name was not honoured. */
     NAME(MessageKey.REVIEW_BADGE_NAME, 3, "name", MessageKey.REVIEW_WHY_NAME),
     /** The target reads as the wrong language. */
-    WRONG_LANGUAGE(MessageKey.REVIEW_BADGE_WRONG_LANGUAGE, 2, "language", MessageKey.REVIEW_WHY_WRONG_LANGUAGE),
+    WRONG_LANGUAGE(
+            MessageKey.REVIEW_BADGE_WRONG_LANGUAGE, 2, FindingBadge.LANGUAGE, MessageKey.REVIEW_WHY_WRONG_LANGUAGE),
     /** Part of the source is missing from the target. */
-    OMISSION(MessageKey.REVIEW_BADGE_OMISSION, 1, "omission", MessageKey.REVIEW_WHY_OMISSION),
+    OMISSION(MessageKey.REVIEW_BADGE_OMISSION, 1, FindingBadge.OMISSION_KIND, MessageKey.REVIEW_WHY_OMISSION),
     /** Any other kind of finding, or only a score. */
     LOW_SCORE(MessageKey.REVIEW_BADGE_LOW_SCORE, 0, "score", MessageKey.REVIEW_WHY_LOW_SCORE);
 
@@ -73,7 +74,7 @@ public enum FindingBadge {
      * Chooses the badge of a flagged segment.
      *
      * @param findings the segment's findings; never null
-     * @param judgeScore a stored score, or {@code null} — the reviewer gives none, so only a record from before it has one
+     * @param judgeScore a stored score, or {@code null} — nothing scores a segment now, so only an older record has one
      * @return the badge of the main finding, {@link #LOW_SCORE} when only a score exists, or empty when the
      *     segment has neither
      */

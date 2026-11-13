@@ -12,8 +12,11 @@ import javafx.stage.Stage;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
-import ua.bookloom.api.pipeline.ConsistencySummary;
+import ua.bookloom.api.pipeline.BriefChoices;
 import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.LanguageSupport;
+import ua.bookloom.api.pipeline.ProofreadSummary;
+import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.ui.ConformanceCases.Overlay;
 import ua.bookloom.ui.ConformanceCases.Screen;
 import ua.bookloom.ui.control.ProgressDialog;
@@ -27,6 +30,7 @@ import ua.bookloom.ui.state.ChangeOrigin;
 import ua.bookloom.ui.state.ChangeResults;
 import ua.bookloom.ui.state.ChangeRow;
 import ua.bookloom.ui.state.ChangeSection;
+import ua.bookloom.ui.state.EditableTarget;
 import ua.bookloom.ui.state.ExportOutcome;
 import ua.bookloom.ui.state.LiveCalls;
 import ua.bookloom.ui.state.ResultsView;
@@ -84,11 +88,56 @@ abstract class ConformanceTestBase extends ShellTestBase {
         primary.sizeToScene();
     }
 
+    /** A model whose name carries a quant the scripted port judges good, for the ready card's chip. */
+    static final String GAP_MODEL = "llama3.1:8b";
+
+    static final String QUANT_MODEL = "hf.co/unsloth/GLM-4.7-Flash-GGUF:UD-Q4_K_XL";
+
+    private final ScriptedModelCapabilities capabilities = quantCapabilities();
+
+    private static ScriptedModelCapabilities quantCapabilities() {
+        final ScriptedModelCapabilities scripted = ScriptedModelCapabilities.idle();
+        scripted.nameQuant(QUANT_MODEL, "UD-Q4_K_XL", ua.bookloom.api.llm.QuantTier.GOOD);
+        scriptAdvice(scripted);
+        return scripted;
+    }
+
+    private static void scriptAdvice(final ScriptedModelCapabilities scripted) {
+        scripted.advise(
+                "ollama",
+                "gemma4:e4b",
+                AdviceReports.report(
+                        ua.bookloom.api.llm.ModelReport.Match.EXACT,
+                        null,
+                        AdviceReports.identity("gemma", 4.0, "Q4_K_M"),
+                        AdviceReports.notes("Gemma 4 E4B", "Gemma 4"),
+                        null,
+                        java.util.List.of()),
+                ua.bookloom.api.llm.LanguageAdvice.NEUTRAL);
+        scripted.advise(
+                "ollama",
+                GAP_MODEL,
+                AdviceReports.report(
+                        ua.bookloom.api.llm.ModelReport.Match.FAMILY,
+                        null,
+                        AdviceReports.identity("llama", 8.0, "Q4_K_M"),
+                        AdviceReports.notes("Llama 3.1 8B", "Llama 3.1"),
+                        null,
+                        java.util.List.of()),
+                AdviceReports.advice(
+                        ua.bookloom.api.llm.LanguageState.DECLARED,
+                        ua.bookloom.api.llm.LanguageState.NOT_DECLARED,
+                        false,
+                        "Llama 3.1"));
+    }
+
     @Override
     protected Injector createInjector(final Locale locale) {
         return UiTestInjector.builder(locale)
                 .projects(projects)
                 .glossary(glossary)
+                .capabilities(capabilities)
+                .languages(new BundledChoices())
                 .build();
     }
 
@@ -128,13 +177,13 @@ abstract class ConformanceTestBase extends ShellTestBase {
             case NONE -> {
                 // nothing is open over the shell
             }
-            case ABOUT -> onFx(() -> ((Button) required("shell-about")).fire());
+            case ABOUT -> onFx(((Button) required("shell-about"))::fire);
             case ERROR_DIALOG ->
                 onFx(() -> injector.getInstance(ErrorPresenter.class)
                         .present(AppError.of(
                                 ErrorCode.timeout, "Translation failed", "The provider did not answer in time.")));
-            case REVIEW_DESK -> onFx(() -> ((Button) required("translating-review-flagged")).fire());
-            case ADD_TERM -> onFx(() -> ((Button) required("names-style-add")).fire());
+            case REVIEW_DESK -> onFx(((Button) required("translating-review-flagged"))::fire);
+            case ADD_TERM -> onFx(((Button) required("names-style-add"))::fire);
             case RESULTS -> onFx(this::showSampleResults);
             case EXPORT_COMPLETE ->
                 onFx(() -> injector.getInstance(ExportCompleteDialog.class).show(finishedExport()));
@@ -160,36 +209,52 @@ abstract class ConformanceTestBase extends ShellTestBase {
                 ChangeOperation.NAME_REVIEW,
                 false,
                 List.of(
-                        new ChangeResults.Item(
-                                new ChangeRow(
-                                        0,
-                                        ChangeKind.REMOVED,
-                                        "Hale",
-                                        "No target · other",
-                                        "—",
-                                        "not a name",
-                                        ChangeOrigin.MODEL,
-                                        ChangeSection.NAMES),
-                                done -> done.accept(true)),
-                        new ChangeResults.Item(
-                                new ChangeRow(
-                                        1,
-                                        ChangeKind.CHANGED,
-                                        "Well",
-                                        "No target · other",
-                                        "No target · character",
-                                        null,
-                                        ChangeOrigin.MODEL,
-                                        ChangeSection.NAMES),
-                                done -> done.accept(true))),
+                        sampleItem(0, ChangeKind.REMOVED, "Hale", "—", "not a name"),
+                        sampleItem(1, ChangeKind.CHANGED, "Well", "No target · character", null)),
                 LiveCalls.EMPTY,
-                List.of("Mid"));
+                List.of(new ChangeRow(
+                        2,
+                        ChangeKind.UNTARGETED,
+                        "Mid",
+                        "No target · character",
+                        "—",
+                        null,
+                        ChangeOrigin.MODEL,
+                        ChangeSection.NAMES,
+                        new EditableTarget("e3", "", "character"))));
+    }
+
+    private static ChangeResults.Item sampleItem(
+            final long id, final ChangeKind kind, final String term, final String after, final @Nullable String why) {
+        return new ChangeResults.Item(
+                new ChangeRow(id, kind, term, "No target · other", after, why, ChangeOrigin.MODEL, ChangeSection.NAMES),
+                done -> done.accept(true));
     }
 
     // A partial export, so the card's untranslated-segments line is checked in both themes with the rest.
     private static ExportOutcome finishedExport() {
         final Path book = Path.of("/books/Frankenstein.uk.epub");
         return new ExportOutcome(
-                new ExportReport(book, 10, 3, 0, 0, 8, 2, List.of(), 10, ConsistencySummary.NOT_RUN, 0), 958_464);
+                new ExportReport(book, 10, 3, 0, 0, 8, 2, List.of(), 10, ProofreadSummary.NONE, 0), 958_464);
+    }
+
+    /**
+     * Every language counts as having tested rules, as in the default graph, and a target's Book Brief rows (apostrophe,
+     * quotation marks, address, declared conventions) come from the bundled language files, so the brief is checked with
+     * the rows a Ukrainian target shows.
+     */
+    private static final class BundledChoices implements LanguageSupport {
+
+        private static final LanguageSupport FILES = LanguageRules.bundled();
+
+        @Override
+        public boolean hasTestedRules(final String languageTag) {
+            return true;
+        }
+
+        @Override
+        public BriefChoices briefChoices(final String targetTag) {
+            return FILES.briefChoices(targetTag);
+        }
     }
 }

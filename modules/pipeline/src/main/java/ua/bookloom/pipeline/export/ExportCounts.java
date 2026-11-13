@@ -8,8 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
-import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.SourceFallback;
 import ua.bookloom.api.pipeline.SuspiciousSegment;
@@ -122,7 +122,7 @@ record ExportCounts(
      *
      * @param destination the non-null written book
      * @param sideFiles the non-null side files written beside it
-     * @param consistency the non-null summary of the consistency pass
+     * @param proofread the non-null proofread summary read from the stores
      * @param sourceFallbacks the non-null segments written in their source for a broken translation
      * @param suspicious the non-null accepted segments the final audit doubts
      * @param unresolvedBlocking the non-null locators of segments whose written text still holds a blocking finding
@@ -131,7 +131,7 @@ record ExportCounts(
     ExportReport report(
             final Path destination,
             final List<Path> sideFiles,
-            final ConsistencySummary consistency,
+            final ProofreadSummary proofread,
             final List<SourceFallback> sourceFallbacks,
             final List<SuspiciousSegment> suspicious,
             final List<String> unresolvedBlocking) {
@@ -145,7 +145,7 @@ record ExportCounts(
                 reviewed,
                 sideFiles,
                 bodySegments,
-                consistency,
+                proofread,
                 keptVerbatim,
                 sourceFallbacks,
                 suspicious,

@@ -3,7 +3,6 @@ package ua.bookloom.ui.state;
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -15,11 +14,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.testfx.util.WaitForAsyncUtils;
-import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.ExportProgress.Step;
 import ua.bookloom.ui.BookFixtures;
-import ua.bookloom.ui.LiveCallFixtures;
 
 /** An export is a blocking, stoppable activity that shows the step and the call count its job announces. */
 class ExportViewModelProgressTest extends ExportViewModelTestBase {
@@ -30,7 +27,7 @@ class ExportViewModelProgressTest extends ExportViewModelTestBase {
     private ExecutorService worker;
 
     @BeforeEach
-    void openTheBook() throws IOException {
+    void openTheBook() {
         openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
         exportService.writeFiles(true);
         worker = Executors.newSingleThreadExecutor();
@@ -85,63 +82,23 @@ class ExportViewModelProgressTest extends ExportViewModelTestBase {
         }
     }
 
-    // IF the job's announcements never reached the activity, THEN its dialog would spin through a long pass.
+    // IF the job's announcements never reached the activity, THEN its dialog would stay on its first words.
     @Test
-    void export_jobAnnouncesACountedStep_theActivityShowsFractionStepAndCallCount() throws Exception {
-        exportService.announce(new ExportProgress(Step.CONSISTENCY_NEIGHBOUR, 1, 4));
+    void export_jobAnnouncesTheWritingStep_theActivityShowsItsWordsAndTheFile() throws Exception {
+        exportService.announce(new ExportProgress(Step.WRITING, 0, 1));
         exportService.holdRuns();
 
         export();
         WaitForAsyncUtils.waitFor(
                 5,
                 TimeUnit.SECONDS,
-                () -> onFx(() -> activities.running().getFirst().steps().done() == 2));
+                () -> onFx(() ->
+                        "Write the file".equals(activities.running().getFirst().stepText())));
 
         final Activity shown = onFx(() -> activities.running().getFirst());
         assertThat(shown.kind()).isEqualTo(ActivityKind.EXPORT);
         assertThat(shown.cancellable()).isTrue();
-        // The bar counts every step of the export: the check before it (1) and the first of the 4 rereads, of 5.
-        assertThat(shown.fraction()).isEqualTo(0.4);
-        assertThat(shown.stepText()).isEqualTo("Reread next to the neighbours");
-        assertThat(shown.details()).extracting(Activity.Detail::value).contains("1 of 4", "Frankenstein.uk.epub");
-        exportService.release();
-    }
-
-    // IF the pass's calls never reached the activity, THEN the busy card could not show what the model is asked.
-    @Test
-    void export_jobShowsACall_theActivityCarriesItForTheCallView() throws Exception {
-        exportService.announceCalls(LiveCallFixtures.waiting(3, 1, "Two.", LiveCallFixtures.smallPrompt()));
-        exportService.holdRuns();
-
-        export();
-        WaitForAsyncUtils.waitFor(
-                5,
-                TimeUnit.SECONDS,
-                () -> onFx(() -> activities.running().getFirst().calls().current() != null));
-
-        final Activity shown = onFx(() -> activities.running().getFirst());
-        assertThat(shown.calls().current())
-                .isNotNull()
-                .extracting(CallSnapshot::callId)
-                .isEqualTo(3L);
-        exportService.release();
-    }
-
-    // IF the retry step were counted as requests, THEN "3 of 8 requests" would describe eight segments.
-    @Test
-    void export_jobAnnouncesTheRetryStep_theActivityCountsSegments() throws Exception {
-        exportService.announce(new ExportProgress(Step.RETRY_DOUBTED, 3, 8));
-        exportService.holdRuns();
-
-        export();
-        WaitForAsyncUtils.waitFor(
-                5,
-                TimeUnit.SECONDS,
-                () -> onFx(() -> activities.running().getFirst().fraction() != null));
-
-        final Activity shown = onFx(() -> activities.running().getFirst());
-        assertThat(shown.stepText()).isEqualTo("Translate unsure segments again");
-        assertThat(shown.details()).contains(new Activity.Detail("Segments", "3 of 8"));
+        assertThat(shown.details()).extracting(Activity.Detail::value).contains("Frankenstein.uk.epub");
         exportService.release();
     }
 

@@ -1,11 +1,21 @@
 package ua.bookloom.ui.dialog;
 
+import static ua.bookloom.ui.theme.StyleClasses.BTN_GHOST;
+import static ua.bookloom.ui.theme.StyleClasses.BTN_PRIMARY;
+import static ua.bookloom.ui.theme.StyleClasses.BTN_SECONDARY;
+import static ua.bookloom.ui.theme.StyleClasses.CARD_TITLE;
+import static ua.bookloom.ui.theme.StyleClasses.DIALOG_SUB;
+
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Supplier;
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -18,6 +28,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.Tips;
@@ -31,6 +42,8 @@ import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StageChip;
 import ua.bookloom.ui.state.TestDetail;
 import ua.bookloom.ui.state.TestDetails;
+import ua.bookloom.ui.state.TestLive;
+import ua.bookloom.ui.state.TestProgress;
 import ua.bookloom.ui.state.TestSubject;
 import ua.bookloom.ui.state.Tone;
 
@@ -42,11 +55,17 @@ final class ProviderTestView {
     private static final double RAW_HEIGHT = 360;
     private static final double METRICS_WIDTH = 230;
     private static final double COLUMN_SPACING = 14;
+    // The live time is shown in tenths of a second, so the card is redrawn a little faster than that.
+    private static final javafx.util.Duration TICK = javafx.util.Duration.millis(100);
 
     private final Messages messages;
     private final SettingsViewModel viewModel;
     private final TextClipboard clipboard;
     private final Runnable close;
+    private final TestCloseQuestion askClose;
+    private final AdvancedChecksPane checks;
+    private final Timeline ticker = new Timeline(new KeyFrame(TICK, event -> redraw()));
+    private @Nullable Button stop;
     private final ModalCard card = new ModalCard(ModalCard.Size.XL);
     private final Label title = ModalCard.title("");
     private final Banner verdict = new Banner("test-verdict", Tone.INFO, Messages.ELLIPSIS, "", "");
@@ -61,6 +80,8 @@ final class ProviderTestView {
     private final Map<VerificationStage, Button> tabs = new EnumMap<>(VerificationStage.class);
     private final InvalidationListener onRunner = observed -> refresh();
     private VerificationStage stage;
+    // Until the person picks a tab, the card follows the stage the running test is in.
+    private boolean picked;
     private TestDetail detail = new TestDetail(TestDetail.Severity.INFO, "", "", "", "", "", List.of(), "", "");
 
     ProviderTestView(
@@ -68,18 +89,27 @@ final class ProviderTestView {
             final SettingsViewModel viewModel,
             final TextClipboard clipboard,
             final VerificationStage stage,
-            final Runnable close) {
+            final Runnable close,
+            final TestCloseQuestion askClose) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.clipboard = Objects.requireNonNull(clipboard, "clipboard");
         this.stage = Objects.requireNonNull(stage, "stage");
         this.close = Objects.requireNonNull(close, "close");
+        this.askClose = Objects.requireNonNull(askClose, "askClose");
+        this.checks = new AdvancedChecksPane(messages);
+        ticker.setCycleCount(Animation.INDEFINITE);
         build();
         viewModel.tests().stages().addListener(onRunner);
         viewModel.tests().running().addListener(onRunner);
+        viewModel.tests().progress().sent().addListener(onRunner);
+        viewModel.tests().progress().started().addListener(onRunner);
+        viewModel.tests().progress().finished().addListener(onRunner);
         card.sceneProperty().addListener((observed, was, now) -> {
             if (now == null && was != null) {
                 detach();
+            } else if (now != null) {
+                refresh();
             }
         });
         refresh();
@@ -91,8 +121,12 @@ final class ProviderTestView {
 
     private void detach() {
         log.debug("the test dialog was closed: no longer following the runner");
+        ticker.stop();
         viewModel.tests().stages().removeListener(onRunner);
         viewModel.tests().running().removeListener(onRunner);
+        viewModel.tests().progress().sent().removeListener(onRunner);
+        viewModel.tests().progress().started().removeListener(onRunner);
+        viewModel.tests().progress().finished().removeListener(onRunner);
     }
 
     private static TextArea raw(final String id) {
@@ -108,7 +142,7 @@ final class ProviderTestView {
 
     private void build() {
         card.setId("test-card");
-        card.header(title, Wrapped.label(messages.get(MessageKey.SETTINGS_TEST_SUBTITLE), "dialog-sub"));
+        card.header(title, Wrapped.label(messages.get(MessageKey.SETTINGS_TEST_SUBTITLE), DIALOG_SUB));
         buildRequestRow();
         final HBox columns = new HBox(
                 COLUMN_SPACING,
@@ -121,7 +155,7 @@ final class ProviderTestView {
                         "test-copy-response",
                         () -> detail.rawResponse()));
         columns.getStyleClass().add("test-columns");
-        card.setContent(new VBox(BODY_SPACING, verdict, requestRow, columns));
+        card.setContent(new VBox(BODY_SPACING, verdict, checks.node(), requestRow, columns));
         buildFooter();
     }
 
@@ -133,7 +167,7 @@ final class ProviderTestView {
         requestLine.setMaxWidth(Double.MAX_VALUE);
         copyCurl.setId("test-copy-curl");
         copyCurl.setText(messages.get(MessageKey.SETTINGS_TEST_COPY_CURL));
-        copyCurl.getStyleClass().add("btn-secondary");
+        copyCurl.getStyleClass().add(BTN_SECONDARY);
         Tips.install(messages, copyCurl, MessageKey.SETTINGS_TEST_COPY_CURL_TIP);
         copyCurl.setOnAction(event -> copy(detail.curl(), MessageKey.SETTINGS_TEST_COPIED_CURL));
         requestRow.getChildren().addAll(requestLine, copyCurl);
@@ -146,10 +180,10 @@ final class ProviderTestView {
             final String copyId,
             final Supplier<String> raw) {
         final Label name = new Label(messages.get(head));
-        name.getStyleClass().add("card-title");
+        name.getStyleClass().add(CARD_TITLE);
         copy.setId(copyId);
         copy.setText(messages.get(MessageKey.SETTINGS_TEST_COPY));
-        copy.getStyleClass().add("btn-ghost");
+        copy.getStyleClass().add(BTN_GHOST);
         Tips.install(messages, copy, MessageKey.SETTINGS_TEST_COPY_TIP);
         copy.setOnAction(event -> copy(raw.get(), MessageKey.SETTINGS_TEST_COPIED));
         final Region grow = new Region();
@@ -181,33 +215,55 @@ final class ProviderTestView {
             card.getButtonTypes().add(type);
             final Button tab = (Button) card.lookupButton(type);
             tab.setId("test-tab-" + each.name().toLowerCase(Locale.ROOT));
-            Tips.install(messages, tab, tabTip(each));
+            Tips.install(messages, tab, TestCardWords.tabTip(each));
             tab.setOnAction(event -> show(each));
             tabs.put(each, tab);
         }
+        stop = stopButton();
         Tips.install(
                         messages,
                         card.button(
                                 messages.get(MessageKey.SETTINGS_TEST_CLOSE),
                                 ButtonBar.ButtonData.OK_DONE,
                                 "test-close",
-                                "btn-primary"),
+                                BTN_PRIMARY),
                         MessageKey.SETTINGS_TEST_CLOSE_TIP)
-                .setOnAction(event -> close.run());
-        card.setOnEscape(close);
+                .setOnAction(event -> closeAsked());
+        card.setOnEscape(this::closeAsked);
     }
 
-    private static MessageKey tabTip(final VerificationStage which) {
-        return switch (which) {
-            case CONNECTION -> MessageKey.SETTINGS_STAGE_CONNECTION_TIP;
-            case MODELS -> MessageKey.SETTINGS_STAGE_MODELS_TIP;
-            case INFERENCE -> MessageKey.SETTINGS_STAGE_INFERENCE_TIP;
-        };
+    private Button stopButton() {
+        final Button stopping = Tips.install(
+                messages,
+                card.button(
+                        messages.get(MessageKey.SETTINGS_TEST_STOP),
+                        ButtonBar.ButtonData.OTHER,
+                        "test-stop",
+                        "btn-danger-outline"),
+                MessageKey.SETTINGS_TEST_STOP_TIP);
+        stopping.setOnAction(event -> viewModel.tests().stop());
+        return stopping;
+    }
+
+    // Closing while the test runs asks, as leaving its screen does: stop it, or let it finish beside its button.
+    private void closeAsked() {
+        final ProviderTest runningTest = viewModel.tests().running().get();
+        if (runningTest == null) {
+            log.debug("the test card closes: no test runs");
+            close.run();
+            return;
+        }
+        log.debug("the test card was closed while {} runs: asking first", runningTest);
+        askClose.ask(
+                CheckSentences.stageName(messages, runningTest.lastStage()),
+                () -> viewModel.tests().stop(),
+                () -> log.info("the test card closed with {} still running", runningTest));
     }
 
     private void show(final VerificationStage next) {
         log.debug("the test dialog now shows {}", next);
         stage = next;
+        picked = true;
         card.clearFeedback();
         refresh();
     }
@@ -218,42 +274,74 @@ final class ProviderTestView {
         card.feedback(messages.get(said), Severity.SUCCESS);
     }
 
+    private TestDetails.Subject subject() {
+        final Optional<TestSubject> tested = viewModel.testedSubject().get();
+        return new TestDetails.Subject(
+                viewModel.testedName(),
+                tested.map(TestSubject::isLocalProgram).orElse(false),
+                tested.map(subject -> !subject.model().isBlank()).orElse(false));
+    }
+
     private void refresh() {
+        redraw();
+        log.debug("test dialog redrawn for {}: {}", stage, detail.severity());
+    }
+
+    // The clock's tick redraws without a log line: it fires ten times a second while a test runs.
+    private void redraw() {
         final ProviderTest runningTest = viewModel.tests().running().get();
+        final TestProgress live = viewModel.tests().progress();
+        followRunningStage(runningTest, live);
         final boolean running = runningTest != null && stage.compareTo(runningTest.lastStage()) <= 0;
         final List<StageChip> chips = viewModel.tests().stages();
-        detail = TestDetails.of(
-                messages,
-                stage,
-                chips,
-                running,
-                viewModel.testedName(),
-                viewModel.testedSubject().get().map(TestSubject::isLocalProgram).orElse(false),
-                viewModel
-                        .testedSubject()
-                        .get()
-                        .map(tested -> !tested.model().isBlank())
-                        .orElse(false));
-        log.debug("test dialog redrawn for {}: {}, running {}", stage, detail.severity(), running);
-        title.setText(messages.get(titleOf(stage)));
+        detail = TestDetails.of(messages, stage, chips, running, subject(), liveOf(runningTest, live));
+        title.setText(messages.get(TestCardWords.titleOf(stage)));
         showVerdict();
         requestLine.setText(detail.requestLine());
         requestRow.setVisible(!detail.requestLine().isEmpty());
         requestRow.setManaged(requestRow.isVisible());
-        body.setText(detail.body());
-        response.setText(detail.response());
+        changeText(body, detail.body());
+        changeText(response, detail.response());
+        checks.show(stage == VerificationStage.ADVANCED, detail.checks());
+        followClock(runningTest != null);
         copyBody.setDisable(detail.rawBody().isEmpty());
         copyResponse.setDisable(detail.rawResponse().isEmpty());
         showMetrics();
         showTabs(chips);
     }
 
-    private static MessageKey titleOf(final VerificationStage which) {
-        return switch (which) {
-            case CONNECTION -> MessageKey.SETTINGS_TEST_CONNECTION;
-            case MODELS -> MessageKey.SETTINGS_TEST_MODELS;
-            case INFERENCE -> MessageKey.SETTINGS_TEST_INFERENCE;
-        };
+    private static TestLive liveOf(final @Nullable ProviderTest runningTest, final TestProgress live) {
+        final int steps = runningTest == null ? 0 : TestDetails.stepOf(runningTest.lastStage());
+        return new TestLive(live.sent(), live.started(), live.finished(), steps, live.now());
+    }
+
+    private void followRunningStage(final @Nullable ProviderTest runningTest, final TestProgress live) {
+        if (runningTest == null || picked || live.started().isEmpty()) {
+            return;
+        }
+        stage = live.started().getLast().stage();
+    }
+
+    // Setting the same text again would move the caret and the scroll back to the top on every tick.
+    private static void changeText(final TextArea area, final String text) {
+        if (!text.equals(area.getText())) {
+            area.setText(text);
+        }
+    }
+
+    // The clock runs only while a test does, so the live time grows; a card left open after the run holds no timer.
+    private void followClock(final boolean testRunning) {
+        final Button stopping = stop;
+        if (stopping != null) {
+            stopping.setVisible(testRunning);
+            stopping.setManaged(testRunning);
+        }
+        final boolean ticking = ticker.getStatus() == Animation.Status.RUNNING;
+        if (testRunning && !ticking && card.getScene() != null) {
+            ticker.play();
+        } else if (!testRunning && ticking) {
+            ticker.stop();
+        }
     }
 
     private void showVerdict() {
@@ -295,10 +383,13 @@ final class ProviderTestView {
         tabs.forEach((each, tab) -> {
             final boolean ran = chips.stream().anyMatch(chip -> chip.stage() == each);
             // A stage never tried because an earlier one failed still opens, to say so.
-            final boolean told = ran || TestDetails.failedBefore(each, chips).isPresent();
+            final boolean begun =
+                    viewModel.tests().progress().started().stream().anyMatch(start -> start.stage() == each);
+            final boolean told =
+                    ran || begun || TestDetails.failedBefore(each, chips).isPresent();
             tab.setDisable(!told && each != stage);
-            tab.getStyleClass().removeAll("btn-secondary", "btn-ghost");
-            tab.getStyleClass().add(each == stage ? "btn-secondary" : "btn-ghost");
+            tab.getStyleClass().removeAll(BTN_SECONDARY, BTN_GHOST);
+            tab.getStyleClass().add(each == stage ? BTN_SECONDARY : BTN_GHOST);
         });
     }
 }

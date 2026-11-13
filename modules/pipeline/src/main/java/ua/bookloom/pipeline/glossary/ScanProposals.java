@@ -28,7 +28,9 @@ public record ScanProposals(List<GlossaryEntry> entries, Set<String> readingOnly
     }
 
     /**
-     * The entries seeded with the genders their first names and pronouns suggest, then without a term kept only for
+     * The entries seeded with the genders their first names, pronouns and verbs, and declension suggest (in that
+     * order, so each later source fills only what the earlier left unknown, and strong book evidence may replace a
+     * rule's gender), then without a term kept only for
      * the reading that the dial's plan would not read — so Fast, which reads only likely characters, keeps a common
      * word with a capital only when the pronouns already made it a person.
      *
@@ -40,8 +42,12 @@ public record ScanProposals(List<GlossaryEntry> entries, Set<String> readingOnly
     public List<GlossaryEntry> seededFor(
             final BookSlice story, @Nullable final String language, @Nullable final QualityDial dial) {
         Objects.requireNonNull(story, "story");
-        final List<GlossaryEntry> seeded =
-                PronounGender.seeded(GivenNames.seeded(entries, language), story.visibleTexts(), language);
+        final List<String> texts = story.visibleTexts();
+        final List<GlossaryEntry> seeded = UnsureMarks.marked(
+                DeclensionGender.seeded(
+                        PronounGender.seeded(GivenNames.seeded(entries, language), texts, language), texts, language),
+                texts,
+                language);
         if (readingOnly.isEmpty()) {
             return seeded;
         }

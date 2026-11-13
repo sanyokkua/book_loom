@@ -13,6 +13,7 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Narrator;
@@ -34,6 +35,7 @@ import ua.bookloom.pipeline.glossary.StopWords;
 class NamesScanDiagnosisTest {
 
     private static final int PROPOSAL_MIN = 3;
+    private static final java.util.regex.Pattern LOWER_WORD_AFTER_SPACE = java.util.regex.Pattern.compile("\\s[a-z]");
 
     @Test
     void scan_ownerBooks_reportsWhyEachGoldNameIsLeftOut() {
@@ -71,7 +73,7 @@ class NamesScanDiagnosisTest {
         final List<NameCandidate> all =
                 FrequencyScan.candidates(prepared.index(), prepared.index().story(), 1, gold.sourceLanguage());
         final String text = String.join(
-                "\n", prepared.story().stream().map(s -> s.sourceInner()).toList());
+                "\n", prepared.story().stream().map(Segment::sourceInner).toList());
         out.append("== ")
                 .append(file.getFileName())
                 .append(" glossary after scan: ")
@@ -99,7 +101,7 @@ class NamesScanDiagnosisTest {
                     : "proposed with count " + exact.get().count() + " (dropped later, not by the scan)";
         } else if (StopWords.of(language).contains(head) && name.contains(" ")) {
             reason = "stop-word head '" + head + "' never starts a name";
-        } else if (name.matches(".*\\s[a-z].*")
+        } else if (LOWER_WORD_AFTER_SPACE.matcher(name).find()
                 || name.contains(" and ")
                 || name.contains("’s")
                 || name.contains("'s")) {

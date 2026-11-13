@@ -7,7 +7,6 @@ import ua.bookloom.api.project.Project;
 import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.RequestDefaults;
 
 /**
  * The stored project a setup call is about, with its open book.
@@ -16,20 +15,18 @@ import ua.bookloom.pipeline.prompt.RequestDefaults;
  * @param document the open book
  * @param target the brief's target language; never blank
  * @param index the book's index, or null when none was built
- * @param requestDefaults the reasoning plan and sampling mode read when the call began
  */
 record SetupBook(
         Project project,
         Document document,
         String target,
-        @Nullable BookIndex index,
-        RequestDefaults requestDefaults) {
+        @Nullable BookIndex index) {
 
     private static final String FB2_ZIP = ".fb2.zip";
 
     /** The frame every setup call of this book is built in. */
     CallFrame frame() {
-        return CallFrame.forBook(project.brief(), document, index, requestDefaults);
+        return CallFrame.forBook(project.brief(), document, index);
     }
 
     /** The language the code reads the book in: the chosen source, else the one it declares; null when unknown. */

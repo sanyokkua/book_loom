@@ -1,0 +1,233 @@
+{
+ "m01": {
+  "task": "heading",
+  "pair": "en-uk",
+  "difficulty": "easy",
+  "length": "<=10",
+  "defectClass": "none"
+ },
+ "m02": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "easy",
+  "length": "11-30",
+  "defectClass": "first-person-narrator"
+ },
+ "m03": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "medium",
+  "length": "11-30",
+  "defectClass": "name-with-evidence"
+ },
+ "m04": {
+  "task": "dialogue",
+  "pair": "en-uk",
+  "difficulty": "medium",
+  "length": "11-30",
+  "defectClass": "dialogue-punctuation"
+ },
+ "m05": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "easy",
+  "length": "11-30",
+  "defectClass": "name-with-evidence"
+ },
+ "m06": {
+  "task": "name",
+  "pair": "en-uk",
+  "difficulty": "easy",
+  "length": "11-30",
+  "defectClass": "stress-mark"
+ },
+ "m07": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "medium",
+  "length": "11-30",
+  "defectClass": "multi-word-place"
+ },
+ "m08": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "medium",
+  "length": "11-30",
+  "defectClass": "transliteration"
+ },
+ "m09": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "easy",
+  "length": "11-30",
+  "defectClass": "none"
+ },
+ "m10": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "medium",
+  "length": "11-30",
+  "defectClass": "brand"
+ },
+ "m11": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "easy",
+  "length": "11-30",
+  "defectClass": "name-without-evidence"
+ },
+ "m12": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "easy",
+  "length": ">30",
+  "defectClass": "name-with-evidence"
+ },
+ "m13": {
+  "task": "heading",
+  "pair": "en-uk",
+  "difficulty": "easy",
+  "length": "<=10",
+  "defectClass": "heading-number"
+ },
+ "m14": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "medium",
+  "length": "11-30",
+  "defectClass": "inflected-term"
+ },
+ "m15": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "hard",
+  "length": "11-30",
+  "defectClass": "inflected-term"
+ },
+ "m16": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "hard",
+  "length": "11-30",
+  "defectClass": "inflected-title"
+ },
+ "m17": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "medium",
+  "length": "11-30",
+  "defectClass": "brand"
+ },
+ "m18": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "medium",
+  "length": "11-30",
+  "defectClass": "material"
+ },
+ "m19": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "medium",
+  "length": "11-30",
+  "defectClass": "drug"
+ },
+ "m20": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "medium",
+  "length": "11-30",
+  "defectClass": "brand"
+ },
+ "m21": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "hard",
+  "length": ">30",
+  "defectClass": "long-paragraph"
+ },
+ "m22": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "medium",
+  "length": "11-30",
+  "defectClass": "russian-letter"
+ },
+ "m23": {
+  "task": "injection",
+  "pair": "en-uk",
+  "difficulty": "hard",
+  "length": "11-30",
+  "defectClass": "injection"
+ },
+ "m24": {
+  "task": "code",
+  "pair": "en-uk",
+  "difficulty": "easy",
+  "length": "11-30",
+  "defectClass": "latin-code"
+ },
+ "m25": {
+  "task": "dialogue",
+  "pair": "en-uk",
+  "difficulty": "hard",
+  "length": ">30",
+  "defectClass": "address-mix"
+ },
+ "m26": {
+  "task": "dialogue",
+  "pair": "en-uk",
+  "difficulty": "medium",
+  "length": "11-30",
+  "defectClass": "address-mix"
+ },
+ "m27": {
+  "task": "footnote",
+  "pair": "en-uk",
+  "difficulty": "easy",
+  "length": "11-30",
+  "defectClass": "footnote"
+ },
+ "m28": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "medium",
+  "length": "11-30",
+  "defectClass": "first-person-narrator"
+ },
+ "m29": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "medium",
+  "length": "<=10",
+  "defectClass": "negation"
+ },
+ "m30": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "easy",
+  "length": "<=10",
+  "defectClass": "numbers"
+ },
+ "m31": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "medium",
+  "length": ">30",
+  "defectClass": "late-name"
+ },
+ "m32": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "medium",
+  "length": "11-30",
+  "defectClass": "cast-forms"
+ },
+ "m33": {
+  "task": "prose",
+  "pair": "en-uk",
+  "difficulty": "hard",
+  "length": "11-30",
+  "defectClass": "proofread-trap"
+ }
+}

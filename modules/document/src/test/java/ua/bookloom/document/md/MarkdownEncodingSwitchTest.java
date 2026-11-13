@@ -20,8 +20,12 @@ class MarkdownEncodingSwitchTest {
 
     private static final Charset LATIN_1 = StandardCharsets.ISO_8859_1;
 
-    private static final String SOURCE = "# Le café\n\nLe café du coin était fermé ce matin-là, et personne ne savait "
-            + "pourquoi. Les élèves attendaient devant la porte, sous la pluie fine.\n";
+    private static final String SOURCE = """
+            # Le café
+
+            Le café du coin était fermé ce matin-là, et personne ne savait \
+            pourquoi. Les élèves attendaient devant la porte, sous la pluie fine.
+            """;
 
     private final OpenMarkdownRegistry registry = new OpenMarkdownRegistry();
 

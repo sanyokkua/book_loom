@@ -107,8 +107,8 @@ class DrmAdjudicatorTest {
     void adjudicate_contentDocumentEncrypted_isRefused() {
         final ParsedOpf opf = opfWith(manifestItem("chapter01.xhtml", "application/xhtml+xml"));
 
-        assertThatThrownBy(() -> DrmAdjudicator.adjudicate(
-                        encryptionOf("http://www.idpf.org/2008/embedding", "OPS/chapter01.xhtml"), opf))
+        final var arg1 = encryptionOf("http://www.idpf.org/2008/embedding", "OPS/chapter01.xhtml");
+        assertThatThrownBy(() -> DrmAdjudicator.adjudicate(arg1, opf))
                 .isInstanceOf(DrmRefusedException.class)
                 .hasMessageContaining("content rather than a font");
     }
@@ -119,8 +119,8 @@ class DrmAdjudicatorTest {
     void adjudicate_encryptedResourceMissingFromTheManifest_isRefused() {
         final ParsedOpf opf = opfWith(manifestItem("fonts/Charter-Roman.ttf", "application/vnd.ms-opentype"));
 
-        assertThatThrownBy(() -> DrmAdjudicator.adjudicate(
-                        encryptionOf("http://www.idpf.org/2008/embedding", "OPS/fonts/ghost.ttf"), opf))
+        final var arg1 = encryptionOf("http://www.idpf.org/2008/embedding", "OPS/fonts/ghost.ttf");
+        assertThatThrownBy(() -> DrmAdjudicator.adjudicate(arg1, opf))
                 .isInstanceOf(DrmRefusedException.class)
                 .hasMessageContaining("not declared in the package manifest");
     }
@@ -145,9 +145,8 @@ class DrmAdjudicatorTest {
     void adjudicate_cipherUriResolvedAgainstTheOpfDirectory_wouldNotMatch() {
         final ParsedOpf opf = opfWith(manifestItem("fonts/Charter-Roman.ttf", "application/vnd.ms-opentype"));
 
-        assertThatThrownBy(() -> DrmAdjudicator.adjudicate(
-                        encryptionOf("http://www.idpf.org/2008/embedding", "fonts/Charter-Roman.ttf"), opf))
-                .isInstanceOf(DrmRefusedException.class);
+        final var arg1 = encryptionOf("http://www.idpf.org/2008/embedding", "fonts/Charter-Roman.ttf");
+        assertThatThrownBy(() -> DrmAdjudicator.adjudicate(arg1, opf)).isInstanceOf(DrmRefusedException.class);
     }
 
     @Test
@@ -168,7 +167,8 @@ class DrmAdjudicatorTest {
                 </encryption>
                 """.getBytes(StandardCharsets.UTF_8));
 
-        assertThatThrownBy(() -> DrmAdjudicator.adjudicate(entry, opfWith())).isInstanceOf(DrmRefusedException.class);
+        final var opf = opfWith();
+        assertThatThrownBy(() -> DrmAdjudicator.adjudicate(entry, opf)).isInstanceOf(DrmRefusedException.class);
     }
 
     /**
@@ -180,6 +180,7 @@ class DrmAdjudicatorTest {
         final RawEntry entry =
                 new RawEntry("META-INF/encryption.xml", 0, 0, "not xml <<<".getBytes(StandardCharsets.UTF_8));
 
-        assertThatThrownBy(() -> DrmAdjudicator.adjudicate(entry, opfWith())).isInstanceOf(DrmRefusedException.class);
+        final var opf = opfWith();
+        assertThatThrownBy(() -> DrmAdjudicator.adjudicate(entry, opf)).isInstanceOf(DrmRefusedException.class);
     }
 }

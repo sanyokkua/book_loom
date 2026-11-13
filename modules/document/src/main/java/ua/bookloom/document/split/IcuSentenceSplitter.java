@@ -39,7 +39,7 @@ public final class IcuSentenceSplitter implements SentenceSplitter {
             final List<String> pieces = pieces(masked, segment.pairs(), languageTag, segment.id());
             log.trace("Pieces of segment {}: {}", segment.id(), pieces);
             return Result.ok(pieces);
-        } catch (Throwable t) {
+        } catch (Exception t) {
             log.error("Unexpected failure splitting segment {}", segment.id(), t);
             return Result.err(AppError.of(
                     ErrorCode.internal,
@@ -151,7 +151,11 @@ public final class IcuSentenceSplitter implements SentenceSplitter {
                 break;
             }
             final String text = masked.substring(token[0], token[1]);
-            depth += opening.contains(text) ? 1 : closing.contains(text) ? -1 : 0;
+            if (opening.contains(text)) {
+                depth++;
+            } else if (closing.contains(text)) {
+                depth--;
+            }
         }
         return depth > 0;
     }

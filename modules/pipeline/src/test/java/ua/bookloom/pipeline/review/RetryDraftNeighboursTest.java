@@ -26,63 +26,45 @@ import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.review.ReviewFixtures.Desk;
 
 /**
- * A retry is shown what the run's first draft had around it: the paragraph after it as the book now translates it,
- * and — for its reviewer — the character sheet the first draft saw.
+ * A retry is shown the window a run's draft has around it, read from the stored targets now, and — for its reviewer —
+ * today's character sheet of the names the segment holds.
  */
 class RetryDraftNeighboursTest {
 
     @TempDir
     private Path tempDir;
 
-    // The run's batch showed the model what came next; a retry shows the next paragraph as it is now translated.
+    // A retry's window is the run's: the earlier pairs with the targets the run kept, and the next paragraph's source.
     @Test
-    void retry_nextParagraphTranslated_showsItAfterThePreviousTranslations() {
+    void retry_neighboursStored_showsTheKeptPreviousPairAndTheNextSource() {
         final Desk desk = flaggedWithSnapshot(JobState.PAUSED);
+        accept(desk, "ch05.xhtml:10", "Ніч була тиха й темна.");
         accept(desk, "ch05.xhtml:12", "Вранці знову пішов дощ.");
         final ScriptedChatModel model = passing();
 
         ok(retry(desk, model));
 
-        assertThat(userMessage(model.requests().getFirst())).contains("""
-                        </PreviousTranslations>
-
-                        [Next translated text — context only; do NOT re-translate it]
-                        <NextTranslation>
-                        Вранці знову пішов дощ.
-                        </NextTranslation>""");
+        assertThat(userMessage(model.requests().getFirst()))
+                .contains("""
+                        Source: Chapter 5 line 10.
+                        Translation: Ніч була тиха й темна.
+                        """)
+                .contains("do NOT translate or answer it]\nChapter 5 line 12.")
+                .doesNotContain("Вранці знову пішов дощ.");
     }
 
+    // A model copies the translation it is shown, so a flagged neighbour gives its source alone.
     @Test
-    void retry_nextParagraphNotTranslated_showsNoNextText() {
+    void retry_previousParagraphFlagged_showsItsSourceOnly() {
         final Desk desk = flaggedWithSnapshot(JobState.PAUSED);
+        flag(desk, "ch05.xhtml:10", "Ніч була дуже темною.");
         final ScriptedChatModel model = passing();
 
         ok(retry(desk, model));
 
-        assertThat(userMessage(model.requests().getFirst())).doesNotContain("[Next translated text");
-    }
-
-    // The run's reviewer saw who the characters are; the retry's reviewer sees the sheet the first draft saw.
-    @Test
-    void retry_snapshotWithCharacters_showsTheReviewerTheCharacterSheet() {
-        final Desk desk = flaggedWithSnapshot(JobState.PAUSED);
-        withContext(
-                desk,
-                FLAGGED_ID,
-                new ContextSnapshot(
-                        SNAPSHOT.precedingTargets(),
-                        SNAPSHOT.glossary(),
-                        SNAPSHOT.tmHits(),
-                        SNAPSHOT.summary(),
-                        SNAPSHOT.styleSheet(),
-                        List.of(),
-                        List.of("Hale — male")));
-        final ScriptedChatModel model = passing();
-
-        ok(retry(desk, model));
-
-        assertThat(userMessage(model.requests().get(1)))
-                .contains("[Characters in these pairs — who they are]\nHale — male");
+        assertThat(userMessage(model.requests().getFirst()))
+                .contains("Source: Chapter 5 line 10.")
+                .doesNotContain("Ніч була дуже темною.");
     }
 
     private Desk flaggedWithSnapshot(final JobState run) {
@@ -105,10 +87,10 @@ class RetryDraftNeighboursTest {
         return Objects.requireNonNull(result.data(), () -> "expected success but got " + result.error());
     }
 
-    // IF the stored snapshot also holds the sections a batch sent, THEN the retry replays the same text as without
-    // them.
+    // IF the retry read the first draft's stored sections, THEN two records that differ only in them would be retried
+    // differently; the retry builds from the project as it is now.
     @Test
-    void retry_batchAdoptedSnapshot_replaysTheSameTextAsTheSnapshotWithoutSections() {
+    void retry_storedSectionsDiffer_sameRequest() {
         final Desk plain = flaggedWithSnapshot(JobState.PAUSED);
         final ScriptedChatModel plainModel = passing();
         ok(retry(plain, plainModel));
@@ -116,8 +98,12 @@ class RetryDraftNeighboursTest {
         withContext(
                 batched,
                 FLAGGED_ID,
-                SNAPSHOT.withSent(List.of(new PromptSection(
-                        "items", "Items:", PromptSection.Origin.USER, List.of("<s id=\"1\">The monster.</s>")))));
+                new ContextSnapshot(
+                        "beef",
+                        List.of(new PromptSection(
+                                "items", "Items:", PromptSection.Origin.USER, List.of("<s id=\"1\">The monster.</s>"))),
+                        List.of(),
+                        false));
         final ScriptedChatModel batchedModel = passing();
 
         ok(retry(batched, batchedModel));

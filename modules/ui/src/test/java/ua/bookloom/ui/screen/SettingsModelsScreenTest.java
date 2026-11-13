@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Slider;
@@ -15,8 +16,11 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.RefusedSetting;
+import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.state.ModelEntry;
 import ua.bookloom.ui.state.TechnicalDetails;
@@ -38,6 +42,20 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
         assertThat(ThemeTestSupport.onFx(() ->
                         modelsCombo().getConverter().toString(modelsCombo().getValue())))
                 .isEqualTo("gemma4:e4b · Ollama");
+    }
+
+    // IF typing in the chooser did not narrow the list, THEN a person with hundreds of models could not find one.
+    @Test
+    void chooser_textTyped_narrowsTheOfferedModelsToNamesContainingIt() throws TimeoutException {
+        openModels();
+
+        onFx(() -> modelsCombo().getEditor().setText("OSS"));
+        awaitFx(() -> modelsCombo().getItems().size() == 1);
+        assertThat(ThemeTestSupport.onFx(() -> modelsCombo().getItems().get(0).modelId()))
+                .isEqualTo(GPT_OSS);
+
+        onFx(() -> modelsCombo().getEditor().clear());
+        awaitFx(() -> modelsCombo().getItems().size() == 3);
     }
 
     // IF the tip stayed on the Providers tab only, THEN a person on the Models tab would see no way to reload.
@@ -74,10 +92,8 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
 
         openModels();
 
-        assertThat(shown("models-found-text"))
-                .contains("131,072 tokens")
-                .contains("16,384 loaded now")
-                .contains("structured answers: not checked yet");
+        assertThat(shown("models-found-text")).contains("131,072 tokens").contains("16,384 loaded now");
+        assertThat(shown("models-found-structured")).contains("structured answers: not checked yet");
     }
 
     // IF "not checked yet" named nothing to do, THEN a person could not learn how to get the answer.
@@ -85,7 +101,7 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
     void found_noInferenceTestThisSession_saysNotCheckedYetAndNamesTheTest() throws TimeoutException {
         openModels();
 
-        assertThat(shown("models-found-text"))
+        assertThat(shown("models-found-structured"))
                 .contains("not checked yet")
                 .contains("Test inference on the Providers tab");
     }
@@ -97,7 +113,7 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
 
         openModels();
 
-        assertThat(shown("models-found-text"))
+        assertThat(shown("models-found-structured"))
                 .contains(
                         "\u00ab\u041f\u0435\u0440\u0435\u0432\u0456\u0440\u0438\u0442\u0438 \u0432\u0456\u0434\u043f\u043e\u0432\u0456\u0434\u044c\u00bb");
     }
@@ -109,9 +125,9 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
 
         openModels();
 
-        assertThat(ThemeTestSupport.onFx(() -> ((ToggleButton) required("models-temperature-value")).isSelected()))
+        assertThat(ThemeTestSupport.onFx(((ToggleButton) required("models-temperature-value"))::isSelected))
                 .isTrue();
-        assertThat(ThemeTestSupport.onFx(() -> ((Slider) required("models-temperature-slider")).getValue()))
+        assertThat(ThemeTestSupport.onFx(((Slider) required("models-temperature-slider"))::getValue))
                 .isEqualTo(0.5);
         assertThat(shown("models-temperature-hint")).isEqualTo("Every request uses this value.");
         assertThat(shown("models-temperature-readout")).isEqualTo("0.50");
@@ -134,7 +150,7 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
 
         openModels();
 
-        assertThat(ThemeTestSupport.onFx(() -> ((ToggleSwitch) required("models-context-on")).isSelected()))
+        assertThat(ThemeTestSupport.onFx(((ToggleSwitch) required("models-context-on"))::isSelected))
                 .isFalse();
         assertThat(modelsField("models-context").getText()).isEqualTo("16384");
         assertThat(modelsField("models-context").isDisabled()).isTrue();
@@ -147,7 +163,7 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
 
         openModels();
 
-        assertThat(ThemeTestSupport.onFx(() -> ((ToggleSwitch) required("models-context-on")).isSelected()))
+        assertThat(ThemeTestSupport.onFx(((ToggleSwitch) required("models-context-on"))::isSelected))
                 .isTrue();
         assertThat(modelsField("models-context").getText()).isEqualTo("16384");
         assertThat(modelsField("models-context").isDisabled()).isFalse();
@@ -173,7 +189,7 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
         assertThat(visible("models-field-ollama")).isFalse();
         assertThat(shown("models-field-completion")).isEqualTo("max_completion_tokens (standard)");
         assertThat(shown("models-field-tokens")).isEqualTo("max_tokens (older servers)");
-        assertThat(ThemeTestSupport.onFx(() -> ((ToggleButton) required("models-field-tokens")).isSelected()))
+        assertThat(ThemeTestSupport.onFx(((ToggleButton) required("models-field-tokens"))::isSelected))
                 .isTrue();
     }
 
@@ -306,7 +322,9 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
                 null,
                 OutputLengthField.MAX_TOKENS,
                 List.of(new RefusedSetting("temperature", LocalDate.of(2026, 10, 2), "omitted")),
-                null,
-                null);
+                Map.of(),
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
     }
 }

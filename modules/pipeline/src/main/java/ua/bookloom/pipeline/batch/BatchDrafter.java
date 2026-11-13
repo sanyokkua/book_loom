@@ -1,27 +1,29 @@
 package ua.bookloom.pipeline.batch;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
-import ua.bookloom.api.pipeline.CallItem;
-import ua.bookloom.api.pipeline.CallItemStatus;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ChunkPosition;
-import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.pipeline.StepKind;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.chunk.BatchSizeController;
 import ua.bookloom.pipeline.chunk.BatchSizeController.Failure;
+import ua.bookloom.pipeline.context.ContextBuilder;
+import ua.bookloom.pipeline.context.PromptPlan;
+import ua.bookloom.pipeline.context.TranslateContext;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.prompt.PromptBreakdown;
+import ua.bookloom.pipeline.prompt.PromptName;
 
 /**
  * Drafts several consecutive segments in one model call and reads the reply per id. It makes the call and judges the
@@ -35,8 +37,8 @@ import ua.bookloom.pipeline.prompt.PromptBreakdown;
 public final class BatchDrafter {
 
     /**
-     * Where a run's batch size starts: the number of items the measured A/B of the small and the large model class both
-     * answered with every id once and every token kept.
+     * A batch size for a drafter built without a model profile (tests and evals); a run starts at its model profile's
+     * size (redesign task 10.8).
      */
     public static final int DEFAULT_INITIAL_SIZE = 8;
 
@@ -49,9 +51,6 @@ public final class BatchDrafter {
     /** How many ids a readable reply must leave out before the missing ones are asked again together. */
     public static final int MIN_MISSING_TO_REASK = 2;
 
-    /** The ceiling of the adaptive size; the initial size is not a cap, and the token budget and the unit cut a batch further. */
-    public static final int MAX_SIZE = 16;
-
     static final int CLEAN_STREAK_TO_GROW = 3;
 
     /** How many first-item-only or cut replies in a row halve the size, because one of them says nothing but a habit does. */
@@ -63,7 +62,7 @@ public final class BatchDrafter {
     private final @Nullable String sourceLanguage;
     private final String targetLanguage;
     private final BatchSizeController size;
-    private final KeyTermAsks keyTermAsks = new KeyTermAsks();
+    private final int startSize;
     private int stallStreak;
 
     /**
@@ -74,7 +73,7 @@ public final class BatchDrafter {
      * @param calls the non-null seam every call of the run goes through
      * @param sourceLanguage the source language tag, or null when the book declares none
      * @param targetLanguage the non-null target language tag
-     * @param initialSize the first batch size, from {@link #NO_BATCHING} to 16
+     * @param initialSize the first batch size, at least {@link #NO_BATCHING}; it is also the ceiling the size never grows above
      */
     public BatchDrafter(
             final BatchPromptBuilder prompts,
@@ -90,12 +89,13 @@ public final class BatchDrafter {
         this.targetLanguage = Objects.requireNonNull(targetLanguage, "targetLanguage");
         // A run that batches never halves its way into no batching, which only an initial size of one asks for.
         final int min = initialSize < MIN_BATCHING_SIZE ? NO_BATCHING : MIN_BATCHING_SIZE;
-        this.size = new BatchSizeController(min, MAX_SIZE, initialSize, CLEAN_STREAK_TO_GROW);
+        this.size = new BatchSizeController(min, initialSize, initialSize, CLEAN_STREAK_TO_GROW);
+        this.startSize = initialSize;
     }
 
-    /** The run's memory of whether its model answers the key-term block, which decides if the next prompt asks. */
-    public KeyTermAsks keyTermAsks() {
-        return keyTermAsks;
+    /** The size the run started at, which is also the most a batch may carry: halving may lower the size, growth stops here. */
+    public int startSize() {
+        return startSize;
     }
 
     /** The items the next batch may carry, before the token budget cuts it. */
@@ -104,26 +104,15 @@ public final class BatchDrafter {
     }
 
     /**
-     * What a batch's prompt would weigh, so a run can fit it to the window before it sends it.
-     *
-     * @param context the non-null context shown with the items
-     * @param items the non-null items, at least one
-     * @return the estimated tokens of the whole prompt
-     */
-    public int promptTokens(final BatchContext context, final List<BatchItem> items) {
-        return PromptBreakdown.of(prompts.messagesFor(context, items)).total();
-    }
-
-    /**
      * Sends one batch and reads its reply.
      *
-     * @param context the non-null read-only context shown with the items
-     * @param items the non-null items, at least one, with unique ids
+     * @param context the non-null window, map and memory shown with the items
+     * @param items the non-null items, at least one, numbered {@code 1…n}
      * @param segmentIds the non-null segments the items stand for, in the items' order, which the call announces
      * @return the reply read per id (not readable when nothing usable came), or the error the call answered
      */
     public Result<BatchReply> draft(
-            final BatchContext context, final List<BatchItem> items, final List<String> segmentIds) {
+            final TranslateContext context, final List<BatchItem> items, final List<String> segmentIds) {
         return draft(
                 context,
                 items,
@@ -132,23 +121,31 @@ public final class BatchDrafter {
                 null);
     }
 
-    /** The prompt parts a batch of these items is sent as, in the order they are sent; never null. */
-    public List<PromptSection> sectionsFor(final BatchContext context, final List<BatchItem> items) {
-        return prompts.sectionsFor(context, items);
+    /**
+     * The plan of a batch of these items, as {@link #draft} sends it.
+     *
+     * @param context the non-null window, map and memory shown with the items
+     * @param items the non-null items, numbered {@code 1…n}
+     * @param segmentIds the non-null segments the items stand for
+     * @return the fitted plan, or the builder's error
+     */
+    public Result<ContextBuilder.FittedPlan> plan(
+            final TranslateContext context, final List<BatchItem> items, final List<String> segmentIds) {
+        return prompts.plan(context, items, segmentIds);
     }
 
     /**
-     * Sends one batch made in a known chunk and reads its reply, as {@link #draft(BatchContext, List, List)} does.
+     * Sends one batch made in a known chunk and reads its reply, as {@link #draft(TranslateContext, List, List)} does.
      *
-     * @param context the non-null read-only context shown with the items
-     * @param items the non-null items, at least one, with unique ids
+     * @param context the non-null window, map and memory shown with the items
+     * @param items the non-null items, at least one, numbered {@code 1…n}
      * @param segmentIds the non-null segments the items stand for, in the items' order
      * @param sources the non-null source of each segment as a person reads it, in the items' order
      * @param position the chunk the batch is made in, which the shown call names, or null when it is not known
-     * @return as {@link #draft(BatchContext, List, List)}
+     * @return as {@link #draft(TranslateContext, List, List)}
      */
     public Result<BatchReply> draft(
-            final BatchContext context,
+            final TranslateContext context,
             final List<BatchItem> items,
             final List<String> segmentIds,
             final List<String> sources,
@@ -161,12 +158,40 @@ public final class BatchDrafter {
                 segmentIds,
                 size.size(),
                 position);
-        final ChatRequest request = request(context, items);
-        final CallDescriptor descriptor = new CallDescriptor(
-                prompts.format().promptName().resourceBaseName(),
-                position,
-                sources,
-                () -> prompts.sectionsFor(context, items));
+        final Result<ContextBuilder.FittedPlan> planned = prompts.plan(context, items, segmentIds);
+        final ContextBuilder.FittedPlan fitted = planned.data();
+        if (fitted == null) {
+            return Result.err(Objects.requireNonNull(planned.error(), "error"));
+        }
+        if (fitted.keptItems() < items.size()) {
+            log.warn(
+                    "The batch's plan keeps {} of its {} items; the rest are left to their own drafts",
+                    fitted.keptItems(),
+                    items.size());
+        }
+        return draft(fitted.plan(), items, segmentIds, sources, position);
+    }
+
+    /**
+     * Sends one batch planned already, as {@link #draft(TranslateContext, List, List, List, ChunkPosition)} does.
+     *
+     * @param plan the non-null plan of these items
+     * @param items the non-null items, at least one, numbered {@code 1…n}
+     * @param segmentIds the non-null segments the items stand for, in the items' order
+     * @param sources the non-null source of each segment as a person reads it, in the items' order
+     * @param position the chunk the batch is made in, or null when it is not known
+     * @return as {@link #draft(TranslateContext, List, List)}
+     */
+    public Result<BatchReply> draft(
+            final PromptPlan plan,
+            final List<BatchItem> items,
+            final List<String> segmentIds,
+            final List<String> sources,
+            @Nullable final ChunkPosition position) {
+        Objects.requireNonNull(plan, "plan");
+        final ChatRequest request = prompts.requestFor(plan, items, false);
+        final CallDescriptor descriptor =
+                new CallDescriptor(PromptName.TRANSLATE.resourceBaseName(), position, sources, plan::sections);
         final Result<ChatResponse> answered = calls.callAbout(CallKind.DRAFT, segmentIds, request, descriptor);
         final ChatResponse response = answered.data();
         if (response == null) {
@@ -178,32 +203,9 @@ public final class BatchDrafter {
         final List<String> ids = items.stream().map(BatchItem::id).toList();
         final BatchReply reply = response.content().isBlank()
                 ? BatchReply.unreadable(ids)
-                : parser.parse(response.content(), items, sourceLanguage, targetLanguage, prompts.format());
-        calls.parsed(segmentIds, callItems(ids, segmentIds, reply));
+                : parser.parse(response.content(), items, sourceLanguage, targetLanguage);
+        calls.parsed(segmentIds, BatchCallItems.of(ids, segmentIds, reply));
         return Result.ok(reply.withCut(response.finishReason() == FinishReason.LENGTH));
-    }
-
-    /**
-     * Reads a reply as the items a call row shows: the expected ids in order, then any extra id. A gate refusal made
-     * later by the caller is not an item status, so it is not shown here.
-     */
-    private static List<CallItem> callItems(
-            final List<String> ids, final List<String> segmentIds, final BatchReply reply) {
-        final List<CallItem> expected = new ArrayList<>();
-        final List<CallItem> extra = new ArrayList<>();
-        for (final ItemOutcome outcome : reply.outcomes()) {
-            final int index = ids.indexOf(outcome.id());
-            final String target = outcome.target().isBlank() ? null : outcome.target();
-            final CallItem item = new CallItem(
-                    outcome.id(),
-                    index < 0 || index >= segmentIds.size() ? null : segmentIds.get(index),
-                    target,
-                    CallItemStatus.valueOf(outcome.status().name()),
-                    outcome.problems().stream().map(ItemProblem::name).toList());
-            (outcome.status() == ItemStatus.EXTRA ? extra : expected).add(item);
-        }
-        expected.addAll(extra);
-        return expected;
     }
 
     /**
@@ -224,7 +226,7 @@ public final class BatchDrafter {
      *     second call, so no single draft follows
      */
     public Result<BatchReply> reaskMissing(
-            final BatchContext context,
+            final TranslateContext context,
             final List<BatchItem> items,
             final List<String> segmentIds,
             final List<String> sources,
@@ -236,37 +238,48 @@ public final class BatchDrafter {
             log.debug("No re-ask readable={} missing={}", first.readable(), missing);
             return Result.ok(first);
         }
-        final List<Integer> at = new ArrayList<>();
-        for (int i = 0; i < items.size(); i++) {
-            if (first.outcome(items.get(i).id())
-                    .filter(o -> o.status() == ItemStatus.MISSING)
-                    .isPresent()) {
-                at.add(i);
-            }
-        }
+        final List<Integer> at = missingAt(items, first);
         log.info("Batch reply left out {} of {} ids; asking for those only", at.size(), items.size());
         final String key = "reask:" + segmentIds.get(at.getFirst());
         calls.steps().added(StepKind.RE_ASK, "re-ask", key, segmentIds.get(at.getFirst()));
+        // The re-ask numbers its own items from 1, as every batch does, and its reply is read back under the first ids.
+        final List<BatchItem> renumbered = IntStream.range(0, at.size())
+                .mapToObj(i -> new BatchItem(
+                        Integer.toString(i + 1), items.get(at.get(i)).masked()))
+                .toList();
+        final Map<String, String> back = new HashMap<>();
+        IntStream.range(0, at.size())
+                .forEach(i ->
+                        back.put(Integer.toString(i + 1), items.get(at.get(i)).id()));
         final Result<BatchReply> second = draft(
-                context,
-                at.stream().map(items::get).toList(),
-                at.stream().map(segmentIds::get).toList(),
-                at.stream().map(sources::get).toList(),
-                position);
+                        context,
+                        renumbered,
+                        at.stream().map(segmentIds::get).toList(),
+                        at.stream().map(sources::get).toList(),
+                        position)
+                .map(reply -> reply.renamed(back));
         return ReAskMerge.merge(first, second, calls.steps(), key);
     }
 
+    private static List<Integer> missingAt(final List<BatchItem> items, final BatchReply first) {
+        return IntStream.range(0, items.size())
+                .filter(i -> first.outcome(items.get(i).id())
+                        .filter(o -> o.status() == ItemStatus.MISSING)
+                        .isPresent())
+                .boxed()
+                .toList();
+    }
+
     /**
-     * The request one batch's call sends, before the run's seam sizes it to the window: the same one {@link #draft}
+     * The request one planned batch sends, before the run's seam sizes it to the window: the same one {@link #draft}
      * sends, so a caller that only needs the request (a prompt eval) builds exactly the run's.
      *
-     * @param context the non-null read-only context shown with the items
+     * @param plan the non-null plan of the batch
      * @param items the non-null items, at least one
-     * @return the request, asking for the batch schema unless the format answers in plain text, with the reply capped by the
-     *     items' size
+     * @return the request, asking for the batch schema, with the reply capped by the plan and the items' size
      */
-    public ChatRequest request(final BatchContext context, final List<BatchItem> items) {
-        return prompts.requestFor(prompts.messagesFor(context, items), items, false);
+    public ChatRequest request(final PromptPlan plan, final List<BatchItem> items) {
+        return prompts.requestFor(plan, items, false);
     }
 
     /**
@@ -290,12 +303,12 @@ public final class BatchDrafter {
         }
         countStall(outcome);
         log.debug(
-                "Batch recorded outcome={} sent={} size={} nextSize={} maxSize={}",
+                "Batch recorded outcome={} sent={} size={} nextSize={} ceiling={}",
                 outcome,
                 reply.outcomes().size() - reply.count(ItemStatus.EXTRA),
                 before,
                 size.size(),
-                MAX_SIZE);
+                startSize);
     }
 
     // A stall alone says nothing, but a model that always stops after item one must still be able to shrink its batch.

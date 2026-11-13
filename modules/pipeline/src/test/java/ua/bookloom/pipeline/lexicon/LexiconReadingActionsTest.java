@@ -29,10 +29,11 @@ import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.RenderingOrigin;
-import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
 import ua.bookloom.pipeline.glossary.LexiconReading;
 import ua.bookloom.pipeline.glossary.PreScan;
@@ -111,7 +112,7 @@ class LexiconReadingActionsTest {
      */
     private final ChatModel model = request -> {
         requests.add(request);
-        final String user = request.messages().getLast().content();
+        final String user = AnalysisData.of(request.messages().getLast().content());
         if (formatOf(request).equals(TERM_CHOICE)) {
             return reply("{\"terms\":[{\"term\":\"pentacle\",\"keep\":true},{\"term\":\"table\",\"keep\":false}]}");
         }
@@ -187,7 +188,7 @@ class LexiconReadingActionsTest {
     @Test
     void review_termTheGlossaryHolds_isNotAskedAndAPromotionOnlyRemovesIt() {
         desk.glossary()
-                .add(new GlossaryEntry(
+                .add(GlossaryEntry.of(
                         desk.projectId() + ":pentacle",
                         desk.projectId(),
                         "Pentacle",
@@ -200,7 +201,8 @@ class LexiconReadingActionsTest {
 
         assertThat(service.review(desk.projectId(), model, event -> {}).isOk()).isTrue();
         assertThat(requests)
-                .noneMatch(request -> request.messages().getLast().content().contains("[[pentacle]]"));
+                .noneMatch(request ->
+                        AnalysisData.of(request.messages().getLast().content()).contains("[[pentacle]]"));
 
         assertThat(service.promote(desk.projectId(), "pentacle").isOk()).isTrue();
         assertThat(lexicon.all(desk.projectId()).data()).isEmpty();
@@ -307,7 +309,7 @@ class LexiconReadingActionsTest {
                 .extracting(GlossaryEntry::term, GlossaryEntry::target)
                 .containsExactly(org.assertj.core.api.Assertions.tuple("Orlan", "Орлан"));
         assertThat(desk.glossary().findByTerm(desk.projectId(), "Orlan").data())
-                .hasValueSatisfying(entry -> assertThat(entry.origin()).isEqualTo(TargetOrigin.SUGGESTED));
+                .hasValueSatisfying(entry -> assertThat(entry.targetOrigin()).isEqualTo(Origin.LIKELY));
     }
 
     // The person promoting a term whose rendering they typed makes it the glossary's own; a reading's stays a
@@ -319,7 +321,7 @@ class LexiconReadingActionsTest {
         service.promote(desk.projectId(), "pentacle");
 
         assertThat(desk.glossary().findByTerm(desk.projectId(), "pentacle").data())
-                .hasValueSatisfying(entry -> assertThat(entry.origin()).isEqualTo(TargetOrigin.PERSON));
+                .hasValueSatisfying(entry -> assertThat(entry.targetOrigin()).isEqualTo(Origin.USER));
     }
 
     @Test
@@ -331,7 +333,7 @@ class LexiconReadingActionsTest {
         assertThat(desk.glossary().findByTerm(desk.projectId(), "pentacle").data())
                 .hasValueSatisfying(entry -> {
                     assertThat(entry.target()).isEqualTo(PENTACLE_KEPT);
-                    assertThat(entry.origin()).isEqualTo(TargetOrigin.SUGGESTED);
+                    assertThat(entry.targetOrigin()).isEqualTo(Origin.LIKELY);
                 });
     }
 
@@ -359,7 +361,8 @@ class LexiconReadingActionsTest {
         service.review(desk.projectId(), model, event -> {});
 
         assertThat(requests)
-                .extracting(request -> request.messages().getLast().content())
+                .extracting(
+                        request -> AnalysisData.of(request.messages().getLast().content()))
                 .noneMatch(user -> user.contains("[[pentacle]]"));
         assertThat(lexicon.all(desk.projectId()).data())
                 .extracting(LexiconEntry::term, LexiconEntry::chosen)

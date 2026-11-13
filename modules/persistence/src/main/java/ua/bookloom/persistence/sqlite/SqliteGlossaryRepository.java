@@ -1,5 +1,7 @@
 package ua.bookloom.persistence.sqlite;
 
+import static ua.bookloom.util.contract.ArgNames.PROJECT_ID;
+
 import com.google.inject.Inject;
 import java.util.List;
 import java.util.Objects;
@@ -19,8 +21,9 @@ import ua.bookloom.util.text.GlossaryKeys;
 /**
  * Stores a project's glossary as one {@link GlossaryDocument} in {@code project_docs}. Every change reads, changes
  * and writes the document inside one write transaction on the single writer, so a person's edit and a run's addition
- * made at the same moment both survive ({@code design.md} D9). Terms are matched by their {@link GlossaryKeys} key,
- * and removed terms are kept with the document, so they are still remembered after a restart.
+ * made at the same moment both survive ({@code design.md} D9). Terms are matched by their {@link GlossaryKeys} key
+ * against every lemma and form ({@link ua.bookloom.persistence.GlossaryIndex}), and removed terms are kept with the
+ * document, so they are still remembered after a restart.
  */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
@@ -37,7 +40,7 @@ public final class SqliteGlossaryRepository implements GlossaryRepository {
 
     private Result<GlossaryEntry> addIn(final Handle h, final GlossaryEntry entry) {
         final GlossaryDocument doc = load(h, codec, entry.projectId());
-        if (doc.findByKey(GlossaryKeys.of(entry.term())).isPresent()) {
+        if (doc.holderOf(entry).isPresent()) {
             log.debug(
                     "Glossary add refused as duplicate projectId={} termLength={}",
                     entry.projectId(),
@@ -75,7 +78,7 @@ public final class SqliteGlossaryRepository implements GlossaryRepository {
     // One read-modify-write of the document for all of them; a refused entry leaves the document as it was.
     @Override
     public Result<List<GlossaryEntry>> putAll(final String projectId, final List<GlossaryEntry> entries) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(entries, "entries");
         return db.write("glossary putAll", h -> {
                     final Optional<GlossaryDocument> next =
@@ -97,7 +100,7 @@ public final class SqliteGlossaryRepository implements GlossaryRepository {
     @Override
     public Result<Optional<GlossaryEntry>> update(
             final String projectId, final String term, final UnaryOperator<GlossaryEntry> change) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         Objects.requireNonNull(change, "change");
         return db.write("glossary updateByTerm", h -> {
@@ -112,7 +115,7 @@ public final class SqliteGlossaryRepository implements GlossaryRepository {
 
     @Override
     public Result<Boolean> remove(final String projectId, final String entryId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(entryId, "entryId");
         return db.write("glossary remove", h -> {
             final GlossaryDocument doc = load(h, codec, projectId);
@@ -124,8 +127,30 @@ public final class SqliteGlossaryRepository implements GlossaryRepository {
     }
 
     @Override
+    public Result<GlossaryEntry> fold(final String projectId, final String foldedId, final GlossaryEntry kept) {
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(foldedId, "foldedId");
+        Objects.requireNonNull(kept, "kept");
+        return db.write("glossary fold", h -> {
+                    final GlossaryDocument doc = load(h, codec, projectId);
+                    if (doc.findById(foldedId).isEmpty()
+                            || doc.findById(kept.id()).isEmpty()) {
+                        log.debug("Glossary fold refused projectId={}: an entry is not held", projectId);
+                        return Result.<GlossaryEntry>err(AppError.of(
+                                ErrorCode.validation,
+                                "Unknown glossary entry",
+                                "No such glossary entry exists in project '" + projectId + "'."));
+                    }
+                    store(h, codec, projectId, doc.folded(foldedId, kept));
+                    log.debug("Glossary fold projectId={} foldedId={} keptId={}", projectId, foldedId, kept.id());
+                    return Result.ok(kept);
+                })
+                .flatMap(Function.identity());
+    }
+
+    @Override
     public Result<List<GlossaryEntry>> all(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         return db.read("glossary all", h -> {
             final List<GlossaryEntry> entries = load(h, codec, projectId).entries();
             log.debug("Glossary all projectId={} count={}", projectId, entries.size());
@@ -135,7 +160,7 @@ public final class SqliteGlossaryRepository implements GlossaryRepository {
 
     @Override
     public Result<Optional<GlossaryEntry>> findByTerm(final String projectId, final String term) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         log.debug("Glossary findByTerm projectId={} termLength={}", projectId, term.length());
         return db.read("glossary findByTerm", h -> load(h, codec, projectId).findByKey(GlossaryKeys.of(term)));
@@ -143,7 +168,7 @@ public final class SqliteGlossaryRepository implements GlossaryRepository {
 
     @Override
     public Result<Boolean> wasRemoved(final String projectId, final String term) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         log.debug("Glossary wasRemoved projectId={} termLength={}", projectId, term.length());
         return db.read("glossary wasRemoved", h -> load(h, codec, projectId).wasRemoved(GlossaryKeys.of(term)));

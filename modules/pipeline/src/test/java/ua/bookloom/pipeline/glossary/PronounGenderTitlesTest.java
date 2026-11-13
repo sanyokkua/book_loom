@@ -4,6 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.PronounGender.Evidence;
 
 /**
@@ -89,5 +93,37 @@ class PronounGenderTitlesTest {
                 "en");
 
         assertThat(evidence.male()).isEqualTo(2);
+    }
+
+    // IF an Auto source with no recognised declaration (no language) gave no evidence at all, THEN a woman called "Mrs.
+    // Whitmore" through the book stayed without a gender; the form of address is read from every language's data.
+    @Test
+    void of_languageNotKnown_stillReadsTheFormsOfAddress() {
+        final List<String> texts = List.of(
+                "Good evening, Mrs. Whitmore, said the boy.",
+                "Mrs. Whitmore handed him a loaf of bread.",
+                "Mr. Ashdown waited by the gate. Whitmore never saw him.");
+
+        assertThat(PronounGender.of("Whitmore", texts, null).female()).isEqualTo(2);
+        assertThat(PronounGender.of("Ashdown", texts, null).male()).isEqualTo(1);
+        assertThat(PronounGender.of("Whitmore", texts, null).male()).isZero();
+    }
+
+    @Test
+    void seeded_languageNotKnown_suggestsTheGenderOfTheFormOfAddressAsLikely() {
+        final GlossaryEntry entry =
+                GlossaryEntry.of("e1", "p1", "Whitmore", null, TermType.CHARACTER, Gender.UNKNOWN, false);
+        final GlossaryEntry seeded = PronounGender.seeded(
+                entry, List.of("Mrs. Whitmore handed him a loaf.", "Good evening, Mrs. Whitmore."), null);
+
+        assertThat(seeded.gender()).isEqualTo(Gender.FEMALE);
+        assertThat(seeded.genderOrigin()).isEqualTo(Origin.LIKELY);
+    }
+
+    @Test
+    void of_languageNotKnownAndNoFormOfAddress_isNoEvidence() {
+        assertThat(PronounGender.of("Whitmore", List.of("Whitmore handed him a loaf. She smiled."), null)
+                        .total())
+                .isZero();
     }
 }

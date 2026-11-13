@@ -90,7 +90,7 @@ class BatchSizeSignalTest {
         final BatchDrafter drafter = scripted(List.of(
                 Result.ok(new ChatResponse(
                         entries("1", "Вона відчинила двері.", "2", "Він мовчав."), FinishReason.LENGTH)),
-                reply(entries("3", "Дощ припинився.", "4", "Настала ніч."))));
+                reply(entries("1", "Дощ припинився.", "2", "Настала ніч."))));
         final BatchReply first = firstReply(drafter);
 
         final BatchReply merged = reasked(drafter, first);

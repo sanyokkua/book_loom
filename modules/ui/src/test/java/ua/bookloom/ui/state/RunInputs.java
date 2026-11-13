@@ -5,6 +5,7 @@ import java.time.LocalTime;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.ProofreadTally;
 import ua.bookloom.api.pipeline.RecoveryWaiting;
 
 /**
@@ -28,6 +29,9 @@ final class RunInputs {
     private ModelChoice model = OLLAMA;
     private @Nullable Controls controls;
     private @Nullable ActivityKind otherWork;
+    private @Nullable ProofreadTally proofread;
+    private @Nullable RunStage stage;
+    private @Nullable String span;
 
     static RunInputs in(final RunState state) {
         final RunInputs inputs = new RunInputs();
@@ -81,6 +85,21 @@ final class RunInputs {
         return this;
     }
 
+    RunInputs proofread(final ProofreadTally tally) {
+        proofread = tally;
+        return this;
+    }
+
+    RunInputs stage(final RunStage value) {
+        stage = value;
+        return this;
+    }
+
+    RunInputs span(final String value) {
+        span = value;
+        return this;
+    }
+
     RunInputs pausedOn(final ErrorCode code) {
         pausedOn = code;
         return this;
@@ -118,8 +137,10 @@ final class RunInputs {
                 model,
                 offered,
                 otherWork,
+                span,
                 null,
-                null);
+                proofread,
+                stage);
     }
 
     RunStateView view() {

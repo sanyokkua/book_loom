@@ -29,6 +29,14 @@ public interface ConfirmPrompt {
                 MessageKey.CONFIRM_STOP_YES_TIP,
                 MessageKey.CONFIRM_STOP_NO);
 
+        /** Stopping the run during its Proofread stage, where the segments in flight are being proofread. */
+        public static final Question STOP_PROOFREAD = new Question(
+                MessageKey.CONFIRM_STOP_TITLE,
+                MessageKey.CONFIRM_STOP_TEXT_PROOFREAD,
+                MessageKey.CONFIRM_STOP_YES,
+                MessageKey.CONFIRM_STOP_YES_TIP,
+                MessageKey.CONFIRM_STOP_NO);
+
         /** Opening another project while a translation is at work; the text names the book and the project. */
         public static final Question SWITCH_PROJECT = new Question(
                 MessageKey.CONFIRM_SWITCH_TITLE,
@@ -71,22 +79,6 @@ public interface ConfirmPrompt {
                 MessageKey.EXPORT_REPLACE_TEXT,
                 MessageKey.EXPORT_REPLACE_YES,
                 MessageKey.EXPORT_REPLACE_YES_TIP);
-
-        /** Ending the last check early and writing the file; the text says what was reread. */
-        public static final Question WRITE_NOW = new Question(
-                MessageKey.EXPORT_WRITE_NOW_TITLE,
-                MessageKey.EXPORT_WRITE_NOW_TEXT,
-                MessageKey.EXPORT_WRITE_NOW_YES,
-                MessageKey.EXPORT_WRITE_NOW_YES_TIP,
-                MessageKey.EXPORT_WRITE_NOW_NO);
-
-        /** Ending the last check before it reread anything. */
-        public static final Question WRITE_NOW_EARLY = new Question(
-                MessageKey.EXPORT_WRITE_NOW_TITLE,
-                MessageKey.EXPORT_WRITE_NOW_TEXT_EARLY,
-                MessageKey.EXPORT_WRITE_NOW_YES,
-                MessageKey.EXPORT_WRITE_NOW_YES_TIP,
-                MessageKey.EXPORT_WRITE_NOW_NO);
 
         /** Removing a project and its saved work; its title names the project. */
         public static final Question REMOVE_PROJECT = new Question(

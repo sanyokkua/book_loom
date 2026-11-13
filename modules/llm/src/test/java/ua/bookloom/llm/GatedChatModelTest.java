@@ -21,6 +21,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,7 @@ import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
@@ -44,13 +46,18 @@ import ua.bookloom.llm.retry.RetryPolicy;
 /** Exercises retries and gate placement against the real OpenAI-compatible HTTP boundary. */
 class GatedChatModelTest {
 
-    private static final String CHAT_PATH = "/v1/chat/completions";
+    private static final long SETTLE_NANOS = TimeUnit.MILLISECONDS.toNanos(100);
+
+    // LM Studio's own route, where its chat goes first.
+    private static final String CHAT_PATH = "/api/v0/chat/completions";
     private static final String OLLAMA_CHAT_PATH = "/api/chat";
-    private static final String MODEL_ID = "test-model";
+    private static final String MODEL_ID = "mistral-small3.2:24b";
+    // A model whose built-in row has an on/off thinking switch, so the off value is sent and can be refused.
+    private static final String SWITCH_MODEL_ID = "qwen3.5:9b";
     private static final String REPLY =
-            "{\"model\":\"test-model\",\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"translated\"},\"finish_reason\":\"stop\"}]}";
+            "{\"model\":\"mistral-small3.2:24b\",\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"translated\"},\"finish_reason\":\"stop\"}]}";
     private static final String OLLAMA_REPLY =
-            "{\"model\":\"test-model\",\"message\":{\"role\":\"assistant\",\"content\":\"translated\"},\"done_reason\":\"stop\"}";
+            "{\"model\":\"mistral-small3.2:24b\",\"message\":{\"role\":\"assistant\",\"content\":\"translated\"},\"done_reason\":\"stop\"}";
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-09-22T12:00:00Z"), ZoneOffset.UTC);
 
     private final WireMockServer server =
@@ -267,8 +274,9 @@ class GatedChatModelTest {
             assertThat(ready.await(2, TimeUnit.SECONDS)).isTrue();
             start.countDown();
             awaitRequestCount(1);
-            Thread.sleep(100);
-            assertThat(server.getAllServeEvents()).hasSize(1);
+            LockSupport.parkNanos(SETTLE_NANOS);
+            // The model-id check's one GET of the server's list is not a chat call.
+            assertThat(server.findAll(postRequestedFor(urlEqualTo(CHAT_PATH)))).hasSize(1);
             assertThat(first.get(3, TimeUnit.SECONDS).isOk()).isTrue();
             assertThat(second.get(3, TimeUnit.SECONDS).isOk()).isTrue();
             server.verify(2, postRequestedFor(urlEqualTo(CHAT_PATH)));
@@ -329,11 +337,12 @@ class GatedChatModelTest {
 
     private GatedChatModel model(RetryPolicy.Sleeper sleeper) {
         final ProviderConfig config = new ProviderConfig(
-                "test",
-                ProviderKind.OPENAI_COMPATIBLE,
-                URI.create(server.baseUrl() + "/v1"),
-                Duration.ofSeconds(2),
-                Duration.ofSeconds(3));
+                        "test",
+                        ProviderKind.OPENAI_COMPATIBLE,
+                        URI.create(server.baseUrl() + "/v1"),
+                        Duration.ofSeconds(2),
+                        Duration.ofSeconds(3))
+                .withEngine(ServerEngine.LM_STUDIO);
         final ProviderClientFactory clients = new ProviderClientFactory(
                 new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
         final RetryPolicy retryPolicy = new RetryPolicy(CLOCK, () -> 0.5, sleeper);
@@ -350,7 +359,7 @@ class GatedChatModelTest {
         final ProviderClientFactory clients = new ProviderClientFactory(
                 new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
         final RetryPolicy retryPolicy = new RetryPolicy(CLOCK, () -> 0.5, sleeper);
-        return new GatedChatModel(clients.create(config), MODEL_ID, new InferenceGate(), retryPolicy);
+        return new GatedChatModel(clients.create(config), SWITCH_MODEL_ID, new InferenceGate(), retryPolicy);
     }
 
     private static Result<ChatResponse> concurrentChat(GatedChatModel model, CountDownLatch ready, CountDownLatch start)
@@ -362,12 +371,16 @@ class GatedChatModelTest {
         return model.chat(request());
     }
 
-    private void awaitRequestCount(int expected) throws InterruptedException {
+    private void awaitRequestCount(int expected) {
         final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
-        while (System.nanoTime() < deadline && server.getAllServeEvents().size() < expected) {
-            Thread.sleep(10);
+        while (System.nanoTime() < deadline && chatRequests() < expected) {
+            LockSupport.parkNanos(SETTLE_NANOS / 10);
         }
-        assertThat(server.getAllServeEvents()).hasSize(expected);
+        assertThat(chatRequests()).isEqualTo(expected);
+    }
+
+    private int chatRequests() {
+        return server.findAll(postRequestedFor(urlEqualTo(CHAT_PATH))).size();
     }
 
     private static ChatRequest request() {

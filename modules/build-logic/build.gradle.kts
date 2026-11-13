@@ -4,7 +4,7 @@ import org.gradle.api.artifacts.dsl.LockMode
 //
 // Shared configuration lives here rather than in a root `allprojects { }` block: a convention plugin is
 // configuration-cache friendly and can be tested, an `allprojects` block is neither
-// (docs/specification/04_Build_and_Release/01_BUILD_AND_TOOLING.md#convention-plugins).
+// (docs/spec_baseline/specification/04_Build_and_Release/01_BUILD_AND_TOOLING.md#convention-plugins).
 
 plugins {
     `kotlin-dsl`

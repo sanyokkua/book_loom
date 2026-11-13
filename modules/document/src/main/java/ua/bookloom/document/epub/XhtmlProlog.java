@@ -53,7 +53,7 @@ final class XhtmlProlog {
 
     private static int skipWhitespace(String text, int from) {
         int pos = from;
-        while (pos < text.length() && (Character.isWhitespace(text.charAt(pos)) || text.charAt(pos) == '﻿')) {
+        while (pos < text.length() && (Character.isWhitespace(text.charAt(pos)) || text.charAt(pos) == '\uFEFF')) {
             pos++;
         }
         return pos;

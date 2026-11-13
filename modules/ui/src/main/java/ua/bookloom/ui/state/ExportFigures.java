@@ -2,6 +2,7 @@ package ua.bookloom.ui.state;
 
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.ExportOpenWork;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.project.ExportRecord;
 
@@ -12,12 +13,24 @@ import ua.bookloom.api.project.ExportRecord;
  *
  * @param counts the review desk's counts now
  * @param last the project's last written export, or null when none was
+ * @param open the work still open that the banners name: proofread marks and segments waiting on a given fact
  */
-public record ExportFigures(ReviewCounts counts, @Nullable ExportRecord last) {
+public record ExportFigures(ReviewCounts counts, @Nullable ExportRecord last, ExportOpenWork open) {
 
-    /** Rejects missing counts. */
+    /** Rejects missing counts and open work. */
     public ExportFigures {
         Objects.requireNonNull(counts, "counts");
+        Objects.requireNonNull(open, "open");
+    }
+
+    /**
+     * Figures that know of no open work.
+     *
+     * @param counts the review desk's counts now
+     * @param last the project's last written export, or null when none was
+     */
+    public ExportFigures(final ReviewCounts counts, final @Nullable ExportRecord last) {
+        this(counts, last, ExportOpenWork.NONE);
     }
 
     /**

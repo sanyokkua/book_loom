@@ -1,5 +1,7 @@
 package ua.bookloom.ui.control;
 
+import static ua.bookloom.util.contract.ArgNames.MESSAGES;
+
 import java.util.Objects;
 import java.util.Optional;
 import javafx.beans.InvalidationListener;
@@ -49,7 +51,7 @@ public final class Tips {
      * @return {@code node}
      */
     public static <N extends Node> N install(final Messages messages, final N node, final MessageKey tip) {
-        Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(messages, MESSAGES);
         return install(node, messages.get(tip));
     }
 
@@ -102,7 +104,7 @@ public final class Tips {
      * @return {@code pane}
      */
     public static <P extends TitledPane> P installOnTitle(final Messages messages, final P pane, final MessageKey tip) {
-        Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(messages, MESSAGES);
         Objects.requireNonNull(pane, "pane");
         final String text = messages.get(tip);
         final Tooltip tooltip = tooltip(text);
@@ -150,7 +152,7 @@ public final class Tips {
      * @return {@code node}
      */
     public static <N extends Node> N installOnHover(final Messages messages, final N node, final MessageKey tip) {
-        Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(messages, MESSAGES);
         Objects.requireNonNull(node, "node");
         final String text = messages.get(tip);
         node.getProperties().put(PENDING_KEY, text);

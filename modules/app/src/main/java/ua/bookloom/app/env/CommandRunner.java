@@ -80,7 +80,7 @@ public interface CommandRunner {
         private static Charset nativeCharset() {
             try {
                 return Charset.forName(System.getProperty("native.encoding", "UTF-8"));
-            } catch (IllegalArgumentException unknown) {
+            } catch (IllegalArgumentException _) {
                 return StandardCharsets.UTF_8;
             }
         }

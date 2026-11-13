@@ -4,6 +4,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
+import ua.bookloom.pipeline.prompt.ChatRequests;
 
 /**
  * The finding a wasted round leaves for the next one: the reply could not be read, and why. A round that repeated the
@@ -16,8 +17,8 @@ final class ReplyFormatFinding {
 
     static final String RAISED_BY = "reply-format";
 
-    /** The sampling seed of a call that follows a refused reply; the value is arbitrary, it only differs from none. */
-    static final int RETRY_SEED = 8191;
+    /** The sampling seed of a call that follows a refused reply. */
+    static final int RETRY_SEED = ChatRequests.RETRY_SEED;
 
     static QaFinding of(final String diagnostic) {
         return new QaFinding(

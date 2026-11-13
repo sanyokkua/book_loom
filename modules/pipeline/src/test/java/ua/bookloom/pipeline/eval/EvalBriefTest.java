@@ -141,7 +141,8 @@ class EvalBriefTest {
 
     @Test
     void of_unknownPreset_failsNamingThePresets() {
-        assertThatThrownBy(() -> EvalBrief.of("en", "uk", Map.of("BOOKLOOM_EVAL_PRESET", "nope")))
+        final var arg1 = Map.of("BOOKLOOM_EVAL_PRESET", "nope");
+        assertThatThrownBy(() -> EvalBrief.of("en", "uk", arg1))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("glass-harbour");
     }

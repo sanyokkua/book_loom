@@ -4,28 +4,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
-import ua.bookloom.api.pipeline.ConsistencyChecks;
-import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.GenderWait;
-import ua.bookloom.api.project.DeferralReason;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.i18n.Messages;
 
 /** The export's two gender notices in both bundles: a missing gender to set and a suggested one to confirm. */
 class ExportReportLinesGenderTest {
 
-    private static final ConsistencySummary SPLIT = new ConsistencySummary(
-            ConsistencySummary.Status.RAN,
-            0,
-            0,
-            Map.of(DeferralReason.GENDER_UNKNOWN, 7),
-            0,
-            ConsistencyChecks.NONE,
-            List.of(new GenderWait("Ember", 5, true), new GenderWait("Dane", 2)),
-            5,
-            2);
+    private static final ProofreadSummary SPLIT =
+            new ProofreadSummary(12, 7, List.of(new GenderWait("Ember", 5, true), new GenderWait("Dane", 2)), 5, 2);
 
     private final Messages english = UiTestInjector.create(Locale.ENGLISH).getInstance(Messages.class);
     private final Messages ukrainian =
@@ -53,14 +42,7 @@ class ExportReportLinesGenderTest {
 
     @Test
     void lines_noSuggestedWait_haveNoSuggestedNotice() {
-        final ConsistencySummary unknownOnly = new ConsistencySummary(
-                ConsistencySummary.Status.RAN,
-                0,
-                0,
-                Map.of(DeferralReason.GENDER_UNKNOWN, 2),
-                0,
-                ConsistencyChecks.NONE,
-                List.of(new GenderWait("Dane", 2)));
+        final ProofreadSummary unknownOnly = new ProofreadSummary(12, 2, List.of(new GenderWait("Dane", 2)), 0, 2);
 
         assertThat(ExportReportLines.suggestedGender(english, unknownOnly)).isEmpty();
         assertThat(ExportReportLines.awaitingGender(english, unknownOnly)).isPresent();

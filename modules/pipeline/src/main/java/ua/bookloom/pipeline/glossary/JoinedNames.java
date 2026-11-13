@@ -74,8 +74,7 @@ final class JoinedNames {
         final List<Pair> pairs = new ArrayList<>();
         final Set<String> used = new HashSet<>();
         joins.values().stream()
-                .sorted(Comparator.comparingInt((List<Join> list) -> list.size())
-                        .reversed())
+                .sorted(Comparator.<List<Join>>comparingInt(List::size).reversed())
                 .filter(list -> isOneName(list, byTerm))
                 .forEach(list -> accept(index, list, used, pairs));
         log.debug("Joined names: {} pairs among {} candidates", pairs.size(), terms.size());

@@ -74,7 +74,7 @@ public final class BookInspectorService implements BookInspector {
                     .orElseGet(() -> refused(source));
             logOutcome(source, inspection);
             return Result.ok(inspection);
-        } catch (Throwable t) {
+        } catch (Exception t) {
             final AppError error = internalError(t);
             log.debug("Inspected source={} outcome={}", source, error.code());
             return Result.err(error);
@@ -93,7 +93,7 @@ public final class BookInspectorService implements BookInspector {
             final AppError error = notOpenError(e);
             log.debug("Profiled document id={} format={} outcome={}", document.id(), document.format(), error.code());
             return Result.err(error);
-        } catch (Throwable t) {
+        } catch (Exception t) {
             final AppError error = internalError(t);
             log.debug("Profiled document id={} format={} outcome={}", document.id(), document.format(), error.code());
             return Result.err(error);
@@ -220,7 +220,7 @@ public final class BookInspectorService implements BookInspector {
                 }
             }
             return false;
-        } catch (IOException | CorruptContainerException unreadableZip) {
+        } catch (IOException | CorruptContainerException _) {
             return false;
         }
     }

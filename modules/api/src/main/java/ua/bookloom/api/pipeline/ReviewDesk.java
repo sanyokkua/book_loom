@@ -81,16 +81,6 @@ public interface ReviewDesk {
     }
 
     /**
-     * Skips a segment: nothing about it changes and it is not marked reviewed, and the record answered is the next
-     * flagged segment the queue moves on to.
-     *
-     * @param projectId the non-null project id
-     * @param segmentId the non-null segment id
-     * @return the next flagged segment's stored record, or the skipped segment's own when no other is flagged
-     */
-    Result<SegmentRecord> skip(String projectId, String segmentId);
-
-    /**
      * Applies a pending backward-revision proposal as the person's own edit.
      *
      * @param projectId the non-null project id
@@ -98,6 +88,17 @@ public interface ReviewDesk {
      * @return the segment's stored record after the action
      */
     Result<SegmentRecord> acceptProposal(String projectId, String segmentId);
+
+    /**
+     * Puts back the text and the status a kept proofread rewrite replaced: ACCEPTED, or FLAGGED with the findings that
+     * blocked it.
+     *
+     * @param projectId the non-null project id
+     * @param segmentId the non-null segment id
+     * @return the stored record, reviewed, with no proofread verdict; {@code validation} for a segment that holds no
+     *     kept rewrite or holds the person's own edit, with nothing changed
+     */
+    Result<SegmentRecord> undoProofread(String projectId, String segmentId);
 
     /**
      * Lists the segments matching a filter, in document order.

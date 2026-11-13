@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.run;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,13 +29,13 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.pipeline.narrator.NarratorInference;
 import ua.bookloom.pipeline.narrator.NarratorInference.Verdict;
-import ua.bookloom.pipeline.revision.DeferralRegister;
+import ua.bookloom.pipeline.proofread.DeferralRegister;
 
 /**
  * The narrator's gender from the run's own work (15i.T5, 15f.A4): when translation has ended and the brief still holds
  * no gender for a first-person narrator, the decided targets of the segments told in the first person are counted
  * ({@link NarratorInference}), and a gender that holds is stored with the origin INFERRED. The segments holding the
- * other gender's forms are left a gender deferral waiting on the narrator, so backward revision re-renders them. A
+ * other gender's forms are left a gender deferral waiting on the narrator, which the Proofread stage settles. A
  * narrator the person set, the brief verified or the run already inferred, and a third-person one, are never replaced; a
  * merely suggested gender is, because the decided targets are stronger evidence than an unverified guess. Nothing here
  * asks a model.
@@ -75,11 +77,11 @@ public final class NarratorStage {
         log.debug("Narrator stage project={}", projectId);
         final Result<Integer> flushed = sinks.pending().flush();
         if (flushed.isErr()) {
-            return Optional.of(Objects.requireNonNull(flushed.error(), "error"));
+            return Optional.of(Objects.requireNonNull(flushed.error(), ERROR));
         }
         final Result<Optional<Project>> found = stores.projects().find(projectId);
         if (found.isErr()) {
-            return Optional.of(Objects.requireNonNull(found.error(), "error"));
+            return Optional.of(Objects.requireNonNull(found.error(), ERROR));
         }
         final Project project = Objects.requireNonNull(found.data(), "found").orElse(null);
         if (project == null || !isOpenToInference(project.brief().narrator())) {
@@ -104,7 +106,7 @@ public final class NarratorStage {
         final @Nullable String language = settings.frame().analysisLanguage();
         final Result<List<SegmentRecord>> read = stores.segments().all(project.id());
         if (read.isErr()) {
-            return Optional.of(Objects.requireNonNull(read.error(), "error"));
+            return Optional.of(Objects.requireNonNull(read.error(), ERROR));
         }
         final FirstPerson told = firstPerson(Objects.requireNonNull(read.data(), "records"), language);
         if (told.ids().size() < NarratorInference.MIN_SEGMENTS || !isFirstPersonBook(project, language)) {
@@ -153,13 +155,13 @@ public final class NarratorStage {
                 new Narrator(NarratorPerson.FIRST, verdict.gender(), GenderOrigin.INFERRED, List.of());
         final Result<Project> saved = stores.projects().save(project.withBrief(brief.withNarrator(inferred)));
         if (saved.isErr()) {
-            return Optional.of(Objects.requireNonNull(saved.error(), "error"));
+            return Optional.of(Objects.requireNonNull(saved.error(), ERROR));
         }
         final List<String> minority =
                 verdict.minority().stream().map(told.ids()::get).toList();
         sinks.pending().deferred(DeferralRegister.narratorGender(project.id(), minority));
         final Result<Integer> flushed = sinks.pending().flush();
-        return flushed.isErr() ? Optional.of(Objects.requireNonNull(flushed.error(), "error")) : Optional.empty();
+        return flushed.isErr() ? Optional.of(Objects.requireNonNull(flushed.error(), ERROR)) : Optional.empty();
     }
 
     /** The first-person segments' ids and decided targets, in book order, side by side. */

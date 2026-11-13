@@ -3,7 +3,7 @@
  *
  * <p>{@code opens} its implementation package to Guice so constructor injection can reflect on it — a JPMS module
  * without the {@code opens} fails at runtime, not compile time, which is a failure mode best avoided by never
- * having it (docs/specification/02_Architecture/10_DI_AND_LIFECYCLE.md).
+ * having it (docs/spec_baseline/specification/02_Architecture/10_DI_AND_LIFECYCLE.md).
  */
 module ua.bookloom.document {
     // Compile-time only: JSpecify supplies the `@NullMarked` package markers that switch

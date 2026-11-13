@@ -58,7 +58,7 @@ class ModelActionLockScreenTest extends TranslatingScreenTestBase {
     private void stuckOnAJudge() {
         mirror().live()
                 .publishWaitingCall(new WaitingCall(
-                        CallKind.REVIEW,
+                        CallKind.PROOFREAD,
                         "ch7 · p42",
                         0,
                         1,

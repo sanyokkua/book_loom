@@ -12,7 +12,7 @@ import ua.bookloom.api.document.PlaceholderPair;
 import ua.bookloom.pipeline.Tokens;
 
 /**
- * The note a placeholder repair call is given: which tokens the rejected target lost, added or put out of order, and
+ * The note the one repair is given for lost marks: which tokens the rejected target lost, added or put out of order, and
  * what each affected pair wraps in the text, so a small model is told exactly what to fix instead of a general rule.
  */
 @Slf4j

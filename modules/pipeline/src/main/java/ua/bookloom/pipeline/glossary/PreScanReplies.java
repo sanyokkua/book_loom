@@ -3,11 +3,14 @@ package ua.bookloom.pipeline.glossary;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.prompt.JsonReplies;
@@ -85,5 +88,14 @@ final class PreScanReplies {
             case "neuter" -> Gender.NEUTER;
             default -> Gender.UNKNOWN;
         };
+    }
+
+    /** What a person reads of a batch: each candidate asked, with the type and gender the reply gave it, if any. */
+    static Map<String, @Nullable String> shown(final List<NameCandidate> batch, final List<Proposal> proposals) {
+        final Map<String, @Nullable String> shown = new LinkedHashMap<>();
+        batch.forEach(candidate -> shown.put(candidate.term(), null));
+        proposals.forEach(
+                proposal -> shown.put(proposal.candidate().term(), CallItem.words(proposal.type(), proposal.gender())));
+        return shown;
     }
 }

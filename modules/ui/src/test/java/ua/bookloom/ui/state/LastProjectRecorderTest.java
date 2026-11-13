@@ -30,7 +30,7 @@ class LastProjectRecorderTest extends ShellTestBase {
     void openProject_anyWay_isStoredAsTheLastProject() throws Exception {
         assertThat(lastProject()).isEmpty();
 
-        onFx(() -> OpenBookForTest.open(injector.getInstance(CurrentProject.class), "en", "uk"));
+        onFx(() -> OpenedBookFixture.open(injector.getInstance(CurrentProject.class), "en", "uk"));
 
         WaitForAsyncUtils.waitFor(10, TimeUnit.SECONDS, () -> lastProject().isPresent());
         assertThat(lastProject()).hasValue("p1");

@@ -177,7 +177,7 @@ class TranslatingScreenWaitingTest extends TranslatingScreenTestBase {
     @ValueSource(strings = {"simple", "detailed"})
     void stuckCall_atThreeFortyOfSix_showsOneClockInEitherView(final String view) {
         runningOnTheShell();
-        onFx(() -> ((ToggleButton) required("translating-live-mode-" + view)).fire());
+        onFx(((ToggleButton) required("translating-live-mode-" + view))::fire);
 
         waitOn(220L);
 

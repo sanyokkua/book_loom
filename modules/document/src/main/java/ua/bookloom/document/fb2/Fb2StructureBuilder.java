@@ -23,7 +23,7 @@ import ua.bookloom.api.document.Unit;
 
 /**
  * Builds an FB2 book's structure tree from its own bodies (task 4.4): each body's nested {@code section} elements,
- * content of the main body outside every section as an untitled leading node, and each further body (notes,
+ * content of the main body outside every section as an untitled, unlisted leading node, and each further body (notes,
  * comments, …) as a single top-level node.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs,
@@ -83,7 +83,8 @@ final class Fb2StructureBuilder {
         final Sections sections = sectionsOf(body, unit);
         final List<StructureNode> nodes = new ArrayList<>();
         if (sections.leadingCount() > 0) {
-            nodes.add(new StructureNode("", unit.id(), sections.leadingCount(), List.of(), sections.leadingFirst()));
+            nodes.add(new StructureNode(
+                    "", unit.id(), sections.leadingCount(), List.of(), sections.leadingFirst(), false));
         }
         for (final Element top : childrenNamed(body, SECTION_ELEMENT)) {
             nodes.add(buildSectionNode(top, sections));
@@ -175,9 +176,8 @@ final class Fb2StructureBuilder {
     private static Element resolveLeaf(Element root, SkeletonAnchor anchor) {
         return switch (anchor) {
             case NodeAnchor nodeAnchor -> resolvePath(root, nodeAnchor.nodePath());
-            case ByteSpanAnchor ignored ->
-                throw new IllegalStateException("An FB2 segment must be anchored by a node path");
-            case AttributeAnchor ignored ->
+            case ByteSpanAnchor _ -> throw new IllegalStateException("An FB2 segment must be anchored by a node path");
+            case AttributeAnchor _ ->
                 throw new IllegalStateException("An FB2 body segment must be anchored by a node path");
         };
     }

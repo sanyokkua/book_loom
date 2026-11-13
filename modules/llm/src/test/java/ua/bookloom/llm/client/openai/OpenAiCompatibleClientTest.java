@@ -17,7 +17,6 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -44,6 +43,7 @@ import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.ClosedPorts;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
@@ -53,7 +53,8 @@ import ua.bookloom.llm.http.HttpExchange;
 class OpenAiCompatibleClientTest {
 
     private static final String MODEL_ID = "google/gemma-4-e4b";
-    private static final String CHAT_PATH = "/v1/chat/completions";
+    // LM Studio's own route, where its chat goes first.
+    private static final String CHAT_PATH = "/api/v0/chat/completions";
     private static final String MODELS_PATH = "/v1/models";
     private static final String SCHEMA = """
             {"type":"object","properties":{"segments":{"type":"array"}},"required":["segments"]}
@@ -88,6 +89,7 @@ class OpenAiCompatibleClientTest {
                           "stream":false,
                           "temperature":0.2,
                           "reasoning_effort":"none",
+                          "top_p":1.0,"top_k":0,"min_p":0.0,"repeat_penalty":1.0,
                           "response_format":{"type":"json_schema","json_schema":{"name":"draft","strict":true,"schema":{"type":"object","properties":{"segments":{"type":"array"}},"required":["segments"]}}}
                         }
                         """))
@@ -104,7 +106,8 @@ class OpenAiCompatibleClientTest {
 
         server.verify(postRequestedFor(urlEqualTo(CHAT_PATH))
                 .withRequestBody(equalToJson("""
-                        {"model":"google/gemma-4-e4b","messages":[{"role":"user","content":"hello"}],"stream":false}
+                        {"model":"google/gemma-4-e4b","messages":[{"role":"user","content":"hello"}],"stream":false,
+                         "top_p":1.0,"top_k":0,"min_p":0.0,"repeat_penalty":1.0}
                         """))
                 .withoutHeader("Authorization"));
     }
@@ -134,7 +137,7 @@ class OpenAiCompatibleClientTest {
                 {"model":"google/gemma-4-e4b","choices":[{"message":{"content":"<think>private reasoning</think>the answer","reasoning_content":"private reasoning","tool_calls":[{"id":"call_1"}]},"finish_reason":"stop"},{"message":{"content":"second choice"},"finish_reason":"stop"}]}
                 """);
 
-        assertThat(sendChat(messageOnlyRequest())).isEqualTo(new ChatResponse("the answer", FinishReason.STOP));
+        assertThat(sendChat(messageOnlyRequest()).content()).isEqualTo("the answer");
     }
 
     @Test
@@ -143,22 +146,24 @@ class OpenAiCompatibleClientTest {
                 {"model":"google/gemma-4-e4b","choices":[{"message":{"content":"<think>private reasoning</think>"},"finish_reason":"stop"}]}
                 """);
 
-        assertThat(sendChat(messageOnlyRequest())).isEqualTo(new ChatResponse("", FinishReason.STOP));
+        assertThat(sendChat(messageOnlyRequest()).content()).isEmpty();
     }
 
     @Test
     void chat_modelMismatchUsesReplyAndEmitsOneWarnNamingBothModels() {
-        stubChat("""
-                {"model":"google/gemma-4-e4b","choices":[{"message":{"content":"reply"},"finish_reason":"stop"}]}
-                """);
-        final Logger logger = (Logger) LoggerFactory.getLogger(OpenAiCompatibleClient.class);
+        // A generic server: the reply is used (LM Studio refuses it, LmStudioRouteTest).
+        server.stubFor(post(urlEqualTo("/v1/chat/completions")).willReturn(okJson("""
+                        {"model":"google/gemma-4-e4b","choices":[{"message":{"content":"reply"},"finish_reason":"stop"}]}
+                        """)));
+        final Logger logger = (Logger) LoggerFactory.getLogger(OpenAiReplyReader.class);
         final ListAppender<ILoggingEvent> appender = new ListAppender<>();
         appender.setContext((LoggerContext) LoggerFactory.getILoggerFactory());
         appender.start();
         logger.addAppender(appender);
 
         try {
-            final Result<ChatResponse> result = client().chat("google/gemma-4-e4b-typo", messageOnlyRequest())
+            final Result<ChatResponse> result = client(ServerEngine.GENERIC)
+                    .chat("google/gemma-4-e4b-typo", messageOnlyRequest())
                     .result();
             assertThat(result.isOk())
                     .as("OpenAI-compatible chat result: " + result.error())
@@ -272,7 +277,7 @@ class OpenAiCompatibleClientTest {
     }
 
     @Test
-    void listModels_closedEndpointPreservesUnreachable() throws IOException {
+    void listModels_closedEndpointPreservesUnreachable() {
         final Result<List<ModelInfo>> result =
                 client(closedEndpoint(), Duration.ofSeconds(2)).listModels().result();
 
@@ -334,15 +339,28 @@ class OpenAiCompatibleClientTest {
         return client(URI.create(server.baseUrl() + "/v1"), Duration.ofSeconds(2));
     }
 
+    private OpenAiCompatibleClient client(ServerEngine engine) {
+        final ProviderConfig config = new ProviderConfig(
+                        "lmstudio",
+                        ProviderKind.OPENAI_COMPATIBLE,
+                        URI.create(server.baseUrl() + "/v1"),
+                        Duration.ofSeconds(2),
+                        Duration.ofSeconds(2))
+                .withEngine(engine);
+        return new OpenAiCompatibleClient(
+                config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
+    }
+
     private OpenAiCompatibleClient client(URI endpoint, Duration requestTimeout) {
         final ProviderConfig config = new ProviderConfig(
-                "lmstudio", ProviderKind.OPENAI_COMPATIBLE, endpoint, Duration.ofSeconds(2), requestTimeout);
+                        "lmstudio", ProviderKind.OPENAI_COMPATIBLE, endpoint, Duration.ofSeconds(2), requestTimeout)
+                .withEngine(ServerEngine.LM_STUDIO);
         return new OpenAiCompatibleClient(
                 config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
     }
 
     private static ChatRequest messageOnlyRequest() {
-        return new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")));
+        return new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello"))).withoutReasoning();
     }
 
     private static ChatRequest formattedRequest() {

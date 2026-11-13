@@ -1,6 +1,6 @@
 # Logging
 
-Scope: all modules (`**/src/main/java/**`). Stack: SLF4J 2 + Logback 1.5. Spec: `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`, `docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-23-slf4j-logback`. See also `error-envelope.md`, `offline-and-privacy.md`.
+Scope: all modules (`**/src/main/java/**`). Stack: SLF4J 2 + Logback 1.5. Spec: `docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`, `docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-23-slf4j-logback`. See also `error-envelope.md`, `offline-and-privacy.md`.
 
 ## MUST
 

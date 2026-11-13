@@ -13,8 +13,8 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ScriptedChatModelFactory;
@@ -28,17 +28,17 @@ import ua.bookloom.ui.i18n.Messages;
 class NamesStyleConfirmGendersTest extends FxTestBase {
 
     private static final String PROJECT = "p1";
-    private static final GlossaryEntry ANNE = new GlossaryEntry(
+    private static final GlossaryEntry ANNE = GlossaryEntry.of(
                     "e1", PROJECT, "Anne", "Анна", TermType.CHARACTER, Gender.UNKNOWN, false)
             .withSuggestedGender(Gender.FEMALE);
-    private static final GlossaryEntry BORIS = new GlossaryEntry(
+    private static final GlossaryEntry BORIS = GlossaryEntry.of(
                     "e2", PROJECT, "Boris", "Борис", TermType.CHARACTER, Gender.UNKNOWN, false)
             .withSuggestedGender(Gender.MALE);
     private static final GlossaryEntry CARL =
-            new GlossaryEntry("e3", PROJECT, "Carl", "Карл", TermType.CHARACTER, Gender.MALE, false);
+            GlossaryEntry.of("e3", PROJECT, "Carl", "Карл", TermType.CHARACTER, Gender.MALE, false);
     private static final GlossaryEntry DORA =
-            new GlossaryEntry("e4", PROJECT, "Dora", "Дора", TermType.CHARACTER, Gender.UNKNOWN, false);
-    private static final GlossaryEntry RIVER = new GlossaryEntry(
+            GlossaryEntry.of("e4", PROJECT, "Dora", "Дора", TermType.CHARACTER, Gender.UNKNOWN, false);
+    private static final GlossaryEntry RIVER = GlossaryEntry.of(
                     "e5", PROJECT, "River", "Ріка", TermType.PLACE, Gender.UNKNOWN, false)
             .withSuggestedGender(Gender.FEMALE);
 
@@ -61,11 +61,8 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
     private void useViewModelIn(final Locale locale) {
         final Injector injector = UiTestInjector.create(locale);
         vm = onFx(() -> new NamesStyleViewModel(
-                glossary,
-                new ScriptedLexiconService(),
-                new ScriptedNamesPass(),
-                ScriptedChatModelFactory.ok(),
-                injector.getInstance(SettingsViewModel.class),
+                new NamesServices(glossary, new ScriptedLexiconService(), new ScriptedNamesPass()),
+                new ModelAccess(ScriptedChatModelFactory.ok(), injector.getInstance(SettingsViewModel.class)),
                 new DirectExecutor(),
                 injector.getInstance(Messages.class),
                 injector.getInstance(ActivityTracker.class),
@@ -80,7 +77,7 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
         run(() -> vm.show(PROJECT));
         glossary.willAnswer(Result.err(AppError.of(ErrorCode.validation, "Refused", "Not stored.")));
 
-        run(vm::confirmGenders);
+        run(vm.suggestions()::confirmGenders);
 
         assertThat(onFx(() -> vm.notice().get().text()))
                 .isEqualTo("Щось у введених даних або в книжці не так. Подробиці пояснюють, що саме.");
@@ -88,7 +85,7 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
 
     @Test
     void suggestedGenderCount_mixedRows_countsOnlySuggestedCharacters() {
-        assertThat(onFx(() -> vm.suggestedGenderCount().get())).isEqualTo(2);
+        assertThat(onFx(() -> vm.suggestions().suggestedGenderCount().get())).isEqualTo(2);
     }
 
     // IF the action only relabelled the rows, THEN the next run would still treat the genders as guesses.
@@ -97,14 +94,14 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
         glossary.willAnswer(Result.ok(ANNE.withGender(Gender.FEMALE)));
         glossary.willAnswer(Result.ok(BORIS.withGender(Gender.MALE)));
 
-        run(vm::confirmGenders);
+        run(vm.suggestions()::confirmGenders);
 
         assertThat(glossary.updated())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
                 .containsExactly(
-                        org.assertj.core.groups.Tuple.tuple("Anne", Gender.FEMALE, GenderOrigin.PERSON),
-                        org.assertj.core.groups.Tuple.tuple("Boris", Gender.MALE, GenderOrigin.PERSON));
-        assertThat(onFx(() -> vm.suggestedGenderCount().get())).isZero();
+                        org.assertj.core.groups.Tuple.tuple("Anne", Gender.FEMALE, Origin.USER),
+                        org.assertj.core.groups.Tuple.tuple("Boris", Gender.MALE, Origin.USER));
+        assertThat(onFx(() -> vm.suggestions().suggestedGenderCount().get())).isZero();
     }
 
     @Test
@@ -112,7 +109,7 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
         glossary.willAnswer(Result.ok(ANNE.withGender(Gender.FEMALE)));
         glossary.willAnswer(Result.ok(BORIS.withGender(Gender.MALE)));
 
-        run(vm::confirmGenders);
+        run(vm.suggestions()::confirmGenders);
 
         final ChangeResults results = onFx(() -> vm.results().get());
         assertThat(results.operation()).isEqualTo(ChangeOperation.CONFIRM_GENDERS);
@@ -124,14 +121,14 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
     void undoAll_afterConfirming_putsTheSuggestedGendersBack() {
         glossary.willAnswer(Result.ok(ANNE.withGender(Gender.FEMALE)));
         glossary.willAnswer(Result.ok(BORIS.withGender(Gender.MALE)));
-        run(vm::confirmGenders);
+        run(vm.suggestions()::confirmGenders);
         glossary.willAnswer(Result.ok(ANNE));
         glossary.willAnswer(Result.ok(BORIS));
 
         run(() -> vm.results().get().undoAll());
 
         assertThat(glossary.updated().subList(2, 4)).containsExactly(ANNE, BORIS);
-        assertThat(onFx(() -> vm.suggestedGenderCount().get())).isEqualTo(2);
+        assertThat(onFx(() -> vm.suggestions().suggestedGenderCount().get())).isEqualTo(2);
     }
 
     @Test
@@ -139,7 +136,7 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
         glossary.willAnswer(Result.ok(List.of(CARL, DORA, RIVER)));
         run(() -> vm.show(PROJECT));
 
-        run(vm::confirmGenders);
+        run(vm.suggestions()::confirmGenders);
 
         assertThat(glossary.updated()).isEmpty();
         assertThat(onFx(() -> vm.results().get())).isNull();
@@ -148,10 +145,10 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
     // IF Undo restored only the rows the action asked for, THEN a character's other spellings stayed the person's.
     @Test
     void undoAll_characterWithAnotherSpelling_putsBothRowsBack() {
-        final GlossaryEntry ember = new GlossaryEntry(
+        final GlossaryEntry ember = GlossaryEntry.of(
                         "e6", PROJECT, "Ember", "Ембер", TermType.CHARACTER, Gender.UNKNOWN, false)
                 .withSuggestedGender(Gender.FEMALE);
-        final GlossaryEntry embers = new GlossaryEntry(
+        final GlossaryEntry embers = GlossaryEntry.of(
                         "e7", PROJECT, "Embers", "Ембер", TermType.CHARACTER, Gender.UNKNOWN, false)
                 .withSuggestedGender(Gender.FEMALE);
         glossary.willAnswer(Result.ok(List.of(ember, embers)));
@@ -159,7 +156,7 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
         glossary.willAnswer(Result.ok(ember.withGender(Gender.FEMALE)));
         glossary.willAnswer(Result.ok(embers.withGender(Gender.FEMALE)));
         glossary.willAnswer(Result.ok(List.of(ember.withGender(Gender.FEMALE), embers.withGender(Gender.FEMALE))));
-        run(vm::confirmGenders);
+        run(vm.suggestions()::confirmGenders);
         assertThat(onFx(() -> vm.results().get()).count(ChangeKind.CHANGED)).isEqualTo(2);
         glossary.willAnswer(Result.ok(ember));
         glossary.willAnswer(Result.ok(embers));
@@ -167,23 +164,23 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
         run(() -> vm.results().get().undoAll());
 
         assertThat(glossary.updated()).endsWith(ember, embers);
-        assertThat(onFx(() -> vm.suggestedGenderCount().get())).isEqualTo(2);
+        assertThat(onFx(() -> vm.suggestions().suggestedGenderCount().get())).isEqualTo(2);
     }
 
     // IF the glossary shared the gender with a spelling nobody asked about, THEN the results must list that row too.
     @Test
     void confirmGenders_serviceChangesAnotherSpelling_reportsThatRowToo() {
-        final GlossaryEntry ember = new GlossaryEntry(
+        final GlossaryEntry ember = GlossaryEntry.of(
                         "e6", PROJECT, "Ember", "Ембер", TermType.CHARACTER, Gender.UNKNOWN, false)
                 .withSuggestedGender(Gender.FEMALE);
         final GlossaryEntry embers =
-                new GlossaryEntry("e7", PROJECT, "Embers", "Ембер", TermType.CHARACTER, Gender.FEMALE, false);
+                GlossaryEntry.of("e7", PROJECT, "Embers", "Ембер", TermType.CHARACTER, Gender.FEMALE, false);
         glossary.willAnswer(Result.ok(List.of(ember, embers)));
         run(() -> vm.show(PROJECT));
         glossary.willAnswer(Result.ok(ember.withGender(Gender.FEMALE)));
         glossary.willAnswer(Result.ok(List.of(ember.withGender(Gender.FEMALE), embers.withGender(Gender.FEMALE))));
 
-        run(vm::confirmGenders);
+        run(vm.suggestions()::confirmGenders);
 
         assertThat(onFx(() -> vm.results().get()).count(ChangeKind.CHANGED)).isEqualTo(2);
     }
@@ -194,7 +191,7 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
         glossary.willAnswer(Result.ok(ANNE.withGender(Gender.FEMALE)));
         glossary.willAnswer(Result.err(AppError.of(ErrorCode.internal, "Refused", "Boris could not be stored.")));
 
-        run(vm::confirmGenders);
+        run(vm.suggestions()::confirmGenders);
 
         assertThat(onFx(() -> vm.results().get()).count(ChangeKind.CHANGED)).isEqualTo(1);
         final GlossaryNotice notice = onFx(() -> vm.notice().get());

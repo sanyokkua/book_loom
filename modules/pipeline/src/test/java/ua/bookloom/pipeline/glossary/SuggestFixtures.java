@@ -26,7 +26,7 @@ final class SuggestFixtures {
 
     static GlossaryEntry entry(
             final String term, final TermType type, final Gender gender, @Nullable final String target) {
-        return new GlossaryEntry(
+        return GlossaryEntry.of(
                 "p1:" + term.toLowerCase(Locale.ROOT).replace(' ', '-'), "p1", term, target, type, gender, false);
     }
 

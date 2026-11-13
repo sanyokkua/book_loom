@@ -77,7 +77,7 @@ class ReviewViewModelRetryTest extends ReviewViewModelTestBase {
 
         @Override
         public boolean isTerminated() {
-            return refusing;
+            return isShutdown();
         }
 
         @Override

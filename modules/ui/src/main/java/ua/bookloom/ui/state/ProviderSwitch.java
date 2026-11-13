@@ -85,7 +85,7 @@ public final class ProviderSwitch {
                 final Result<List<ProjectSummary>> listed = projects.list();
                 Platform.runLater(() -> decide(projectId, chosen, listed));
             });
-        } catch (RejectedExecutionException closing) {
+        } catch (RejectedExecutionException _) {
             counting = false;
             log.warn("use this one: the window is closing, nothing was changed");
         }

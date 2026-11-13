@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.BooleanSupplier;
 import javafx.application.Platform;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,7 @@ import ua.bookloom.util.paths.AppPaths;
 class DetailedLogMarkerTest {
 
     private static final long WAIT_SECONDS = 10;
+    private static final long POLL_NANOS = TimeUnit.MILLISECONDS.toNanos(20);
 
     @TempDir
     private Path dataDir;
@@ -44,16 +46,16 @@ class DetailedLogMarkerTest {
             final CountDownLatch started = new CountDownLatch(1);
             Platform.startup(started::countDown);
             started.await(WAIT_SECONDS, TimeUnit.SECONDS);
-        } catch (IllegalStateException alreadyRunning) {
+        } catch (IllegalStateException _) {
             // The toolkit is shared by the test JVM; a running one is what is wanted.
         }
         return injector;
     }
 
-    private static void waitFor(final BooleanSupplier condition) throws InterruptedException {
+    private static void waitFor(final BooleanSupplier condition) {
         final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(WAIT_SECONDS);
         while (System.nanoTime() < deadline && !condition.getAsBoolean()) {
-            Thread.sleep(20);
+            LockSupport.parkNanos(POLL_NANOS);
         }
     }
 

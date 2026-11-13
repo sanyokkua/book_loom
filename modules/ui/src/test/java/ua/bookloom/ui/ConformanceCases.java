@@ -71,8 +71,11 @@ final class ConformanceCases {
         GLOSSARY_WHILE_HIDDEN,
         BOOK_WITHOUT_LANGUAGE,
         BRIEF_SUGGESTED,
+        BRIEF_UKRAINIAN_TARGET,
         PROJECTS_LISTED,
         PROJECTS_EMPTY,
+        READY_QUANT_CHIP,
+        READY_LANGUAGE_WARNING,
         PROVIDER_FORM_DIRTY,
         PROVIDER_FOLD_OPEN,
         PROVIDER_TESTED,
@@ -104,10 +107,6 @@ final class ConformanceCases {
             new Part("#export-aux-bilingual .box", Kind.BACKGROUND, "surface", "#ffffff", "#33424a");
     private static final Part BOX_EDGE =
             new Part("#export-aux-bilingual .box", Kind.BORDER, "input-border", "#988462", "#7d949e");
-    private static final Part SWITCH_TRACK =
-            new Part("#export-aux-consistency .thumb-area", Kind.BACKGROUND, "toggle-off", "#87939a", "#87939a");
-    private static final Part SWITCH_THUMB =
-            new Part("#export-aux-consistency .thumb", Kind.BACKGROUND, "toggle-thumb", "#ffffff", "#ffffff");
 
     /** One entry per screen; a later screen task adds exactly one line here. */
     private static final List<Screen> BASE = List.of(
@@ -219,6 +218,17 @@ final class ConformanceCases {
                             // The predicted Tone & style is the right column's one card, drawn like the decisions.
                             new Part("#brief-tone-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#brief-tone-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
+            // A Ukrainian target adds the rows its language file sets — apostrophe, quotation marks, address and the
+            // hard-g convention — each labelled like every other brief field.
+            new Screen(
+                    "BOOK_BRIEF_POLICY_KEYS",
+                    ViewNames.BOOK_BRIEF,
+                    Preparation.BRIEF_UKRAINIAN_TARGET,
+                    Overlay.NONE,
+                    List.of(
+                            new Part("#brief-policy-apostrophe-label", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"),
+                            new Part(
+                                    "#brief-policy-convention-hardG-label", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"))),
             new Screen(
                     "BOOK_BRIEF_AUTO_SOURCE",
                     ViewNames.BOOK_BRIEF,
@@ -242,6 +252,8 @@ final class ConformanceCases {
                             new Part("#brief-evidence-genre-uncertain", Kind.BORDER, "warn-bd", "#e4cfa2", "#5c4d31"),
                             new Part("#brief-evidence-genre-uncertain", Kind.TEXT, "warn-fg", "#835d27", "#e6c086"),
                             new Part("#brief-evidence-genre", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"),
+                            // The genre nothing supported is marked "(likely)" in the hint role until it is decided.
+                            new Part("#brief-likely-genre", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"),
                             new Part("#brief-source-proposal-text", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"))),
             new Screen(
                     "BOOK_BRIEF_NO_BOOK",
@@ -252,15 +264,15 @@ final class ConformanceCases {
                             new Part("#nobook-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#nobook-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
             ConformanceResultsCase.RESULTS_DIALOG,
-            // The screen that writes the book: cards and result tiles on the surface role, the side-file boxes and the
-            // consistency track on the cool border role. It needs an open book to show them; the finished state
+            // The screen that writes the book: cards and result tiles on the surface role, the side-file boxes on the
+            // cool border role. It needs an open book to show them; the finished state
             // follows a real export.
             new Screen(
                     "EXPORT",
                     ViewNames.EXPORT,
                     Preparation.BOOK_OPENED,
                     Overlay.NONE,
-                    List.of(CARD_FILL, CARD_EDGE, BOX_FILL, BOX_EDGE, SWITCH_TRACK, SWITCH_THUMB)),
+                    List.of(CARD_FILL, CARD_EDGE, BOX_FILL, BOX_EDGE)),
             new Screen(
                     "EXPORT_COMPLETED",
                     ViewNames.EXPORT,
@@ -274,9 +286,7 @@ final class ConformanceCases {
                             new Part("#export-auto", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#export-auto", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
                             BOX_FILL,
-                            BOX_EDGE,
-                            SWITCH_TRACK,
-                            SWITCH_THUMB)));
+                            BOX_EDGE)));
 
     /** Every screen, the import screen's open-book cases and the names screen's included. */
     static final List<Screen> SCREENS = Stream.of(

@@ -96,7 +96,7 @@ record ZipText(String name, String text) {
     private static Charset charsetOrUtf8(String name) {
         try {
             return Charset.forName(name);
-        } catch (RuntimeException unknown) {
+        } catch (RuntimeException _) {
             return StandardCharsets.UTF_8;
         }
     }

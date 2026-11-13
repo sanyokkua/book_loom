@@ -7,7 +7,6 @@ import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -52,8 +51,8 @@ public final class AppPathsResolver {
     private static final Set<String> NETWORK_FILESYSTEMS =
             Set.of("nfs", "nfs4", "cifs", "smbfs", "smb", "smb2", "afpfs", "webdav", "fuse.sshfs", "9p");
 
-    private final Function<String, @Nullable String> getEnv;
-    private final Function<String, @Nullable String> getProperty;
+    private final NameLookup getEnv;
+    private final NameLookup getProperty;
 
     /**
      * Creates a resolver over the given environment seams.
@@ -61,7 +60,7 @@ public final class AppPathsResolver {
      * @param getEnv reads an environment variable, returning {@code null} when unset
      * @param getProperty reads a system property, returning {@code null} when unset
      */
-    public AppPathsResolver(Function<String, @Nullable String> getEnv, Function<String, @Nullable String> getProperty) {
+    public AppPathsResolver(NameLookup getEnv, NameLookup getProperty) {
         this.getEnv = Objects.requireNonNull(getEnv, "getEnv");
         this.getProperty = Objects.requireNonNull(getProperty, "getProperty");
     }
@@ -235,7 +234,7 @@ public final class AppPathsResolver {
         try {
             final FileStore store = Files.getFileStore(dataDir);
             return NETWORK_FILESYSTEMS.contains(store.type().toLowerCase(Locale.ROOT));
-        } catch (IOException | SecurityException e) {
+        } catch (IOException | SecurityException _) {
             // An unreadable store type is not a startup problem; local is the safe assumption, and the only cost of
             // being wrong is that a warning is not printed.
             return false;

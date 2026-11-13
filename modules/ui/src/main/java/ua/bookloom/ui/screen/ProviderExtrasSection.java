@@ -3,7 +3,10 @@ package ua.bookloom.ui.screen;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.UnaryOperator;
+import javafx.collections.ListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
@@ -12,13 +15,19 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import org.controlsfx.control.ToggleSwitch;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.llm.ModelInput;
+import ua.bookloom.api.llm.PastedModel;
+import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ProviderDraft;
 import ua.bookloom.ui.state.ProviderDraft.HeaderRow;
 import ua.bookloom.ui.state.ProviderForm;
+import ua.bookloom.ui.state.SettingsViewModel;
 
 /**
  * The two optional lists of a provider: extra request headers and extra model names. Each sits behind a switch that
@@ -37,9 +46,15 @@ final class ProviderExtrasSection {
     private final FlowPane chips = new FlowPane(6, 6);
     private final TextField modelInput = new TextField();
     private final VBox modelsPart = new VBox(6);
+    private final Label understood = Wrapped.wholeLines(new Label());
+    private final Label pullLabel = Wrapped.label("", "hint");
+    private final TextField pull = new TextField();
+    private final SettingsViewModel viewModel;
+    private final ListChangeListener<String> onOffered = change -> showUnderstood();
     private List<String> shownModels = List.of();
 
-    ProviderExtrasSection(final ProviderForm form, final Messages messages) {
+    ProviderExtrasSection(final SettingsViewModel viewModel, final ProviderForm form, final Messages messages) {
+        this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.form = Objects.requireNonNull(form, "form");
         this.messages = Objects.requireNonNull(messages, "messages");
         buildHeaders();
@@ -87,7 +102,10 @@ final class ProviderExtrasSection {
         modelInput.setPromptText(messages.get(MessageKey.SETTINGS_FORM_MODELS_ADD));
         Tips.install(messages, modelInput, MessageKey.SETTINGS_FORM_MODELS_ADD_TIP);
         modelInput.setOnAction(event -> addTyped());
-        modelsPart.getChildren().addAll(chips, modelInput);
+        modelInput.textProperty().addListener((observed, was, now) -> showUnderstood());
+        viewModel.modelListing().offered().addListener(new WeakListChangeListener<>(onOffered));
+        buildUnderstood();
+        modelsPart.getChildren().addAll(chips, modelInput, understood, pullLabel, pull);
         bindPart(modelsOn, modelsPart);
         modelsOn.selectedProperty().addListener((observed, was, now) -> {
             if (!now) {
@@ -96,17 +114,73 @@ final class ProviderExtrasSection {
         });
     }
 
+    private void buildUnderstood() {
+        understood.setId("settings-form-model-understood");
+        understood.getStyleClass().add("hint");
+        pullLabel.setId("settings-form-model-pull-label");
+        pullLabel.setText(messages.get(MessageKey.SETTINGS_FORM_MODELS_PULL_LABEL));
+        pull.setId("settings-form-model-pull");
+        pull.setEditable(false);
+        pull.getStyleClass().add("w-model");
+        Visibility.show(understood, false);
+        Visibility.show(pullLabel, false);
+        Visibility.show(pull, false);
+    }
+
+    // The reading only parses the paste: nothing is fetched, opened or run, and a plain id shows no line.
+    private void showUnderstood() {
+        final Optional<PastedModel> read = readTyped();
+        final List<String> listed = viewModel.modelListing().offered();
+        final boolean known =
+                read.isPresent() && listed.contains(read.get().input().modelId());
+        Visibility.show(understood, read.isPresent());
+        read.ifPresent(pasted -> understood.setText(understoodText(pasted, !listed.isEmpty() && !known)));
+        final String command = read.map(PastedModel::pullCommand).orElse(null);
+        final boolean offer = command != null && !known && form.draft().get().kind() == ProviderKind.OLLAMA;
+        Visibility.show(pullLabel, offer);
+        Visibility.show(pull, offer);
+        pull.setText(offer ? command : "");
+    }
+
+    private Optional<PastedModel> readTyped() {
+        final String typed = modelInput.getText().strip();
+        return typed.isEmpty()
+                ? Optional.empty()
+                : viewModel.quantChips().readPasted(typed, form.draft().get().kind());
+    }
+
+    private String understoodText(final PastedModel pasted, final boolean unlisted) {
+        final ModelInput input = pasted.input();
+        final String label = pasted.modelLabel().isBlank() ? input.modelId() : pasted.modelLabel();
+        final String quant = pasted.quantToken();
+        final String shown = quant == null ? label : messages.get(MessageKey.SETTINGS_QUANT_CHIP, label, quant);
+        final String repo = input.repo();
+        final String file = input.file();
+        final String line = understoodLine(repo, file, shown);
+        // On a line of its own: after a quant token such as "Q4_K_M" a space alone reads as one run-on sentence.
+        return unlisted ? line + "\n" + messages.get(MessageKey.SETTINGS_FORM_MODELS_NOT_LISTED) : line;
+    }
+
+    private String understoodLine(final @Nullable String repo, final @Nullable String file, final String shown) {
+        if (repo == null) {
+            return messages.get(MessageKey.SETTINGS_FORM_MODELS_UNDERSTOOD_ID, shown);
+        }
+        return file == null
+                ? messages.get(MessageKey.SETTINGS_FORM_MODELS_UNDERSTOOD_REPO, repo, shown)
+                : messages.get(MessageKey.SETTINGS_FORM_MODELS_UNDERSTOOD_REPO_FILE, repo, file, shown);
+    }
+
     private static void bindPart(final ToggleSwitch toggle, final VBox part) {
         Visibility.bind(part, toggle.selectedProperty());
     }
 
     private void addTyped() {
         final String typed = modelInput.getText().strip();
+        final String id = readTyped().map(pasted -> pasted.input().modelId()).orElse(typed);
         modelInput.clear();
-        if (!typed.isEmpty()) {
-            form.edit(draft -> draft.customModels().contains(typed)
-                    ? draft
-                    : draft.withCustomModels(plus(draft.customModels(), typed)));
+        if (!id.isEmpty()) {
+            form.edit(draft ->
+                    draft.customModels().contains(id) ? draft : draft.withCustomModels(plus(draft.customModels(), id)));
         }
     }
 

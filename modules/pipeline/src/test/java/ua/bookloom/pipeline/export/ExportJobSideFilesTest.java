@@ -29,6 +29,7 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.RunRecord;
+import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.TestBooks;
@@ -91,7 +92,7 @@ class ExportJobSideFilesTest {
     }
 
     // The report states the counts — the untranslated book title and page title are pending beside "The end." — names
-    // each flagged segment by its locator with its findings, and says whether the consistency pass ran.
+    // each flagged segment by its locator with its findings, and what the Proofread stage re-read.
     @Test
     void run_reportChosen_writesCountsAndFlaggedSegments() {
         final String id = frankenstein();
@@ -105,7 +106,8 @@ class ExportJobSideFilesTest {
                         "- Pending, written in the source language: 3",
                         "- Flagged, written with the machine translation: 1",
                         "- ch1 · p02: omission (medium) — a clause is missing",
-                        "The consistency pass was not run.");
+                        "## Proofread",
+                        "- Re-read by the Proofread stage: 0");
     }
 
     // IF the report left out who translated the book and for how long, THEN a person comparing two exports of one book
@@ -150,9 +152,8 @@ class ExportJobSideFilesTest {
         final String leftover = "The old wooden door opened slowly and the captain looked into the dark room.";
         final String id = fixture.importBook(
                 TestBooks.epub(tempDir.resolve("Door.epub"), List.of(List.of(leftover, "He left.")), "en"), "en");
-        final List<String> ids = fixture.bodyRecords(id).stream()
-                .map(record -> record.segmentId())
-                .toList();
+        final List<String> ids =
+                fixture.bodyRecords(id).stream().map(SegmentRecord::segmentId).toList();
         fixture.accept(id, ids.get(0), leftover);
         fixture.accept(id, ids.get(1), "Він пішов.");
 
@@ -222,9 +223,8 @@ class ExportJobSideFilesTest {
                         List.of(List.of("Victor &amp; I left.", "He opened the door.", "The end.")),
                         "en"),
                 "en");
-        final List<String> ids = fixture.bodyRecords(id).stream()
-                .map(record -> record.segmentId())
-                .toList();
+        final List<String> ids =
+                fixture.bodyRecords(id).stream().map(SegmentRecord::segmentId).toList();
         fixture.accept(id, ids.get(0), "Віктор & я пішли.");
         fixture.flag(id, ids.get(1), "Він відчинив двері.");
         fixture.decide(
@@ -234,7 +234,7 @@ class ExportJobSideFilesTest {
                         .withFindings(
                                 List.of(new QaFinding("omission", Severity.MEDIUM, "a clause is missing", "judge"))));
         ok(fixture.glossary()
-                .add(new GlossaryEntry(
+                .add(GlossaryEntry.of(
                         GlossaryIds.of(id, "Victor"), id, "Victor", "Віктор", TermType.CHARACTER, Gender.MALE, true)));
         return id;
     }

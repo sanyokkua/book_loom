@@ -27,6 +27,8 @@ final class SuggestionLines {
     static final int MAX_EXAMPLE_CHARS = 120;
 
     private static final String SEPARATOR = " — ";
+    private static final String COMMON_WORD = "common word, translate it";
+    private static final String COMMON_WORDS_IN_NAME = "translate the common word: ";
 
     /**
      * The line of one entry.
@@ -36,6 +38,7 @@ final class SuggestionLines {
      * @param reading its reading, or null when it was not read
      * @param cluster what is already rendered of its person, when something is
      * @param refusal the refused rendering when this is the retry, else null
+     * @param commonWords the words of the term the book also writes in lower case; empty when none
      * @return one line that starts with {@code "- "} and the term
      */
     static String of(
@@ -43,9 +46,15 @@ final class SuggestionLines {
             final Evidence evidence,
             @Nullable final Reading reading,
             final Optional<String> cluster,
-            @Nullable final Refusal refusal) {
+            @Nullable final Refusal refusal,
+            final List<String> commonWords) {
         final List<String> parts = new ArrayList<>();
-        parts.add(typeOf(entry.type()) + genderOf(entry));
+        final boolean isOneWord = commonWords.size() == 1
+                && commonWords.getFirst().equals(entry.term().strip());
+        parts.add(isOneWord ? COMMON_WORD : typeOf(entry.type()) + genderOf(entry));
+        if (!commonWords.isEmpty() && !isOneWord) {
+            parts.add(COMMON_WORDS_IN_NAME + String.join(", ", commonWords));
+        }
         if (reading != null && reading.speaking()) {
             parts.add("speaking name");
         }
@@ -61,7 +70,7 @@ final class SuggestionLines {
     }
 
     private static String refusedNote(final Refusal refusal) {
-        return "refused: \"" + refusal.rendering() + "\" (" + refusal.why().reason() + "); give another";
+        return "refused: \"" + refusal.rendering() + "\" (" + refusal.why() + ")";
     }
 
     private static String genderOf(final GlossaryEntry entry) {
@@ -80,6 +89,9 @@ final class SuggestionLines {
             case PLACE -> "place";
             case TERM -> "term";
             case TITLE -> "title";
+            case ORGANISATION -> "organisation";
+            case PRODUCT -> "product";
+            case MATERIAL -> "material";
             case OTHER -> "other";
         };
     }

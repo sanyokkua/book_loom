@@ -20,6 +20,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -42,7 +43,7 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 class TermLearningJobTest {
 
     private static final Pattern ITEM = Pattern.compile("<s id=\"(\\d+)\">(.*)</s>");
-    private static final Pattern SHOWN = Pattern.compile("<Text>\\n(.*?)\\n</Text>", Pattern.DOTALL);
+    private static final Pattern SHOWN = Pattern.compile("<s id=\"1\">(.*?)</s>", Pattern.DOTALL);
     private static final String ESTABLISHED_LINE = "master → господар";
     private static final String P4 = "The master sat in the dark.";
     private static final List<List<String>> CHAPTERS = List.of(
@@ -76,21 +77,35 @@ class TermLearningJobTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
-    /** Never reports terms; drifts to «учитель» in the fourth chapter unless its prompt names «господар». */
+    /**
+     * Drifts to «учитель» in the fourth chapter unless its prompt names «господар»; reports no terms unless built to
+     * add a {@code terms} object to every batch entry, as the retired key-term asks had it do.
+     */
     private static final class DriftingModel implements ChatModel {
 
         private final List<ChatRequest> requests = new CopyOnWriteArrayList<>();
+        private final String termsField;
+
+        DriftingModel() {
+            this("");
+        }
+
+        DriftingModel(final String termsField) {
+            this.termsField = termsField;
+        }
 
         @Override
         public Result<ChatResponse> chat(final ChatRequest request) {
             requests.add(request);
             final String user = userMessage(request);
-            final String rendering = user.contains(P4) && !user.contains(ESTABLISHED_LINE) ? "учитель" : "господар";
+            // The next source after a batch may be the fourth chapter's paragraph; only translating it can drift.
+            final String rendering =
+                    isTranslating(user, P4) && !user.contains(ESTABLISHED_LINE) ? "учитель" : "господар";
             final Matcher items = ITEM.matcher(user);
             final List<String> entries = new ArrayList<>();
             while (items.find()) {
-                entries.add(
-                        "{\"id\":\"" + items.group(1) + "\",\"target\":\"" + target(items.group(2), rendering) + "\"}");
+                entries.add("{\"id\":\"" + items.group(1) + "\",\"target\":\"" + target(items.group(2), rendering)
+                        + "\"" + termsField + "}");
             }
             final String reply = !entries.isEmpty()
                     ? "{\"items\":[" + String.join(",", entries) + "]}"
@@ -99,7 +114,7 @@ class TermLearningJobTest {
         }
 
         private static boolean isTranslating(final String user, final String source) {
-            return user.contains(">" + source + "</s>") || user.contains("<Text>\n" + source + "\n</Text>");
+            return user.contains(">" + source + "</s>") || user.contains("<s id=\"1\">" + source + "</s>");
         }
 
         private static String shown(final String user) {
@@ -109,7 +124,7 @@ class TermLearningJobTest {
 
         private static String target(final String source, final String rendering) {
             final String word = Character.toUpperCase(rendering.charAt(0)) + rendering.substring(1);
-            return Objects.requireNonNull(TARGETS.get(source)).formatted(word);
+            return TARGETS.getOrDefault(source, source).formatted(word);
         }
 
         // A source shown only as a related earlier pair (15i.T8) is not being translated there.
@@ -151,10 +166,10 @@ class TermLearningJobTest {
         }
         assertThat(model.namesRenderingFor(P4)).isTrue();
         assertThat(model.requests.stream()
-                        .filter(request -> userMessage(request).contains(P4))
+                        .filter(request -> DriftingModel.isTranslating(userMessage(request), P4))
                         .map(ChatRequest::messages)
                         .flatMap(List::stream)
-                        .map(message -> message.content())
+                        .map(ChatMessage::content)
                         .anyMatch(content -> content.contains("[Established renderings")))
                 .isTrue();
         assertThat(storedTargets(project)).noneMatch(target -> target.contains("Учитель"));
@@ -174,6 +189,21 @@ class TermLearningJobTest {
         final RenderingConsistency metric = RenderingConsistency.of(List.of(master(project)));
         assertThat(metric.distinctPerTerm()).isEqualTo(1.0);
         assertThat(metric.learnedCoverage()).isEqualTo(1.0);
+    }
+
+    // Arm 5b retired the key-term asks: a reply that still reports a rendering adds nothing; the decided pairs teach
+    // it.
+    @Test
+    void run_batchedModelReportsTerms_learnsOnlyFromTheDecidedPairs() {
+        final DriftingModel model = new DriftingModel(",\"terms\":{\"master\":\"господар\"}");
+        final TestProject project = book();
+
+        report(batchedJob(project, model, new RunRequest(project.id(), ReviewMode.UNATTENDED))
+                .run());
+
+        assertLearnedAfterThreeChapters(model, project);
+        assertThat(master(project).renderings()).isEmpty();
+        assertThat(master(project).learned()).isEqualTo(new LexiconEntry.Learned("господар", 4, 4));
     }
 
     @Test

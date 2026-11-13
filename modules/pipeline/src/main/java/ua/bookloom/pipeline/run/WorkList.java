@@ -15,12 +15,14 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.Unit;
+import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.pipeline.ChunkPosition;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.project.SegmentCounts;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.pipeline.project.ChapterBoundaries;
 
 /**
  * The segments a run still has to decide, in document order, and the counts that move as it decides them.
@@ -41,15 +43,16 @@ public final class WorkList {
     private final List<Unit> units;
     private final int bodyUnits;
     private final StoryUnits story;
+    private final ChapterNumbers numbers;
     private final int segments;
     private List<WorkItem> pending = List.of();
     private List<Segment> decided = List.of();
     private final RunCounts counts = new RunCounts();
     private int next;
-    // The 1-based section of the last decision, 0 before any.
     private int lastSection;
 
-    private WorkList(final RunStores stores, final String projectId, final Document document) {
+    private WorkList(
+            final RunStores stores, final String projectId, final Document document, final ChapterBoundaries chapters) {
         this.stores = stores;
         this.projectId = projectId;
         final List<Unit> body =
@@ -58,8 +61,14 @@ public final class WorkList {
         document.units().stream().filter(Unit::isAuxiliary).forEach(ordered::add);
         this.units = List.copyOf(ordered);
         this.bodyUnits = body.size();
+        this.numbers = new ChapterNumbers(chapters, bodyUnits);
         this.story = StoryUnits.of(body);
         this.segments = body.stream().mapToInt(unit -> unit.segments().size()).sum();
+    }
+
+    /** {@return the role of the unit at a {@link WorkItem#section()}; the auxiliary unit's titles count as front matter} */
+    UnitRole roleOfSection(final int section) {
+        return section < bodyUnits ? units.get(section).role() : UnitRole.FRONT_MATTER;
     }
 
     /**
@@ -68,13 +77,15 @@ public final class WorkList {
      * @param stores the non-null stores to read from
      * @param projectId the non-null project id
      * @param document the non-null opened book of that project
+     * @param chapters the non-null chapters of that book, which progress counts in
      * @return the work list, or the storage error that stopped the read
      */
-    public static Result<WorkList> read(final RunStores stores, final String projectId, final Document document) {
+    public static Result<WorkList> read(
+            final RunStores stores, final String projectId, final Document document, final ChapterBoundaries chapters) {
         Objects.requireNonNull(stores, "stores");
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(document, "document");
-        final WorkList work = new WorkList(stores, projectId, document);
+        final WorkList work = new WorkList(stores, projectId, document, chapters);
         return work.load("start").map(count -> work);
     }
 
@@ -213,8 +224,8 @@ public final class WorkList {
     }
 
     /**
-     * Returns every segment of an item's unit, decided ones included, in document order — the segments a draft's
-     * preceding targets are taken from.
+     * Returns every segment of an item's unit, decided ones included, in document order — the segments the memory
+     * reads a segment's neighbours from.
      *
      * @param item the non-null item whose unit is asked for
      * @return never null; holds the item's own segment
@@ -233,12 +244,12 @@ public final class WorkList {
     }
 
     /**
-     * Returns the counts as backward revision starts, after the last segment is decided.
+     * Returns the counts as the Proofread stage starts, after the last segment is decided.
      *
-     * @return the counts under the {@code REVISE} stage, at the last section
+     * @return the counts under the {@code PROOFREAD} stage, at the last section
      */
-    public JobProgress revisionProgress() {
-        return progress(JobStage.REVISE, currentSection());
+    public JobProgress proofreadProgress() {
+        return progress(JobStage.PROOFREAD, currentSection());
     }
 
     /**
@@ -264,10 +275,10 @@ public final class WorkList {
      * Returns where an item stands: its section among the body units and the chunk the run is in.
      *
      * @param item the non-null item about to be translated
-     * @return the section k of n, {@code n} for the auxiliary unit, and the chunk k of n within the unit
+     * @return the chapter k of n, the last chapter for the auxiliary unit, and the chunk k of n within the unit
      */
     public ChunkPosition position(final WorkItem item) {
-        return counts.position(sectionOf(Objects.requireNonNull(item, "item")), bodyUnits);
+        return counts.position(chapterOf(Objects.requireNonNull(item, "item")), numbers.count());
     }
 
     /**
@@ -288,7 +299,7 @@ public final class WorkList {
                 status,
                 path,
                 item.section());
-        lastSection = sectionOf(item);
+        lastSection = chapterOf(item);
         next++;
         counts.decided(status, path);
         return progress(JobStage.TRANSLATE, lastSection);
@@ -364,34 +375,26 @@ public final class WorkList {
         return complete;
     }
 
-    /**
-     * Returns the number of body units, the auxiliary unit never counted.
-     *
-     * @return the section count
-     */
+    /** {@return the number of body units, the auxiliary unit never counted} */
     public int sectionCount() {
         return bodyUnits;
     }
 
-    /**
-     * Returns the number of segments in the body units.
-     *
-     * @return the segment count, the auxiliary unit left out
-     */
+    /** {@return the number of segments in the body units, the auxiliary unit left out} */
     public int segmentCount() {
         return segments;
     }
 
     private JobProgress progress(final JobStage stage, final int section) {
-        return counts.progress(stage, section, bodyUnits);
+        return counts.progress(stage, section, numbers.count());
     }
 
     private int currentSection() {
-        return hasPending() ? sectionOf(pending.get(next)) : lastSection;
+        return hasPending() ? chapterOf(pending.get(next)) : lastSection;
     }
 
-    // An item's unit index counts the auxiliary unit last, one past the body; reported, it stays the last section.
-    private int sectionOf(final WorkItem item) {
-        return Math.min(item.section() + 1, bodyUnits);
+    // Progress counts chapters; outside the story an item reports the last decided one.
+    private int chapterOf(final WorkItem item) {
+        return numbers.of(item, Math.max(lastSection, 1));
     }
 }

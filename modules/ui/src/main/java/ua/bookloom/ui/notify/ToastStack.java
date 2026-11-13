@@ -1,5 +1,7 @@
 package ua.bookloom.ui.notify;
 
+import static ua.bookloom.util.contract.ArgNames.OCCASION;
+
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.time.Duration;
@@ -100,13 +102,13 @@ public final class ToastStack implements Toasts {
 
     @Override
     public void raise(final ToastOccasion occasion, final Object... args) {
-        Objects.requireNonNull(occasion, "occasion");
+        Objects.requireNonNull(occasion, OCCASION);
         display(occasion.severity(), occasion.key(), null, args);
     }
 
     @Override
     public void raiseWithAction(final ToastOccasion occasion, final ToastAction action, final Object... args) {
-        Objects.requireNonNull(occasion, "occasion");
+        Objects.requireNonNull(occasion, OCCASION);
         Objects.requireNonNull(action, "action");
         display(occasion.severity(), occasion.key(), action, args);
     }
@@ -122,7 +124,7 @@ public final class ToastStack implements Toasts {
 
     @Override
     public void withdraw(final ToastOccasion occasion) {
-        Objects.requireNonNull(occasion, "occasion");
+        Objects.requireNonNull(occasion, OCCASION);
         final List<Toast> gone =
                 shown.stream().filter(toast -> toast.isOf(occasion.key())).toList();
         log.debug("withdrawing {} toast(s) of {}", gone.size(), occasion);

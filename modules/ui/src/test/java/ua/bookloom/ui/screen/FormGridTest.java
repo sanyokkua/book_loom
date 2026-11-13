@@ -52,7 +52,7 @@ class FormGridTest extends FxTestBase {
     }
 
     private double x(final javafx.scene.Node node) {
-        return ThemeTestSupport.onFx(() -> node.getLayoutX());
+        return ThemeTestSupport.onFx(node::getLayoutX);
     }
 
     private double right(final javafx.scene.Node node) {

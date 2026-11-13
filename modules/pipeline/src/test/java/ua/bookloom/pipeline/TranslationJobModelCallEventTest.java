@@ -29,6 +29,7 @@ class TranslationJobModelCallEventTest {
             "CallSnapshotUpdated",
             "ModelCallFinished",
             "CallSnapshotUpdated",
+            "CallSnapshotUpdated",
             "SegmentDrafted",
             "StepChanged",
             "SegmentDecided",
@@ -50,10 +51,13 @@ class TranslationJobModelCallEventTest {
         assertThat(events)
                 .extracting(event -> event.getClass().getSimpleName())
                 .containsExactlyElementsOf(Stream.of(
-                                List.of("StageStarted", "StageStarted", "StepsPlanned"),
+                                // The summary steps, then the chunk's drafts.
+                                List.of("StageStarted", "StageStarted", "StepsPlanned", "StepsPlanned"),
                                 ONE_SEGMENT,
                                 ONE_SEGMENT,
-                                List.of("Finished"))
+                                // The one chapter's summary step, done with no call: it is the book's last; then the
+                                // Proofread stage, before the run finishes.
+                                List.of("StepChanged", "StepChanged", "StageStarted", "Finished"))
                         .flatMap(List::stream)
                         .toList());
         assertThat(events)

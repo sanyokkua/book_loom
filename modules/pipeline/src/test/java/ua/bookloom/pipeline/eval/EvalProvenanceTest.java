@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.eval;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,6 +12,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -82,53 +84,61 @@ class EvalProvenanceTest {
         assertThat(p.dial()).isEqualTo("FAST");
     }
 
-    // The relevant-pairs gate (15i.T8) compares an `on` and an `off` report, so each says which it was.
+    // Each report says what its calls asked for.
     @Test
-    void capture_relevantPairsSwitch_isRecordedInTheBrief() {
-        assertThat(provenance(Map.of("BOOKLOOM_EVAL_RELEVANT_PAIRS", "off")).brief())
-                .isEqualTo("relevant_pairs=off");
-        assertThat(provenance(Map.of("BOOKLOOM_EVAL_PRESET", "glass-harbour", "BOOKLOOM_EVAL_RELEVANT_PAIRS", "on"))
-                        .brief())
-                .isEqualTo("preset=glass-harbour relevant_pairs=on");
-    }
-
-    // The batch-format gate (15i.X1) compares reports of three arms, so each says which format it measured.
-    @Test
-    void capture_batchFormatSwitch_isRecordedInTheBrief() {
-        assertThat(provenance(Map.of("BOOKLOOM_EVAL_BATCH_FORMAT", "markers")).brief())
-                .isEqualTo("batch_format=markers");
-        assertThat(provenance(Map.of("BOOKLOOM_EVAL_PRESET", "glass-harbour", "BOOKLOOM_EVAL_BATCH_FORMAT", "dual"))
-                        .brief())
-                .isEqualTo("preset=glass-harbour batch_format=dual");
-    }
-
-    // The thinking plan and the notes arm change what a report measures, so each report says which it ran with.
-    @Test
-    void capture_nothingSet_recordsThinkingAndNotesOff() {
-        final EvalProvenance p = provenance(Map.of());
-
-        assertThat(p.reasoning()).isEqualTo("off");
-        assertThat(p.batchNotes()).isEqualTo("off");
+    void capture_nothingSet_recordsTheOffIntent() {
+        assertThat(provenance(Map.of()).reasoning()).isEqualTo("intent-off");
     }
 
     @Test
-    void capture_reasoningPlanAndNotesSwitch_areRecorded() {
-        final EvalProvenance p = provenance(Map.of(
-                "BOOKLOOM_REASONING", "TERM_READING=on,DRAFT_BATCH_JSON=on",
-                "BOOKLOOM_BATCH_NOTES", "on"));
+    void json_noJudge_saysModeNone() throws IOException {
+        final JsonNode judge =
+                new ObjectMapper().readTree(provenance(Map.of()).json()).get("judge");
 
-        assertThat(p.reasoning()).isEqualTo("DRAFT_BATCH_JSON=on,TERM_READING=on");
-        assertThat(p.batchNotes()).isEqualTo("on");
+        assertThat(judge).hasToString("{\"mode\":\"none\"}");
     }
 
     @Test
-    void json_reasoningAndNotes_areFieldsOfTheProvenance() throws IOException {
-        final String json = provenance(Map.of("BOOKLOOM_REASONING", "REVIEWER=on", "BOOKLOOM_BATCH_NOTES", "on"))
-                .json();
+    void json_withJudge_writesTheJudgeBlock() throws IOException {
+        final JudgeRunner.Block block = new JudgeRunner.Block(
+                "gemma4:26b", "q4_K_M", "ollama 0.12.6", "bl-judge-1", "d7b8b8ded24e", "off", "pairwise", true, null);
+
+        final JsonNode judge = new ObjectMapper()
+                .readTree(provenance(Map.of()).withJudge(block).json())
+                .get("judge");
+
+        assertThat(judge.toString())
+                .startsWith("{\"model\":\"gemma4:26b\",\"quant\":\"q4_K_M\",\"server\":\"ollama 0.12.6\","
+                        + "\"rubricVersion\":\"bl-judge-1\",\"rubricHash\":\"d7b8b8ded24e\",\"reasoning\":\"off\","
+                        + "\"mode\":\"pairwise\",\"sameFamily\":true,\"calibration\":{");
+    }
+
+    @Test
+    void json_withJudge_carriesTheCalibrationResult() throws IOException {
+        final JudgeRunner.Block block = new JudgeRunner.Block(
+                "gemma4:26b-mlx", null, null, "bl-judge-1", "d7b8b8ded24e", "off", "pairwise", true, null);
+
+        final JsonNode calibration = new ObjectMapper()
+                .readTree(provenance(Map.of()).withJudge(block).json())
+                .get("judge")
+                .get("calibration");
+
+        assertThat(calibration.get("rubricHash").asText()).isEqualTo("d7b8b8ded24e");
+        assertThat(calibration.get("dataset").asText()).isEqualTo("cal-1");
+        assertThat(calibration.get("tprWilsonLower").asDouble()).isEqualTo(0.510);
+        assertThat(calibration.get("passed").asBoolean()).isFalse();
+    }
+
+    // The retired variable no longer changes what a report says it ran with, and the report names the value as the
+    // calls' intent, not as what the server was sent: the model's profile decides that (design D20).
+    @Test
+    void json_reasoning_isTheOffIntentWhateverTheEnvironment() throws IOException {
+        final String json =
+                provenance(Map.of("BOOKLOOM_REASONING", "REVIEWER=on")).json();
 
         final JsonNode node = new ObjectMapper().readTree(json);
-        assertThat(node.get("reasoning").asText()).isEqualTo("REVIEWER=on");
-        assertThat(node.get("batchNotes").asText()).isEqualTo("on");
+        assertThat(node.get("reasoning").asText()).isEqualTo("intent-off");
+        assertThat(node.at("/model/thinking").asText()).isEqualTo("intent-off");
     }
 
     @Test
@@ -137,7 +147,7 @@ class EvalProvenanceTest {
 
         final JsonNode node = new ObjectMapper().readTree(json);
         assertThat(json).startsWith("{\"provenance\":{\"timestamp\"");
-        assertThat(node.get("provenance").get("model").asText()).isEqualTo("gemma4:e4b-mlx");
+        assertThat(node.at("/provenance/model/id").asText()).isEqualTo("gemma4:e4b-mlx");
         assertThat(node.get("recall").asDouble()).isEqualTo(1.0);
     }
 
@@ -173,5 +183,52 @@ class EvalProvenanceTest {
 
         assertThat(reports.resolve("m-words.json")).exists();
         assertThat(dir.resolve("hist")).doesNotExist();
+    }
+
+    @Test
+    void within_versionTwo_writesDatasetModelRepeatsAndNoiseBand() throws IOException {
+        final EvalProvenance p = EvalProvenance.capture(
+                        MiniReport.SUITE,
+                        "gemma4:e4b-mlx",
+                        "",
+                        Map.of("BOOKLOOM_EVAL_REPEATS", "3", "BOOKLOOM_EVAL_QUANT", "q4_K_M"),
+                        CLOCK,
+                        dir,
+                        16384)
+                .withAggregates(List.of(0.80, 0.84, 0.82));
+
+        final JsonNode node = new ObjectMapper().readTree(p.within("{\"suite\":\"mini\"}"));
+
+        final JsonNode provenance = node.get("provenance");
+        assertThat(provenance.get("version").asInt()).isEqualTo(2);
+        assertThat(provenance.at("/dataset/id").asText()).isEqualTo("mini-en");
+        assertThat(provenance.at("/model/id").asText()).isEqualTo("gemma4:e4b-mlx");
+        assertThat(provenance.at("/model/quantisation").asText()).isEqualTo("q4_K_M");
+        assertThat(provenance.at("/model/seeds")).hasToString("[1000,1001,1002]");
+        assertThat(provenance.at("/repeats/k").asInt()).isEqualTo(3);
+        assertThat(provenance.get("noiseBand").asDouble()).isCloseTo(0.04, within(1e-9));
+        assertThat(provenance.get("baselineOf").isNull()).isTrue();
+    }
+
+    @Test
+    void withDataset_russianMini_replacesTheSuiteDatasetAndKeepsAggregatesInTheJson() throws IOException {
+        final EvalProvenance p =
+                provenance(Map.of()).withDataset(MiniBook.MINI_RU).withAggregates(List.of(0.5, 0.6, 0.55));
+
+        final JsonNode provenance = new ObjectMapper().readTree(p.within("{}")).get("provenance");
+
+        assertThat(provenance.at("/dataset/id").asText()).isEqualTo("mini-ru");
+        assertThat(provenance.at("/dataset/pair").asText()).isEqualTo("ru-uk");
+        assertThat(provenance.at("/dataset/ownerData").asBoolean()).isFalse();
+        assertThat(provenance.get("aggregates")).hasToString("[0.5,0.6,0.55]");
+    }
+
+    @Test
+    void capture_sequenceSuite_readsTheBundledInventedSequenceDataset() {
+        final EvalProvenance p = EvalProvenance.capture("sequence", "m", "", Map.of(), CLOCK, dir, 16384);
+
+        assertThat(p.dataset()).isNotNull();
+        assertThat(p.dataset().id()).isEqualTo("sequence");
+        assertThat(p.dataset().ownerData()).isFalse();
     }
 }

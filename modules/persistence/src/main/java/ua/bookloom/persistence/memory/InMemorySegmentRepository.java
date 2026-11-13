@@ -1,5 +1,8 @@
 package ua.bookloom.persistence.memory;
 
+import static ua.bookloom.util.contract.ArgNames.KEPT_AUXILIARY_KINDS;
+import static ua.bookloom.util.contract.ArgNames.PROJECT_ID;
+
 import com.google.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +38,7 @@ public final class InMemorySegmentRepository implements SegmentRepository {
 
     @Override
     public Result<Integer> saveAll(final String projectId, final List<SegmentRecord> segments) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(segments, "segments");
         final Lock writeLock = store.lock().writeLock();
         writeLock.lock();
@@ -43,7 +46,7 @@ public final class InMemorySegmentRepository implements SegmentRepository {
             store.segments(projectId).replaceAll(segments);
             log.debug("Segments saved projectId={} count={}", projectId, segments.size());
             return Result.ok(segments.size());
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         } finally {
             writeLock.unlock();
@@ -52,12 +55,12 @@ public final class InMemorySegmentRepository implements SegmentRepository {
 
     @Override
     public Result<Optional<SegmentRecord>> find(final String projectId, final String segmentId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(segmentId, "segmentId");
         try {
             return Result.ok(
                     Optional.ofNullable(store.segments(projectId).byId().get(segmentId)));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -65,8 +68,8 @@ public final class InMemorySegmentRepository implements SegmentRepository {
     @Override
     public Result<Optional<SegmentRecord>> firstPending(
             final String projectId, final Set<SegmentKind> keptAuxiliaryKinds) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(keptAuxiliaryKinds, "keptAuxiliaryKinds");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(keptAuxiliaryKinds, KEPT_AUXILIARY_KINDS);
         final Lock readLock = store.lock().readLock();
         readLock.lock();
         try {
@@ -76,7 +79,7 @@ public final class InMemorySegmentRepository implements SegmentRepository {
                 }
             }
             return Result.ok(Optional.empty());
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         } finally {
             readLock.unlock();
@@ -85,8 +88,8 @@ public final class InMemorySegmentRepository implements SegmentRepository {
 
     @Override
     public Result<SegmentCounts> countsByStatus(final String projectId, final Set<SegmentKind> keptAuxiliaryKinds) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(keptAuxiliaryKinds, "keptAuxiliaryKinds");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(keptAuxiliaryKinds, KEPT_AUXILIARY_KINDS);
         final Lock readLock = store.lock().readLock();
         readLock.lock();
         try {
@@ -108,7 +111,7 @@ public final class InMemorySegmentRepository implements SegmentRepository {
                 }
             }
             return Result.ok(new SegmentCounts(pending, accepted, revised, flagged, sourceKept));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         } finally {
             readLock.unlock();
@@ -117,8 +120,8 @@ public final class InMemorySegmentRepository implements SegmentRepository {
 
     @Override
     public Result<List<SegmentRecord>> flagged(final String projectId, final Set<SegmentKind> keptAuxiliaryKinds) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(keptAuxiliaryKinds, "keptAuxiliaryKinds");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(keptAuxiliaryKinds, KEPT_AUXILIARY_KINDS);
         final Lock readLock = store.lock().readLock();
         readLock.lock();
         try {
@@ -129,7 +132,7 @@ public final class InMemorySegmentRepository implements SegmentRepository {
                 }
             }
             return Result.ok(List.copyOf(result));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         } finally {
             readLock.unlock();
@@ -138,7 +141,7 @@ public final class InMemorySegmentRepository implements SegmentRepository {
 
     @Override
     public Result<List<SegmentRecord>> byUnit(final String projectId, final String unitId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(unitId, "unitId");
         final Lock readLock = store.lock().readLock();
         readLock.lock();
@@ -150,7 +153,7 @@ public final class InMemorySegmentRepository implements SegmentRepository {
                 }
             }
             return Result.ok(List.copyOf(result));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         } finally {
             readLock.unlock();
@@ -159,12 +162,12 @@ public final class InMemorySegmentRepository implements SegmentRepository {
 
     @Override
     public Result<List<SegmentRecord>> all(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         final Lock readLock = store.lock().readLock();
         readLock.lock();
         try {
             return Result.ok(List.copyOf(orderedRecords(projectId)));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         } finally {
             readLock.unlock();
@@ -174,7 +177,7 @@ public final class InMemorySegmentRepository implements SegmentRepository {
     @Override
     public Result<SegmentRecord> update(
             final String projectId, final String segmentId, final UnaryOperator<SegmentRecord> update) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(segmentId, "segmentId");
         Objects.requireNonNull(update, "update");
         try {
@@ -195,7 +198,7 @@ public final class InMemorySegmentRepository implements SegmentRepository {
             }
             log.debug("Segment updated projectId={} segmentId={} status={}", projectId, segmentId, updated.status());
             return Result.ok(updated);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }

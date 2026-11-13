@@ -1,0 +1,686 @@
+{
+  "id": "cal-1",
+  "about": "Invented items for the judge calibration (design D24, arm 1). No line comes from a book. A single item holds one translation, a pair item two translations (a, b) of one source. Graders grade blind: the intended defects and winners are not in this file.",
+  "items": [
+    {
+      "id": "cal-s01",
+      "kind": "single",
+      "split": "few-shot",
+      "pair": "en-uk",
+      "source": "She had never seen the sea in winter, and the grey of it frightened her.",
+      "translation": "Вона вже бачила море взимку, і його сірість її лякала.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s02",
+      "kind": "single",
+      "split": "few-shot",
+      "pair": "ru-uk",
+      "source": "Мы вышли из дома ещё до рассвета, чтобы успеть на первый автобус.",
+      "translation": "Ми вийшли з дому ще до світанку, щоб устигнути на перший автобус.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s03",
+      "kind": "single",
+      "split": "few-shot",
+      "pair": "en-uk",
+      "source": "The workshop smelled of glue and sawdust. Along the far wall hung a row of unfinished violins, each tagged with a name and a date, and on the bench beneath them lay the tools of a man who had left in a hurry: a chisel without its handle, a cold cup of tea, an open notebook.",
+      "translation": "Майстерня пахла клеєм і тирсою. Уздовж дальньої стіни висів ряд недороблених скрипок, на кожній — бирка з ім’ям і датою, а на верстаку під ними лежали інструменти людини, що пішла поспіхом: стамеска без руків’я та розгорнутий записник.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s04",
+      "kind": "single",
+      "split": "few-shot",
+      "pair": "ru-uk",
+      "source": "Конечно, он тоже пришёл, хотя никто его не звал.",
+      "translation": "Звісно, він тоже прийшов, хоча ніхто його не кликав.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s05",
+      "kind": "single",
+      "split": "few-shot",
+      "pair": "en-uk",
+      "source": "Marrow Lane was empty, and the lamplighter had not yet come.",
+      "translation": "Провулок Марроу був порожній, а ліхтарник ще не приходив.",
+      "neighbours": [],
+      "goldTerms": [
+        {
+          "source": "Marrow Lane",
+          "target": "провулок Марроу"
+        }
+      ]
+    },
+    {
+      "id": "cal-s06",
+      "kind": "single",
+      "split": "dev",
+      "pair": "en-uk",
+      "source": "The ferry left at seven, and there were only twelve passengers on board.",
+      "translation": "Пором відплив о сьомій, і на борту було лише двадцять пасажирів.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s07",
+      "kind": "single",
+      "split": "dev",
+      "pair": "ru-uk",
+      "source": "Бабушка всегда говорила, что хлеб нужно резать только тогда, когда за столом собрались все. Поэтому мы ждали отца, даже если он задерживался на работе, и суп успевал остыть, а мы — проголодаться так, что начинали считать трещины на потолке.",
+      "translation": "Бабуся завжди казала, що хліб треба різати лише тоді, коли за столом зібралися всі. Тож ми чекали на батька, навіть якщо він затримувався на роботі, і суп устигав вихолонути, а ми — зголодніти так, що починали рахувати тріщини на стелі.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s08",
+      "kind": "single",
+      "split": "dev",
+      "pair": "en-uk",
+      "source": "Captain Holloway raised his glass to the Silent Fleet.",
+      "translation": "Капітан Голловей підняв келих за Мовчазну флотилію.",
+      "neighbours": [],
+      "goldTerms": [
+        {
+          "source": "Holloway",
+          "target": "Голловей"
+        },
+        {
+          "source": "Silent Fleet",
+          "target": "Тихий флот"
+        }
+      ]
+    },
+    {
+      "id": "cal-s09",
+      "kind": "single",
+      "split": "dev",
+      "pair": "ru-uk",
+      "source": "Она закрыла окно и долго смотрела, как по стеклу стекает дождь.",
+      "translation": "Вона зачинила вікно й довго дивилася, як по склу стікає дощ.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s10",
+      "kind": "single",
+      "split": "dev",
+      "pair": "en-uk",
+      "source": "Marta lent her brother the money, though she knew he would not repay it.",
+      "translation": "Брат позичив Марті гроші, хоча знав, що вона їх не поверне.",
+      "neighbours": [
+        "Her brother had lost his job in the spring."
+      ],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s11",
+      "kind": "single",
+      "split": "dev",
+      "pair": "en-uk",
+      "source": "By the time the snow stopped, the road had vanished entirely. We could make out the line of the fence and the roof of the old mill, but everything between them was one smooth white field, and my father said we would wait until morning rather than guess where the ditch began.",
+      "translation": "Коли сніг ущух, дороги вже зовсім не було видно. Ми розрізняли лінію паркану й дах старого млина, але все між ними було одним рівним білим полем, і батько сказав, що ми почекаємо до ранку, а не вгадуватимемо, де починається рів.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s12",
+      "kind": "single",
+      "split": "dev",
+      "pair": "ru-uk",
+      "source": "Я вернулась домой поздно и сразу легла спать, не включая света.",
+      "translation": "Я повернувся додому пізно й одразу ліг спати, не вмикаючи світла.",
+      "neighbours": [
+        "Дождь не прекращался весь вечер.",
+        "Утром телефон снова зазвонил."
+      ],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s13",
+      "kind": "single",
+      "split": "dev",
+      "pair": "en-uk",
+      "source": "“Don’t touch that,” he said quietly. “It isn’t yours.”",
+      "translation": "— Не чіпай, — тихо сказав він. — Це не твоє.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s14",
+      "kind": "single",
+      "split": "dev",
+      "pair": "ru-uk",
+      "source": "Он продал старую лодку соседу и купил на эти деньги сети.",
+      "translation": "Він продав старий човен сусідові й купив на ці гроші вудки.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s15",
+      "kind": "single",
+      "split": "dev",
+      "pair": "en-uk",
+      "source": "He opened the ⟦g0⟧old⟦g1⟧ door and stepped inside.",
+      "translation": "Він відчинив ⟦g0⟧старі двері й увійшов.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s16",
+      "kind": "single",
+      "split": "dev",
+      "pair": "ru-uk",
+      "source": "В тот год река разлилась так широко, что вода дошла до самой церкви. Люди переносили иконы на чердаки, а мальчишки катались на плотах по улицам и кричали от восторга, будто наводнение устроили специально для них.",
+      "translation": "Того року річка розлилася так широко, що вода дійшла аж до церкви. Люди переносили ікони на горища, а хлопчаки каталися вулицями на плотах і кричали від захвату, ніби повінь улаштували спеціально для них.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s17",
+      "kind": "single",
+      "split": "dev",
+      "pair": "en-uk",
+      "source": "She made a decision to take the later train.",
+      "translation": "Вона зробила рішення поїхати пізнішим потягом.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s18",
+      "kind": "single",
+      "split": "test",
+      "pair": "en-uk",
+      "source": "I didn’t recognise her at first; she had cut her hair short.",
+      "translation": "Я одразу її впізнав: вона коротко підстриглася.",
+      "neighbours": [
+        "She stood at the gate with a suitcase."
+      ],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s19",
+      "kind": "single",
+      "split": "test",
+      "pair": "ru-uk",
+      "source": "Сосед снова чинил забор, и стук молотка разносился по всей улице.",
+      "translation": "Сусід знову лагодив паркан, і стукіт молотка лунав на всю вулицю.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s20",
+      "kind": "single",
+      "split": "test",
+      "pair": "en-uk",
+      "source": "The expedition set out with forty mules and came back with nine. Of the men, only the cook and the youngest surveyor returned, and neither would say much about the pass, except that the snow had come three weeks early that year.",
+      "translation": "Експедиція вирушила з сорока мулами, а повернулася з дев’ятьма. Із чоловіків повернулися лише кухар і наймолодший топограф, і жоден із них не хотів багато розповідати про перевал, хіба що те, що сніг того року випав на два тижні раніше.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s21",
+      "kind": "single",
+      "split": "test",
+      "pair": "ru-uk",
+      "source": "Мы долго спорили, но в конце концов решили остаться ещё на неделю.",
+      "translation": "Ми довго сперечалися, але зрештою вирішили залишитися ещё на тиждень.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s22",
+      "kind": "single",
+      "split": "test",
+      "pair": "en-uk",
+      "source": "Old Teague kept the keys to the Granary and gave them to no one.",
+      "translation": "Старий Тіг тримав ключі від Комори й нікому їх не давав.",
+      "neighbours": [],
+      "goldTerms": [
+        {
+          "source": "Teague",
+          "target": "Тіг"
+        },
+        {
+          "source": "Granary",
+          "target": "Комора"
+        }
+      ]
+    },
+    {
+      "id": "cal-s23",
+      "kind": "single",
+      "split": "test",
+      "pair": "ru-uk",
+      "source": "Отец вернулся с войны молчаливым. Он мог часами сидеть на крыльце с остывшим чаем и смотреть на дорогу, а когда мы спрашивали, о чём он думает, только улыбался и гладил нас по голове.",
+      "translation": "Батько повернувся з війни мовчазним. Він міг годинами сидіти на ґанку з вихололим чаєм і дивитися на дорогу, а коли ми питали, про що він думає, тільки усміхався, гладив нас по голові й казав, що колись усе розповість.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s24",
+      "kind": "single",
+      "split": "test",
+      "pair": "en-uk",
+      "source": "The kettle was still warm, so someone had been here not long ago.",
+      "translation": "Чайник був іще теплий, отже, хтось був тут нещодавно.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s25",
+      "kind": "single",
+      "split": "test",
+      "pair": "en-uk",
+      "source": "He apologised to his sister before he left for the station.",
+      "translation": "Він попрощався з сестрою, перш ніж поїхати на вокзал.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s26",
+      "kind": "single",
+      "split": "test",
+      "pair": "ru-uk",
+      "source": "— Ты опять забыл ключи? — спросила мама, не оборачиваясь.",
+      "translation": "— Ти знову забув ключі? — спитала мама, не обертаючись.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s27",
+      "kind": "single",
+      "split": "test",
+      "pair": "en-uk",
+      "source": "At the end of the corridor was a small office with a single window. The clerk inside looked up from his ledger, took my papers without a word, and stamped each page twice, as if once might not be enough to convince anyone.",
+      "translation": "У кінці коридору був маленький кабінет з одним вікном. Клерк усередині відірвався від свого ledger, мовчки взяв мої папери й поставив печатку на кожній сторінці двічі, ніби одного разу могло б не вистачити, щоб когось переконати.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s28",
+      "kind": "single",
+      "split": "test",
+      "pair": "ru-uk",
+      "source": "Никто из нас так и не узнал, кто оставил письмо на пороге.",
+      "translation": "Згодом ми всі дізналися, хто залишив листа на порозі.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s29",
+      "kind": "single",
+      "split": "test",
+      "pair": "en-uk",
+      "source": "If you see the lights on the hill, do not wait for me.",
+      "translation": "Якщо побачиш вогні на пагорбі, не чекай на мене.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-s30",
+      "kind": "single",
+      "split": "test",
+      "pair": "ru-uk",
+      "source": "Мастер взял скрипку, повертел её в руках и долго молчал. Потом сказал, что дерево хорошее, а вот лак положили слишком толстым слоем, и поэтому звук глухой, будто инструмент простужен и боится открыть рот.",
+      "translation": "Майстер узяв скрипку, покрутив її в руках і довго мовчав. Потім сказав, що дерево добре, а от лак поклали надто товстим шаром, і тому звук глухий, ніби інструмент застудився й боїться розтулити рота.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p01",
+      "kind": "pair",
+      "split": "few-shot",
+      "pair": "en-uk",
+      "source": "We left the boat on the shingle and walked up to the house without speaking.",
+      "a": "Ми залишили човен на гальці й мовчки пішли до будинку.",
+      "b": "Ми залишили човен на гальці й пішли до будинку.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p02",
+      "kind": "pair",
+      "split": "few-shot",
+      "pair": "ru-uk",
+      "source": "Она улыбнулась, но глаза у неё оставались грустными.",
+      "a": "Вона посміхнулася, але очі в неї залишались грустними.",
+      "b": "Вона всміхнулася, але очі в неї лишалися сумними.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p03",
+      "kind": "pair",
+      "split": "few-shot",
+      "pair": "en-uk",
+      "source": "The train was late again, and the platform was full of tired people.",
+      "a": "Потяг знову запізнювався, і на пероні було повно втомлених людей.",
+      "b": "Поїзд знову запізнювався, і перон був повен утомлених людей.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p04",
+      "kind": "pair",
+      "split": "few-shot",
+      "pair": "ru-uk",
+      "source": "Дед научил меня различать птиц по голосам. Утром он выводил меня на крыльцо, закрывал мне глаза ладонью и шёпотом спрашивал: кто это поёт? Я угадывал неверно, он смеялся и говорил, что у меня ещё будет много вёсен, чтобы научиться.",
+      "a": "Дід навчив мене розрізняти птахів за голосами. Уранці він виводив мене на ґанок, закривав мені очі долонею й пошепки питав: хто це співає? Я вгадувала неправильно, він сміявся й казав, що в мене ще буде багато весен, щоб навчитися.",
+      "b": "Дід навчив мене розрізняти птахів за голосами. Уранці він виводив мене на ґанок, затуляв мені очі долонею й пошепки питав: хто це співає? Я вгадував неправильно, а він сміявся й казав, що в мене ще буде багато весен, щоб навчитися.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p05",
+      "kind": "pair",
+      "split": "few-shot",
+      "pair": "en-uk",
+      "source": "Ask the Warden of the Eastern Gate whether the caravan has passed.",
+      "a": "Спитай Наглядача Східної брами, чи пройшов уже караван.",
+      "b": "Спитай Вартового Східних воріт, чи пройшов уже караван.",
+      "neighbours": [],
+      "goldTerms": [
+        {
+          "source": "Warden of the Eastern Gate",
+          "target": "Наглядач Східної брами"
+        }
+      ]
+    },
+    {
+      "id": "cal-p06",
+      "kind": "pair",
+      "split": "dev",
+      "pair": "en-uk",
+      "source": "She counted the coins twice and found three missing.",
+      "a": "Вона двічі перелічила монети й виявила, що бракує трьох.",
+      "b": "Вона двічі перелічила монети й виявила, що бракує тринадцяти.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p07",
+      "kind": "pair",
+      "split": "dev",
+      "pair": "ru-uk",
+      "source": "Не говори никому, что ты меня видел.",
+      "a": "Скажи всім, що ти мене бачив.",
+      "b": "Нікому не кажи, що бачив мене.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p08",
+      "kind": "pair",
+      "split": "dev",
+      "pair": "en-uk",
+      "source": "The orchard behind the school had been abandoned for years.",
+      "a": "Сад за школою вже багато років стояв занедбаний.",
+      "b": "Сад за школою роками стояв покинутий.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p09",
+      "kind": "pair",
+      "split": "dev",
+      "pair": "en-uk",
+      "source": "When the doctor finally arrived, the fever had already broken. He listened to the boy’s chest for a long time, left a bottle of something bitter on the windowsill, and told my mother that the worst was over, though he did not sound as certain as his words.",
+      "a": "Коли лікар нарешті приїхав, гарячка вже спала. Він довго слухав хлопчикові груди, залишив на підвіконні пляшечку чогось гіркого й сказав матері, що найгірше минуло, хоча голос у нього був не такий упевнений, як слова.",
+      "b": "Коли лікар нарешті приїхав, гарячка вже спала. Він довго слухав хлопчикові груди, залишив на підвіконні пляшечку чогось гіркого й сказав матері, що найгірше ще попереду, хоча голос у нього був не такий упевнений, як слова.",
+      "neighbours": [
+        "My brother had been ill for three days."
+      ],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p10",
+      "kind": "pair",
+      "split": "dev",
+      "pair": "ru-uk",
+      "source": "Мы купили билеты на поезд, который уходил в полночь.",
+      "a": "Ми купили квитки на потяг, который відходив опівночі.",
+      "b": "Ми купили квитки на потяг, що відходив опівночі.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p11",
+      "kind": "pair",
+      "split": "dev",
+      "pair": "en-uk",
+      "source": "He wrote the date at the top of the page: ⟦g0⟧12 March⟦g1⟧.",
+      "a": "Він написав дату вгорі сторінки: ⟦g0⟧12 березня⟦g1⟧.",
+      "b": "Він написав дату вгорі сторінки: ⟦g0⟧12 березня⟦g0⟧.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p12",
+      "kind": "pair",
+      "split": "dev",
+      "pair": "ru-uk",
+      "source": "Утро выдалось холодным, и над рекой стоял туман.",
+      "a": "Ранок видався холодним, і над річкою стояв туман.",
+      "b": "Ранок був холодний, і над річкою висів туман.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p13",
+      "kind": "pair",
+      "split": "dev",
+      "pair": "en-uk",
+      "source": "I’ll take care of the garden while you’re away.",
+      "a": "Я візьму турботу про сад, поки тебе не буде.",
+      "b": "Я доглядатиму сад, поки тебе не буде.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p14",
+      "kind": "pair",
+      "split": "dev",
+      "pair": "ru-uk",
+      "source": "Хозяйка гостиницы оказалась женщиной строгой, но справедливой. Она не терпела шума после десяти вечера, зато каждое утро ставила на стол свежий хлеб и никогда не брала денег с тех, кто застрял в городе из-за метели.",
+      "a": "Господиня готелю виявилася жінкою суворою, але справедливою. Вона не терпіла галасу після десятої вечора, зате щоранку ставила на стіл свіжий хліб і ніколи не брала грошей із тих, хто застряг у місті через хуртовину.",
+      "b": "Господиня готелю виявилася жінкою суворою, але справедливою. Вона не терпіла галасу після десятої вечора, зате щоранку ставила на стіл свіжий хліб і брала гроші лише з тих, хто застряг у місті через хуртовину.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p15",
+      "kind": "pair",
+      "split": "dev",
+      "pair": "en-uk",
+      "source": "The letter was signed only with an initial: R.",
+      "a": "Лист було підписано тремтячою рукою, лише ініціалом: Р.",
+      "b": "Лист було підписано лише ініціалом: Р.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p16",
+      "kind": "pair",
+      "split": "dev",
+      "pair": "ru-uk",
+      "source": "Мальчик спрятал котёнка под куртку и побежал домой.",
+      "a": "Хлопчик сховав кошеня під куртку й побіг додому.",
+      "b": "Хлопчик сховав кошеня під куртку й пішов додому.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p17",
+      "kind": "pair",
+      "split": "dev",
+      "pair": "en-uk",
+      "source": "There was a time when the whole street gathered in our kitchen on Sunday evenings. My aunt played the accordion badly and loudly, the neighbours argued about football, and the children were sent to bed and crept back down the stairs to listen.",
+      "a": "Колись уся вулиця збиралася в нас на кухні щонеділі ввечері. Тітка грала на акордеоні погано й голосно, сусіди сперечалися про футбол, а дітей відправляли спати, і вони навшпиньки спускалися сходами назад, щоб послухати.",
+      "b": "Був час, коли вся вулиця недільними вечорами збиралася на нашій кухні. Тітка грала на акордеоні кепсько й гучно, сусіди сперечалися про футбол, а дітей виряджали спати — і вони крадькома поверталися сходами вниз, щоб послухати.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p18",
+      "kind": "pair",
+      "split": "dev",
+      "pair": "en-uk",
+      "source": "Keep the receipt; you’ll need it to return the coat.",
+      "a": "Збережи чек; він знадобиться тобі, щоб повернути пальто до кінця тижня.",
+      "b": "Збережи чек: він знадобиться, щоб повернути пальто.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p19",
+      "kind": "pair",
+      "split": "test",
+      "pair": "ru-uk",
+      "source": "Я так и не смогла дозвониться до сестры.",
+      "a": "Я так і не змогла додзвонитися до сестри.",
+      "b": "Я так і не зміг додзвонитися до сестри.",
+      "neighbours": [
+        "Телефон молчал до самого утра."
+      ],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p20",
+      "kind": "pair",
+      "split": "test",
+      "pair": "en-uk",
+      "source": "Twenty-two years later, he returned to the town where he was born.",
+      "a": "Через дванадцять років він повернувся до міста, де народився.",
+      "b": "Через двадцять два роки він повернувся до міста, у якому народився.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p21",
+      "kind": "pair",
+      "split": "test",
+      "pair": "en-uk",
+      "source": "She folded the map and put it back in her pocket.",
+      "a": "Вона склала мапу й поклала її назад до кишені.",
+      "b": "Вона згорнула карту і поклала її назад у кишеню.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p22",
+      "kind": "pair",
+      "split": "test",
+      "pair": "ru-uk",
+      "source": "Зимой в деревне становилось так тихо, что было слышно, как трещит лёд на пруду. Мы с братом катались на санках до темноты, а потом сушили варежки на печке и спорили, кто из нас первым увидел лису у старого колодца.",
+      "a": "Узимку в селі ставало так тихо, що було чути, як тріщить лід на ставку. Ми з братом каталися на санках до темряви, а потім сушили рукавиці на печі й сперечалися, хто з нас першим побачив вовка біля старої криниці.",
+      "b": "Узимку в селі ставало так тихо, що було чути, як тріщить лід на ставку. Ми з братом каталися на санчатах до темряви, а потім сушили рукавиці на печі й сперечалися, хто з нас першим побачив лисицю біля старої криниці.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p23",
+      "kind": "pair",
+      "split": "test",
+      "pair": "en-uk",
+      "source": "“Are you coming?” she asked. “Not tonight,” I said.",
+      "a": "«Ти йдеш?» — спитала вона. «Не сьогодні», — сказав я.",
+      "b": "Ти йдеш?» спитала вона. «Не сьогодні» сказав я.",
+      "neighbours": [
+        "The bus stop was empty."
+      ],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p24",
+      "kind": "pair",
+      "split": "test",
+      "pair": "ru-uk",
+      "source": "Он всегда приходил вовремя, кроме того вторника.",
+      "a": "Він завжди приходив вчасно, окрім того вівторка, коли пішов дощ.",
+      "b": "Він завжди приходив вчасно, крім того вівторка.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p25",
+      "kind": "pair",
+      "split": "test",
+      "pair": "en-uk",
+      "source": "The Brennick sisters ran the bakery on Quill Street.",
+      "a": "Сестри Бреннік тримали пекарню на вулиці Квілл.",
+      "b": "Сестри Бреннік тримали пекарню на Пір’яній вулиці.",
+      "neighbours": [],
+      "goldTerms": [
+        {
+          "source": "Brennick",
+          "target": "Бреннік"
+        },
+        {
+          "source": "Quill Street",
+          "target": "вулиця Квілл"
+        }
+      ]
+    },
+    {
+      "id": "cal-p26",
+      "kind": "pair",
+      "split": "test",
+      "pair": "ru-uk",
+      "source": "Дорога шла через лес, и мы шли молча.",
+      "a": "Дорога вела через ліс, і ми йшли мовчки.",
+      "b": "Шлях пролягав крізь ліс, і ми йшли мовчки.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p27",
+      "kind": "pair",
+      "split": "test",
+      "pair": "en-uk",
+      "source": "My grandmother kept every letter she had ever received in a biscuit tin under her bed. After she died, we found more than three hundred of them, tied in bundles by year, and not one from my grandfather, who had written to her every week of the war.",
+      "a": "Бабуся зберігала кожен отриманий лист у бляшанці з-під печива під ліжком. Після її смерті ми знайшли понад триста листів і жодного від дідуся, який писав їй щотижня всю війну.",
+      "b": "Бабуся зберігала всі листи, які будь-коли отримувала, у бляшанці з-під печива під ліжком. Коли вона померла, ми знайшли їх понад триста, перев’язаних пачками за роками, — і жодного від дідуся, який усю війну писав їй щотижня.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p28",
+      "kind": "pair",
+      "split": "test",
+      "pair": "ru-uk",
+      "source": "Она попросила меня не открывать окно.",
+      "a": "Вона попросила мене не відчиняти вікна.",
+      "b": "Вона попросила мене відчинити вікно.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p29",
+      "kind": "pair",
+      "split": "test",
+      "pair": "en-uk",
+      "source": "The market opened at dawn. By the time we arrived the best fish had gone, but the old woman at the last stall still had a basket of mussels and a smile for anyone who stopped to talk to her about the weather.",
+      "a": "Ринок відкривався на світанку. Коли ми прийшли, найкращу рибу вже розібрали, але стара жінка за останнім прилавком іще мала кошик мідій і усмішку для кожного, хто зупинявся поговорити з нею про погоду.",
+      "b": "Базар відкрився на світанку. Коли ми дісталися туди, найкращої риби вже не було, та в старенької за останнім прилавком ще лишався кошик мідій — і усмішка для всякого, хто спинявся погомоніти з нею про погоду.",
+      "neighbours": [],
+      "goldTerms": []
+    },
+    {
+      "id": "cal-p30",
+      "kind": "pair",
+      "split": "test",
+      "pair": "en-uk",
+      "source": "He had promised to be back by Friday.",
+      "a": "Він обіцяв повернутися до п’ятниці.",
+      "b": "Він обіцяв повернутися в п’ятницю ввечері.",
+      "neighbours": [],
+      "goldTerms": []
+    }
+  ]
+}

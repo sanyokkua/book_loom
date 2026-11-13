@@ -19,6 +19,7 @@ import ua.bookloom.ui.dialog.ProviderTestDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
+import ua.bookloom.ui.state.BlockedWords;
 import ua.bookloom.ui.state.CheckSentences;
 import ua.bookloom.ui.state.ProviderForm;
 import ua.bookloom.ui.state.ProviderTest;
@@ -99,7 +100,7 @@ final class ProviderSummaryCard {
                                     viewModel.tests().blockedBy().get();
                             return blocker == null
                                     ? ""
-                                    : messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(blocker.label()));
+                                    : BlockedWords.in(messages, blocker, ActivityKind.PROVIDER_INFERENCE_TEST);
                         },
                         viewModel.tests().blockedBy()));
         Visibility.bind(reason, reason.textProperty().isNotEmpty());

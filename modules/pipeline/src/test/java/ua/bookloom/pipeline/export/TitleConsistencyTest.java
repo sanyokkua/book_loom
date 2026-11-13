@@ -110,8 +110,12 @@ class TitleConsistencyTest {
                 "“Amber Tide”, Mara Voss|«Бурштиновий Приплив», Мара Восс",
                 "Mara Voss|Мара Восс",
                 "Mara Voss Amber Tide|Мара Восс Бурштиновий Приплив",
+                // A quote mark anywhere in a separator must not quote the title: the author's own quotes stay off it.
+                "“Mara Voss” Amber Tide|Мара Восс Бурштиновий Приплив",
+                "Amber Tide, ‘Mara Voss’|Бурштиновий Приплив, Мара Восс",
             })
-    void apply_headingOfOnlyTitleAndAuthor_isComposedWithTargetQuotes(final String source, final String expected) {
+    void apply_headingOfOnlyTitleAndAuthor_isComposedWithTargetQuotesOnlyAroundTheTitle(
+            final String source, final String expected) {
         decided(aux("aux:title", SegmentKind.METADATA_TITLE, TITLE), BRIEF_TITLE);
         decided(aux("aux:author", SegmentKind.METADATA_AUTHOR, "Mara Voss"), "Мара Восс");
         decided(body("c1:1", SegmentKind.HEADING, source), "інше");
@@ -151,22 +155,6 @@ class TitleConsistencyTest {
 
     private void decided(final Segment segment, final String target) {
         records.add(record(segment, SegmentStatus.ACCEPTED, target));
-    }
-
-    // IF a quote mark anywhere in a separator quoted the title, THEN the author's own quotes would wrap the title.
-    @ParameterizedTest
-    @CsvSource(
-            delimiter = '|',
-            value = {
-                "“Mara Voss” Amber Tide|Мара Восс Бурштиновий Приплив",
-                "Amber Tide, ‘Mara Voss’|Бурштиновий Приплив, Мара Восс",
-            })
-    void apply_quoteThatDoesNotTouchTheTitle_leavesTheTitleUnquoted(final String source, final String expected) {
-        decided(aux("aux:title", SegmentKind.METADATA_TITLE, TITLE), BRIEF_TITLE);
-        decided(aux("aux:author", SegmentKind.METADATA_AUTHOR, "Mara Voss"), "Мара Восс");
-        decided(body("c1:1", SegmentKind.HEADING, source), "інше");
-
-        assertThat(written(Set.of())).containsEntry("c1:1", expected);
     }
 
     // IF the composed heading were logged at DEBUG, THEN the book's title would reach an ordinary log file.
@@ -253,7 +241,6 @@ class TitleConsistencyTest {
                 null,
                 List.of(),
                 SegmentPath.DRAFT,
-                0,
                 false,
                 null);
     }

@@ -11,7 +11,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -84,34 +83,19 @@ class BookSamplesTest {
     // The window is the dial's own size, held to what the model's window leaves after the call's system message
     // (here 700 tokens), its reply cap (here 500) and the 500-token safety margin every window keeps.
     @ParameterizedTest
-    @CsvSource(
-            nullValues = "none",
-            value = {
-                "FAST,none,1500",
-                "BALANCED,none,2500",
-                "MAX,none,4000",
-                "MAX,16384,4000",
-                "MAX,131072,4000",
-                "MAX,8192,4000",
-                "MAX,4096,2396",
-                "BALANCED,4096,2396",
-                "FAST,4096,1500"
-            })
-    void windowTokens_dialAndDetectedContext_isTheDialsSizeLimitedToTheRoomLeft(
-            final QualityDial dial, final Integer detectedContext, final int expected) {
-        assertThat(BookSamples.windowTokens(dial, detectedContext, 1200)).isEqualTo(expected);
-    }
-
-    // IF the person widened the model's window, THEN the brief's windows grow to the dial's size; a narrower one
-    // shrinks them.
-    @ParameterizedTest
-    @CsvSource(
-            nullValues = "none",
-            value = {"MAX,4096,32768,4000", "MAX,131072,4096,2396", "MAX,none,4096,2396"})
-    void windowTokens_override_wins(
-            final QualityDial dial, @Nullable final Integer detectedContext, final int override, final int expected) {
-        assertThat(BookSamples.windowTokens(dial, detectedContext, override, 1200))
-                .isEqualTo(expected);
+    @CsvSource({
+        "FAST,16384,1500",
+        "BALANCED,16384,2500",
+        "MAX,16384,4000",
+        "MAX,32768,4000",
+        "MAX,8192,4000",
+        "MAX,4096,2396",
+        "BALANCED,4096,2396",
+        "FAST,4096,1500"
+    })
+    void windowTokens_dialAndWindow_isTheDialsSizeLimitedToTheRoomLeft(
+            final QualityDial dial, final int window, final int expected) {
+        assertThat(BookSamples.windowTokens(dial, window, 1200)).isEqualTo(expected);
     }
 
     // IF the brief read one passage at the start, THEN 590 words would decide the register of a whole book.
@@ -263,7 +247,7 @@ class BookSamplesTest {
     void of_storyReadInSeveralWindows_noWindowIsTheWholeStory() {
         final List<BookSample> samples = BookSamples.of(book(chapters(3)), "en", 4, 800);
 
-        assertThat(samples.size()).isGreaterThan(1);
+        assertThat(samples).hasSizeGreaterThan(1);
         assertThat(samples).noneMatch(BookSample::wholeStory);
     }
 

@@ -11,12 +11,12 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
-import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.checks.CharacterName;
 import ua.bookloom.pipeline.checks.CharacterNames;
 import ua.bookloom.pipeline.checks.CheckFinding;
 import ua.bookloom.pipeline.checks.GenderCheck;
 import ua.bookloom.pipeline.checks.GenderChecks;
+import ua.bookloom.pipeline.checks.TextCheckInput;
 import ua.bookloom.pipeline.checks.TextChecks;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.glossary.IdentityRule;
@@ -24,7 +24,8 @@ import ua.bookloom.pipeline.prompt.LanguageRules;
 
 /**
  * Turns the deterministic text findings into gate results: a blocking finding fails like a hard gate, so the
- * segment is repaired or flagged before any reviewer reads it, and a soft finding passes with a low note for review.
+ * segment is repaired or flagged before it is accepted; a finding that does not block passes, at medium
+ * severity (repair level, it earns a fix) or, for a note-level check, at low severity (an audit note for review).
  * Skipped for a kept foreign passage, whose letters are meant to differ from the target's.
  */
 @Slf4j
@@ -40,23 +41,35 @@ final class TextCheckGates {
             return List.of();
         }
         final String target = NameRemoval.targetWithoutNames(input);
-        final List<CheckResult> results = new ArrayList<>(TextChecks.run(
+        final List<CheckResult> results = new ArrayList<>(TextChecks.run(new TextCheckInput(
                         NameRemoval.sourceWithoutNames(input),
                         target,
                         input.sourceLanguage(),
                         input.targetLanguage(),
                         input.glossaryPairs(),
-                        keptAsWritten(input))
+                        keptAsWritten(input),
+                        input.unitRole(),
+                        input.pinnedTargets()))
                 .stream()
                 .map(TextCheckGates::resultOf)
                 .toList());
-        AlphabetCheck.find(input.sourceDisplayText(), target, input.targetLanguage(), input.glossaryPairs()).stream()
-                .map(TextCheckGates::resultOf)
-                .forEach(results::add);
+        results.addAll(alphabetResults(input, target));
         genderResult(input, target).ifPresent(results::add);
         characterResult(input, target).ifPresent(results::add);
         wordResult(input, target, words).ifPresent(results::add);
         return List.copyOf(results);
+    }
+
+    private static List<CheckResult> alphabetResults(final SoftCheckInput input, final String target) {
+        return AlphabetCheck.find(
+                        input.sourceDisplayText(),
+                        target,
+                        input.sourceLanguage(),
+                        input.targetLanguage(),
+                        input.glossaryPairs())
+                .stream()
+                .map(TextCheckGates::resultOf)
+                .toList();
     }
 
     // An identifier stays as written whatever the policy. Under Keep original a term whose rendering is its own
@@ -96,9 +109,7 @@ final class TextCheckGates {
         }
         log.debug("Word validator doubts {} word(s)", found.size());
         final String note = found.stream().map(CheckFinding::note).collect(Collectors.joining(" "));
-        final CheckName name = CheckName.UNKNOWN_WORD;
-        return Optional.of(CheckResult.passWithNotice(
-                name, new QaFinding(name.findingKind(), Severity.LOW, note, name.raisedBy())));
+        return Optional.of(notice(CheckName.UNKNOWN_WORD, note));
     }
 
     // One notice per segment that names every wrong word, so the repair prompt gets them all in a single finding.
@@ -116,9 +127,7 @@ final class TextCheckGates {
                 found.size(),
                 input.narrator().gender());
         final String note = found.stream().map(CheckFinding::note).collect(Collectors.joining(" "));
-        final CheckName name = CheckName.GENDER;
-        return Optional.of(CheckResult.passWithNotice(
-                name, new QaFinding(name.findingKind(), Severity.LOW, note, name.raisedBy())));
+        return Optional.of(notice(CheckName.GENDER, note));
     }
 
     // One notice per segment that names every word that disagrees with a woman's name, like the narrator's notice.
@@ -134,17 +143,34 @@ final class TextCheckGates {
         }
         log.debug("Character agreement found {} word(s) for {} character(s)", found.size(), names.size());
         final String note = found.stream().map(CheckFinding::note).collect(Collectors.joining(" "));
-        final CheckName name = CheckName.NAME_GENDER;
-        return Optional.of(CheckResult.passWithNotice(
-                name, new QaFinding(name.findingKind(), Severity.LOW, note, name.raisedBy())));
+        return Optional.of(notice(CheckName.NAME_GENDER, note));
     }
 
     private static CheckResult resultOf(final CheckFinding finding) {
         final CheckName check = checkOf(finding);
-        return finding.blocking()
-                ? CheckResult.hardGateFailed(check, finding.note())
-                : CheckResult.passWithNotice(
-                        check, new QaFinding(check.findingKind(), Severity.LOW, finding.note(), check.raisedBy()));
+        if (finding.blocking()) {
+            return CheckResult.hardGateFailed(check, finding.note());
+        }
+        final CheckLevel level = finding.level() == null ? softLevel(check) : finding.level();
+        return notice(check, level, finding.note());
+    }
+
+    // A finding that does not block passes the gate at the severity CheckLevels reads its level back from. A finding
+    // names its own level when the check's findings differ (a lost number repairs, an extra one is a note); otherwise a
+    // repair- or note-level check raises at its own level and a block-level check's finding that does not block is a
+    // style note (the quote check's balanced English marks).
+    private static CheckResult notice(final CheckName check, final String note) {
+        return notice(check, softLevel(check), note);
+    }
+
+    private static CheckResult notice(final CheckName check, final CheckLevel level, final String note) {
+        log.debug("Text check {} raised a {} notice", check.raisedBy(), level);
+        return CheckResult.passWithNotice(
+                check, new QaFinding(check.findingKind(), CheckLevels.severityFor(level), note, check.raisedBy()));
+    }
+
+    private static CheckLevel softLevel(final CheckName check) {
+        return check.level() == CheckLevel.BLOCK ? CheckLevel.NOTE : check.level();
     }
 
     private static CheckName checkOf(final CheckFinding finding) {
@@ -166,9 +192,11 @@ final class TextCheckGates {
             case LATIN_RUN -> CheckName.LATIN_RUN;
             case NAME_MISSING -> CheckName.NAME_MISSING;
             case NAME_SPELLING -> CheckName.NAME_SPELLING;
-            case FOREIGN_WORD -> CheckName.FOREIGN_WORD;
+            case FUNCTION_WORD_RESIDUE -> CheckName.FUNCTION_WORD_RESIDUE;
             case IDENTIFIER_CHANGED -> CheckName.IDENTIFIER;
             case ADDRESS_MIX -> CheckName.ADDRESS_MIX;
+            case TERMINAL_MARK -> CheckName.TERMINAL_MARK;
+            case ADDRESS_PARITY -> CheckName.ADDRESS_PARITY;
         };
     }
 }

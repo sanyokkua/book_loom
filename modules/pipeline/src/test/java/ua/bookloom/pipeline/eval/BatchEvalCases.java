@@ -19,8 +19,8 @@ import ua.bookloom.pipeline.eval.EvalContext.Pair;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class BatchEvalCases {
 
-    /** The batch sizes of the sweep; the same four the controller's bounds are chosen from. */
-    static final List<Integer> SIZES = List.of(4, 8, 12, 16);
+    /** The batch sizes of the sweep: the two sizes a run can start at, which are also the most it ever sends. */
+    static final List<Integer> SIZES = List.of(4, 8);
 
     private static final List<Pair> EARLIER_PAIRS =
             List.of(new Pair("It was late.", "Було пізно."), new Pair("He left.", "Він пішов."));

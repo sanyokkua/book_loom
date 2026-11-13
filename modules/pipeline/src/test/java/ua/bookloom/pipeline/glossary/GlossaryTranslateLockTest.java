@@ -112,7 +112,7 @@ class GlossaryTranslateLockTest {
     }
 
     private static GlossaryEntry open(final String term, final TermType type) {
-        return new GlossaryEntry(PROJECT + ":" + term, PROJECT, term, null, type, Gender.UNKNOWN, false);
+        return GlossaryEntry.of(PROJECT + ":" + term, PROJECT, term, null, type, Gender.UNKNOWN, false);
     }
 
     private static Result<ChatResponse> suggestions() {

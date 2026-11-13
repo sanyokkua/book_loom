@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.util.text.Edges;
 
 /**
  * Whether a quote is the narrator's own speech (15i.B4). A name or a word of address the narrator says ("Mind the
@@ -26,6 +27,8 @@ import lombok.extern.slf4j.Slf4j;
 final class NarratorSpeech {
 
     private static final char MARK = '"';
+    // The regular expression whitespace class plus the punctuation a quote is trimmed of.
+    private static final String QUOTE_EDGE = " \t\n\u000B\f\r\".,;:!?-";
     private static final Pattern SPACES = Pattern.compile("\\s+");
     private static final Pattern NOT_A_WORD = Pattern.compile("[^\\p{L}\\p{M}']+");
     private static final Pattern LEAD = Pattern.compile("^[\\s,.;:!?-]+");
@@ -53,7 +56,7 @@ final class NarratorSpeech {
         if (lower.isEmpty() || quote.isBlank()) {
             return false;
         }
-        final String part = normalized(quote).replaceAll("^[\\s\".,;:!?-]+|[\\s\".,;:!?-]+$", "");
+        final String part = Edges.strip(normalized(quote), QUOTE_EDGE);
         final boolean saidByNarrator = passages.stream()
                 .flatMap(passage -> Arrays.stream(passage.split("\\R")))
                 .map(NarratorSpeech::normalized)
@@ -124,7 +127,7 @@ final class NarratorSpeech {
 
     private static List<String> words(final String text) {
         return Arrays.stream(NOT_A_WORD.split(normalized(text)))
-                .map(word -> word.replaceAll("^'+|'+$", ""))
+                .map(word -> Edges.strip(word, "'"))
                 .filter(word -> !word.isEmpty())
                 .toList();
     }

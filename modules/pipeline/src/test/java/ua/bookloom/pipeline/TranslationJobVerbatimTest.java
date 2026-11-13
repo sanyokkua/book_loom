@@ -20,6 +20,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobProgress;
@@ -68,9 +69,8 @@ class TranslationJobVerbatimTest {
                         SegmentRecord::status,
                         SegmentRecord::path,
                         SegmentRecord::machineTarget,
-                        SegmentRecord::findings,
-                        SegmentRecord::repairRounds)
-                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.VERBATIM, untranslatable, List.of(), 0);
+                        SegmentRecord::findings)
+                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.VERBATIM, untranslatable, List.of());
     }
 
     // A word is text: it still reaches the model, so the rule never keeps a real word untranslated.
@@ -142,7 +142,7 @@ class TranslationJobVerbatimTest {
         final TestProject project = project(source, brief("en", "uk"));
         project.stores()
                 .glossary()
-                .add(new GlossaryEntry(
+                .add(GlossaryEntry.of(
                         GlossaryIds.of(project.id(), "Zerubin"),
                         project.id(),
                         "Zerubin",
@@ -194,6 +194,6 @@ class TranslationJobVerbatimTest {
     }
 
     private static String textOf(final ChatRequest request) {
-        return request.messages().stream().map(message -> message.content()).reduce("", String::concat);
+        return request.messages().stream().map(ChatMessage::content).reduce("", String::concat);
     }
 }

@@ -2,7 +2,7 @@ package ua.bookloom.api.pipeline;
 
 /**
  * What the pipeline knows about the languages it has translation rules for, so the Book Brief can say when a target
- * language is translated with the general rules only.
+ * language is translated with the general rules only, and offer the choices the target language sets.
  */
 @FunctionalInterface
 public interface LanguageSupport {
@@ -15,4 +15,15 @@ public interface LanguageSupport {
      *     in which case a prompt carries the general rules and translation still works
      */
     boolean hasTestedRules(String languageTag);
+
+    /**
+     * The apostrophe, quotation-mark, address and convention choices a target language's file sets.
+     *
+     * @param targetTag the non-null BCP-47 tag of the target language
+     * @return never null; {@link BriefChoices#NONE} when the language sets none, which is also the answer of a support
+     *     that reads no language file
+     */
+    default BriefChoices briefChoices(final String targetTag) {
+        return BriefChoices.NONE;
+    }
 }

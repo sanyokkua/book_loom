@@ -1,5 +1,7 @@
 package ua.bookloom.document.epub;
 
+import static ua.bookloom.util.contract.ArgNames.DOCUMENT;
+
 import com.google.inject.Inject;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -173,7 +175,7 @@ public final class EpubInspection implements FormatInspection {
      */
     @Override
     public Optional<CoverImage> cover(Document document) {
-        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(document, DOCUMENT);
         final Optional<ParsedEpub> parsed = registry.find(document.id());
         if (parsed.isEmpty()) {
             log.debug("No open EPUB state for cover lookup documentId={}", document.id());
@@ -306,7 +308,7 @@ public final class EpubInspection implements FormatInspection {
      */
     @Override
     public List<StructureNode> structure(Document document) {
-        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(document, DOCUMENT);
         final Optional<ParsedEpub> parsed = registry.find(document.id());
         if (parsed.isEmpty()) {
             log.debug("No open EPUB state for structure lookup documentId={}", document.id());
@@ -339,7 +341,7 @@ public final class EpubInspection implements FormatInspection {
      */
     @Override
     public BookStats stats(Document document) {
-        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(document, DOCUMENT);
         final ParsedEpub parsed = requireOpen(document);
         final BookStats stats = EpubStats.compute(document, parsed, opfOf(parsed));
         log.debug(
@@ -363,7 +365,7 @@ public final class EpubInspection implements FormatInspection {
      */
     @Override
     public Set<String> resourceIds(Document document) {
-        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(document, DOCUMENT);
         final ParsedEpub parsed = requireOpen(document);
         final Set<String> ids = EpubStats.resourceIds(document, parsed, opfOf(parsed));
         log.debug("EPUB resource ids documentId={} count={}", document.id(), ids.size());

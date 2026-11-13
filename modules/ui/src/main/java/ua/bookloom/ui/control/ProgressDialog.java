@@ -1,5 +1,9 @@
 package ua.bookloom.ui.control;
 
+import static ua.bookloom.ui.theme.StyleClasses.BTN_PRIMARY;
+import static ua.bookloom.ui.theme.StyleClasses.BTN_SECONDARY;
+import static ua.bookloom.ui.theme.StyleClasses.DIALOG_SUB;
+
 import java.time.Instant;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -10,6 +14,7 @@ import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.layout.Priority;
@@ -38,6 +43,8 @@ import ua.bookloom.ui.state.ResultsView;
  */
 @Slf4j
 public final class ProgressDialog extends ModalCard {
+
+    private static final String PROGRESS_DETAIL_SCROLL = "progress-detail-scroll";
 
     private static final double DIVIDER = 0.36;
     private static final String DETAIL_JOIN = " · ";
@@ -74,28 +81,10 @@ public final class ProgressDialog extends ModalCard {
             final Messages messages,
             final Runnable onCancel,
             final @Nullable Runnable onHide) {
-        this(model, messages, onCancel, onHide, null);
-    }
-
-    /**
-     * Builds the dialog over its model, with the export's "Write the file now".
-     *
-     * @param model what the dialog shows, kept while the work runs
-     * @param messages the catalogue every word comes from
-     * @param onCancel what Cancel does: stop the work, or ask first
-     * @param onHide what puts the work in the background, or {@code null} for short work, which cannot be hidden
-     * @param onWriteNow what "Write the file now" does, or {@code null} for work that writes no file
-     */
-    public ProgressDialog(
-            final ProgressDialogModel model,
-            final Messages messages,
-            final Runnable onCancel,
-            final @Nullable Runnable onHide,
-            final @Nullable Runnable onWriteNow) {
+        Objects.requireNonNull(onCancel, "onCancel");
         super(Size.XL);
         this.model = Objects.requireNonNull(model, "model");
         this.messages = Objects.requireNonNull(messages, "messages");
-        Objects.requireNonNull(onCancel, "onCancel");
         setId("busy-card");
         detail = new ProgressStepDetail(model, messages);
         howCounted = new HowCountedPane("progress-how", messages);
@@ -107,7 +96,7 @@ public final class ProgressDialog extends ModalCard {
         if (getContent() instanceof ScrollPane scroll) {
             scroll.setFitToHeight(true);
         }
-        cancel = footer(onCancel, onHide, onWriteNow);
+        cancel = footer(onCancel, onHide);
         setOnEscape(onHide != null ? onHide : onCancel);
         model.activity().addListener((observed, was, now) -> showActivity(now));
         model.figures().addListener((observed, was, now) -> showFigures());
@@ -146,7 +135,7 @@ public final class ProgressDialog extends ModalCard {
     private void buildHeader() {
         title.setId("progress-title");
         purpose.setId("progress-purpose");
-        purpose.getStyleClass().add("dialog-sub");
+        purpose.getStyleClass().add(DIALOG_SUB);
         purpose.setWrapText(true);
         bar.setId("progress-bar");
         bar.setMaxWidth(Double.MAX_VALUE);
@@ -159,20 +148,20 @@ public final class ProgressDialog extends ModalCard {
                                 model.figures().get().total()),
                         model.figures()));
         figures.setId("progress-figures");
-        figures.getStyleClass().add("dialog-sub");
+        figures.getStyleClass().add(DIALOG_SUB);
         details.setId("progress-details");
-        details.getStyleClass().add("dialog-sub");
+        details.getStyleClass().add(DIALOG_SUB);
         header(title, purpose, bar, figures, details).getStyleClass().add("progress-header");
     }
 
     private Node body() {
-        detailScroll.getStyleClass().add("progress-detail-scroll");
+        detailScroll.getStyleClass().add(PROGRESS_DETAIL_SCROLL);
         final ScrollPane answersScroll = new ScrollHost(answers);
-        answersScroll.getStyleClass().add("progress-detail-scroll");
+        answersScroll.getStyleClass().add(PROGRESS_DETAIL_SCROLL);
         showAnswers(answersScroll);
         final ScrollPane left = new ScrollHost(stepsColumn());
         left.setFitToHeight(true);
-        left.getStyleClass().add("progress-detail-scroll");
+        left.getStyleClass().add(PROGRESS_DETAIL_SCROLL);
         final SplitPane split = new SplitPane(left, new StackPane(detailScroll, answersScroll));
         split.setDividerPositions(DIVIDER);
         split.getStyleClass().add("progress-split");
@@ -206,8 +195,7 @@ public final class ProgressDialog extends ModalCard {
         });
     }
 
-    private Button footer(
-            final Runnable onCancel, final @Nullable Runnable onHide, final @Nullable Runnable onWriteNow) {
+    private Button footer(final Runnable onCancel, final @Nullable Runnable onHide) {
         final ButtonType cancelType =
                 new ButtonType(messages.get(MessageKey.BUSY_CANCEL), ButtonBar.ButtonData.CANCEL_CLOSE);
         final ButtonType hideType =
@@ -218,9 +206,6 @@ public final class ProgressDialog extends ModalCard {
         } else {
             getButtonTypes().setAll(hideType, cancelType);
             wireHide((Button) lookupButton(hideType), onHide);
-        }
-        if (onWriteNow != null) {
-            ProgressFooterActions.addWriteNow(this, messages, onWriteNow);
         }
         final Button stop = (Button) lookupButton(cancelType);
         stop.setId("progress-cancel");
@@ -235,7 +220,7 @@ public final class ProgressDialog extends ModalCard {
 
     private void wireHide(final Button hide, final Runnable onHide) {
         hide.setId("progress-background");
-        hide.getStyleClass().add("btn-secondary");
+        hide.getStyleClass().add(BTN_SECONDARY);
         Tips.install(messages, hide, MessageKey.PROGRESS_BACKGROUND_TIP);
         hide.setOnAction(event -> {
             log.info("progress dialog: continue in background pressed");
@@ -256,7 +241,7 @@ public final class ProgressDialog extends ModalCard {
         getButtonTypes().add(applyType);
         final Button button = (Button) lookupButton(applyType);
         button.setId("progress-apply");
-        button.getStyleClass().add("btn-primary");
+        button.getStyleClass().add(BTN_PRIMARY);
         button.setOnAction(event -> {
             final ResultOffer offer = model.activity().get().outcome().offer();
             log.info("progress dialog: apply pressed, an answer is held: {}", offer != null);
@@ -297,7 +282,9 @@ public final class ProgressDialog extends ModalCard {
         footnote.setId("progress-footnote");
         footnote.getStyleClass().add("progress-footnote");
         if (kind == ActivityKind.SUGGEST_STYLE) {
-            // Its Ukrainian sentence is long: held to a width the buttons beside it leave, at the smallest window.
+            // Its Ukrainian sentence is long: held to a width the buttons beside it leave, at the smallest window, and
+            // wrapped onto a second line where the platform's font draws it wider than that.
+            Wrapped.wholeLines(footnote);
             footnote.setMinWidth(FOOTNOTE_WIDTH);
             footnote.setPrefWidth(FOOTNOTE_WIDTH);
             footnote.setMaxWidth(FOOTNOTE_WIDTH);
@@ -314,7 +301,7 @@ public final class ProgressDialog extends ModalCard {
         showOffer(now);
         purpose.setText(purposeOf(now));
         final Double fraction = now.fraction();
-        bar.setProgress(fraction == null ? ProgressBar.INDETERMINATE_PROGRESS : fraction);
+        bar.setProgress(fraction == null ? ProgressIndicator.INDETERMINATE_PROGRESS : fraction);
         details.setText(now.details().stream()
                 .map(line -> line.label() + " " + line.value())
                 .collect(Collectors.joining(DETAIL_JOIN)));
@@ -354,9 +341,6 @@ public final class ProgressDialog extends ModalCard {
         if (now.kind() == ActivityKind.SUGGEST_NAME) {
             return messages.get(MessageKey.PROGRESS_SUGGEST_NAME_PURPOSE);
         }
-        if (now.title() == MessageKey.PROGRESS_EXPORT_TITLE) {
-            return messages.get(MessageKey.PROGRESS_EXPORT_PURPOSE);
-        }
         if (!now.cancellable()) {
             return messages.get(MessageKey.BUSY_NOT_CANCELLABLE);
         }
@@ -378,6 +362,7 @@ public final class ProgressDialog extends ModalCard {
      * @param now the moment the clocks read
      */
     public void tick(final Instant now) {
+        model.advance();
         detail.tick(now);
     }
 }

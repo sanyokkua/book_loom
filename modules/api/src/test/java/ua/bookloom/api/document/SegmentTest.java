@@ -89,8 +89,8 @@ class SegmentTest {
     void placeholders_returned_isUnmodifiable() {
         final Segment segment = segment("unit:0", "unit", 0, null, null);
 
-        assertThatThrownBy(() -> segment.placeholders().put("k", "v"))
-                .isInstanceOf(UnsupportedOperationException.class);
+        final var target = segment.placeholders();
+        assertThatThrownBy(() -> target.put("k", "v")).isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test

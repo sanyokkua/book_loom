@@ -155,7 +155,7 @@ class TranslationJobStallWatchdogTest {
             try {
                 new CountDownLatch(1).await(5, TimeUnit.SECONDS);
                 throw new AssertionError("the watchdog never ended the call");
-            } catch (InterruptedException cause) {
+            } catch (InterruptedException _) {
                 attempts.failed(attempt, ErrorCode.cancelled);
                 return Result.err(AppError.of(ErrorCode.cancelled, "Cancelled", "The call was interrupted."));
             }

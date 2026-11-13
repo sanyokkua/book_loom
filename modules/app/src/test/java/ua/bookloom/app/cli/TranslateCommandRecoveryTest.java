@@ -21,6 +21,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.app.CoreModules;
 import ua.bookloom.app.StartupContext;
 import ua.bookloom.app.bootstrap.ReviewModeResolver;
@@ -54,7 +55,7 @@ class TranslateCommandRecoveryTest {
 
         final int exit = command(models, new ScriptedProbe(1)).run(arguments(), print(console));
 
-        assertThat(exit).isEqualTo(0);
+        assertThat(exit).isZero();
         assertThat(lines(console))
                 .anyMatch(line -> line.startsWith("Provider unreachable — waiting and retrying by itself"))
                 .anyMatch(line -> line.startsWith("Completed: "));
@@ -118,15 +119,28 @@ class TranslateCommandRecoveryTest {
         assertThat(json.path("recovery").path("outages").get(0).path("ended").asText())
                 .isEqualTo("RESUMED");
         assertThat(json.path("export").path("partial").asBoolean()).isFalse();
-        assertThat(json.path("exitCode").asInt()).isEqualTo(0);
-        // The scripted models report no usage, so the pipeline's estimate of the reply tokens is what is counted.
+        assertThat(json.path("exitCode").asInt()).isZero();
+        // The scripted models report no usage, so the calls are counted and no token figure is written, never a 0.
         assertThat(json.path("modelCallsByKind").path("DRAFT").path("attempts").asInt())
                 .isPositive();
-        assertThat(json.path("modelCallsByKind")
-                        .path("DRAFT")
-                        .path("completionTokens")
-                        .asInt())
-                .isPositive();
+        assertThat(json.path("modelCallsByKind").path("DRAFT").has("completionTokens"))
+                .isFalse();
+    }
+
+    // A Fast run's report gives the time of each of the three stages and counts no proofread call.
+    @Test
+    void run_fastReport_namesPrepareTranslateProofreadTimesAndNoProofreadCall() throws IOException {
+        final Path report = tempDir.resolve("reports/stages.json");
+
+        command(new ScriptedModels(Set.of(), ErrorCode.unreachable), new ScriptedProbe(0))
+                .run(arguments("--report", report.toString()), print(new ByteArrayOutputStream()));
+
+        final JsonNode json = new ObjectMapper().readTree(Files.readString(report));
+        assertThat(json.path("quality").asText()).isEqualTo("FAST");
+        assertThat(json.path("timings").path("stageSeconds").properties())
+                .extracting(java.util.Map.Entry::getKey)
+                .containsExactly("PREP", "TRANSLATE", "PROOFREAD");
+        assertThat(json.path("modelCallsByKind").has("PROOFREAD")).isFalse();
     }
 
     // A doubled word passes the run's gates as a note; the audit lists the segment, the console says so in one line
@@ -206,7 +220,10 @@ class TranslateCommandRecoveryTest {
                             binder.bind(RecoveryTimer.class).toInstance(clock::advanceBy);
                         }));
         return TranslateCommandTestFakes.commandOver(
-                core, models, new TranslateCommandTestFakes.RecordingProviderConfigs(), probe);
+                core,
+                models.recordingInto(core.getInstance(CallLedger.class)),
+                new TranslateCommandTestFakes.RecordingProviderConfigs(),
+                probe);
     }
 
     private static PrintStream print(ByteArrayOutputStream console) {

@@ -6,16 +6,20 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.project.Address;
+import ua.bookloom.api.project.AddressForm;
 import ua.bookloom.api.project.FootnotePolicy;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Narrator;
+import ua.bookloom.api.project.QuoteStyle;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.api.project.UnitPolicy;
 
@@ -28,6 +32,18 @@ final class StylePhrases {
     static final String FILE = "style-phrases.properties";
     static final int BANDS = 5;
     private static final int BAND_WIDTH = 20;
+    private static final List<String> FIXED_KEYS = List.of(
+            "default.line",
+            "apostrophe",
+            "quoteStyle",
+            "address",
+            "convention",
+            "narrator.third",
+            "narrator.first.MALE",
+            "narrator.first.FEMALE",
+            "narrator.first.LIKELY_MALE",
+            "narrator.first.LIKELY_FEMALE",
+            "narrator.first.UNKNOWN");
 
     private static final class Holder {
         static final StylePhrases INSTANCE = load(() -> StylePhrases.class.getResourceAsStream(FILE));
@@ -95,6 +111,34 @@ final class StylePhrases {
         return gender == Gender.MALE || gender == Gender.FEMALE;
     }
 
+    String apostrophe(final String mark) {
+        return properties.getProperty("apostrophe").replace("{mark}", mark);
+    }
+
+    String quoteStyle(final QuoteStyle style) {
+        return properties
+                .getProperty("quoteStyle")
+                .replace("{outerOpen}", style.outerOpen())
+                .replace("{outerClose}", style.outerClose())
+                .replace("{innerOpen}", style.innerOpen())
+                .replace("{innerClose}", style.innerClose());
+    }
+
+    String address(final Address address) {
+        return properties
+                .getProperty("address")
+                .replace("{strangers}", phrase(address.strangers()))
+                .replace("{family}", phrase(address.family()));
+    }
+
+    /** A declared convention's line: its own wording when the file has one, else the general line naming it. */
+    String convention(final String name, final String choice) {
+        final String own = properties.getProperty("convention." + name);
+        final String line =
+                own != null ? own : properties.getProperty("convention").replace("{name}", name);
+        return line.replace("{choice}", choice);
+    }
+
     String phrase(final Enum<?> choice) {
         return properties.getProperty(key(choice));
     }
@@ -109,25 +153,16 @@ final class StylePhrases {
                         NamePolicy.values(),
                         ForeignPassagePolicy.values(),
                         FootnotePolicy.values(),
-                        UnitPolicy.values())
+                        UnitPolicy.values(),
+                        AddressForm.values())
                 .flatMap(Arrays::stream)
-                .map(choice -> key((Enum<?>) choice));
+                .map(StylePhrases::key);
         final Stream<String> bands =
                 Stream.iterate(1, band -> band + 1).limit(BANDS).map(band -> "balance.band" + band);
-        Stream.concat(
-                        Stream.concat(keys, bands),
-                        Stream.of(
-                                "default.line",
-                                "narrator.third",
-                                "narrator.first.MALE",
-                                "narrator.first.FEMALE",
-                                "narrator.first.LIKELY_MALE",
-                                "narrator.first.LIKELY_FEMALE",
-                                "narrator.first.UNKNOWN"))
-                .forEach(key -> {
-                    if (properties.getProperty(Objects.requireNonNull(key)) == null) {
-                        throw new IllegalStateException(FILE + " lacks key '" + key + "'");
-                    }
-                });
+        Stream.concat(Stream.concat(keys, bands), FIXED_KEYS.stream()).forEach(key -> {
+            if (properties.getProperty(Objects.requireNonNull(key)) == null) {
+                throw new IllegalStateException(FILE + " lacks key '" + key + "'");
+            }
+        });
     }
 }

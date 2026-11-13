@@ -13,25 +13,20 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.heal.RepairReply;
-import ua.bookloom.pipeline.prompt.DraftContext;
-import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
 import ua.bookloom.pipeline.prompt.DraftStep;
-import ua.bookloom.pipeline.prompt.GateNotes;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.run.PauseDecider;
 
 /**
- * Drafts one piece of an oversized segment: one call, the draft step's one structural repair, and a check that the
- * reply holds exactly the piece's own tokens with one placeholder repair. Whole-segment unmasking and the decision
+ * Drafts one piece of an oversized segment: one call and the draft step's one structural re-ask; a piece whose
+ * tokens differ is left to the joined segment's code repairs. Whole-segment unmasking and the decision
  * stay with {@link SegmentTranslator}, because the pieces only make sense joined. One drafter drafts every piece
  * under the same extra instruction and temperature choice, through the same seam.
  */
 @Slf4j
 final class PieceDrafter {
-
-    private static final String PIECE_TOKENS_MISMATCH = "The piece's placeholder tokens do not match its source.";
 
     /** What one piece's draft came to: text to join, or a reply the step itself found unusable. */
     sealed interface Piece permits Text, Unusable {}
@@ -46,19 +41,16 @@ final class PieceDrafter {
     record Unusable(AppError error) implements Piece {}
 
     private final SegmentTranslator owner;
-    private final DraftReplyParser replyParser;
     private final ModelCalls calls;
     private final String extraInstruction;
     private final boolean lowerTemperature;
 
     PieceDrafter(
             final SegmentTranslator owner,
-            final DraftReplyParser replyParser,
             final ModelCalls calls,
             final String extraInstruction,
             final boolean lowerTemperature) {
         this.owner = Objects.requireNonNull(owner, "owner");
-        this.replyParser = Objects.requireNonNull(replyParser, "replyParser");
         this.calls = Objects.requireNonNull(calls, "calls");
         this.extraInstruction = Objects.requireNonNull(extraInstruction, "extraInstruction");
         this.lowerTemperature = lowerTemperature;
@@ -66,29 +58,27 @@ final class PieceDrafter {
 
     /**
      * Drafts every piece again, each told to fix the findings — their notes, one line each — and hands the joined
-     * result back as a rewrite of the whole segment, which the repair round gates and evaluates once like any other.
+     * result back as a rewrite of the whole segment, which the one repair gates and evaluates once like any other.
      *
      * @return the rewrite, a flag-now reply when a piece's answer is unusable or its error flags at once, or the error
      *     a call answered that the run routes
      */
     static Result<RepairReply> redraft(
             final SegmentTranslator owner,
-            final DraftReplyParser replyParser,
-            final Segment segment,
-            final DraftContext context,
+            final DraftAttempt whole,
             final List<String> pieces,
             final List<QaFinding> findings,
             final ModelCalls calls) {
+        final Segment segment = whole.segment();
         final String instruction = findings.stream().map(QaFinding::note).collect(Collectors.joining("\n"));
         log.debug("Redrafting segment id={} pieces={} findings={}", segment.id(), pieces.size(), findings.size());
         if (log.isTraceEnabled()) {
             log.trace("Extra instruction segmentId={} instruction={}", segment.id(), instruction);
         }
-        final Result<Piece> drafted =
-                new PieceDrafter(owner, replyParser, calls, instruction, false).draftAll(segment, context, pieces);
+        final Result<Piece> drafted = new PieceDrafter(owner, calls, instruction, false).draftAll(whole, pieces);
         if (drafted.isErr()) {
             final AppError error = Objects.requireNonNull(drafted.error());
-            return PauseDecider.route(error.code()) == PauseDecider.Route.FLAG_AT_ONCE
+            return PauseDecider.route(error) == PauseDecider.Route.FLAG_AT_ONCE
                     ? Result.ok(new RepairReply.FlagNow(error))
                     : Result.err(error);
         }
@@ -105,7 +95,8 @@ final class PieceDrafter {
      * @return the joined, stripped translation, the first piece's reply the step cannot use, or the error a call
      *     answered
      */
-    Result<Piece> draftAll(final Segment segment, final DraftContext context, final List<String> pieces) {
+    Result<Piece> draftAll(final DraftAttempt whole, final List<String> pieces) {
+        final Segment segment = whole.segment();
         log.debug(
                 "Drafting pieces segmentId={} pieces={} hasExtraInstruction={} lowerTemperature={}",
                 segment.id(),
@@ -114,12 +105,13 @@ final class PieceDrafter {
                 lowerTemperature);
         final List<String> replies = new ArrayList<>();
         for (final String piece : pieces) {
-            final Result<Piece> drafted = draft(pieceOf(segment, piece), context);
+            final Result<Piece> drafted =
+                    draft(whole.ofPiece(pieceOf(segment, piece), extraInstruction, lowerTemperature));
             if (drafted.isErr()) {
                 return drafted;
             }
             switch (Objects.requireNonNull(drafted.data())) {
-                case Unusable unusable -> {
+                case Unusable _ -> {
                     return drafted;
                 }
                 case Text(final String text) -> replies.add(WhitespaceRestoration.restore(piece, text));
@@ -151,7 +143,8 @@ final class PieceDrafter {
     }
 
     /** The piece's draft, or the error the model call answered. */
-    private Result<Piece> draft(final Segment piece, final DraftContext context) {
+    private Result<Piece> draft(final DraftAttempt attempt) {
+        final Segment piece = attempt.segment();
         log.debug(
                 "Drafting piece segmentId={} pieceLength={}",
                 piece.id(),
@@ -159,40 +152,28 @@ final class PieceDrafter {
         if (log.isTraceEnabled()) {
             log.trace("Piece text segmentId={} text={}", piece.id(), piece.masked());
         }
-        return answer(piece, context, callFor(piece, context, DraftStep.DRAFT, "", ""), false, false);
+        return answer(attempt, callFor(attempt, DraftStep.DRAFT, "", ""), false);
     }
 
     private Result<Piece> answer(
-            final Segment piece,
-            final DraftContext context,
-            final Result<ChatResponse> reply,
-            final boolean structuralUsed,
-            final boolean placeholderUsed) {
+            final DraftAttempt attempt, final Result<ChatResponse> reply, final boolean structuralUsed) {
         if (reply.isErr()) {
             return Result.err(Objects.requireNonNull(reply.error()));
         }
+        final Segment piece = attempt.segment();
         final ChatResponse response = Objects.requireNonNull(reply.data());
-        final ParsedReply parsed = replyParser.parse(response.content(), piece.masked(), owner.targetLanguage());
+        final ParsedReply parsed = owner.prompts().parse(response.content(), attempt);
         if (parsed.kind() == ReplyKind.INVALID_STRUCTURED && !response.content().isBlank()) {
             return structuralUsed
                     ? failed(piece, ErrorCode.validation, "The model did not return the required translation JSON.")
-                    : repair(
-                            piece,
-                            context,
-                            DraftStep.STRUCTURAL_REPAIR,
-                            response.content(),
-                            parsed.diagnostic(),
-                            placeholderUsed);
+                    : repairStructure(attempt, response.content(), parsed.diagnostic());
         }
-        return accept(piece, context, response, parsed.translation().strip(), placeholderUsed);
+        return accept(piece, response, parsed.translation().strip());
     }
 
-    private Result<Piece> accept(
-            final Segment piece,
-            final DraftContext context,
-            final ChatResponse response,
-            final String trimmed,
-            final boolean placeholderUsed) {
+    // A piece whose marks are wrong is still taken: the joined segment's code repairs put marks back, and a segment
+    // they cannot save goes to its one repair.
+    private static Result<Piece> accept(final Segment piece, final ChatResponse response, final String trimmed) {
         if (log.isTraceEnabled()) {
             log.trace("Piece reply segmentId={} raw={} trimmed={}", piece.id(), response.content(), trimmed);
         }
@@ -202,24 +183,17 @@ final class PieceDrafter {
         if (response.finishReason() != FinishReason.STOP) {
             return failed(piece, ErrorCode.validation, "The model response did not finish normally.");
         }
-        if (keepsItsTokens(trimmed, Tokens.inOrder(piece.masked()))) {
-            return Result.ok(new Text(trimmed));
+        if (!keepsItsTokens(trimmed, Tokens.inOrder(piece.masked()))) {
+            log.debug(
+                    "Piece marks differ from its source segmentId={}; left to the segment's code repairs", piece.id());
         }
-        return placeholderUsed
-                ? failed(piece, ErrorCode.validation, PIECE_TOKENS_MISMATCH)
-                : repair(
-                        piece,
-                        context,
-                        DraftStep.PLACEHOLDER_REPAIR,
-                        trimmed,
-                        GateNotes.describe(piece.masked(), trimmed, piece.pairs(), PIECE_TOKENS_MISMATCH),
-                        false);
+        return Result.ok(new Text(trimmed));
     }
 
     /**
      * Whether a piece's reply holds its own tokens in order, apart from tokens it invented glued to a word, which the
      * whole segment's deterministic repair drops while keeping the word. An invented token standing for a word, or
-     * a missing, repeated or moved own token, sends the piece to its repair.
+     * a missing, repeated or moved own token, is left to the joined segment's code repairs.
      */
     private static boolean keepsItsTokens(final String reply, final List<String> expected) {
         final List<String> own =
@@ -230,34 +204,22 @@ final class PieceDrafter {
         return keeps;
     }
 
-    private Result<Piece> repair(
-            final Segment piece,
-            final DraftContext context,
-            final DraftStep step,
-            final String rejected,
-            final String diagnostic,
-            final boolean placeholderUsed) {
-        log.debug("Repairing piece segmentId={} step={}", piece.id(), step);
-        log.warn("Repairing a piece of an oversized segment segmentId={} step={}", piece.id(), step);
-        final boolean isPlaceholder = step == DraftStep.PLACEHOLDER_REPAIR;
-        return answer(
-                piece,
-                context,
-                callFor(piece, context, step, rejected, diagnostic),
-                !isPlaceholder,
-                isPlaceholder || placeholderUsed);
+    private Result<Piece> repairStructure(final DraftAttempt attempt, final String rejected, final String diagnostic) {
+        log.warn(
+                "Re-asking a piece of an oversized segment for its JSON segmentId={}",
+                attempt.segment().id());
+        return answer(attempt, callFor(attempt, DraftStep.STRUCTURAL_REPAIR, rejected, diagnostic), true);
     }
 
     private Result<ChatResponse> callFor(
-            final Segment piece,
-            final DraftContext context,
-            final DraftStep step,
-            final String rejected,
-            final String diagnostic) {
-        final DraftAttempt attempt = DraftAttempt.ofPiece(piece, context, extraInstruction, lowerTemperature);
+            final DraftAttempt attempt, final DraftStep step, final String rejected, final String diagnostic) {
         final var request = owner.requestFor(attempt, step, rejected, diagnostic);
         return DraftCalls.call(
-                step, piece, request, owner.requests().descriptor(attempt, step, rejected, diagnostic), calls);
+                step,
+                attempt.segment(),
+                request,
+                owner.requests().descriptor(attempt, step, rejected, diagnostic),
+                calls);
     }
 
     private static Result<Piece> failed(final Segment piece, final ErrorCode code, final String message) {

@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.prompt;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -17,20 +18,34 @@ import ua.bookloom.api.pipeline.PromptSection;
  * @param sections the parts of the prompt as sent, in order; called at most once, when the first attempt goes out
  * @param targets each segment's translation as the call was given it, as a person reads it, in the order of the call's
  *     segment ids; empty when the call is about no translation yet (a draft) or its site does not show one
+ * @param asked what a call about no segment asks, one line per thing (a name, a term, a window), as a person reads it;
+ *     empty for a call about segments, whose sources say it
  */
 public record CallDescriptor(
         String label,
         @Nullable ChunkPosition position,
         List<String> sources,
         Supplier<List<PromptSection>> sections,
-        List<String> targets) {
+        List<String> targets,
+        List<String> asked) {
 
-    /** Rejects a missing part and copies the sources and targets. */
+    /** Rejects a missing part and copies the lists. */
     public CallDescriptor {
+        asked = List.copyOf(Objects.requireNonNull(asked, "asked"));
         Objects.requireNonNull(label, "label");
         sources = List.copyOf(Objects.requireNonNull(sources, "sources"));
         Objects.requireNonNull(sections, "sections");
         targets = List.copyOf(Objects.requireNonNull(targets, "targets"));
+    }
+
+    /** A descriptor that names no lines asked, for a call about segments. */
+    public CallDescriptor(
+            final String label,
+            @Nullable final ChunkPosition position,
+            final List<String> sources,
+            final Supplier<List<PromptSection>> sections,
+            final List<String> targets) {
+        this(label, position, sources, sections, targets, List.of());
     }
 
     /**
@@ -56,7 +71,29 @@ public record CallDescriptor(
      * @return a copy that carries them
      */
     public CallDescriptor withTargets(final List<String> shown) {
-        return new CallDescriptor(label, position, sources, sections, shown);
+        return new CallDescriptor(label, position, sources, sections, shown, asked);
+    }
+
+    /**
+     * This descriptor for a call about no segment, with what it asks so a screen can say it before the model answers.
+     *
+     * @param lines what is asked, one line per name, term or window, as a person reads it
+     * @return a copy that carries them
+     */
+    public CallDescriptor withAsked(final List<String> lines) {
+        return new CallDescriptor(label, position, sources, sections, targets, lines);
+    }
+
+    /**
+     * A call about no segment whose prompt is shown whole, with the lines it asks about so a screen can say them before
+     * the model answers.
+     *
+     * @param name the non-null prompt the call renders
+     * @param lines what is asked, one per name or term, as a person reads it
+     * @return the descriptor, with no segments and no parts
+     */
+    public static CallDescriptor asking(final PromptName name, final Collection<String> lines) {
+        return whole(name).withAsked(List.copyOf(Objects.requireNonNull(lines, "lines")));
     }
 
     /**

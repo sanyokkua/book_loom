@@ -1,43 +1,40 @@
 package ua.bookloom.pipeline.glossary;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.ChatRole;
-import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Refusal;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Replies;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
 import ua.bookloom.pipeline.glossary.TermEvidence.Evidence;
-import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.NameRules;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.util.lang.Languages;
 import ua.bookloom.util.lang.Script;
 import ua.bookloom.util.text.GlossaryKeys;
 
@@ -48,14 +45,27 @@ import ua.bookloom.util.text.GlossaryKeys;
  * call, and only a common noun is asked about. Nothing is written here; the caller writes once every batch has answered.
  */
 @Slf4j
-@RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class SuggestTargets {
 
     /** How many entries one call carries, small enough for a small model to answer every one. */
-    static final int BATCH_SIZE = 20;
+    static final int SUGGEST_BATCH = 20;
 
     private final PromptTemplates templates;
+    private final ContextBuilder builder;
     private final ObjectMapper mapper;
+
+    /**
+     * Builds its requests on the ANALYSIS frame (design D8) from the catalogue's task templates.
+     *
+     * @param templates the non-null prompt catalogue
+     * @param mapper the non-null object mapper
+     */
+    @Inject
+    public SuggestTargets(final PromptTemplates templates, final ObjectMapper mapper) {
+        this.templates = Objects.requireNonNull(templates, "templates");
+        this.builder = new ContextBuilder(this.templates);
+        this.mapper = Objects.requireNonNull(mapper, "mapper");
+    }
 
     /**
      * The entries with the targets the model suggests for them written in, for entries the glossary does not hold yet —
@@ -130,33 +140,82 @@ public final class SuggestTargets {
             final NamePolicy policy,
             final ModelCalls calls,
             final TargetContext context) {
+        return suggest(entries, story, frame, policy, calls, context, refused -> {});
+    }
+
+    /** As the six-argument {@code suggest}, telling each batch's count of renderings refused twice to {@code rejected}. */
+    Result<List<Suggestion>> suggest(
+            final List<GlossaryEntry> entries,
+            final BookSlice story,
+            final CallFrame frame,
+            final NamePolicy policy,
+            final ModelCalls calls,
+            final TargetContext context,
+            final IntConsumer rejected) {
         Objects.requireNonNull(entries, "entries");
         Objects.requireNonNull(story, "story");
         Objects.requireNonNull(frame, "frame");
         Objects.requireNonNull(policy, "policy");
         Objects.requireNonNull(calls, "calls");
         Objects.requireNonNull(context, "context");
-        final List<Suggestion> kept = new ArrayList<>(keptAsWritten(entries, policy, context));
-        final List<GlossaryEntry> asked = entries.stream()
-                .filter(entry -> !SuggestionLocks.isKeptAsWritten(entry, policy, context))
-                .toList();
-        final int batches = (asked.size() + BATCH_SIZE - 1) / BATCH_SIZE;
-        log.info(
-                "Glossary suggestions started policy={} entries={} kept={} asked={} batches={}",
-                policy,
-                entries.size(),
-                kept.size(),
-                asked.size(),
-                batches);
-        final Result<List<Suggestion>> answered = ask(asked, new Setting(story, frame, policy, calls, context));
+        final TargetContext known = context.withCommonWords(CommonWords.of(entries, story, frame.analysisLanguage()));
+        final List<Suggestion> kept = new ArrayList<>(SettledSuggestions.of(entries, frame, policy, known));
+        final List<GlossaryEntry> asked = unsettled(entries, kept);
+        final SuggestionGroups groups = SuggestionGroups.of(asked, policy, SUGGEST_BATCH);
+        logStart(policy, entries.size(), kept.size(), groups);
+        final Result<List<Suggestion>> answered =
+                askAll(groups, new Setting(story, frame, policy, calls, known, rejected));
         if (answered.isErr()) {
             log.warn("Glossary suggestions failed; nothing is suggested");
             return answered;
         }
         kept.addAll(Objects.requireNonNull(answered.data(), "answered"));
-        final List<Suggestion> locked = SuggestionLocks.apply(kept, frame, policy, context);
-        log.info("Glossary suggestions finished suggested={} of {}", locked.size(), entries.size());
+        final List<Suggestion> locked = SuggestionLocks.apply(kept, frame, policy, known);
+        logFinish(locked, entries.size());
         return Result.ok(locked);
+    }
+
+    private static List<GlossaryEntry> unsettled(final List<GlossaryEntry> entries, final List<Suggestion> settled) {
+        final Set<String> ids =
+                settled.stream().map(suggestion -> suggestion.entry().id()).collect(Collectors.toSet());
+        return entries.stream().filter(entry -> !ids.contains(entry.id())).toList();
+    }
+
+    private static void logFinish(final List<Suggestion> locked, final int entries) {
+        log.info(
+                "Glossary suggestions finished suggested={} of {} meaningNotes={}",
+                locked.size(),
+                entries,
+                locked.stream()
+                        .filter(suggestion -> suggestion.meaning() != null)
+                        .count());
+    }
+
+    private static void logStart(
+            final NamePolicy policy, final int entries, final int kept, final SuggestionGroups groups) {
+        log.info(
+                "Glossary suggestions started policy={} entries={} kept={} translatedByChoice={} batches={}",
+                policy,
+                entries,
+                kept,
+                groups.translatedByChoice(policy),
+                groups.batches());
+    }
+
+    // Each group under its own policy, so its task states that policy and shows that policy's example.
+    private Result<List<Suggestion>> askAll(final SuggestionGroups groups, final Setting base) {
+        final List<Suggestion> answered = new ArrayList<>();
+        for (final Map.Entry<NamePolicy, List<GlossaryEntry>> group :
+                groups.byPolicy().entrySet()) {
+            final Setting setting = new Setting(
+                    base.story(), base.frame(), group.getKey(), base.calls(), base.context(), base.rejected());
+            final Result<List<Suggestion>> asked = ask(group.getValue(), setting, groups);
+            if (asked.isErr()) {
+                return asked;
+            }
+            answered.addAll(Objects.requireNonNull(asked.data(), "asked"));
+        }
+        return Result.ok(answered);
     }
 
     /**
@@ -179,75 +238,64 @@ public final class SuggestTargets {
         return suggest(entries, story, frame, policy, calls, TargetContext.none());
     }
 
-    private static List<Suggestion> keptAsWritten(
-            final List<GlossaryEntry> entries, final NamePolicy policy, final TargetContext context) {
-        return entries.stream()
-                .filter(entry -> SuggestionLocks.isKeptAsWritten(entry, policy, context))
-                .map(entry -> new Suggestion(entry, entry.term()))
-                .toList();
-    }
-
     /** What every call of one suggestion run shares. */
     private record Setting(
-            BookSlice story, CallFrame frame, NamePolicy policy, ModelCalls calls, TargetContext context) {}
+            BookSlice story,
+            CallFrame frame,
+            NamePolicy policy,
+            ModelCalls calls,
+            TargetContext context,
+            IntConsumer rejected) {}
 
     /** What one run asks and checks with, built once for all its batches. */
     private record Run(
             Setting setting,
-            String system,
+            Map<String, String> task,
             Map<String, Evidence> evidence,
             @Nullable Script refused,
             @Nullable Script required,
-            RenderingChecks checks,
+            TargetValidator checks,
             ClusterAgreement cluster) {}
 
-    private Result<List<Suggestion>> ask(final List<GlossaryEntry> asked, final Setting setting) {
+    private Result<List<Suggestion>> ask(
+            final List<GlossaryEntry> asked, final Setting setting, final SuggestionGroups counter) {
         if (asked.isEmpty()) {
             return Result.ok(List.of());
         }
         final Run run = runOf(asked, setting);
-        final int batches = (asked.size() + BATCH_SIZE - 1) / BATCH_SIZE;
+        final int batches = Math.ceilDiv(asked.size(), SUGGEST_BATCH);
         final List<Suggestion> suggestions = new ArrayList<>();
         for (int index = 0; index < batches; index++) {
             final List<GlossaryEntry> batch =
-                    asked.subList(index * BATCH_SIZE, Math.min(asked.size(), (index + 1) * BATCH_SIZE));
-            setting.calls().announce(new BatchStarted(CallKind.SUGGEST_TARGETS, index + 1, batches));
+                    asked.subList(index * SUGGEST_BATCH, Math.min(asked.size(), (index + 1) * SUGGEST_BATCH));
+            setting.calls().announce(counter.next());
             final Result<List<Suggestion>> answered = runBatch(index, batch, run);
             if (answered.isErr()) {
                 return answered;
             }
             suggestions.addAll(Objects.requireNonNull(answered.data(), "suggestions"));
         }
-        return Result.ok(run.cluster().align(suggestions));
+        return Result.ok(run.cluster().align(SuggestionGroups.noted(suggestions, setting.policy(), setting.context())));
     }
 
     private Run runOf(final List<GlossaryEntry> asked, final Setting setting) {
         final CallFrame frame = setting.frame();
-        final String system = templates
-                .renderSystem(
-                        PromptName.SUGGEST_TARGETS,
-                        frame,
-                        Map.of("nameRule", NameRules.bundled().rule(setting.policy(), frame.targetLanguage())))
-                .strip();
-        final List<GlossaryEntry> glossary =
-                glossaryWith(asked, setting.context().held());
+        // The style sheet is data the renderings are chosen against, so the task carries it, never the system part.
+        final Map<String, String> task = Map.of(
+                "nameRule",
+                NameRules.bundled().rule(setting.policy(), frame.targetLanguage()),
+                "examples",
+                templates.nameExamples(frame, setting.policy()));
+        final List<GlossaryEntry> glossary = setting.context().heldWith(asked);
         final NameClusters clusters = NameClusters.of(glossary, setting.story().index(), frame.analysisLanguage());
         return new Run(
                 setting,
-                system,
+                task,
                 evidenceOf(setting.story(), asked),
-                refusedScript(frame, setting.policy()),
-                requiredScript(frame),
-                new RenderingChecks(frame, setting.policy(), setting.context()),
+                SuggestionScripts.refused(frame, setting.policy()),
+                SuggestionScripts.required(frame),
+                new TargetValidator(frame, setting.policy(), setting.context()),
                 ClusterAgreement.over(clusters, setting.context().held(), asked));
-    }
-
-    // The held entries, each asked one standing in for its held version: a cluster is read from what the call knows.
-    private static List<GlossaryEntry> glossaryWith(final List<GlossaryEntry> asked, final List<GlossaryEntry> held) {
-        final Map<String, GlossaryEntry> byId = new LinkedHashMap<>();
-        held.forEach(entry -> byId.put(entry.id(), entry));
-        asked.forEach(entry -> byId.put(entry.id(), entry));
-        return List.copyOf(byId.values());
     }
 
     private static Map<String, Evidence> evidenceOf(final BookSlice story, final List<GlossaryEntry> asked) {
@@ -262,11 +310,11 @@ public final class SuggestTargets {
     private Result<List<Suggestion>> runBatch(final int index, final List<GlossaryEntry> batch, final Run run) {
         final Result<Replies> first = exchange(index, batch, Map.of(), run);
         if (first.isErr()) {
-            return Result.err(Objects.requireNonNull(first.error(), "error"));
+            return Result.err(Objects.requireNonNull(first.error(), ERROR));
         }
         final Replies replies = Objects.requireNonNull(first.data(), "replies");
         final List<Suggestion> kept = new ArrayList<>(replies.kept());
-        final Map<String, Refusal> refused = refusedOf(replies);
+        final Map<String, Refusal> refused = replies.refusedNotAnswered();
         if (refused.isEmpty()) {
             return Result.ok(kept);
         }
@@ -275,24 +323,14 @@ public final class SuggestTargets {
                 refused.values().stream().map(Refusal::entry).toList();
         final Result<Replies> second = exchange(index, again, refused, run);
         if (second.isErr()) {
-            return Result.err(Objects.requireNonNull(second.error(), "error"));
+            return Result.err(Objects.requireNonNull(second.error(), ERROR));
         }
-        final List<Suggestion> retried =
-                Objects.requireNonNull(second.data(), "replies").kept();
+        final List<Suggestion> retried = RefusedAgain.settle(refused, Objects.requireNonNull(second.data(), "replies"));
         log.info("Suggestion batch {}: {} of {} refused renderings replaced", index, retried.size(), refused.size());
+        run.setting().rejected().accept(Math.max(0, refused.size() - retried.size()));
+        RefusedAgain.warnLeftWithoutTarget(index, refused, retried);
         kept.addAll(retried);
         return Result.ok(kept);
-    }
-
-    // The refusals of a reply by entry id, leaving out an entry the same reply also answered acceptably.
-    private static Map<String, Refusal> refusedOf(final Replies replies) {
-        final Set<String> answered = new HashSet<>();
-        replies.kept().forEach(suggestion -> answered.add(suggestion.entry().id()));
-        final Map<String, Refusal> refused = new LinkedHashMap<>();
-        replies.refused().stream()
-                .filter(refusal -> !answered.contains(refusal.entry().id()))
-                .forEach(refusal -> refused.putIfAbsent(refusal.entry().id(), refusal));
-        return refused;
     }
 
     private Result<Replies> exchange(
@@ -300,19 +338,21 @@ public final class SuggestTargets {
         final ChatRequest request = requestFor(index, batch, refused, run);
         final Result<ChatResponse> reply = run.setting()
                 .calls()
-                .callAbout(
-                        CallKind.SUGGEST_TARGETS, List.of(), request, CallDescriptor.whole(PromptName.SUGGEST_TARGETS));
+                .callAbout(CallKind.SUGGEST_TARGETS, List.of(), request, SuggestionReplies.asking(batch));
         if (reply.isErr()) {
-            final AppError error = Objects.requireNonNull(reply.error(), "error");
-            log.warn("Glossary suggestion batch {} of size {} failed code={}", index, batch.size(), error.code());
+            final AppError error = Objects.requireNonNull(reply.error(), ERROR);
+            log.warn(
+                    "Glossary suggestion batch {} of size {} failed code={} reason={}",
+                    index,
+                    batch.size(),
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return Result.err(error);
         }
         final String content = Objects.requireNonNull(reply.data(), "reply").content();
         log.trace("Glossary suggestion batch {} reply {}", index, content);
-        final Map<String, GlossaryEntry> byKey = new LinkedHashMap<>();
-        batch.forEach(entry -> byKey.put(GlossaryKeys.of(entry.term()), entry));
-        final Replies read =
-                SuggestionReplies.read(mapper, content, byKey, run.refused(), run.required(), run.checks()::standing);
+        final Replies read = readReply(content, batch, run);
+        run.setting().calls().answered(SuggestionReplies.shown(batch, read.kept()));
         log.debug(
                 "Glossary suggestion batch {} answered: size={} suggestions={} refused={}",
                 index,
@@ -320,6 +360,21 @@ public final class SuggestTargets {
                 read.kept().size(),
                 read.refused().size());
         return Result.ok(read);
+    }
+
+    // Each target is stored without the stress marks its language asks to remove before any rule reads it.
+    private Replies readReply(final String content, final List<GlossaryEntry> batch, final Run run) {
+        final Map<String, GlossaryEntry> byKey = new LinkedHashMap<>();
+        batch.forEach(entry -> byKey.put(GlossaryKeys.of(entry.term()), entry));
+        final String target = run.setting().frame().targetLanguage();
+        return SuggestionReplies.read(
+                mapper,
+                content,
+                byKey,
+                run.refused(),
+                run.required(),
+                run.checks(),
+                text -> Objects.requireNonNull(TargetText.clean(text, target), "clean"));
     }
 
     private ChatRequest requestFor(
@@ -331,44 +386,14 @@ public final class SuggestTargets {
                         run.evidence().getOrDefault(entry.term(), Evidence.NONE),
                         setting.context().readings().get(entry.id()),
                         run.cluster().statementFor(entry),
-                        refused.get(entry.id())))
+                        refused.get(entry.id()),
+                        setting.context().commonWordsOf(entry)))
                 .collect(Collectors.joining("\n"));
-        final List<ChatMessage> messages = List.of(
-                new ChatMessage(ChatRole.SYSTEM, run.system()),
-                new ChatMessage(
-                        ChatRole.USER,
-                        templates
-                                .renderUser(PromptName.SUGGEST_TARGETS, Map.of("terms", lines))
-                                .strip()));
-        log.trace("Glossary suggestion batch {} messages {}", index, messages);
-        return ChatRequests.build(
-                PromptName.SUGGEST_TARGETS,
-                messages,
-                OutputLimit.forSuggestions(batch.size()),
-                false,
-                setting.frame().requestDefaults());
-    }
-
-    /**
-     * The script a suggested name must not stay in: under Transliterate, the source's, when the target is written in
-     * another one — a copied name is no suggestion there. Under Translate a kept foreign name can be right.
-     */
-    private static @Nullable Script refusedScript(final CallFrame frame, final NamePolicy policy) {
-        if (policy != NamePolicy.TRANSLITERATE) {
-            return null;
-        }
-        final Optional<Script> source = Languages.scriptOf(frame.analysisLanguage());
-        final Optional<Script> target = Languages.scriptOf(frame.targetLanguage());
-        final boolean differs = source.isPresent() && target.isPresent() && source.get() != target.get();
-        log.debug("Suggestion script rule source={} target={} refusesSourceScript={}", source, target, differs);
-        return differs ? source.get() : null;
-    }
-
-    /** The target language's script when it has letters of its own: every letter of a suggestion must be one. */
-    private static @Nullable Script requiredScript(final CallFrame frame) {
-        final Optional<Script> target = Languages.scriptOf(frame.targetLanguage())
-                .filter(script -> !script.letterScripts().isEmpty());
-        log.debug("Suggestion required script {}", target);
-        return target.orElse(null);
+        final Map<String, String> values = new HashMap<>(run.task());
+        values.put("terms", lines);
+        final ChatRequest request = builder.analysisRequest(
+                PromptName.SUGGEST_TARGETS, setting.frame(), values, OutputLimit.forSuggestions(batch.size()));
+        log.trace("Glossary suggestion batch {} messages {}", index, request.messages());
+        return request;
     }
 }

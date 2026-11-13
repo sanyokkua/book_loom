@@ -1,13 +1,18 @@
 package ua.bookloom.ui.state;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.llm.ProviderConfigRules;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.state.ProviderDraft.Field;
 import ua.bookloom.ui.state.ProviderDraft.FormFinding;
+import ua.bookloom.ui.state.ProviderDraft.HeaderRow;
 
 /**
  * How the Providers form words what it finds: a shared provider rule turned into a finding on its field, and a typed
@@ -24,7 +29,7 @@ final class ProviderFindings {
     static long parseSeconds(final String text) {
         try {
             return Long.parseLong(text.strip());
-        } catch (NumberFormatException ignored) {
+        } catch (NumberFormatException _) {
             return -1;
         }
     }
@@ -74,5 +79,21 @@ final class ProviderFindings {
 
     static FormFinding blocking(final MessageKey key, final Field field) {
         return new FormFinding(key, List.of(), field, true);
+    }
+
+    /** A header row with a value but no name, and a name used twice, ignoring case. */
+    static List<FormFinding> headers(final List<HeaderRow> headers) {
+        final List<FormFinding> found = new ArrayList<>();
+        final Set<String> seen = new HashSet<>();
+        for (final HeaderRow row : headers) {
+            final String header = row.name().strip().toLowerCase(Locale.ROOT);
+            if (header.isEmpty() && !row.value().isBlank()) {
+                found.add(blocking(MessageKey.SETTINGS_ERROR_HEADER_NAME_MISSING, Field.HEADERS));
+            } else if (!header.isEmpty() && !seen.add(header)) {
+                found.add(new FormFinding(
+                        MessageKey.SETTINGS_ERROR_HEADER_DUPLICATE, List.of(header), Field.HEADERS, true));
+            }
+        }
+        return found;
     }
 }

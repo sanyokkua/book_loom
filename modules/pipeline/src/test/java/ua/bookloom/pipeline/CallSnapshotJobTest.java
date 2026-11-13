@@ -45,6 +45,9 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
  */
 class CallSnapshotJobTest {
 
+    /** The label every translate-family call is shown with: the translate prompt's name. */
+    private static final String TRANSLATE = "translate";
+
     private static final String BATCH = "draft-batch-json";
     private static final List<String> SOURCES = List.of(
             S0,
@@ -120,14 +123,14 @@ class CallSnapshotJobTest {
         assertThat(drafts.subList(0, 2))
                 .extracting(CallSnapshot::callId, CallSnapshot::state, CallSnapshot::reply, CallSnapshot::label)
                 .containsExactly(
-                        tuple(1L, CallState.WAITING, null, BATCH), tuple(1L, CallState.ANSWERED, reply, BATCH));
+                        tuple(1L, CallState.WAITING, null, TRANSLATE), tuple(1L, CallState.ANSWERED, reply, TRANSLATE));
         assertThat(drafts.getFirst().segments()).hasSize(8);
         assertThat(drafts.getFirst().segments().getFirst()).isEqualTo(new CallSegment("Book.md:0", "ch1 · p01", S0));
         assertThat(drafts.getFirst().position()).isNotNull();
     }
 
-    // The system message's parts come first, in its template's order, then the user message's; the first batch of a
-    // book has no earlier pairs and no next item, so only the items are sent in the user message.
+    // The system message's blocks come first, in the order the context builder plans them, then the user message's;
+    // the first batch of a book has no earlier pairs and no next item, so only the task and the items are sent.
     @Test
     void run_batchOfEight_showsTheSectionsInTheOrderThePromptSentThem() {
         run(eightParagraphs(QualityDial.FAST), new ScriptedChatModel().answerTo(BATCH, raw(items())));
@@ -137,11 +140,18 @@ class CallSnapshotJobTest {
         assertThat(sections)
                 .extracting(PromptSection::slot, PromptSection::origin)
                 .containsExactly(
+                        tuple("role", PromptSection.Origin.SYSTEM),
+                        tuple("data", PromptSection.Origin.SYSTEM),
+                        tuple("bookRules", PromptSection.Origin.SYSTEM),
                         tuple("styleSheet", PromptSection.Origin.SYSTEM),
                         tuple("languageRules", PromptSection.Origin.SYSTEM),
                         tuple("examples", PromptSection.Origin.SYSTEM),
+                        tuple("reply", PromptSection.Origin.SYSTEM),
+                        tuple("task", PromptSection.Origin.USER),
                         tuple("items", PromptSection.Origin.USER));
-        assertThat(sections.getLast().lines()).hasSize(8).first().isEqualTo("<s id=\"1\">" + S0 + "</s>");
+        assertThat(sections.getLast().lines())
+                .startsWith("<Items>", "<s id=\"1\">" + S0 + "</s>")
+                .contains("</Items>");
     }
 
     @Test
@@ -168,7 +178,7 @@ class CallSnapshotJobTest {
                 .containsExactly(tuple(SegmentOutcomeNote.Kind.FELL_BACK, "MISSING"));
         assertThat(lastOf(2L))
                 .extracting(CallSnapshot::label, CallSnapshot::segments)
-                .containsExactly("draft", List.of(new CallSegment("Book.md:1", "ch1 · p02", S1)));
+                .containsExactly(TRANSLATE, List.of(new CallSegment("Book.md:1", "ch1 · p02", S1)));
         assertThat(lastOf(2L).outcomes())
                 .extracting(SegmentOutcomeNote::segmentId, SegmentOutcomeNote::kind)
                 .containsExactly(tuple("Book.md:1", SegmentOutcomeNote.Kind.ACCEPTED));
@@ -179,24 +189,5 @@ class CallSnapshotJobTest {
                 .filter(snapshot -> snapshot.callId() == callId)
                 .toList()
                 .getLast();
-    }
-
-    @Test
-    void run_reviewedChunk_showsTheReviewerCallAboutTheChunkWithItsOwnSections() {
-        final ScriptedChatModel model =
-                new ScriptedChatModel().answerTo(BATCH, raw(items())).answerTo("reviewer", raw("{\"results\":[]}"));
-
-        run(eightParagraphs(QualityDial.BALANCED), model);
-
-        final List<CallSnapshot> reviews = snapshots(CallKind.REVIEW);
-        assertThat(reviews)
-                .extracting(CallSnapshot::state, CallSnapshot::label)
-                .containsExactly(tuple(CallState.WAITING, "reviewer"), tuple(CallState.ANSWERED, "reviewer"));
-        assertThat(reviews.getFirst().callId()).isEqualTo(2L);
-        assertThat(reviews.getFirst().segments()).hasSize(8);
-        assertThat(reviews.getFirst().sections())
-                .extracting(PromptSection::slot)
-                .startsWith("styleSheet")
-                .endsWith("pairs");
     }
 }

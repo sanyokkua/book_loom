@@ -1,5 +1,8 @@
 package ua.bookloom.pipeline.chunk;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -7,7 +10,10 @@ import ua.bookloom.pipeline.qa.LengthBand;
 import ua.bookloom.util.lang.Languages;
 import ua.bookloom.util.lang.Script;
 
-/** Character-based token estimates: cheap, deterministic and good enough to size chunks and timeouts. */
+/**
+ * Character-based token estimates: cheap, deterministic and good enough to size prompts, chunks and timeouts. A
+ * measured tokenizer count is only logged beside the estimate, never applied, so one call's figures stay reproducible.
+ */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class TokenEstimator {
@@ -21,6 +27,27 @@ public final class TokenEstimator {
     private static final int CAP_TOKENS_PER_PLACEHOLDER = 6;
 
     /**
+     * The lines that fit a token allowance, from the first, so a long list is cut at the end and never half-shown.
+     *
+     * @param lines the non-null lines, most important first
+     * @param allowance the tokens the lines may take together
+     * @return never null; the leading lines whose estimated size, in the generic rate, stays within {@code allowance}
+     */
+    public static List<String> leadingWithin(final List<String> lines, final int allowance) {
+        Objects.requireNonNull(lines, "lines");
+        final List<String> kept = new ArrayList<>();
+        int tokens = 0;
+        for (final String line : lines) {
+            tokens += estimate(line, null);
+            if (tokens > allowance) {
+                break;
+            }
+            kept.add(line);
+        }
+        return kept;
+    }
+
+    /**
      * Estimates the tokens of a text.
      *
      * @param text the text; never null
@@ -29,6 +56,40 @@ public final class TokenEstimator {
      */
     public static int estimate(final String text, @Nullable final String languageTag) {
         return ceil(text.codePointCount(0, text.length()) / charsPerToken(languageTag) * SAFETY_FACTOR);
+    }
+
+    /**
+     * One part of a call's prompt with the language it is written in, so instructions in English and book text in
+     * Cyrillic are each counted at their own script's rate.
+     *
+     * @param text the part's text; never null
+     * @param languageTag the language the text is written in, or null for the cautious figure of an unknown script
+     */
+    public record Message(String text, @Nullable String languageTag) {
+
+        /** Rejects a missing text. */
+        public Message {
+            Objects.requireNonNull(text, "text");
+        }
+    }
+
+    /**
+     * Estimates a whole call's prompt: every part at its own language's rate, plus the tokens the model's chat
+     * template adds once to the request.
+     *
+     * @param messages the call's parts; never null
+     * @param templateOverhead the profile's template overhead in tokens; zero or more
+     * @return the estimate; the overhead alone for no part
+     */
+    public static int estimateCall(final List<Message> messages, final int templateOverhead) {
+        Objects.requireNonNull(messages, "messages");
+        if (templateOverhead < 0) {
+            throw new IllegalArgumentException("templateOverhead must not be negative: " + templateOverhead);
+        }
+        return templateOverhead
+                + messages.stream()
+                        .mapToInt(message -> estimate(message.text(), message.languageTag()))
+                        .sum();
     }
 
     /**

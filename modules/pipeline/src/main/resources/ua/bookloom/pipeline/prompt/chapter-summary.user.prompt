@@ -1,0 +1,31 @@
+Summarise the chapter in <Text> for a translator who will translate the chapters that follow it.
+
+Rules:
+1. Write two or three short sentences: who does what, where, and how the chapter leaves the story.
+2. Write every word in {{targetLanguage}}.
+3. Spell each name only as <Names> spells it, declined to fit the sentence; a name <Names> does not list keeps the spelling of the book.
+4. Name nobody and nothing that <Text> does not name, and add no event or name of your own.
+5. Use only real {{targetLanguage}} words and the names exactly as <Names> spells them; do not invent words, and never write a name the way the book's own language spells it when <Names> gives it another spelling.
+{{#mapLines}}
+
+<Names>
+{{mapLines}}
+</Names>
+{{/mapLines}}
+{{#previousPart}}
+
+<Earlier part>
+{{previousPart}}
+</Earlier part>
+The earlier part of this chapter is summarised above; summarise the whole chapter so far, the earlier part included.
+{{/previousPart}}
+
+<Text>
+{{chapterSource}}
+</Text>
+{{#correction}}
+
+{{correction}}
+{{/correction}}
+
+Return one JSON object: {"summary":"…"}

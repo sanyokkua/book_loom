@@ -17,7 +17,7 @@ surface by `notifications`.
 
 The application SHALL present a single window containing, in fixed positions: a title bar with the product name, a theme control and an about action; a navigation column; a toolbar with a breadcrumb and the screen's actions; a banner slot; the current screen; a work layer for progress dialogs; a layer above it for other dialogs; and transient messages. The toolbar SHALL belong to the shell, not to a screen.
 
-**Source**: FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/specification/mockups/README.md#window-chrome`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`. In plain words: the furniture never moves. A person learns once where the navigation, the actions, the banners and the messages are, and every screen after that is just the middle changing. The banner slot and the two dialog layers are named so that a banner cannot end up inside a scrolled page and a question cannot hide behind work.
+**Source**: FR-UI-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/spec_baseline/specification/mockups/README.md#window-chrome`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`. In plain words: the furniture never moves. A person learns once where the navigation, the actions, the banners and the messages are, and every screen after that is just the middle changing. The banner slot and the two dialog layers are named so that a banner cannot end up inside a scrolled page and a question cannot hide behind work.
 
 #### Scenario: The window opens with its regions in place
 
@@ -40,7 +40,7 @@ The application SHALL present a single window containing, in fixed positions: a 
 
 The application SHALL NOT allow the outer window to be smaller than 960 by 640 pixels. At that size every screen SHALL fit the width of the content area (944 by 600) in English and Ukrainian and every part SHALL be reachable by vertical scrolling; the navigation column SHALL scroll vertically only. A count tile SHALL keep at least 120 pixels and show its number and caption whole, and a progress bar SHALL stay 9 pixels high.
 
-**Source**: FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/specification/mockups/README.md#layout-and-sizes-l` (L10), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`. In plain words: 960 by 640 is the whole window. Nothing may be cut off sideways, what does not fit in height scrolls, and Ukrainian labels, about 26 % longer, fit as well as English.
+**Source**: FR-UI-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/spec_baseline/specification/mockups/README.md#layout-and-sizes-l` (L10), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`. In plain words: 960 by 640 is the whole window. Nothing may be cut off sideways, what does not fit in height scrolls, and Ukrainian labels, about 26 % longer, fit as well as English.
 
 #### Scenario: The window cannot be shrunk below the minimum
 
@@ -86,8 +86,8 @@ version SHALL read `dev` in any build that carries no injected release version.
 
 WHEN the application starts, it SHALL write the same version to the log exactly once.
 
-**Source:** FR-UI-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), DD-50,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-about`.
+**Source:** FR-UI-09 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), DD-50,
+`docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-about`.
 In plain words: when somebody reports a bug, the first question is which build they were running, and there are
 exactly two places that answer can come from — the dialog they can read to you, and the log file they can send
 you. Both have to say the same thing, and the log has to say it once rather than on every screen change.
@@ -108,7 +108,7 @@ you. Both have to say the same thing, and the log has to say it once rather than
 
 The navigation column SHALL present its entries in two named groups — the workflow and the application — with each heading in capital letters. The workflow group SHALL list Projects with no number, then five numbered steps: Import, Book Brief, Names & style, Translating and Export. It SHALL list no review step, because review is a dialog, and no entry SHALL be inert. Exactly one entry SHALL be marked current, following the screen shown.
 
-**Source**: FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/specification/mockups/README.md#g7--five-steps`, `docs/specification/mockups/README.md#window-chrome`. In plain words: the numbers tell a first-time user that this is a sequence with an end, and the one highlighted entry agrees with the screen. The structure is part of Import and review is a dialog, so there are five steps.
+**Source**: FR-UI-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/spec_baseline/specification/mockups/README.md#g7--five-steps`, `docs/spec_baseline/specification/mockups/README.md#window-chrome`. In plain words: the numbers tell a first-time user that this is a sequence with an end, and the one highlighted entry agrees with the screen. The structure is part of Import and review is a dialog, so there are five steps.
 
 #### Scenario: The navigation has exactly two groups
 
@@ -139,9 +139,9 @@ The navigation column SHALL present its entries in two named groups — the work
 
 ### Requirement: Use the control each drawn widget stands for
 
-WHERE the reference rendering draws a widget for which `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#control-mapping-summary` names a real control, the screen SHALL be built from that control rather than from an approximation of it.
+WHERE the reference rendering draws a widget for which `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#control-mapping-summary` names a real control, the screen SHALL be built from that control rather than from an approximation of it.
 
-**Source**: FR-UI-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#control-mapping-summary`, `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#controls-mapping`. In plain words: a segmented picker built as three radio buttons works, but makes the application read as a different program from the one designed.
+**Source**: FR-UI-03 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#control-mapping-summary`, `docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#controls-mapping`. In plain words: a segmented picker built as three radio buttons works, but makes the application read as a different program from the one designed.
 
 #### Scenario: A quality dial is a segmented picker, not three buttons
 
@@ -160,9 +160,9 @@ WHERE the reference rendering draws a widget for which `docs/specification/01_Pr
 
 ### Requirement: Match the reference rendering
 
-The application SHALL render every screen it shows with the arrangement of parts and the roles that `docs/specification/mockups/ui-mockup.html` draws for that screen, in both the light and the dark block, except for the mockup's own aids: its "Mockup reference" pages, preview bars, mockup-only buttons, requirement badges, sample figures and table-resize glyph. A transient message SHALL NOT carry the name of the requirement it shows.
+The application SHALL render every screen it shows with the arrangement of parts and the roles that `docs/spec_baseline/specification/mockups/ui-mockup.html` draws for that screen, in both the light and the dark block, except for the mockup's own aids: its "Mockup reference" pages, preview bars, mockup-only buttons, requirement badges, sample figures and table-resize glyph. A transient message SHALL NOT carry the name of the requirement it shows.
 
-**Source**: FR-UI-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), DD-28 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md`), `docs/specification/mockups/README.md#for-ai-agents-building-the-javafx-ui-from-this-mockup`. In plain words: the mockup settles how things look, and this revision describes the application as built, so the old list of departures is gone. Exact pixel placement is not part of the obligation.
+**Source**: FR-UI-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), DD-28 (`docs/spec_baseline/specification/00_Foundation/04_DESIGN_DECISIONS.md`), `docs/spec_baseline/specification/mockups/README.md#for-ai-agents-building-the-javafx-ui-from-this-mockup`. In plain words: the mockup settles how things look, and this revision describes the application as built, so the old list of departures is gone. Exact pixel placement is not part of the obligation.
 
 #### Scenario: A screen's roles match the reference
 
@@ -196,9 +196,9 @@ No call the application makes to a port SHALL be made on the thread that draws t
 job's own pause, resume and cancel requests and the registration of its progress listener, which only set a flag
 or a list entry under a short lock and never wait on the job.
 
-**Source:** FR-UI-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
-`docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#state-mirror`,
-`docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md`.
+**Source:** FR-UI-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
+`docs/spec_baseline/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#state-mirror`,
+`docs/spec_baseline/specification/02_Architecture/08_THREADING_CONCURRENCY.md`.
 In plain words: a book takes hours to translate. If any of that ran where the window is drawn, the window would
 be a grey rectangle the operating system offers to force-quit. The obligation is stated as "which thread called
 the port" rather than "the window kept redrawing" because the first is something a test can read off the call
@@ -224,7 +224,7 @@ itself, and the second is something no test can honestly observe.
 
 WHILE an action the person started is running in the background and has not yet returned, the screen SHALL report that it is in progress and SHALL make the control that started it unavailable until it answers. Model work SHALL be reported in the progress dialog; opening a book SHALL be reported by a "Reading…" bar with Cancel on the Import screen. WHEN the action answers, the control SHALL be available again.
 
-**Source**: FR-UI-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`, `docs/specification/mockups/README.md#step-1--import--i1i4`. In plain words: model work shows its steps in the progress dialog, and a book being read says which chapter it is on. The control is unavailable meanwhile so that it is not pressed four more times.
+**Source**: FR-UI-02 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`, `docs/spec_baseline/specification/mockups/README.md#step-1--import--i1i4`. In plain words: model work shows its steps in the progress dialog, and a book being read says which chapter it is on. The control is unavailable meanwhile so that it is not pressed four more times.
 
 #### Scenario: Checking a provider reports itself while it runs
 
@@ -248,9 +248,9 @@ WHILE an action the person started is running in the background and has not yet 
 
 ### Requirement: Show the run in the title bar while one exists
 
-WHILE no project is open, the title bar SHALL show only the product name, the theme control and the about action. WHILE a project is open, it SHALL show, from left to right: the project's name, the state text of the run state, the quality and review mode, elapsed time and speed while translating, the AI-model chip, and one run control, Pause or Resume, which does exactly what the toolbar's does. It SHALL also show the activity chip of hidden work.
+WHILE no project is open, the title bar SHALL show only the product name, the theme control and the about action. WHILE a project is open, it SHALL show, left to right: the project's name, the run state's text, the stage chip while a run is running or paused, the quality and review mode, elapsed time and speed while translating, the AI-model chip, the activity chip of hidden work, and one run control, Pause or Resume, doing exactly what the toolbar's does.
 
-**Source**: FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/specification/mockups/README.md#window-chrome`, `docs/specification/mockups/README.md#run-states-a`. In plain words: a book takes hours and a person spends most of that time on other screens. The title bar keeps the project and its run in sight from anywhere.
+**Source**: FR-UI-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/spec_baseline/specification/mockups/README.md#window-chrome`, `docs/spec_baseline/specification/mockups/README.md#run-states-a`, `design.md#d2--the-runs-three-stages-and-the-quality-dial`. In plain words: a book takes hours and a person spends most of that time on other screens. The title bar keeps the project, its run and the stage the run is in in sight from anywhere.
 
 #### Scenario: No run, no run status
 
@@ -260,8 +260,23 @@ WHILE no project is open, the title bar SHALL show only the product name, the th
 #### Scenario: A running run is shown with Pause
 
 - **WHEN** `Earth Gravity · EN → UK` translates at 51 % with about 1 h 10 min left, after 1 h 02 m, at 9.4 tok/s, in a window 1440 pixels wide
-- **THEN** the title bar shows, from left to right, `Earth Gravity · EN → UK`, `51 % done · about 1 h 10 min left`, `Balanced · Unattended`, `1h 02m`, `9.4 tok/s`, the chip `Model answering` and `Pause`
+- **THEN** the title bar shows, from left to right, `Earth Gravity · EN → UK`, `51 % done · about 1 h 10 min left`, the stage chip `Translate`, `Balanced · Unattended`, `1h 02m`, `9.4 tok/s`, the chip `Model answering` and `Pause`
 - **AND** the tooltip of the speed reads "how fast the model writes", and `Resume` is not shown
+
+#### Scenario: The stage chip follows the run
+
+- **WHEN** a Balanced run moves from drafting to proofreading marked windows
+- **THEN** the stage chip changes from `Translate` to `Proofread`
+
+#### Scenario: Preparation has its own chip
+
+- **WHEN** a run has started and is preparing the book
+- **THEN** the stage chip reads `Prepare`
+
+#### Scenario: Max names the proofread round
+
+- **WHEN** a Max run is reading the whole book a second time
+- **THEN** the stage chip reads `Proofread · round 2 of 2: whole book`
 
 #### Scenario: A paused run is shown with Resume
 
@@ -313,11 +328,16 @@ WHILE no project is open, the title bar SHALL show only the product name, the th
 - **WHEN** the names pass is hidden at 53 %
 - **THEN** the title bar shows the chip `Names · 53 % · open`
 
+#### Scenario: No stage chip once the run has ended
+
+- **WHEN** the run of the open project completes or fails
+- **THEN** the title bar shows no stage chip, and the state text reads `Finished` or `Did not finish`
+
 ### Requirement: Search any fixed list by typing
 
 WHERE a choice box offers a fixed list of values the application SHALL narrow the entries shown to those whose displayed name contains the typed text anywhere, ignoring letter case and accents. IF the person leaves the box without picking an entry, THEN a choice that accepts free text, as genre does, SHALL keep the typed text, and a choice that accepts only listed values, as a language does, SHALL keep the value the box held before typing began.
 
-**Source**: FR-BRIEF-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-UI-03 (`#fr-ui`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#control-mapping-summary`. In plain words: the language list has 34 entries and the genre list about 40, and scrolling through them is slow; typing three letters is not. Matching anywhere and ignoring accents means `bokmal` finds Norwegian Bokmål and `fran` finds French without the person guessing how a name begins. Genre is the one list that also takes something the list does not hold, so a typed genre is kept; a language cannot be invented, so an unfinished search leaves the previous one in place.
+**Source**: FR-BRIEF-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-UI-03 (`#fr-ui`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#control-mapping-summary`. In plain words: the language list has 34 entries and the genre list about 40, and scrolling through them is slow; typing three letters is not. Matching anywhere and ignoring accents means `bokmal` finds Norwegian Bokmål and `fran` finds French without the person guessing how a name begins. Genre is the one list that also takes something the list does not hold, so a typed genre is kept; a language cannot be invented, so an unfinished search leaves the previous one in place.
 
 #### Scenario: Typing narrows the languages
 
@@ -348,7 +368,7 @@ WHERE a choice box offers a fixed list of values the application SHALL narrow th
 
 The application SHALL hold each workflow screen's main and run actions in the toolbar, the one action bar, always visible, as the README's layout rule L2 lists them per screen. WHILE the content is compact, Back SHALL read "‹ Back" with the full label as its tooltip.
 
-**Source**: FR-UI-01, FR-UI-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/specification/mockups/README.md#layout-and-sizes-l` (L2). In plain words: the same buttons in the same place on every step, where they cannot scroll out of sight, make the numbered workflow feel like one path. They used to sit at the foot of each page, which could be below the fold.
+**Source**: FR-UI-01, FR-UI-04 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/spec_baseline/specification/mockups/README.md#layout-and-sizes-l` (L2). In plain words: the same buttons in the same place on every step, where they cannot scroll out of sight, make the numbered workflow feel like one path. They used to sit at the foot of each page, which could be below the fold.
 
 #### Scenario: The import screen's footer
 
@@ -409,7 +429,7 @@ The application SHALL hold each workflow screen's main and run actions in the to
 
 The navigation column SHALL end with a footer line naming the AI program and the chosen model, separated by " · ", with the tooltip "the one network destination". Its dot and text SHALL follow the same source as the AI-model chip in the title bar: red `No AI model found` when no AI program is selected or the first-launch look found none, red `No AI model chosen` when a program is selected but no model is chosen, and for example `Ollama · Cannot reach Ollama` when it does not answer.
 
-**Source**: FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-MODEL-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-model`), `docs/specification/mockups/README.md#window-chrome`. In plain words: the navigation is visible from every screen, so a person sees which program a translation uses and whether it answers. Footer and chip are one fact shown twice.
+**Source**: FR-UI-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-MODEL-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-model`), `docs/spec_baseline/specification/mockups/README.md#window-chrome`. In plain words: the navigation is visible from every screen, so a person sees which program a translation uses and whether it answers. Footer and chip are one fact shown twice.
 
 #### Scenario: The footer names the chosen provider and model
 
@@ -440,7 +460,7 @@ The navigation column SHALL end with a footer line naming the AI program and the
 
 The About dialog SHALL say whether the detailed diagnostic log is written in this launch, that the detailed log contains text from the book and stays on this computer unless the person shares it, and SHALL name the log folder. It SHALL offer `Open log folder`, `Copy log path` and `Save diagnostic bundle…`, which SHALL write only to the file the person picks and SHALL NOT send it anywhere.
 
-**Source**: NFR-PRIV-04 (`docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#no-telemetry`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialogs`. In plain words: a person asked for "the log" should not need to know where an operating system keeps logs. About is the one place that says what the log holds, and it hands the log over as one file the person attaches themselves.
+**Source**: NFR-PRIV-04 (`docs/spec_baseline/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#no-telemetry`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialogs`. In plain words: a person asked for "the log" should not need to know where an operating system keeps logs. About is the one place that says what the log holds, and it hands the log over as one file the person attaches themselves.
 
 #### Scenario: About in an installed app without the detailed log
 
@@ -481,7 +501,7 @@ show nothing for it when the run was started with none named.
 
 WHILE no project is open, the application SHALL show workflow steps 1 to 5 in the navigation greyed and unclickable, with a tooltip and the hint "Steps unlock when a project is open", and SHALL keep Projects and Settings available. Import SHALL then be reachable only through "+ New translation".
 
-**Source**: `docs/specification/mockups/README.md#g6--workflow-steps-need-an-open-project`. In plain words: every step works on a project's book, so before one is open there is nothing for them to show. Greying them, with the reason, is clearer than letting a person open an empty screen. The open project's name shows in the title bar.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g6--workflow-steps-need-an-open-project`. In plain words: every step works on a project's book, so before one is open there is nothing for them to show. Greying them, with the reason, is clearer than letting a person open an empty screen. The open project's name shows in the title bar.
 
 #### Scenario: A fresh start locks the steps
 
@@ -498,7 +518,7 @@ WHILE no project is open, the application SHALL show workflow steps 1 to 5 in th
 
 The application SHALL show every dialog inside the window and open no second operating-system window except the native file choosers. Progress dialogs of model work SHALL sit on a work layer, and every question, confirmation, error, form, test and the review desk on a layer above it; a question opened during work SHALL appear above the progress dialog, which keeps its state.
 
-**Source**: `docs/specification/mockups/README.md#g1--dialogs-live-in-the-window-on-two-layers`. In plain words: a separate window for the model's calls got lost behind the main one. Two layers let a question such as "Cancel the export?" appear over the work it is about without losing where that work had got to.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g1--dialogs-live-in-the-window-on-two-layers`. In plain words: a separate window for the model's calls got lost behind the main one. Two layers let a question such as "Cancel the export?" appear over the work it is about without losing where that work had got to.
 
 #### Scenario: A question opens above running work
 
@@ -514,7 +534,7 @@ The application SHALL show every dialog inside the window and open no second ope
 
 The application SHALL size each dialog as a confirmation (480 pixels wide), a form or result (720 pixels wide) or a large dialog (the smaller of 1180 pixels and 92 % of the window wide, and the smaller of 820 pixels and 90 % high), SHALL fix the header and the footer, and SHALL scroll only the body. A large dialog's height SHALL not change with its content.
 
-**Source**: `docs/specification/mockups/README.md#g1--dialogs-live-in-the-window-on-two-layers`. In plain words: the footer's buttons must be where the hand expects them, whether the body holds three lines or three hundred. The order of the footer's buttons and the rest of the dialog's look are the README's.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g1--dialogs-live-in-the-window-on-two-layers`. In plain words: the footer's buttons must be where the hand expects them, whether the body holds three lines or three hundred. The order of the footer's buttons and the rest of the dialog's look are the README's.
 
 #### Scenario: A confirmation is narrow
 
@@ -531,57 +551,11 @@ The application SHALL size each dialog as a confirmation (480 pixels wide), a fo
 - **WHEN** a progress dialog is shown in a window 960 by 640 pixels
 - **THEN** it is about 883 pixels wide and 576 pixels high, and its body scrolls
 
-### Requirement: Answer Enter, Escape and Tab the same way in every dialog
-
-WHILE a dialog is open, the application SHALL keep Tab inside it, SHALL run the footer's main button on Enter (Ctrl or Command with Enter inside a text area, and everywhere in the review desk, whose main button decides a segment and so runs only on Ctrl or Command with Enter), and SHALL close it on Escape. On a progress dialog Escape SHALL hide long work, the export's last check included, and cancel short work; only the export dialog's Cancel button SHALL ask "Cancel the export?". Only About SHALL close on a click outside it.
-
-**Source**: `docs/specification/mockups/README.md#g1--dialogs-live-in-the-window-on-two-layers`, owner answer of 2026-10-20 recorded in `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D1". In plain words: a person at the keyboard should be able to answer any dialog without finding the mouse, and Escape never loses long work: it only puts it out of the way.
-
-#### Scenario: Enter presses the main button
-
-- **WHEN** `Stop translating?` is shown and Enter is pressed
-- **THEN** the main button of its footer is activated
-
-#### Scenario: Plain Enter in the review desk decides nothing
-
-- **WHEN** the review desk is open on `ch5 · p12` with a row of its list focused and Enter is pressed
-- **THEN** no segment is accepted, and Ctrl+Enter (Command+Enter on macOS) runs the desk's main button
-
-#### Scenario: Enter in a text area adds a line
-
-- **WHEN** the cursor is in the note field of a dialog and Enter is pressed
-- **THEN** a new line is added, and Ctrl+Enter (Command+Enter on macOS) activates the main button
-
-#### Scenario: Escape hides long work
-
-- **WHEN** the names pass's progress dialog is showing and Escape is pressed
-- **THEN** the dialog is hidden, the names pass keeps running, and the activity chip in the title bar shows it
-
-#### Scenario: Escape hides the export's last check
-
-- **WHEN** the export's last-check progress dialog is showing at 48 % and Escape is pressed
-- **THEN** the dialog is hidden, the export keeps running, the title bar shows its activity chip, and no `Cancel the export?` question appears
-
-#### Scenario: Escape cancels short work
-
-- **WHEN** the progress dialog of `Fill in from the book` is showing at step 3 of 6 and Escape is pressed
-- **THEN** the work is cancelled, the dialog closes and nothing is written to the brief
-
-#### Scenario: Focus stays in the card
-
-- **WHEN** Tab is pressed on the last control of a dialog
-- **THEN** focus moves to the first control of the same dialog
-
-#### Scenario: A click outside closes About only
-
-- **WHEN** the scrim outside the open About dialog is clicked, and then outside an open `Stop translating?` dialog
-- **THEN** About closes and `Stop translating?` stays open
-
 ### Requirement: Hold a dialog nobody asked for until the window is free
 
 WHEN a dialog opens by itself, such as the review desk at the end of a translation, the application SHALL wait until no dialog is open and no model work is visible, and only then show it. A dialog the person asked for SHALL show at once.
 
-**Source**: `docs/specification/mockups/README.md#g1--dialogs-live-in-the-window-on-two-layers`. In plain words: a desk that pops up over a question the person is answering would be taken for the question's own answer, and could swallow a keypress. Waiting costs nothing, because nothing is lost by seeing it a moment later.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g1--dialogs-live-in-the-window-on-two-layers`. In plain words: a desk that pops up over a question the person is answering would be taken for the question's own answer, and could swallow a keypress. Waiting costs nothing, because nothing is lost by seeing it a moment later.
 
 #### Scenario: The review desk waits for a question
 
@@ -595,19 +569,24 @@ WHEN a dialog opens by itself, such as the review desk at the end of a translati
 
 ### Requirement: Show all model work in one progress dialog
 
-WHEN the application asks the model for the brief, the names, a file name, the last check before saving or a translation's calls, it SHALL show one progress dialog with a header (title, purpose line and a determinate bar), a figures line such as "51 % · 26 of about 49 steps · Left about 1 min", a list of steps with a marker and one result line each, a detail pane, and a footer holding what Cancel does.
+WHEN the application asks the model for the brief, the names, a file name or a translation's calls, among them chapter summaries and proofread windows, it SHALL show one progress dialog with a header (title, purpose line and a determinate bar), a figures line such as "51 % · 26 of about 49 steps · Left about 1 min", a list of steps with a marker and one result line each, a detail pane, and a footer holding what Cancel does.
 
-**Source**: `docs/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`. In plain words: hours of model work used to hide behind a spinner or raw prompts in another window. One dialog shows what is being done, how far along it is and what came back, whatever the work is.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`, `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: hours of model work used to hide behind a spinner or raw prompts in another window. One dialog shows what is being done, how far along it is and what came back, whatever the work is. The export's last check is no longer model work, so it is no longer listed; chapter summaries and proofread windows are.
 
 #### Scenario: The figures line
 
-- **WHEN** the names pass has done 26 of about 49 steps
+- **WHEN** the model work in the dialog has done 26 of about 49 steps
 - **THEN** the bar sits at 51 % and the figures line reads `51 % · 26 of about 49 steps · Left about 1 min`
 
 #### Scenario: A finished step stays selectable
 
 - **WHEN** step 3 of the brief suggestion has finished and step 4 is running
 - **THEN** step 3 shows its result line and can still be selected to see its input and output, and step 5 says it has not started
+
+#### Scenario: Chapter summaries and proofread windows are steps
+
+- **WHEN** a Balanced run has written the summary of chapter 3 and is proofreading the window of paragraphs 40 to 42
+- **THEN** the dialog lists a step `Chapter 3 summarised` with its result line and a step `window ¶40–¶42` with its verdict
 
 #### Scenario: The footer says what Cancel does
 
@@ -623,7 +602,7 @@ WHEN the application asks the model for the brief, the names, a file name, the l
 
 The progress dialog SHALL show a selected step in a Simple view, with one plain sentence and the input and output in plain words, or in a Detailed view that adds the attempt, a clock against the timeout, first token, tokens, speed, the call's kind and the parsed prompt. It SHALL open in Detailed when "Show technical details" is on.
 
-**Source**: `docs/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`, `docs/specification/mockups/README.md#g12--simple-first-technical-details-on-request`. In plain words: most people want to know what is happening, not which attempt of which call it is. The technical view is one click away for those who do.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`, `docs/spec_baseline/specification/mockups/README.md#g12--simple-first-technical-details-on-request`. In plain words: most people want to know what is happening, not which attempt of which call it is. The technical view is one click away for those who do.
 
 #### Scenario: Simple is the default
 
@@ -644,7 +623,7 @@ The progress dialog SHALL show a selected step in a Simple view, with one plain 
 
 The progress dialog SHALL have a follow switch, on by default, that selects the step the work is on, and SHALL turn it off only when a person clicks or presses a key on the list, never because of a selection the application made.
 
-**Source**: `docs/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`. In plain words: a person reading an earlier step must not have it snatched away by the next step starting, and the application's own movement of the selection must not count as the person's choice.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`. In plain words: a person reading an earlier step must not have it snatched away by the next step starting, and the application's own movement of the selection must not count as the person's choice.
 
 #### Scenario: Following moves the selection
 
@@ -663,9 +642,9 @@ The progress dialog SHALL have a follow switch, on by default, that selects the 
 
 ### Requirement: Let long work continue in the background
 
-WHERE model work is long — the names pass or the export's last check — the progress dialog SHALL offer "Continue in background", which hides it and shows the activity chip in the title bar (for example "Names · 53 % · open"). Short work — the brief, a file name, a test — SHALL NOT be hideable. WHEN the chip is clicked, the same dialog SHALL reopen with its state.
+WHERE model work is long — the names pass — the progress dialog SHALL offer "Continue in background", which hides it and shows the activity chip in the title bar (for example "Names · 53 % · open"). Short work — the brief, a file name, a test — SHALL NOT be hideable. WHEN the chip is clicked, the same dialog SHALL reopen with its state.
 
-**Source**: `docs/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`, owner decision 11 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: a names pass can take many minutes, and a person should be able to read the book meanwhile. Short work ends before anyone could want to hide it, so it is not offered.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`, owner decision 11 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`), `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: a names pass can take many minutes, and a person should be able to read the book meanwhile. Short work ends before anyone could want to hide it, so it is not offered. The export's last check, once also hideable, no longer exists.
 
 #### Scenario: Hiding the names pass
 
@@ -686,7 +665,7 @@ WHERE model work is long — the names pass or the export's last check — the p
 
 WHILE long model work runs in the background, the screen it writes to SHALL be read-only behind a banner reading, for example, "Names is running in the background" with the line "This screen is read-only until it ends, so its results and your edits do not overwrite each other." and a "Show progress" button, and other model work SHALL be refused with a message that offers "Show progress". WHEN the work ends, the chip SHALL go and a message with "Review the results" SHALL appear; nothing SHALL open by itself.
 
-**Source**: `docs/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`. In plain words: the background pass is writing into the glossary, so editing it by hand at the same time would lose one of the two sets of changes. Saying so, and offering a way back, is better than a silent lock.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`. In plain words: the background pass is writing into the glossary, so editing it by hand at the same time would lose one of the two sets of changes. Saying so, and offering a way back, is better than a silent lock.
 
 #### Scenario: The glossary is read-only
 
@@ -707,7 +686,7 @@ WHILE long model work runs in the background, the screen it writes to SHALL be r
 
 The application SHALL show an operation's progress as the share of its finished steps, one percentage in the bar and the title bar, and SHALL NOT move the bar back when work is added on the way. Which steps a translation counts is defined by translation-pipeline ("Announce the planned steps and each step's state").
 
-**Source**: `docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, PR1–PR3 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: counting only segments made "52 % in 2 hours, 10 hours left". The bar now shows every step the work announces, and it holds still rather than going backwards when a repair adds work.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, PR1–PR3 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: counting only segments made "52 % in 2 hours, 10 hours left". The bar now shows every step the work announces, and it holds still rather than going backwards when a repair adds work.
 
 #### Scenario: Three tasks of three items
 
@@ -723,7 +702,7 @@ The application SHALL show an operation's progress as the share of its finished 
 
 The application SHALL take the time left as the sum, per kind of step, of the steps left times that kind's measured time per step over the whole operation without pauses. It SHALL show it as "about …" only once 5 steps or 3 % of all steps are finished, whichever comes first, rounded below 1 hour to the minute and from 1 hour to 10 minutes (50 minutes past an hour reads as the next hour), and the shown figure SHALL change by at most 10 % of its value a minute.
 
-**Source**: `docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`. In plain words: the old estimate multiplied the last 20 segments' average by every segment left, so one slow stretch was projected over the whole book. Per kind of step, over the whole run, is steadier, appears only once there is something measured, and never jumps.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`. In plain words: the old estimate multiplied the last 20 segments' average by every segment left, so one slow stretch was projected over the whole book. Per kind of step, over the whole run, is steadier, appears only once there is something measured, and never jumps.
 
 #### Scenario: The owner's sanity check
 
@@ -759,7 +738,7 @@ The application SHALL take the time left as the sum, per kind of step, of the st
 
 The application SHALL show the share of work as one percentage ("51 % done") in the bar and the title bar, and SHALL give counts in text as segments ("74 of 142 segments done"), never printing the two percentages side by side. The bar's tooltip SHALL say "140 of 276 steps, checks included", and "How progress is counted" SHALL list planned, done and measured time per kind of step.
 
-**Source**: `docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`. In plain words: two different percentages next to each other look like a mistake. The bar counts steps, the sentences count segments, and a tooltip and a breakdown explain how one relates to the other.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`. In plain words: two different percentages next to each other look like a mistake. The bar counts steps, the sentences count segments, and a tooltip and a breakdown explain how one relates to the other.
 
 #### Scenario: One percentage, one count
 
@@ -776,27 +755,11 @@ The application SHALL show the share of work as one percentage ("51 % done") in 
 - **WHEN** `How progress is counted` is opened on a Balanced translation
 - **THEN** it lists drafts and checks, each with its planned and done steps and its measured seconds per step
 
-### Requirement: Estimate before Start only from a measured speed
-
-WHILE a translation has not started, the application SHALL show a time estimate only when a speed in seconds per segment was measured, by the last inference test or an earlier translation of the project, and SHALL mark it "estimate". Without one, it SHALL show the relative cost of the quality choices (Balanced about 1.5 times Fast, Max about 3 times).
-
-**Source**: `docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `docs/specification/mockups/README.md#step-2--book-brief--b1b3-i`. In plain words: a guess of hours with no measurement behind it would be believed. Saying "about 1.5 times as long as Fast" is true without knowing the speed of this computer.
-
-#### Scenario: A measured speed gives an estimate
-
-- **WHEN** the last inference test measured 3.0 seconds per segment and Balanced is chosen
-- **THEN** the quality card reads `For this book on this computer: about …` followed by `(estimate from the model test)`
-
-#### Scenario: No speed gives relative cost
-
-- **WHEN** no inference test and no earlier translation of the project measured a speed
-- **THEN** no hours are shown and the choices read `Balanced ≈ 1.5× Fast` and `Max ≈ 3× Fast`
-
 ### Requirement: Fit the layout to the width of the content area
 
 The application SHALL classify the content area, and the window, as compact (below 1040 pixels), regular (1040 to 1439) or wide (1440 and above), with 16 pixels of hysteresis, in one place, and every width-dependent arrangement SHALL be decided there: a pair of cards by the class it is built for and by whether its content fits, the navigation column and the title bar by the window's class. It SHALL cap form and list screens (Projects, Import, Brief, Export, Settings) at 1320 pixels and size the navigation column 236 pixels, or 200 in a compact window.
 
-**Source**: `docs/specification/mockups/README.md#layout-and-sizes-l` (L1, L4, L9). In plain words: the same screens must work at 960 and at 1920 pixels. The 16 pixels of hysteresis stop a layout from flipping back and forth when a scrollbar appears at the edge. Input widths and the cap on prose are the README's.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#layout-and-sizes-l` (L1, L4, L9). In plain words: the same screens must work at 960 and at 1920 pixels. The 16 pixels of hysteresis stop a layout from flipping back and forth when a scrollbar appears at the edge. Input widths and the cap on prose are the README's.
 
 #### Scenario: The class follows the content width
 
@@ -822,7 +785,7 @@ The application SHALL classify the content area, and the window, as compact (bel
 
 The application SHALL keep the list-and-detail splits of the live panel, the review desk, the progress dialogs and Settings › Providers side by side at every width. It SHALL put Names & style's Glossary and Recurring terms cards side by side only while the content is wide and stack them otherwise, and WHILE the content is compact it SHALL stack the Import browser's Text pane and set the four count tiles 2 by 2. IF a pair of cards does not fit side by side at its content's minimum widths (two equal columns as wide as the wider minimum plus the gap, or a main column's minimum beside a side column's preferred width), THEN the application SHALL stack it whatever its breakpoint, and SHALL put it side by side again only 16 pixels past that width; no control that cannot shrink is cut at the right edge in English or Ukrainian.
 
-**Source**: `docs/specification/mockups/README.md#layout-and-sizes-l` (L6, L7), `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`. In plain words: a list without its detail is useless, so those never stack. The glossary's columns need room, so its two cards share a row only on a wide screen. The split widths are the README's.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#layout-and-sizes-l` (L6, L7), `docs/spec_baseline/specification/mockups/README.md#step-3--names--style--n1n5-i`. In plain words: a list without its detail is useless, so those never stack. The glossary's columns need room, so its two cards share a row only on a wide screen. The split widths are the README's.
 
 #### Scenario: Names & style stacks below wide
 
@@ -853,7 +816,7 @@ The application SHALL keep the list-and-detail splits of the live panel, the rev
 
 The application SHALL let Translating, Import, Names & style and Settings grow to the window's height instead of scrolling a table inside a scrolling page, SHALL keep Translating's live card at least 460 pixels high and Settings' footer in view at 960 by 640, and SHALL scroll the screen only below its minimum.
 
-**Source**: `docs/specification/mockups/README.md#layout-and-sizes-l` (L5). In plain words: a table that scrolls inside a page that scrolls is hard to use. These screens use the height they are given and only scroll when it is too small to be useful. The other minimum heights are the README's.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#layout-and-sizes-l` (L5). In plain words: a table that scrolls inside a page that scrolls is hard to use. These screens use the height they are given and only scroll when it is too small to be useful. The other minimum heights are the README's.
 
 #### Scenario: The live card at the smallest window
 
@@ -874,7 +837,7 @@ The application SHALL let Translating, Import, Names & style and Settings grow t
 
 WHEN one line of text does not fit, the application SHALL cut it with an ellipsis and SHALL show its whole text as a tooltip only then. Long text in detail panes and dialogs SHALL wrap, and nothing important SHALL be reachable only by hovering.
 
-**Source**: `docs/specification/mockups/README.md#layout-and-sizes-l` (L8). In plain words: a tooltip on every label is noise, and a cut label with no tooltip hides what it said. Only a cut line needs its tooltip.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#layout-and-sizes-l` (L8). In plain words: a tooltip on every label is noise, and a cut label with no tooltip hides what it said. Only a cut line needs its tooltip.
 
 #### Scenario: A cut name has a tooltip
 
@@ -890,7 +853,7 @@ WHEN one line of text does not fit, the application SHALL cut it with an ellipsi
 
 WHERE a fold (a titled section that opens and closes) carries a hover explanation, the application SHALL show it only while the pointer is on the fold's title bar, never over the fold's open content.
 
-**Source**: `docs/specification/mockups/README.md#layout-and-sizes-l`; the window re-test of `finalize-ui-and-persistence` (G2-3). In plain words: the Connection details explanation once opened wherever the pointer rested in the open provider form and stood over the fields being filled in.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#layout-and-sizes-l`; the window re-test of `finalize-ui-and-persistence` (G2-3). In plain words: the Connection details explanation once opened wherever the pointer rested in the open provider form and stood over the fields being filled in.
 
 #### Scenario: The open provider form shows no fold explanation
 
@@ -901,7 +864,7 @@ WHERE a fold (a titled section that opens and closes) carries a hover explanatio
 
 The application SHALL show scrollbars 12 pixels wide whenever content overflows, never as bars that hide themselves, with the thumb in the muted-2 role on the surface-2 track, and in the navigation column the nav-fg-muted role on the nav-bg-2 track.
 
-**Source**: `docs/specification/mockups/README.md#g3--visible-scrollbars`. In plain words: a hidden scrollbar leaves a person unsure that more exists below the edge. Always showing it, and wide enough to grab, answers that.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g3--visible-scrollbars`. In plain words: a hidden scrollbar leaves a person unsure that more exists below the edge. Always showing it, and wide enough to grab, answers that.
 
 #### Scenario: A long list shows its bar
 
@@ -922,7 +885,7 @@ The application SHALL show scrollbars 12 pixels wide whenever content overflows,
 
 The application SHALL use plain words on the main screens and SHALL show chunks, calls, tokens, attempts, rule codes and wire names only in Detailed views, Advanced folds and when Settings › Appearance › "Show technical details" is on. The switch SHALL be off by default and remembered, SHALL open every Simple and Detailed view in Detailed and open the Settings folds, and SHALL add rule codes and debug lines. There SHALL be no third mode.
 
-**Source**: `docs/specification/mockups/README.md#g12--simple-first-technical-details-on-request`. In plain words: a first-time reader should meet "segments 5–8", not "call 42, chunk 3 of 9". People who need the detail turn one switch on and find it everywhere it was held back.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g12--simple-first-technical-details-on-request`. In plain words: a first-time reader should meet "segments 5–8", not "call 42, chunk 3 of 9". People who need the detail turn one switch on and find it everywhere it was held back.
 
 #### Scenario: Off by default
 
@@ -948,7 +911,7 @@ The application SHALL use plain words on the main screens and SHALL show chunks,
 
 The application SHALL say "AI model" and not "provider", "to review" and not "flagged", "translated", "fixed automatically" and "left" for accepted, repaired and remaining, "translation" for a run, "Try again now" for every retry of a run and "Try again" for a check the person starts (the Projects AI-model line and the two continue dialogs), and "Skip these 4 segments" with the real count. It SHALL explain "segment" once, in the tooltip of every segment count: "A segment is a paragraph, heading or caption — one piece of the book's text."
 
-**Source**: `docs/specification/mockups/README.md#words-w--user-facing-vocabulary`. In plain words: the words of the engine are not the words of a person translating a book. The owner kept "segment" as the unit and asked that it be explained where it is counted. Ukrainian follows the same rules.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#words-w--user-facing-vocabulary`. In plain words: the words of the engine are not the words of a person translating a book. The owner kept "segment" as the unit and asked that it be explained where it is counted. Ukrainian follows the same rules.
 
 #### Scenario: Counts use the plain words
 
@@ -967,9 +930,9 @@ The application SHALL say "AI model" and not "provider", "to review" and not "fl
 
 ### Requirement: Show the live card's Live and Activity log tabs
 
-The Translating screen's live card SHALL hold two tabs, Live and Activity log. The Activity log SHALL offer the filter "All · Problems only", and "All calls…" on the Live tab SHALL open the progress dialog listing the translation's calls, newest first, keeping the last 50.
+The Translating screen's live card SHALL hold two tabs, Live and Activity log. The Activity log SHALL offer the filter "All · Problems only" and list proofread and chapter-summary entries with the other kinds, and "All calls…" on the Live tab SHALL open the progress dialog listing the translation's calls, newest first, keeping the last 50.
 
-**Source**: `docs/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (C1, the live card, Activity log tab and All calls… rows). In plain words: what is happening now and what has happened are two different questions, so they get two tabs. A book makes thousands of calls, so only the latest 50 are kept for reading.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (C1, the live card, Activity log tab and All calls… rows), `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: what is happening now and what has happened are two different questions, so they get two tabs. A book makes thousands of calls, so only the latest 50 are kept for reading. The Proofread stage and the chapter summaries appear in the same places as the drafts.
 
 #### Scenario: Two tabs
 
@@ -980,6 +943,11 @@ The Translating screen's live card SHALL hold two tabs, Live and Activity log. T
 
 - **WHEN** the Activity log holds 40 lines of which 3 are problems, and `Problems only` is chosen
 - **THEN** only those 3 lines are listed, and `All` lists the 40 again
+
+#### Scenario: Proofread and summary entries are in the Activity log
+
+- **WHEN** the Activity log is opened after chapter 3 was summarised and the window of paragraphs 40 to 42 was proofread
+- **THEN** it lists an entry of the kind chapter summary and an entry of the kind proofread
 
 #### Scenario: The last 50 calls
 
@@ -996,7 +964,7 @@ The Translating screen's live card SHALL hold two tabs, Live and Activity log. T
 
 The application SHALL show the Projects screen with the purpose line "A project is one translation of a book. One book can have several — into other languages, or the same language with another AI model. Progress is saved as you go.", a search over books and projects, an All, In progress and Finished filter, and the projects grouped under a header for each book with its cover, title, file, format, segment count and the number of translations.
 
-**Source**: `docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, G6 and decision 8 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: a person may have translated a book into three languages, and wants to find which, and where it stopped. Grouping by book puts a book's translations together.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, G6 and decision 8 (`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md`). In plain words: a person may have translated a book into three languages, and wants to find which, and where it stopped. Grouping by book puts a book's translations together.
 
 #### Scenario: Two translations of one book
 
@@ -1027,7 +995,7 @@ The application SHALL show the Projects screen with the purpose line "A project 
 
 Each project row SHALL show the project's name (a "named" chip when the person named it, "open" for the open one), its languages, AI model and quality, a progress bar with its percentage and when it was last opened, a status chip coloured by meaning (an idle project — not started, paused or stopped — reads grey, never the working colour), and Continue (or Open), and a ⋯ menu with "Rename…", "Show book file" and "Remove project…".
 
-**Source**: `docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`. In plain words: a row answers "which translation is this, how far has it got, and what can I do with it" without opening it.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`. In plain words: a row answers "which translation is this, how far has it got, and what can I do with it" without opening it.
 
 #### Scenario: A translation in progress
 
@@ -1053,7 +1021,7 @@ Each project row SHALL show the project's name (a "named" chip when the person n
 
 WHEN Continue or Open is used on a project, the application SHALL open it at its step. A project whose stored run reads running or paused, after a clean quit or a crash, SHALL show "Ready to continue" and wait for the person to press Continue translation; a finished project SHALL show Finished, not "Ready to continue". How the stored run is read and continued is specified by resume.
 
-**Source**: `docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, `docs/specification/mockups/README.md#run-states-a`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11". In plain words: reopening a project must not begin using the model without a person choosing to. They see where it was and press Continue translation.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, `docs/spec_baseline/specification/mockups/README.md#run-states-a`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11". In plain words: reopening a project must not begin using the model without a person choosing to. They see where it was and press Continue translation.
 
 #### Scenario: Continue from the list
 
@@ -1074,7 +1042,7 @@ WHEN Continue or Open is used on a project, the application SHALL open it at its
 
 WHEN Continue or Open is used on a project other than the one the window's run translates, the application SHALL leave a stopped, finished or failed run behind and show the opened project's own state; IF that run is still at work (running, pausing, paused or stopping), THEN it SHALL first ask "Stop the translation and open another project?" with `Stop and open` and Cancel, stop the run and wait for it to end before opening, and SHALL change nothing on Cancel.
 
-**Source**: `docs/specification/mockups/README.md#run-states-a`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11". In plain words: one translation exists per application run and belongs to its project; another project must never show its figures, rows or Continue translation, and a run is never stopped without the person agreeing.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#run-states-a`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11". In plain words: one translation exists per application run and belongs to its project; another project must never show its figures, rows or Continue translation, and a run is never stopped without the person agreeing.
 
 #### Scenario: A stopped run stays with its project
 
@@ -1090,7 +1058,7 @@ WHEN Continue or Open is used on a project other than the one the window's run t
 
 WHERE Settings › Automation "Reopen the last project" is on, the window SHALL open, at launch, the project that was open when BookLoom last closed; WHERE it is off, or no project was open, the window SHALL open Projects.
 
-**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`. In plain words: a person who works on one book all week should land back in it, and a person who does not want that lands on the list of their translations. When the setting applies is specified by settings.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`. In plain words: a person who works on one book all week should land back in it, and a person who does not want that lands on the list of their translations. When the setting applies is specified by settings.
 
 #### Scenario: The switch is on
 
@@ -1104,30 +1072,73 @@ WHERE Settings › Automation "Reopen the last project" is on, the window SHALL 
 
 ### Requirement: Show a first-launch state on Projects when none exist
 
-WHILE no project exists, the application SHALL show on Projects "Translate a book on your own computer", How it works in four steps (choose a book · check the languages · let it translate · save the translated book, with "your original file is never changed"), the line with the result of the first-launch look, and "+ New translation". While the look runs the line reads `Looking for an AI program on this computer…` with `Try again` visible but disabled; a screen that shows no look this session still offers `Try again` under `No AI model found`. When several models are found the person is asked which one to use; while that question is open the line still reads `Looking for an AI program on this computer…` and never says a program is not open, and the navigation footer reads `Looking for an AI model…`; dismissing that question with `Not now` shows the `No AI model chosen yet` line (the footer reads `No AI model chosen`) and `Try again` asks again. The words `(found on this computer when BookLoom first opened)` appear only in the session whose first-launch look found the model, and are not stored. It SHALL hide search and the filter, and show "+ New translation" with a list too.
+WHILE no project exists, the application SHALL show on Projects "Translate a book. Private when you use a local AI model.", How it works in four steps (choose a book · check the languages · let it translate · save the translated book, with "your original file is never changed"), the line with the result of the first-launch look, and "+ New translation". It SHALL hide search and the filter, and show "+ New translation" with a list too.
 
-**Source**: `docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, `docs/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`. In plain words: the first screen a new person sees must say what the program does, what to press, and whether the AI model it needs was found. The look itself is specified by llm-provider ("Look once for a local AI program at first launch").
+**Source**: `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, `docs/spec_baseline/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`, the owner's decision that privacy is stated as "private when used with local models". In plain words: the first screen a new person sees must say what the program does, what to press, and whether the AI model it needs was found. It must not promise that a cloud model keeps the book on this computer, so the tagline says "private when you use a local AI model".
 
 #### Scenario: An empty list
 
 - **WHEN** the application starts for the first time
 - **THEN** Projects shows the four steps, the AI-model line and `+ New translation`, and no search or filter
 
-#### Scenario: The model was found
+#### Scenario: The tagline does not claim a cloud model is local
 
-- **WHEN** Ollama with `gemma4:e4b` was found when BookLoom first opened
-- **THEN** the AI-model line reads `AI model: Ollama · gemma4:e4b — ready ✓ (found on this computer when BookLoom first opened)`
+- **WHEN** the first-launch Projects screen is shown
+- **THEN** it shows `Translate a book. Private when you use a local AI model.` and does not say the book is translated "on your own computer"
+
+### Requirement: Word the first-launch look's line while it runs and when it finds nothing
+
+WHILE the first-launch look runs, the AI-model line SHALL read `Looking for an AI program on this computer…` with `Try again` visible but disabled; a screen that shows no look this session SHALL still offer `Try again` under `No AI model found`.
+
+**Source**: `docs/spec_baseline/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`, `openspec/specs/llm-provider/spec.md` "Look once for a local AI program at first launch". In plain words: the person always sees what the program is doing and what to press next, even when the look was not run in this session.
 
 #### Scenario: Nothing was found
 
 - **WHEN** no program answered at the first launch
 - **THEN** the line reads `No AI model found`, says `Ollama is not open. Open the Ollama app, then press Try again.` and offers `Try again` and `I use another program…`, and no error dialog is opened
 
+#### Scenario: The look is still running
+
+- **WHEN** the first-launch look has not ended
+- **THEN** the line reads `Looking for an AI program on this computer…` and `Try again` is visible but disabled
+
+### Requirement: Ask which model to use when several are found
+
+WHEN the first-launch look finds several models, the application SHALL ask the person which one to use; WHILE that question is open the line SHALL still read `Looking for an AI program on this computer…` and never say a program is not open, and the navigation footer SHALL read `Looking for an AI model…`; dismissing it with `Not now` SHALL show the `No AI model chosen yet` line (the footer reads `No AI model chosen`), and `Try again` asks again.
+
+**Source**: `docs/spec_baseline/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`. In plain words: while the person is choosing, the screen must not claim that nothing was found; dismissing the question leaves a clear way back.
+
+#### Scenario: Several models are found
+
+- **WHEN** the first-launch look found Ollama with `gemma4:e4b` and LM Studio with `qwen3:8b`, and the question which one to use is open
+- **THEN** the line reads `Looking for an AI program on this computer…` and the footer reads `Looking for an AI model…`
+
+#### Scenario: The question is dismissed
+
+- **WHEN** `Not now` is chosen on the question which model to use
+- **THEN** the line reads `No AI model chosen yet`, the footer reads `No AI model chosen`, and `Try again` asks again
+
+### Requirement: Mark a model found at first launch only in that session
+
+The words `(found on this computer when BookLoom first opened)` SHALL appear only in the session whose first-launch look found the model, and SHALL NOT be stored.
+
+**Source**: `docs/spec_baseline/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`. In plain words: the words describe what happened in this session; a later session knows only the saved model, not how it was found.
+
+#### Scenario: The model was found
+
+- **WHEN** Ollama with `gemma4:e4b` was found when BookLoom first opened
+- **THEN** the AI-model line reads `AI model: Ollama · gemma4:e4b — ready ✓ (found on this computer when BookLoom first opened)`
+
+#### Scenario: A later session drops the words
+
+- **WHEN** BookLoom is opened again after the session whose first-launch look found `gemma4:e4b`
+- **THEN** the AI-model line holds no `(found on this computer when BookLoom first opened)` and nothing about it is stored
+
 ### Requirement: Look again when the person presses Try again
 
 WHEN "Try again" is pressed on the "No AI model found" line, the application SHALL run the first-launch look once more, because the person asked for it, and SHALL show its result on the same line.
 
-**Source**: `docs/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`, ADR-0044. In plain words: after opening Ollama a person presses Try again and expects BookLoom to see it. That look is user-triggered, so it is within the offline rule; BookLoom still never looks by itself again.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`, ADR-0044. In plain words: after opening Ollama a person presses Try again and expects BookLoom to see it. That look is user-triggered, so it is within the offline rule; BookLoom still never looks by itself again.
 
 #### Scenario: Ollama was opened in the meantime
 
@@ -1143,7 +1154,7 @@ WHEN "Try again" is pressed on the "No AI model found" line, the application SHA
 
 WHEN "+ New translation" is used, the application SHALL open Import with its empty drop area, before any book is chosen, and SHALL create the project from the book chosen there. It SHALL show the button in the toolbar of the list and in the empty state.
 
-**Source**: `docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, `docs/specification/mockups/README.md#layout-and-sizes-l` (L2). In plain words: one obvious way in, always in the same place. A project is a translation of a book, so it exists once a book is chosen.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, `docs/spec_baseline/specification/mockups/README.md#layout-and-sizes-l` (L2). In plain words: one obvious way in, always in the same place. A project is a translation of a book, so it exists once a book is chosen.
 
 #### Scenario: From the empty state
 
@@ -1159,7 +1170,7 @@ WHEN "+ New translation" is used, the application SHALL open Import with its emp
 
 The application SHALL name a project `<book title> · <SRC> → <TGT>` (for example `Earth Gravity · EN → UK`), taking the title from the book's metadata before a colon or else the file name. Before a target is chosen it SHALL carry no arrow — `<book title> · <SRC>` — and the source code SHALL be left out until a language is known, so a book with neither reads as its title alone.
 
-**Source**: `docs/specification/mockups/README.md#project-names--one-book-several-translations-pn` (item 1). In plain words: a person never has to invent a name, and the name says what the project is.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#project-names--one-book-several-translations-pn` (item 1). In plain words: a person never has to invent a name, and the name says what the project is.
 
 #### Scenario: A full name
 
@@ -1185,7 +1196,7 @@ The application SHALL name a project `<book title> · <SRC> → <TGT>` (for exam
 
 WHILE a project's name is automatic, the application SHALL change it when the languages change and say so in a message. A name the person typed SHALL never change by itself. A named project SHALL return to its automatic name only when no other project of the book has the same language pair.
 
-**Source**: `docs/specification/mockups/README.md#project-names--one-book-several-translations-pn` (items 2 and 4). In plain words: a name that says `EN → UK` must not go on saying it after the target became German, but a name a person chose is theirs.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#project-names--one-book-several-translations-pn` (items 2 and 4). In plain words: a name that says `EN → UK` must not go on saying it after the target became German, but a name a person chose is theirs.
 
 #### Scenario: The name follows
 
@@ -1206,7 +1217,7 @@ WHILE a project's name is automatic, the application SHALL change it when the la
 
 The application SHALL allow one unnamed project for each language pair of a book (same content). IF a person chooses a used pair in the Brief, THEN a dialog "Same language pair" SHALL show the existing project with its AI model, quality and progress and offer "Open that project" or "Make a second <language> translation", which needs a name of its own; "Translate into another language" asks for that name in its own form and opens the dialog only when the pair turns out to be used.
 
-**Source**: `docs/specification/mockups/README.md#project-names--one-book-several-translations-pn` (item 3). In plain words: two identically named translations would be confused and overwrite each other's files. Asking once, with the choice to open the first, prevents it.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#project-names--one-book-several-translations-pn` (item 3). In plain words: two identically named translations would be confused and overwrite each other's files. Asking once, with the choice to open the first, prevents it.
 
 #### Scenario: A used pair
 
@@ -1227,7 +1238,7 @@ The application SHALL allow one unnamed project for each language pair of a book
 
 WHEN a name is typed for a project, the application SHALL refuse it with "That name is already used", shown only after the first edit, IF another project of the same book has that name after trimming and ignoring letter case, Cyrillic included. A project of another book SHALL never make a name used. How names are stored is specified by local-storage, and how exports of two projects stay apart by export.
 
-**Source**: `docs/specification/mockups/README.md#project-names--one-book-several-translations-pn` (item 4), owner answer of 2026-10-20 recorded in `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D10". In plain words: two translations of one book must be told apart in every list and dialog, but two different books that happen to share a title may each keep their natural name.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#project-names--one-book-several-translations-pn` (item 4), owner answer of 2026-10-20 recorded in `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D10". In plain words: two translations of one book must be told apart in every list and dialog, but two different books that happen to share a title may each keep their natural name.
 
 #### Scenario: Two books with the same title
 
@@ -1248,7 +1259,7 @@ WHEN a name is typed for a project, the application SHALL refuse it with "That n
 
 WHEN "Rename…" is used, the application SHALL ask for a name with chips, an error for a used name and "Use the automatic name again". WHEN "Remove project…" is used, it SHALL ask for confirmation naming the project and saying that the book file, the exported files and the book's other projects stay; what removing deletes is specified by local-storage. WHILE the project's own translation is at work (running, pausing, paused or stopping), the question SHALL instead say that removing stops the translation first ("Stop and remove"), and on confirmation the application SHALL stop the run, wait for it to end, and only then remove the project, so no write of the run fails afterwards.
 
-**Source**: `docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, `docs/specification/mockups/README.md#other-dialogs`. In plain words: removing one translation must not take away anything else a person has, and the question says so before anything is removed.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, `docs/spec_baseline/specification/mockups/README.md#other-dialogs`. In plain words: removing one translation must not take away anything else a person has, and the question says so before anything is removed.
 
 #### Scenario: Renaming
 
@@ -1269,7 +1280,7 @@ WHEN "Rename…" is used, the application SHALL ask for a name with chips, an er
 
 WHEN "Translate into another language" is used, the application SHALL ask for the language and the project name (required for a used pair), create a project on the already imported book that uses the currently chosen AI model, copy the brief and the Glossary and Recurring terms (entries, kinds, genders, locked marks) with every translation emptied, never copy the translation memory, import nothing again and open the new project's brief.
 
-**Source**: `docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, open question 5 of `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (recorded default), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D10". In plain words: the characters and places are the same in any language, so their list is kept; renderings and old translations would pull a new language wrong, so they are cleared.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, open question 5 of `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/proposal.md` (recorded default), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D10". In plain words: the characters and places are the same in any language, so their list is kept; renderings and old translations would pull a new language wrong, so they are cleared.
 
 #### Scenario: A German copy of a Ukrainian project
 
@@ -1305,7 +1316,7 @@ WHEN "Translate into another language" is used, the application SHALL ask for th
 
 WHILE the run state is Translating, Pausing, Stuck call, Stopping or Waiting for the AI model, the application SHALL disable every other model action — Prepare names, Scan, Review, Translate, Fill in from the book — with the tooltip "Pause the translation first — BookLoom sends one model request at a time". WHILE the names pass runs, even hidden, Start translation SHALL wait with "Wait until the names pass ends".
 
-**Source**: `docs/specification/mockups/README.md#changes-while-translating-i`, `docs/specification/mockups/README.md#run-states-a`. In plain words: a local model answers one request at a time. These are the states in which BookLoom has a request out or sends one by itself; in every paused or ended state the model is free.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#changes-while-translating-i`, `docs/spec_baseline/specification/mockups/README.md#run-states-a`. In plain words: a local model answers one request at a time. These are the states in which BookLoom has a request out or sends one by itself; in every paused or ended state the model is free.
 
 #### Scenario: A button explains itself
 
@@ -1331,7 +1342,7 @@ WHILE the run state is Translating, Pausing, Stuck call, Stopping or Waiting for
 
 WHILE a banner applies — the AI model is unreachable, a call is stuck, BookLoom gave up, the model is missing, a translation cannot start, welcome back, finished, or hidden work — the application SHALL show it in a slot between the toolbar and the scrolling content, on every screen, with "Go to Translating" where useful.
 
-**Source**: `docs/specification/mockups/README.md#layout-and-sizes-l` (L3). In plain words: a model program that went away matters whichever screen the person is on, and a banner inside a scrolled page can be missed.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#layout-and-sizes-l` (L3). In plain words: a model program that went away matters whichever screen the person is on, and a banner inside a scrolled page can be missed.
 
 #### Scenario: A banner on another screen
 
@@ -1352,7 +1363,7 @@ WHILE a banner applies — the AI model is unreachable, a call is stuck, BookLoo
 
 The application SHALL put a project in exactly one of sixteen run states — Ready, Ready to continue, Cannot start yet, Translating, Pausing, Paused, Waiting for the AI model, Paused after an error, Stopped trying, Model missing, Stuck call, Stopping, Stopped, Finished to review, Finished nothing to review, Failed — and the title bar's text, the AI-model chip's colour, the toolbar, the banner and the live line SHALL follow that state.
 
-**Source**: `docs/specification/mockups/README.md#run-states-a`. In plain words: one table, not a separate idea of "state" on each screen. If the title bar, the toolbar and the banner all read the same row, they cannot disagree.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#run-states-a`. In plain words: one table, not a separate idea of "state" on each screen. If the title bar, the toolbar and the banner all read the same row, they cannot disagree.
 
 #### Scenario: Ready
 
@@ -1438,11 +1449,11 @@ The application SHALL put a project in exactly one of sixteen run states — Rea
 
 WHILE an attempt of a model call has had no answer for 60 seconds or more, the application SHALL show the Stuck call state, saying the model is "taking longer than usual", and SHALL show one clock: that attempt's elapsed time against that call's own time limit, for example "3:40 of 6:00".
 
-**Source**: `docs/specification/mockups/README.md#run-states-a` (Stuck call), `docs/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Call line). In plain words: a slow model should look slow, not broken. One clock, counting the attempt against its own limit, says how long it has waited and when BookLoom will try again, with no second figure to reconcile.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#run-states-a` (Stuck call), `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Call line). In plain words: a slow model should look slow, not broken. One clock, counting the attempt against its own limit, says how long it has waited and when BookLoom will try again, with no second figure to reconcile. It applies to every kind of call, a proofread call as much as a draft.
 
 #### Scenario: One clock against the call's own limit
 
-- **WHEN** a review call whose time limit is 4:00 has waited 1:30 on its attempt
+- **WHEN** a proofread call whose time limit is 4:00 has waited 1:30 on its attempt
 - **THEN** the chip reads `No answer for 1:30` and the call line shows the one clock `1:30 of 4:00`
 
 #### Scenario: Not stuck before a minute
@@ -1459,7 +1470,7 @@ WHILE an attempt of a model call has had no answer for 60 seconds or more, the a
 
 WHEN a failure is shown with a "Show details" or "Details for support" action, the application SHALL show a plain message first and the technical details in a section collapsed until the person opens it, with Copy details.
 
-**Source**: `docs/specification/mockups/README.md#g12--simple-first-technical-details-on-request`, `docs/specification/mockups/README.md#other-dialogs`. In plain words: the person needs to know what went wrong in a sentence, and the support person needs the code. Both get what they need without the first being buried under the second.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g12--simple-first-technical-details-on-request`, `docs/spec_baseline/specification/mockups/README.md#other-dialogs`. In plain words: the person needs to know what went wrong in a sentence, and the support person needs the code. Both get what they need without the first being buried under the second.
 
 #### Scenario: An unreadable file
 
@@ -1470,7 +1481,7 @@ WHEN a failure is shown with a "Show details" or "Details for support" action, t
 
 WHEN a person leaves a screen while long model work started from it is running, the application SHALL ask "Model work is running" with the choices Stay and Continue in background, and SHALL change nothing until the person answers.
 
-**Source**: `docs/specification/mockups/README.md#other-dialogs`, `docs/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`. In plain words: moving to another screen would otherwise leave a names pass writing into a screen nobody can see. The person decides whether to wait there or let it run on in the background, where its screen turns read-only.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#other-dialogs`, `docs/spec_baseline/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`. In plain words: moving to another screen would otherwise leave a names pass writing into a screen nobody can see. The person decides whether to wait there or let it run on in the background, where its screen turns read-only.
 
 #### Scenario: Leaving during the names pass
 
@@ -1486,7 +1497,7 @@ WHEN a person leaves a screen while long model work started from it is running, 
 
 IF the book file of a project is missing or its content has changed when the project is opened, THEN the application SHALL offer "Find the book…", and SHALL accept a chosen file only when its content equals the stored book's. Otherwise it SHALL say "This is a different book" and change nothing.
 
-**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D10", `docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`. In plain words: a book moved to another folder should not orphan its translation, but a different book must never be attached to someone else's saved work.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D10", `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`. In plain words: a book moved to another folder should not orphan its translation, but a different book must never be attached to someone else's saved work.
 
 #### Scenario: The file was moved
 
@@ -1507,7 +1518,7 @@ IF the book file of a project is missing or its content has changed when the pro
 
 WHILE the window is narrower than the title bar needs, the application SHALL hide the quality and review mode, the elapsed time and the speed below the wide class (1440 pixels), and the project name in a compact window (below 1040 pixels), keeping the state text and the AI-model chip.
 
-**Source**: `docs/specification/mockups/README.md#window-chrome`. In plain words: a narrow window loses the least important items first, so the name of the state and whether the AI model is answering are never the ones to go.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#window-chrome`. In plain words: a narrow window loses the least important items first, so the name of the state and whether the AI model is answering are never the ones to go.
 
 #### Scenario: Items give way in a narrow window
 
@@ -1520,7 +1531,7 @@ WHILE the window is narrower than the title bar needs, the application SHALL hid
 
 WHERE the Automation setting "Keep the computer awake" is on, which it is by default, and WHILE the run state is Translating, Pausing, Stuck call, Stopping or Waiting for the AI model, or any other activity asks the model for text, the desktop application SHALL ask the operating system to keep the computer awake. It SHALL let it sleep again when the last such activity has ended and at exit, and a failure to keep it awake SHALL never fail the run.
 
-**Source**: `docs/specification/mockups/README.md#run-states-a` (the awake column), `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Help line). In plain words: a sleeping computer translates nothing. A person can turn this off in Settings. Asking the operating system is not network traffic.
+**Source**: `docs/spec_baseline/specification/mockups/README.md#run-states-a` (the awake column), `docs/spec_baseline/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/spec_baseline/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Help line). In plain words: a sleeping computer translates nothing. A person can turn this off in Settings. Asking the operating system is not network traffic.
 
 #### Scenario: A run keeps the computer awake until the person pauses it
 
@@ -1576,7 +1587,7 @@ WHERE the Automation setting "Keep the computer awake" is on, which it is by def
 
 WHEN a book is chosen for import while a project is open, whatever its run state, the application SHALL ask "Open another book?" with "Open as a new project" as the main choice, "Replace and delete this translation" as the named destructive choice and Cancel, and SHALL change nothing until the person answers.
 
-**Source**: `docs/specification/mockups/README.md#step-1--import--i1i4` (Header row), `docs/specification/mockups/README.md#other-dialogs`. In plain words: the safe answer is the main one: the earlier translation stays, saved, in Projects; deleting it is a separate, named choice. The dialog is book-import's ("Ask before another book is opened while a project is open").
+**Source**: `docs/spec_baseline/specification/mockups/README.md#step-1--import--i1i4` (Header row), `docs/spec_baseline/specification/mockups/README.md#other-dialogs`. In plain words: the safe answer is the main one: the earlier translation stays, saved, in Projects; deleting it is a separate, named choice. The dialog is book-import's ("Ask before another book is opened while a project is open").
 
 The question comes first, before the file is read; "Already in projects" is a verdict that can only follow it (an answer of "Open as a new project" for a book that is already stored). "Open as a new project" SHALL stop a run that is still going and wait for it to end, because one translation exists per application run and the stopped translation can be continued later from Projects; it SHALL leave a paused, stopped or finished run as it is, the window showing the new book's own state instead of a stopped, finished or failed run, and SHALL never remove the open project. "Replace and delete this translation" SHALL end any run that has not ended, open the book, delete the open project only once the new book is stored (a book that cannot be opened leaves the old project stored, and a book that is the open project's own resets that same project instead) and leave the run idle.
 
@@ -1609,7 +1620,7 @@ The question comes first, before the file is read; "Already in projects" is a ve
 
 WHEN a person advances from a workflow screen, the application SHALL move to the next step, and every step SHALL remain reachable from the navigation column at any time once a project is open. WHEN "Start translation" is used on Names & style while a start is offered, the application SHALL start a run and show Translating, or, IF something the run needs is missing, show it naming what is missing and start nothing.
 
-**Source**: FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/mockups/README.md#run-states-a`. In plain words: the numbering is a suggested order, not a wizard. While a run can be continued, Start translation only shows Translating, so two runs never begin side by side.
+**Source**: FR-UI-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/spec_baseline/specification/mockups/README.md#run-states-a`. In plain words: the numbering is a suggested order, not a wizard. While a run can be continued, Start translation only shows Translating, so two runs never begin side by side.
 
 #### Scenario: Continuing from the book brief shows the next step
 
@@ -1668,9 +1679,9 @@ WHEN a person advances from a workflow screen, the application SHALL move to the
 
 ### Requirement: Continue an existing translation and never call it a start
 
-Resuming SHALL mean continuing a translation that already exists for the book. WHILE it is paused, Resume SHALL continue it in place; WHILE it is stopped, interrupted by a restart or failed, "Continue translation" SHALL begin at the first pending segment, keeping the segments already decided. A continuation SHALL never be labelled "Start", and the title bar's control SHALL do exactly what the toolbar's control of the same name does.
+Resuming SHALL mean continuing a translation that already exists for the book. WHILE it is paused, Resume SHALL continue it in place; WHILE it is stopped, interrupted by a restart or failed, "Continue translation" SHALL continue the stage that still has work (Prepare, Translate or Proofread), keeping what is already decided. A continuation SHALL never be labelled "Start", and the title bar's control SHALL do exactly what the toolbar's control of the same name does.
 
-**Source**: FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/specification/mockups/README.md#run-states-a`. In plain words: Start is for a book with nothing done; Resume and Continue always carry something on. A person who closed the application overnight sees Continue translation and "Ready to continue", not a button that suggests starting over.
+**Source**: FR-UI-01 (`docs/spec_baseline/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/spec_baseline/specification/mockups/README.md#run-states-a`, `design.md#d2--the-runs-three-stages-and-the-quality-dial`. In plain words: Start is for a book with nothing done; Resume and Continue always carry something on. A person who closed the application overnight sees Continue translation and "Ready to continue", not a button that suggests starting over, and the run picks up the stage that was not finished, whether that is drafting or the second reading.
 
 #### Scenario: The title bar's Resume does what the screen's does
 
@@ -1682,6 +1693,11 @@ Resuming SHALL mean continuing a translation that already exists for the book. W
 - **WHEN** a project with 74 of 142 segments done is opened after a restart
 - **THEN** the toolbar offers `Continue translation` and nothing is labelled `Start`
 
+#### Scenario: Continue picks up the stage with work left
+
+- **WHEN** a project whose 142 segments are all drafted but whose proofread of 6 marked windows stopped after 2 is opened after a restart
+- **THEN** the toolbar offers `Continue translation` and the run continues with the Proofread stage
+
 #### Scenario: Resume is not offered while the run is running
 
 - **WHEN** the run over `earth-gravity.epub` is running
@@ -1691,3 +1707,154 @@ Resuming SHALL mean continuing a translation that already exists for the book. W
 
 - **WHEN** the run is paused, paused after an error, or stopped
 - **THEN** `Resume` is offered on the toolbar and the title bar for the first two, and `Continue translation` for a stopped run
+
+### Requirement: Show the run's stage on the Translating summary strip
+
+WHILE a run is at work, the Translating summary strip SHALL show the stages Prepare, Translate and Proofread with the stage in work marked; at Max the Proofread chip SHALL name the round in work, and at Fast the Proofread step SHALL read "marks for review, no model calls".
+
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`, `design.md#d2--the-runs-three-stages-and-the-quality-dial`. In plain words: a run now has three stages, and a person watching must know which one is going and, at Max, how far the second reading of the book has got. At Fast, Proofread makes no model call, and the strip says so rather than leaving a bare stage that never moves.
+
+#### Scenario: The stage in work is marked
+
+- **WHEN** a Balanced run has finished drafting and is proofreading marked windows
+- **THEN** the strip shows `Prepare`, `Translate` and `Proofread` with `Proofread` marked as the stage in work
+
+#### Scenario: Max names the round
+
+- **WHEN** a Max run is reading the whole book a second time
+- **THEN** the Proofread chip reads `Proofread · round 2 of 2: whole book`
+
+#### Scenario: Fast makes no proofread call
+
+- **WHEN** a Fast run reaches its Proofread step
+- **THEN** the step reads "marks for review, no model calls"
+
+#### Scenario: Prepare comes first
+
+- **WHEN** a run has just started and is preparing the book (the style sheet from the brief and, with an empty glossary, the name scan)
+- **THEN** `Prepare` is marked
+
+### Requirement: Show a proofread window as a live-card row with its verdict
+
+WHEN the Proofread stage reads a window of paragraphs, the live card SHALL list it as a row such as `window ¶40–¶42` whose detail shows the text before, the text after and the verdict, kept, proposed, rejected or unchanged, with the reason in words.
+
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: Proofread may rewrite a few paragraphs, and a person must be able to see what changed and why an edit was kept or turned down, in the same place as the draft calls.
+
+#### Scenario: A kept edit
+
+- **WHEN** the window of paragraphs 40 to 42 was proofread and the gender ending of a verb was fixed
+- **THEN** the row `window ¶40–¶42` shows the text before and after and the verdict `kept: gender ending fixed`
+
+#### Scenario: A rejected edit
+
+- **WHEN** a proofread rewrite of the same window added the Russian word `что` and the never-worse gate turned it down
+- **THEN** the row shows the verdict `rejected: added a Russian word «что»` and the text after is the text before
+
+#### Scenario: Unchanged and proposed
+
+- **WHEN** the model returned the paragraphs as they were, and in another window the edit waits for the person
+- **THEN** the first row shows `unchanged` and the second `proposed`
+
+### Requirement: Show a chapter summary as a live-card row
+
+WHEN a chapter's summary is written, the live card SHALL list a row `Chapter {n} summarised` whose detail shows the summary text.
+
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: later chapters are drafted with the summaries of earlier ones, so a person can check what the model made of a chapter before it shapes the rest of the book.
+
+#### Scenario: A summary is written
+
+- **WHEN** the summary of chapter 3 is written
+- **THEN** the live card lists the row `Chapter 3 summarised` and its detail shows the two or three sentences
+
+#### Scenario: No summaries when the switch is off
+
+- **WHEN** the book's chapter-summaries switch is off
+- **THEN** the live card lists no `Chapter {n} summarised` row
+
+### Requirement: Show a figure the engine did not report as a dash
+
+WHERE a call's time to first token, prompt-reading time, cached share or speed was not reported by the engine, the application SHALL show `–` in the live card, the call detail and the progress dialog, and SHALL NOT show 0 or count it in an average.
+
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `design.md#d23--timings-interactive-callers-and-the-model-name-filter`. In plain words: some servers report no time to first token. Showing 0 would make them look instant and would pull every average down, so a missing figure stays visibly missing.
+
+#### Scenario: A call without a time to first token
+
+- **WHEN** the call detail of a draft call answered through Ollama's OpenAI-compatible route is opened
+- **THEN** its time to first token reads `–`
+
+#### Scenario: A reported figure is shown
+
+- **WHEN** LM Studio reports a time to first token of 0.21 seconds
+- **THEN** the call detail shows 210 ms
+
+#### Scenario: A missing figure is left out of the average
+
+- **WHEN** three calls reported 200 ms, 400 ms and nothing
+- **THEN** the average time to first token reads 300 ms, from the two calls that reported it
+
+### Requirement: Name the recommended model on the empty Projects screen
+
+WHILE no project exists, the Projects screen SHALL show a line naming the model recommended for the computer's memory with its pull command as text, such as "This computer has 16 GB: gemma4:e4b is recommended. Pull it with `ollama pull gemma4:e4b`.", and SHALL NOT run the command.
+
+**Source**: `docs/spec_baseline/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-projects`, `docs/spec_baseline/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: a new person does not know which model fits their computer. The first screen says which one to get and how, and leaves the download to them. Which model fits which memory is the settings capability's rule for the model choice.
+
+#### Scenario: A 16 GB computer
+
+- **WHEN** the application starts for the first time on a computer with 16 GB of memory
+- **THEN** the line reads "This computer has 16 GB: gemma4:e4b is recommended. Pull it with `ollama pull gemma4:e4b`."
+
+#### Scenario: A 32 GB computer
+
+- **WHEN** the first launch happens on a computer with 32 GB of memory
+- **THEN** the line names `gemma4:26b-a4b` as recommended with `ollama pull gemma4:26b-a4b`
+
+#### Scenario: Nothing is pulled
+
+- **WHEN** the line is shown
+- **THEN** BookLoom starts no download
+
+#### Scenario: A list of projects hides the line
+
+- **WHEN** at least one project exists
+- **THEN** the line is not shown
+
+### Requirement: Answer Enter, Escape and Tab alike in every dialog
+
+WHILE a dialog is open, the application SHALL keep Tab inside it, SHALL run the footer's main button on Enter (Ctrl or Command with Enter inside a text area, and everywhere in the review desk, whose main button decides a segment and so runs only on Ctrl or Command with Enter), and SHALL close it on Escape. On a progress dialog Escape SHALL hide long work and cancel short work; only the export dialog's Cancel button SHALL ask "Cancel the export?". Only About SHALL close on a click outside it.
+
+**Source**: `docs/spec_baseline/specification/mockups/README.md#g1--dialogs-live-in-the-window-on-two-layers`, owner answer of 2026-10-20 recorded in `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D1", `design.md#d16--export-validates-and-writes-with-no-model-call`. In plain words: a person at the keyboard should be able to answer any dialog without finding the mouse, and Escape never loses long work: it only puts it out of the way. The export no longer has a last check to hide, so the only long work Escape hides is the names pass.
+
+#### Scenario: Enter presses the main button
+
+- **WHEN** `Stop translating?` is shown and Enter is pressed
+- **THEN** the main button of its footer is activated
+
+#### Scenario: Plain Enter in the review desk decides nothing
+
+- **WHEN** the review desk is open on `ch5 · p12` with a row of its list focused and Enter is pressed
+- **THEN** no segment is accepted, and Ctrl+Enter (Command+Enter on macOS) runs the desk's main button
+
+#### Scenario: Enter in a text area adds a line
+
+- **WHEN** the cursor is in the note field of a dialog and Enter is pressed
+- **THEN** a new line is added, and Ctrl+Enter (Command+Enter on macOS) activates the main button
+
+#### Scenario: Escape hides long work
+
+- **WHEN** the names pass's progress dialog is showing and Escape is pressed
+- **THEN** the dialog is hidden, the names pass keeps running, and the activity chip in the title bar shows it
+
+#### Scenario: Escape cancels short work
+
+- **WHEN** the progress dialog of `Fill in from the book` is showing at step 3 of 6 and Escape is pressed
+- **THEN** the work is cancelled, the dialog closes and nothing is written to the brief
+
+#### Scenario: Focus stays in the card
+
+- **WHEN** Tab is pressed on the last control of a dialog
+- **THEN** focus moves to the first control of the same dialog
+
+#### Scenario: A click outside closes About only
+
+- **WHEN** the scrim outside the open About dialog is clicked, and then outside an open `Stop translating?` dialog
+- **THEN** About closes and `Stop translating?` stays open

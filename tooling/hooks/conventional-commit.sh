@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 #
 # commit-msg hook: Conventional Commits validation
-# (docs/specification/04_Build_and_Release/02_QUALITY_GATES.md#lefthook-stages).
+# (docs/spec_baseline/specification/04_Build_and_Release/02_QUALITY_GATES.md#lefthook-stages).
 #
 # The history has to stay machine-readable: the release tooling that arrives in change 27 derives the changelog
 # and the version bump from the commit type and the breaking-change marker. A message that does not parse is a

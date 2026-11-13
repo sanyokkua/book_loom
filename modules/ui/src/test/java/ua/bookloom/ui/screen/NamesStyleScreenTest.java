@@ -203,7 +203,7 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         assertThat(ThemeTestSupport.onFx(() -> table().getColumns().stream()
                         .map(column -> ((Label) column.getGraphic()).getText())
                         .toList()))
-                .containsExactly("Term", "Kind", "Translation", "Gender", "Locked", "");
+                .containsExactly("Term", "Kind", "Forms", "Translation", "State", "Gender", "");
         assertThat(ThemeTestSupport.onFx(() -> table().getItems())).isEmpty();
         assertThat(button("names-style-start").isDisabled()).isFalse();
         assertThat(button("names-style-scan").getText()).isEqualTo("Scan");

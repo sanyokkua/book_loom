@@ -118,7 +118,7 @@ final class TermTableCard<R> extends VBox {
      * @param importFile reads the chosen file
      * @param exportFile writes the chosen file
      * @param exportName the file name the save dialog starts with
-     * @param extra a button that only this card carries, shown before the changed filter, or {@code null}
+     * @param extra a button that only this card carries, shown right after Review, or {@code null}
      * @param frozen whether the screen is read-only because work in the background writes to it; the editing actions
      *     of the toolbar follow it
      */
@@ -185,23 +185,32 @@ final class TermTableCard<R> extends VBox {
     }
 
     /**
-     * A column of either table.
+     * A column's header.
      *
      * @param header the catalogue entry of the header text, which a blank-headed column keeps as its accessible name
      * @param shown {@code false} for a column whose header carries no text (the remove cross, "→ Glossary") and
      *     explains itself on hover only
+     * @param tip the catalogue entry of the hover explanation
+     */
+    record Head(MessageKey header, boolean shown, MessageKey tip) {}
+
+    /**
+     * A column of either table.
+     *
+     * @param head the header's words and tip
      * @param width the width the column starts at
      * @param minWidth the width the column cannot be dragged below
      */
     static <R> TableColumn<R, R> column(
             final Messages messages,
-            final MessageKey header,
-            final boolean shown,
-            final MessageKey tip,
+            final Head head,
             final double width,
             final double minWidth,
             final @Nullable Comparator<R> order,
             final Supplier<TableCell<R, R>> cell) {
+        final MessageKey header = head.header();
+        final boolean shown = head.shown();
+        final MessageKey tip = head.tip();
         final TableColumn<R, R> column = new TableColumn<>(shown ? messages.get(header) : "");
         Tips.installOnHeader(messages, column, tip);
         if (!shown && column.getGraphic() instanceof Label blank) {
@@ -283,7 +292,7 @@ final class TermTableCard<R> extends VBox {
         scan = model.scan();
         row.getChildren().addAll(model.buttons());
         if (bar.extra() != null) {
-            row.getChildren().add(bar.extra());
+            row.getChildren().add(row.getChildren().indexOf(model.review()) + 1, bar.extra());
         }
         row.getChildren()
                 .addAll(ChangedMarks.filter(messages, id + "-changed-filter", marks), importButton, exportButton, more);

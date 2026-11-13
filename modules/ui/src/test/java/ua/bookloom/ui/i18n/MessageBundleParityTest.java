@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /** The English and Ukrainian catalogues are complete against each other. */
 class MessageBundleParityTest {
@@ -22,5 +24,12 @@ class MessageBundleParityTest {
         final Map<String, String> ukrainian = Catalogues.load("uk");
 
         assertThat(ukrainian.keySet()).containsExactlyInAnyOrderElementsOf(english.keySet());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"en", "uk"})
+    void keys_eachCatalogue_holdNoRelativeCostWord(final String language) {
+        // IF a relative-cost key came back, THEN the screens would promise a cost the estimate no longer shows.
+        assertThat(Catalogues.load(language).keySet()).noneMatch(key -> key.startsWith("estimate.relative."));
     }
 }

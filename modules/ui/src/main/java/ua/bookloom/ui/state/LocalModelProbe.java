@@ -1,5 +1,7 @@
 package ua.bookloom.ui.state;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.net.URI;
@@ -9,6 +11,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -20,10 +23,12 @@ import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.settings.AppSetting;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.dialog.ModelPickPrompt;
+import ua.bookloom.util.text.Slashes;
 
 /**
  * The look at the two local AI programs (ADR-0044): once on the very first launch, and again whenever the person
@@ -127,9 +132,14 @@ public final class LocalModelProbe {
     private void look(final boolean atFirstLaunch) {
         log.info("local AI program look starting, first launch {}", atFirstLaunch);
         try {
-            final Optional<Answered> ollama =
-                    ask(OLLAMA_ID, ProviderKind.OLLAMA, OLLAMA_ADDRESS).filter(this::isSameProgram);
-            final Optional<Answered> lmStudio = ask(LM_STUDIO_ID, ProviderKind.OPENAI_COMPATIBLE, LM_STUDIO_ADDRESS)
+            final Optional<Answered> ollama = ask(
+                            OLLAMA_ID, ProviderKind.OLLAMA, OLLAMA_ADDRESS, rows -> ServerEngine.OLLAMA)
+                    .filter(this::isSameProgram);
+            final Optional<Answered> lmStudio = ask(
+                            LM_STUDIO_ID,
+                            ProviderKind.OPENAI_COMPATIBLE,
+                            LM_STUDIO_ADDRESS,
+                            LocalModelProbe::rowsEngine)
                     .filter(this::isSameProgram);
             log.info("look finished: ollama={} lmstudio={}", count(ollama), count(lmStudio));
             ollama.ifPresent(this::save);
@@ -147,7 +157,23 @@ public final class LocalModelProbe {
         return answered.map(found -> Integer.toString(found.models().size())).orElse("none");
     }
 
-    private Optional<Answered> ask(final String id, final ProviderKind kind, final URI address) {
+    // Ollama's /api/tags list is read by its own shape, so a list that parsed is Ollama's. Port 1234 is only LM
+    // Studio's default: another server can answer there, so the rows' own owner decides; rows naming none are generic.
+    private static ServerEngine rowsEngine(final List<ModelInfo> rows) {
+        final ServerEngine named = rows.stream()
+                .map(ModelInfo::ownerEngine)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(ServerEngine.GENERIC);
+        log.debug("local AI program at port 1234 named by its rows: {}", named);
+        return named;
+    }
+
+    private Optional<Answered> ask(
+            final String id,
+            final ProviderKind kind,
+            final URI address,
+            final Function<List<ModelInfo>, ServerEngine> engineOf) {
         log.debug("asking {}", address);
         final ProviderConfig draft = new ProviderConfig(id, kind, address, LOOK_CONNECT_TIMEOUT, LOOK_REQUEST_TIMEOUT);
         final Result<List<ModelInfo>> listed = catalog.listModels(draft);
@@ -155,23 +181,23 @@ public final class LocalModelProbe {
             log.debug(
                     "{} did not answer: {}",
                     id,
-                    Objects.requireNonNull(listed.error(), "error").code());
+                    Objects.requireNonNull(listed.error(), ERROR).code());
             return Optional.empty();
         }
-        final List<String> models = Objects.requireNonNull(listed.data(), "data").stream()
-                .map(ModelInfo::id)
-                .toList();
+        final List<ModelInfo> rows = Objects.requireNonNull(listed.data(), "data");
+        final List<String> models = rows.stream().map(ModelInfo::id).toList();
         if (models.isEmpty()) {
             log.debug("{} answered with no models", id);
             return Optional.empty();
         }
         return Optional.of(new Answered(
                 new ProviderConfig(
-                        id,
-                        kind,
-                        address,
-                        ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
-                        ProviderConfig.DEFAULT_REQUEST_TIMEOUT),
+                                id,
+                                kind,
+                                address,
+                                ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
+                                ProviderConfig.DEFAULT_REQUEST_TIMEOUT)
+                        .withEngine(engineOf.apply(rows)),
                 models));
     }
 
@@ -192,7 +218,7 @@ public final class LocalModelProbe {
     }
 
     private static String normalized(final URI address) {
-        return address.toString().replace("//localhost", "//127.0.0.1").replaceAll("/+$", "");
+        return Slashes.trimTrailing(address.toString().replace("//localhost", "//127.0.0.1"));
     }
 
     // A provider the person already set up under this id keeps its settings (name, timeouts, custom models); the look
@@ -210,7 +236,7 @@ public final class LocalModelProbe {
             log.warn(
                     "provider {} not saved: {}",
                     answered.config().id(),
-                    Objects.requireNonNull(saved.error(), "error").code());
+                    Objects.requireNonNull(saved.error(), ERROR).code());
         }
     }
 
@@ -235,7 +261,7 @@ public final class LocalModelProbe {
         final String providerId = answered.config().id();
         outcome.set(new ProbeOutcome.Asking());
         pick.ask(
-                providerId,
+                answered.config(),
                 answered.models(),
                 modelId -> executor.execute(() -> pickedModel(new ModelSelection(providerId, modelId), atFirstLaunch)),
                 () -> {
@@ -259,7 +285,7 @@ public final class LocalModelProbe {
         if (written.isErr()) {
             log.warn(
                     "model.current not stored: {}",
-                    Objects.requireNonNull(written.error(), "error").code());
+                    Objects.requireNonNull(written.error(), ERROR).code());
         } else {
             log.info("model.current set to {}/{}", chosen.providerId(), chosen.modelId());
         }
@@ -270,7 +296,7 @@ public final class LocalModelProbe {
         if (written.isErr()) {
             log.warn(
                     "the first-launch flag was not stored: {}",
-                    Objects.requireNonNull(written.error(), "error").code());
+                    Objects.requireNonNull(written.error(), ERROR).code());
         } else {
             log.info("first-launch look recorded");
         }

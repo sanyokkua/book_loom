@@ -55,11 +55,11 @@ final class ProtectedSpansFixtures {
     }
 
     static GlossaryEntry locked(final String term, @Nullable final String target) {
-        return new GlossaryEntry("p1:" + term, "p1", term, target, TermType.CHARACTER, Gender.UNKNOWN, true);
+        return GlossaryEntry.of("p1:" + term, "p1", term, target, TermType.CHARACTER, Gender.UNKNOWN, true);
     }
 
     static GlossaryEntry unlocked(final String term, final String target) {
-        return new GlossaryEntry("p1:" + term, "p1", term, target, TermType.CHARACTER, Gender.UNKNOWN, false);
+        return GlossaryEntry.of("p1:" + term, "p1", term, target, TermType.CHARACTER, Gender.UNKNOWN, false);
     }
 
     static PlaceholderPair pair(final int open, final int close, @Nullable final String language) {

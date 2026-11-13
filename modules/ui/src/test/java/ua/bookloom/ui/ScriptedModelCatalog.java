@@ -11,6 +11,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.LockSupport;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
@@ -76,6 +77,12 @@ public final class ScriptedModelCatalog implements ModelCatalog {
     public void respondWith(final String... ids) {
         failure = null;
         answer = listOf(ids);
+    }
+
+    /** From now on answers with {@code models}, cloud flags kept; a previously scripted failure no longer applies. */
+    public void respondWith(final ModelInfo... models) {
+        failure = null;
+        answer = Result.ok(List.of(models));
     }
 
     /** From now on answers with {@code error}; a previously scripted exception no longer applies. */
@@ -149,18 +156,18 @@ public final class ScriptedModelCatalog implements ModelCatalog {
     }
 
     /** Blocks until {@code listModels} has been entered {@code expected} times in all. */
-    public void awaitCalls(final int expected) throws InterruptedException {
+    public void awaitCalls(final int expected) {
         final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(WAIT_SECONDS);
         while (calls.get() < expected) {
             if (System.nanoTime() > deadline) {
                 throw new IllegalStateException("the catalogue was asked " + calls.get() + " time(s), not " + expected);
             }
-            TimeUnit.MILLISECONDS.sleep(5);
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(5));
         }
     }
 
     /** Blocks until {@code listModels} has been entered at least once. */
-    public void awaitEntered() throws InterruptedException {
+    public void awaitEntered() {
         awaitCalls(1);
     }
 

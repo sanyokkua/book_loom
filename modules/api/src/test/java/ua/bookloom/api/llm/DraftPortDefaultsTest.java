@@ -42,6 +42,27 @@ class DraftPortDefaultsTest {
         assertThat(Objects.requireNonNull(result.error(), "error").code()).isEqualTo(ErrorCode.internal);
     }
 
+    // IF a verifier does not implement engine detection, THEN the default returns an internal error instead of
+    // throwing.
+    @Test
+    void detectEngine_defaultOnPortWithoutOverride_returnsTypedError() {
+        final ProviderVerifier verifier = new ProviderVerifier() {
+            @Override
+            public Result<VerificationReport> verify(ModelSelection selection, VerificationPolicy policy) {
+                return Result.err(AppError.of(ErrorCode.internal, "t", "m"));
+            }
+
+            @Override
+            public Result<VerificationReport> verifyConnection(String providerId) {
+                return Result.err(AppError.of(ErrorCode.internal, "t", "m"));
+            }
+        };
+
+        final Result<EngineDetection> result = verifier.detectEngine(DRAFT);
+
+        assertThat(Objects.requireNonNull(result.error(), "error").code()).isEqualTo(ErrorCode.internal);
+    }
+
     // IF a catalog does not implement draft listing, THEN the default returns an internal error instead of throwing.
     @Test
     void listModelsDraft_defaultOnPortWithoutOverride_returnsTypedError() {
@@ -68,5 +89,32 @@ class DraftPortDefaultsTest {
                 "GET", "http://localhost/x", "", "", 200, null, null, false, "Authorization: Bearer ••••");
 
         assertThat(exchange.requestHeaders()).isEqualTo("Authorization: Bearer ••••");
+    }
+
+    // IF a verifier that cannot announce its requests refused the listening form, THEN the window's test would fail on
+    // an older verifier instead of running unheard.
+    @Test
+    void verifyDraftWithListener_portWithoutOverride_runsTheDraftFormUnheard() {
+        final ProviderVerifier verifier = new ProviderVerifier() {
+            @Override
+            public Result<VerificationReport> verify(ModelSelection selection, VerificationPolicy policy) {
+                return Result.err(AppError.of(ErrorCode.internal, "t", "m"));
+            }
+
+            @Override
+            public Result<VerificationReport> verifyConnection(String providerId) {
+                return Result.err(AppError.of(ErrorCode.internal, "t", "m"));
+            }
+
+            @Override
+            public Result<VerificationReport> verify(ProviderConfig draft, String modelId, VerificationPolicy policy) {
+                return Result.ok(new VerificationReport(List.of()));
+            }
+        };
+
+        final Result<VerificationReport> result =
+                verifier.verify(DRAFT, "model-a", VerificationPolicy.FULL, VerificationListener.NONE);
+
+        assertThat(result.isOk()).isTrue();
     }
 }

@@ -37,4 +37,34 @@ public interface ProviderVerifier {
         return Result.err(AppError.of(
                 ErrorCode.internal, "Not supported", "This verifier cannot check a description that is not saved."));
     }
+
+    /**
+     * Runs the stages for a description that is not saved and tells {@code listener} of each request just before it
+     * is sent and of each stage as it ends, so the test card can show a request while its reply is awaited. A
+     * verifier that cannot tell runs the stages unheard.
+     *
+     * @param draft the unsaved provider description
+     * @param modelId the model to verify
+     * @param policy the verification depth
+     * @param listener hears the requests and the stages on the verifying thread; {@link VerificationListener#NONE}
+     *     for nobody
+     * @return the stage report, or a {@code validation} error for a description the rules refuse
+     */
+    default Result<VerificationReport> verify(
+            ProviderConfig draft, String modelId, VerificationPolicy policy, VerificationListener listener) {
+        return verify(draft, modelId, policy);
+    }
+
+    /**
+     * Detects the server engine again, as the person's Detect again asks: the "Treat this server as..." choice is
+     * dropped and the probes decide; a declined Ollama offer stays declined. A provider saved with the same kind and
+     * address gets the engine stored. No model is called, so the inference gate is not taken.
+     *
+     * @param config the provider description to probe, saved or not
+     * @return the engine found, or the error that kept the server from being asked (unreachable, missing credential)
+     */
+    default Result<EngineDetection> detectEngine(ProviderConfig config) {
+        return Result.err(
+                AppError.of(ErrorCode.internal, "Not supported", "This verifier cannot detect a server's engine."));
+    }
 }

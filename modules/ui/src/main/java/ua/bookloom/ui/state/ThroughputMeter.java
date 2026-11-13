@@ -52,8 +52,11 @@ final class ThroughputMeter {
             log.debug("throughput: a {} call reported no completion tokens, not counted", event.kind());
             return;
         }
-        final Duration reported = usage.generation();
-        final Duration generation = reported == null ? event.elapsed() : reported;
+        final Duration generation = usage.generation();
+        if (generation == null) {
+            log.debug("throughput: a {} call reported no generation time (missing), not counted", event.kind());
+            return;
+        }
         runTokens += tokens;
         runNanos += generation.toNanos();
         runEstimated |= event.usageEstimated();

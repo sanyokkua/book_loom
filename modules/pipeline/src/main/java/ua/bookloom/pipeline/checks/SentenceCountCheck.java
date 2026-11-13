@@ -18,7 +18,7 @@ import ua.bookloom.util.lang.Script;
  * source has significant ones (three words or more), because a translator may join a one-word exclamation to its
  * neighbour but does not drop a statement. A speech closed by a quote and a dash attribution is a sentence end in the
  * target even without the source's full stop, when the language file's dialogue convention says so (15j.J9).
- * Blocking, so the segment is repaired before any reviewer reads it.
+ * Blocking, so the segment is repaired before it is accepted.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")

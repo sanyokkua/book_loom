@@ -22,15 +22,16 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.CallKind;
-import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.api.project.ForeignPassagePolicy;
-import ua.bookloom.pipeline.prompt.CallFrame;
+import ua.bookloom.pipeline.TestPlanners;
+import ua.bookloom.pipeline.context.TranslateContext;
+import ua.bookloom.pipeline.context.TranslatePlanner;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.StyleSheet;
 
 /** The batch call and the adaptive size it keeps, against a model scripted at the call seam. */
 class BatchDrafterTest {
+
+    static final TranslatePlanner PLANNER = TestPlanners.planner("en", "uk");
+    static final TranslateContext CONTEXT = TestPlanners.empty(PLANNER);
 
     private static final List<BatchItem> ITEMS = List.of(
             new BatchItem("1", "She opened the door and looked outside."),
@@ -58,10 +59,8 @@ class BatchDrafterTest {
                 return answer;
             }
         };
-        final CallFrame frame =
-                new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
         return new BatchDrafter(
-                new BatchPromptBuilder(new PromptTemplates(), frame, BatchFormat.JSON, false),
+                new BatchPromptBuilder(PLANNER),
                 new BatchReplyParser(new ObjectMapper()),
                 recording,
                 "en",
@@ -71,7 +70,7 @@ class BatchDrafterTest {
 
     private static BatchReply drafted(final BatchDrafter drafter, final List<BatchItem> items) {
         return Objects.requireNonNull(
-                drafter.draft(BatchContext.empty(), items, List.of("a", "b")).data(), "reply");
+                drafter.draft(CONTEXT, items, List.of("a", "b")).data(), "reply");
     }
 
     static Result<ChatResponse> reply(final String content) {
@@ -82,7 +81,7 @@ class BatchDrafterTest {
     void draft_cleanReply_announcesOneDraftCallAboutEverySegmentAndAcceptsBoth() {
         final BatchDrafter drafter = drafter(reply(CLEAN), 8);
 
-        final Result<BatchReply> result = drafter.draft(BatchContext.empty(), ITEMS, List.of("Book.md:0", "Book.md:1"));
+        final Result<BatchReply> result = drafter.draft(CONTEXT, ITEMS, List.of("Book.md:0", "Book.md:1"));
 
         assertThat(kinds).containsExactly(CallKind.DRAFT);
         assertThat(segments).containsExactly(List.of("Book.md:0", "Book.md:1"));
@@ -103,6 +102,11 @@ class BatchDrafterTest {
     }
 
     static BatchDrafter scriptedDrafter(final List<Result<ChatResponse>> answers, final List<List<String>> segments) {
+        return scriptedDrafter(answers, segments, 8);
+    }
+
+    static BatchDrafter scriptedDrafter(
+            final List<Result<ChatResponse>> answers, final List<List<String>> segments, final int initialSize) {
         final ModelCalls scripted = new ModelCalls() {
             private int next;
 
@@ -119,15 +123,13 @@ class BatchDrafterTest {
                 return answers.get(next++);
             }
         };
-        final CallFrame frame =
-                new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
         return new BatchDrafter(
-                new BatchPromptBuilder(new PromptTemplates(), frame, BatchFormat.JSON, false),
+                new BatchPromptBuilder(PLANNER),
                 new BatchReplyParser(new ObjectMapper()),
                 scripted,
                 "en",
                 "uk",
-                8);
+                initialSize);
     }
 
     static String entries(final String... pairs) {
@@ -140,16 +142,14 @@ class BatchDrafterTest {
 
     static BatchReply firstReply(final BatchDrafter drafter) {
         return Objects.requireNonNull(
-                drafter.draft(BatchContext.empty(), FOUR, FOUR_IDS, FOUR_SOURCES, null)
-                        .data(),
-                "reply");
+                drafter.draft(CONTEXT, FOUR, FOUR_IDS, FOUR_SOURCES, null).data(), "reply");
     }
 
     @Test
     void reaskMissing_twoIdsLeftOut_asksOnlyThoseAndMergesTheirAnswers() {
         final BatchDrafter drafter = drafterAnswering(List.of(
                 reply(entries("1", "Вона відчинила двері.", "4", "Настала ніч.")),
-                reply(entries("2", "Він мовчав.", "3", "Дощ припинився."))));
+                reply(entries("1", "Він мовчав.", "2", "Дощ припинився."))));
         final BatchReply first = firstReply(drafter);
 
         final BatchReply merged = reasked(drafter, first);
@@ -202,15 +202,14 @@ class BatchDrafterTest {
                 drafterAnswering(List.of(reply(entries("1", "Вона відчинила двері.")), Result.err(error)));
         final BatchReply first = firstReply(drafter);
 
-        final Result<BatchReply> merged =
-                drafter.reaskMissing(BatchContext.empty(), FOUR, FOUR_IDS, FOUR_SOURCES, null, first);
+        final Result<BatchReply> merged = drafter.reaskMissing(CONTEXT, FOUR, FOUR_IDS, FOUR_SOURCES, null, first);
 
         assertThat(merged.error()).isNotNull().extracting(AppError::code).isEqualTo(ErrorCode.cancelled);
     }
 
     static BatchReply reasked(final BatchDrafter drafter, final BatchReply first) {
         return Objects.requireNonNull(
-                drafter.reaskMissing(BatchContext.empty(), FOUR, FOUR_IDS, FOUR_SOURCES, null, first)
+                drafter.reaskMissing(CONTEXT, FOUR, FOUR_IDS, FOUR_SOURCES, null, first)
                         .data(),
                 "reply");
     }
@@ -219,7 +218,7 @@ class BatchDrafterTest {
     void reaskMissing_secondReplyNamesAnotherId_ignoresThatId() {
         final BatchDrafter drafter = drafterAnswering(List.of(
                 reply(entries("1", "Вона відчинила двері.", "4", "Настала ніч.")),
-                reply(entries("2", "Він мовчав.", "9", "Зайве."))));
+                reply(entries("1", "Він мовчав.", "9", "Зайве."))));
         final BatchReply first = firstReply(drafter);
 
         final BatchReply merged = reasked(drafter, first);
@@ -244,7 +243,7 @@ class BatchDrafterTest {
         final AppError error = AppError.of(ErrorCode.unreachable, "Provider unreachable", "No answer.");
         final BatchDrafter drafter = drafter(Result.err(error), 8);
 
-        final Result<BatchReply> result = drafter.draft(BatchContext.empty(), ITEMS, List.of("a", "b"));
+        final Result<BatchReply> result = drafter.draft(CONTEXT, ITEMS, List.of("a", "b"));
 
         assertThat(result.isErr()).isTrue();
         assertThat(Objects.requireNonNull(result.error()).code()).isEqualTo(ErrorCode.unreachable);
@@ -298,20 +297,23 @@ class BatchDrafterTest {
                 .filteredOn(message -> message.startsWith("Batch recorded"))
                 .singleElement()
                 .asString()
-                .contains("outcome=FIRST_ONLY", "sent=2", "nextSize=10", "maxSize=16");
+                .contains("outcome=FIRST_ONLY", "sent=2", "nextSize=10", "ceiling=10");
     }
 
     @Test
     void record_threeCleanRepliesInARow_growTheSizeByOne() {
         final BatchDrafter drafter = drafter(reply(CLEAN), 8);
         final BatchReply clean = drafted(drafter, ITEMS);
+        final BatchDrafter failing = drafter(reply("  "), 8);
+        drafter.record(drafted(failing, ITEMS));
+        assertThat(drafter.size()).isEqualTo(4);
 
         drafter.record(clean);
         drafter.record(clean);
-        assertThat(drafter.size()).isEqualTo(8);
+        assertThat(drafter.size()).isEqualTo(4);
         drafter.record(clean);
 
-        assertThat(drafter.size()).isEqualTo(9);
+        assertThat(drafter.size()).isEqualTo(5);
     }
 
     @Test
@@ -330,15 +332,17 @@ class BatchDrafterTest {
     }
 
     @Test
-    void size_startingAtOne_growsOnlyAfterACleanStreak() {
+    void size_startOfOne_isNeverBatchedAndNeverGrows() {
         final BatchDrafter drafter = drafter(reply(CLEAN), BatchDrafter.NO_BATCHING);
         final BatchReply clean = drafted(drafter, ITEMS);
 
         drafter.record(clean);
         drafter.record(clean);
         drafter.record(clean);
+        drafter.record(clean);
 
-        assertThat(drafter.size()).isEqualTo(2);
+        assertThat(drafter.size()).isEqualTo(BatchDrafter.NO_BATCHING);
+        assertThat(drafter.startSize()).isEqualTo(BatchDrafter.NO_BATCHING);
     }
 
     @Test

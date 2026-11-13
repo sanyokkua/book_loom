@@ -1,66 +1,126 @@
 package ua.bookloom.pipeline;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.api.document.PlaceholderRepair;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.StepKind;
+import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.chunk.OversizedSplit;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.context.TranslateContext;
+import ua.bookloom.pipeline.context.TranslatePlanner;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateFunction;
-import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.heal.PieceRedraft;
+import ua.bookloom.pipeline.heal.RepairCall;
+import ua.bookloom.pipeline.heal.RepairReplies;
+import ua.bookloom.pipeline.heal.RepairReply;
 import ua.bookloom.pipeline.memory.ProtectedMask;
-import ua.bookloom.pipeline.prompt.DraftContext;
-import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
-import ua.bookloom.pipeline.prompt.DraftReplyParser;
-import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
-import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
+import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.DraftStep;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.run.PauseDecider;
 
 /**
- * The draft step: one draft call, with at most one structural and one placeholder repair, whose reply is read by
- * design D3's reply precedence. It decides nothing — a reply it can use goes to the quality loop, which accepts,
- * repairs or flags it — so the chunk runner and a review retry share one draft step.
+ * The draft step: one draft call, with at most one format re-ask, whose reply is read by design D3's reply
+ * precedence; marks the reply lost are put back by code, and a reply that copies a shown example is asked once more
+ * and then flagged. It decides nothing — a reply it can use goes to the quality loop, which accepts, repairs or flags it
+ * — so the chunk runner and a review retry share one draft step. A run's draft and a review retry's alike are a batch of
+ * one planned by the context builder.
  */
 @Slf4j
 public final class SegmentTranslator {
 
+    private static final String SEGMENT = "segment";
+    private static final String CONTEXT = "context";
+
+    /** The error of a segment whose reply copied a shown example twice. */
+    static final String EXAMPLE_COPIED = DraftReplies.EXAMPLE_COPIED;
+
     private final GateFunction gate;
     private final ModelCalls calls;
     private final BookFormat format;
-    private final DraftPromptBuilder promptBuilder;
-    private final DraftReplyParser replyParser;
+    private final DraftPrompts prompts;
     private final DraftRequests requests;
+    private final DraftReplies replies;
 
-    /** Creates the draft step of one run over its placeholder gate, call seam, format, prompts and reply reader. */
+    /**
+     * Creates the draft step of one run, whose drafts are planned by the run's context builder as batches of one.
+     *
+     * @param gate the non-null placeholder gate
+     * @param calls the non-null seam every call goes through
+     * @param format the non-null format of the book
+     * @param planner the non-null planner of the run's translate-family calls
+     * @param mapper the non-null tolerant JSON mapper a batch of one's reply is read with
+     */
     public SegmentTranslator(
             final GateFunction gate,
             final ModelCalls calls,
             final BookFormat format,
-            final DraftPromptBuilder promptBuilder,
-            final DraftReplyParser replyParser) {
+            final TranslatePlanner planner,
+            final ObjectMapper mapper) {
+        this(gate, calls, format, new TranslateDraftPrompts(planner, mapper));
+    }
+
+    private SegmentTranslator(
+            final GateFunction gate, final ModelCalls calls, final BookFormat format, final DraftPrompts prompts) {
         this.gate = Objects.requireNonNull(gate, "gate");
         this.calls = Objects.requireNonNull(calls, "calls");
         this.format = Objects.requireNonNull(format, "format");
-        this.promptBuilder = Objects.requireNonNull(promptBuilder, "promptBuilder");
-        this.replyParser = Objects.requireNonNull(replyParser, "replyParser");
-        this.requests = new DraftRequests(gate, promptBuilder, replyParser);
+        this.prompts = Objects.requireNonNull(prompts, "prompts");
+        this.requests = new DraftRequests(gate, prompts);
+        this.replies = new DraftReplies(gate, format, prompts, calls, this::send);
     }
 
     Result<DraftOutcome> translate(final Segment segment) {
-        return translate(segment, DraftContext.empty(), ProtectedMask.none(segment.masked()));
+        return translate(segment, null, ProtectedMask.none(segment.masked()));
+    }
+
+    /**
+     * A draft carrying the person's note, as a review retry sends it, optionally at the draft call's lower temperature.
+     *
+     * @param segment the non-null segment to draft
+     * @param context the window, map and memory the draft is shown, or null to plan it with none
+     * @param mask the non-null spans hidden in the segment
+     * @param extraInstruction the non-null note shown in the draft; empty for none
+     * @param lowerTemperature whether the draft call asks for its lower temperature
+     * @return the draft's outcome, or the error a call answered
+     */
+    Result<DraftOutcome> translate(
+            final Segment segment,
+            @Nullable final TranslateContext context,
+            final ProtectedMask mask,
+            final String extraInstruction,
+            final boolean lowerTemperature) {
+        Objects.requireNonNull(segment, SEGMENT);
+        Objects.requireNonNull(mask, "mask");
+        Objects.requireNonNull(extraInstruction, "extraInstruction");
+        return draft(DraftAttempt.of(segment, context, mask, extraInstruction, lowerTemperature));
+    }
+
+    /**
+     * A run's draft of one segment, planned over the window, map and memory it is shown.
+     *
+     * @param segment the non-null segment to draft
+     * @param context the window, map and memory the draft is shown, or null to plan it with none
+     * @param mask the non-null spans hidden in the segment
+     * @return the draft's outcome, or the error a call answered, which the run routes
+     */
+    public Result<DraftOutcome> translate(
+            final Segment segment, @Nullable final TranslateContext context, final ProtectedMask mask) {
+        Objects.requireNonNull(segment, SEGMENT);
+        Objects.requireNonNull(mask, "mask");
+        return draft(DraftAttempt.of(segment, context, mask, "", false));
     }
 
     /**
@@ -71,64 +131,88 @@ public final class SegmentTranslator {
      * @return a draft step sharing this one's seam, format, prompts and reply reader
      */
     public SegmentTranslator gatedBy(final GateFunction chunkGate) {
-        return new SegmentTranslator(
-                Objects.requireNonNull(chunkGate, "chunkGate"), calls, format, promptBuilder, replyParser);
+        return new SegmentTranslator(Objects.requireNonNull(chunkGate, "chunkGate"), calls, format, prompts);
     }
 
-    /** The run's draft of one segment: no extra instruction, at the draft's own temperature. */
-    public Result<DraftOutcome> translate(final Segment segment, final DraftContext context, final ProtectedMask mask) {
-        return translate(segment, context, mask, "", false);
-    }
-
-    /**
-     * Drafts one segment showing the model its mask's text — the segment's masked text with its protected spans
-     * hidden behind tokens — so the prompt, its repairs and the output allowance all follow that text. A review retry
-     * passes the person's note, which the draft and its repairs carry, and may ask the draft call alone for its lower
-     * temperature.
-     *
-     * @param segment the non-null segment to draft
-     * @param context the non-null context the draft is shown
-     * @param mask the non-null spans hidden in the segment; its text carries every token the reply must return
-     * @param extraInstruction the non-null note shown under {@code [Extra instruction]}; empty for none
-     * @param lowerTemperature whether the draft call asks for its lower temperature
-     * @return the draft's outcome, or the error a call answered, which the run routes
-     */
-    public Result<DraftOutcome> translate(
-            final Segment segment,
-            final DraftContext context,
-            final ProtectedMask mask,
-            final String extraInstruction,
-            final boolean lowerTemperature) {
-        Objects.requireNonNull(segment, "segment");
-        Objects.requireNonNull(context, "context");
-        Objects.requireNonNull(mask, "mask");
-        Objects.requireNonNull(extraInstruction, "extraInstruction");
-        final DraftAttempt attempt = DraftAttempt.of(segment, context, mask, extraInstruction, lowerTemperature);
+    private Result<DraftOutcome> draft(final DraftAttempt attempt) {
         log.debug(
-                "Translating segment id={} format={} shownLength={} extraInstruction={} lowerTemperature={}",
-                segment.id(),
+                "Translating segment id={} format={} shownLength={} extraInstruction={} lowerTemperature={} planned={}",
+                attempt.segment().id(),
                 format,
                 attempt.shownText().length(),
-                !extraInstruction.isEmpty(),
-                lowerTemperature);
-        return send(attempt, DraftStep.DRAFT, "", "");
+                !attempt.extraInstruction().isEmpty(),
+                attempt.lowerTemperature(),
+                attempt.translate() != null);
+        return send(attempt, DraftStep.DRAFT, "", "", DraftReplies.Sent.FIRST);
     }
 
-    // A structural repair follows only a draft, a placeholder repair a draft or a structural repair, so the step tells
-    // which repairs are already used.
-    private Result<DraftOutcome> send(
-            final DraftAttempt attempt, final DraftStep step, final String rejected, final String diagnostic) {
-        final ChatRequest request = requestFor(attempt, step, rejected, diagnostic);
+    Result<DraftOutcome> send(
+            final DraftAttempt attempt,
+            final DraftStep step,
+            final String rejected,
+            final String diagnostic,
+            final DraftReplies.Sent sent) {
+        final ChatRequest built = requestFor(attempt, step, rejected, diagnostic);
+        final ChatRequest request = sent.echoAsked() ? built.withSeed(ChatRequests.RETRY_SEED) : built;
         final Result<ChatResponse> reply = DraftCalls.call(
                 step, attempt.segment(), request, requests.descriptor(attempt, step, rejected, diagnostic), calls);
         if (reply.isErr()) {
-            return decideModelError(attempt, Objects.requireNonNull(reply.error()));
+            return replies.decideModelError(attempt, Objects.requireNonNull(reply.error()));
         }
-        return decideResponse(
+        return replies.decideResponse(
                 attempt,
                 Objects.requireNonNull(reply.data()),
-                step != DraftStep.DRAFT,
-                step == DraftStep.PLACEHOLDER_REPAIR);
+                new DraftReplies.Sent(sent.reasked() || step != DraftStep.DRAFT, sent.echoAsked()));
+    }
+
+    /**
+     * How the one repair of a segment drafted whole is sent: the draft's own prompt and context, the previous attempt
+     * and its defects, at the repair's temperature with the retry seed; with no defect, the plain draft again with the
+     * retry seed (Fast's re-draft of lost marks).
+     *
+     * @param segment the non-null segment the draft is for
+     * @param context the window, map and memory the draft was shown, or null when it was planned with none
+     * @param mask the non-null spans hidden in the segment
+     * @return the segment's repair call
+     */
+    public RepairCall repairCall(
+            final Segment segment, @Nullable final TranslateContext context, final ProtectedMask mask) {
+        final DraftAttempt attempt = DraftAttempt.of(
+                Objects.requireNonNull(segment, SEGMENT), context, Objects.requireNonNull(mask, "mask"), "", false);
+        return (previous, defects, through) -> repair(attempt, previous, defects, through);
+    }
+
+    private Result<RepairReply> repair(
+            final DraftAttempt attempt,
+            final String previous,
+            final List<QaFinding> defects,
+            final ModelCalls through) {
+        if (defects.isEmpty()) {
+            return redraft(attempt, through);
+        }
+        final Segment segment = attempt.segment();
+        final String lines = DraftRequests.defectLines(defects);
+        log.debug("Sending the one repair segmentId={} defects={}", segment.id(), defects.size());
+        final ChatRequest request = requests.build(attempt, DraftStep.REPAIR, previous, lines);
+        final Result<ChatResponse> reply = DraftCalls.call(
+                DraftStep.REPAIR,
+                segment,
+                request,
+                requests.descriptor(attempt, DraftStep.REPAIR, previous, lines),
+                through);
+        return RepairReplies.read(reply, text -> prompts.parseRepair(text, attempt));
+    }
+
+    // Fast's one retry of formatting marks the code could not put back: the plain draft again, with the retry seed so
+    // the model does not answer the same reply.
+    private Result<RepairReply> redraft(final DraftAttempt attempt, final ModelCalls through) {
+        final Segment segment = attempt.segment();
+        log.debug("Sending the plain re-draft of lost marks segmentId={}", segment.id());
+        final ChatRequest request =
+                requests.build(attempt, DraftStep.DRAFT, "", "").withSeed(ChatRequests.RETRY_SEED);
+        final Result<ChatResponse> reply = DraftCalls.call(
+                DraftStep.DRAFT, segment, request, requests.descriptor(attempt, DraftStep.DRAFT, "", ""), through);
+        return RepairReplies.read(reply, text -> prompts.parseRepair(text, attempt));
     }
 
     /**
@@ -143,97 +227,126 @@ public final class SegmentTranslator {
         return BatchAdoption.adopt(gate, segment, mask, maskedTarget);
     }
 
-    /** The run's draft of one segment, in pieces when it is alone above the budget: no note, the draft's temperature. */
+    /**
+     * A run's draft of one segment, in pieces when it is alone above the budget: no note, the draft's temperature.
+     *
+     * @param segment the non-null segment to draft
+     * @param context the window, map and memory the draft is shown, or null to plan it with none
+     * @param mask the non-null spans hidden in the segment
+     * @param splitter the non-null sentence splitter of the source language
+     * @param budgetTokens the current-part budget a piece must fit
+     * @return the draft's outcome, or the error a call answered, which the run routes
+     */
     public Result<DraftOutcome> translateSplit(
             final Segment segment,
-            final DraftContext context,
+            @Nullable final TranslateContext context,
             final ProtectedMask mask,
             final SentenceSplitter splitter,
             final int budgetTokens) {
-        return translateSplit(segment, context, mask, splitter, budgetTokens, "", false);
+        return translateSplit(segment, context, mask, splitter, budgetTokens, false);
     }
 
     /**
-     * Drafts a segment, in sentence-aligned pieces when the text it is shown is alone above the budget. The pieces are
-     * joined and gated once as that one segment, because the translation goes back into the node it came from. A
-     * review retry passes the person's note and its temperature choice, so every piece's draft carries them as the
-     * whole segment's draft would.
+     * As {@link #translateSplit(Segment, TranslateContext, ProtectedMask, SentenceSplitter, int)}, for a segment whose
+     * batch answer copied a shown example: this draft is that answer's one re-ask, so a copy again flags the segment.
+     *
+     * @param copiedOnce whether the segment's batch answer copied a shown example
+     */
+    public Result<DraftOutcome> translateSplit(
+            final Segment segment,
+            @Nullable final TranslateContext context,
+            final ProtectedMask mask,
+            final SentenceSplitter splitter,
+            final int budgetTokens,
+            final boolean copiedOnce) {
+        Objects.requireNonNull(segment, SEGMENT);
+        Objects.requireNonNull(mask, "mask");
+        final DraftAttempt attempt = DraftAttempt.of(segment, context, mask, "", false);
+        if (copiedOnce) {
+            log.debug("Drafting segment id={} as the re-ask of a batch answer that copied an example", segment.id());
+            calls.steps().added(StepKind.RE_ASK, "re-ask", DraftReplies.ECHO_KEY + segment.id(), segment.id());
+            return replies.echoReask(attempt, false);
+        }
+        return split(attempt, splitter, budgetTokens);
+    }
+
+    /**
+     * A review retry's draft of one segment, planned over the window and map it is shown now and in pieces when it is
+     * alone above the budget, as a run's draft is. The pieces are joined and gated once as that one segment, because the
+     * translation goes back into the node it came from; every piece's draft carries the person's note and temperature
+     * choice as the whole segment's draft would.
      *
      * @param segment the non-null segment to draft
-     * @param context the non-null context each piece is shown
+     * @param context the non-null window, map and memory the draft is shown
      * @param mask the non-null spans hidden in the segment; the pieces are cut from its text
      * @param splitter the non-null sentence splitter of the source language
      * @param budgetTokens the chunk budget a piece must fit
      * @param extraInstruction the non-null note shown under {@code [Extra instruction]}; empty for none
      * @param lowerTemperature whether each draft call asks for its lower temperature
-     * @return the draft's outcome, or the error a call answered, which the run routes
+     * @return the draft's outcome, or the error a call answered
      */
     public Result<DraftOutcome> translateSplit(
             final Segment segment,
-            final DraftContext context,
+            final TranslateContext context,
             final ProtectedMask mask,
             final SentenceSplitter splitter,
             final int budgetTokens,
             final String extraInstruction,
             final boolean lowerTemperature) {
-        Objects.requireNonNull(segment, "segment");
-        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(segment, SEGMENT);
+        Objects.requireNonNull(context, CONTEXT);
         Objects.requireNonNull(mask, "mask");
-        Objects.requireNonNull(splitter, "splitter");
         Objects.requireNonNull(extraInstruction, "extraInstruction");
-        final String shown = mask.maskedText();
-        final int estimate = TokenEstimator.estimate(shown, promptBuilder.sourceLanguage());
+        return split(
+                DraftAttempt.of(segment, context, mask, extraInstruction, lowerTemperature), splitter, budgetTokens);
+    }
+
+    private Result<DraftOutcome> split(
+            final DraftAttempt whole, final SentenceSplitter splitter, final int budgetTokens) {
+        Objects.requireNonNull(splitter, "splitter");
+        final Segment segment = whole.segment();
+        final String shown = whole.shownText();
+        final int estimate = TokenEstimator.estimate(shown, prompts.sourceLanguage());
         if (estimate <= budgetTokens) {
             log.debug(
                     "Segment id={} estimate={} within budget={}, drafted whole", segment.id(), estimate, budgetTokens);
-            return translate(segment, context, mask, extraInstruction, lowerTemperature);
+            return draft(whole);
         }
-        final DraftAttempt whole = DraftAttempt.of(segment, context, mask, extraInstruction, lowerTemperature);
-        return switch (OversizedSplit.plan(segment, shown, promptBuilder.sourceLanguage(), budgetTokens, splitter)) {
-            case OversizedSplit.Pieces plan -> translatePieces(whole, plan.pieces());
-            case OversizedSplit.Unsplittable none -> unsplittable(whole, mask, estimate, budgetTokens);
+        return switch (OversizedSplit.plan(segment, shown, prompts.sourceLanguage(), budgetTokens, splitter)) {
+            case OversizedSplit.Pieces(var pieces) -> translatePieces(whole, pieces);
+            case OversizedSplit.Unsplittable _ -> unsplittable(whole, estimate, budgetTokens);
         };
     }
 
-    // A segment whose one sentence is alone above the budget cannot be cut, so it is drafted whole, without preceding
-    // targets or memory hits to leave it room, keeping the note and temperature the draft was asked with.
-    private Result<DraftOutcome> unsplittable(
-            final DraftAttempt attempt, final ProtectedMask mask, final int estimate, final int budgetTokens) {
-        final Segment segment = attempt.segment();
-        final DraftContext context = attempt.context();
+    // A segment whose one sentence is alone above the budget cannot be cut, so it is drafted whole, without previous
+    // pairs, next source or memory lines to leave it room, keeping the note and temperature the draft was asked with.
+    private Result<DraftOutcome> unsplittable(final DraftAttempt attempt, final int estimate, final int budgetTokens) {
         log.warn(
                 "Oversized segment {} cannot be split estimate={} budget={}; drafting it whole without"
-                        + " preceding targets or memory hits",
-                segment.id(),
+                        + " previous pairs, next source or memory lines",
+                attempt.segment().id(),
                 estimate,
                 budgetTokens);
-        return translate(
-                segment,
-                new DraftContext(
-                        List.of(), context.summary(), context.glossaryLines(), List.of(), context.suggestedLines()),
-                mask,
-                attempt.extraInstruction(),
-                attempt.lowerTemperature());
+        return draft(attempt.alone());
     }
 
     /** Drafts each piece with the segment's own context, joins the replies in order and gates them once. */
     private Result<DraftOutcome> translatePieces(final DraftAttempt attempt, final List<String> pieces) {
         final Segment segment = attempt.segment();
-        final DraftContext context = attempt.context();
         log.debug("Translating segment id={} in {} pieces", segment.id(), pieces.size());
-        final PieceRedraft redraft = (findings, redraftCalls) ->
-                PieceDrafter.redraft(this, replyParser, segment, context, pieces, findings, redraftCalls);
+        final PieceRedraft redraft =
+                (findings, redraftCalls) -> PieceDrafter.redraft(this, attempt, pieces, findings, redraftCalls);
         final DraftAttempt whole = attempt.redraftedBy(redraft);
         final Result<PieceDrafter.Piece> drafted = new PieceDrafter(
-                        this, replyParser, calls, attempt.extraInstruction(), attempt.lowerTemperature())
-                .draftAll(segment, context, pieces);
+                        this, calls, attempt.extraInstruction(), attempt.lowerTemperature())
+                .draftAll(attempt, pieces);
         if (drafted.isErr()) {
-            return decideModelError(whole, Objects.requireNonNull(drafted.error()));
+            return replies.decideModelError(whole, Objects.requireNonNull(drafted.error()));
         }
         return switch (Objects.requireNonNull(drafted.data())) {
             case PieceDrafter.Unusable(final AppError unusable) ->
                 DraftOutcomes.flaggedAtOnce(whole, unusable, FinishReason.STOP.name(), "[]");
-            case PieceDrafter.Text(final String joined) -> restore(whole, joined, true);
+            case PieceDrafter.Text(final String joined) -> replies.restore(whole, joined);
         };
     }
 
@@ -243,131 +356,16 @@ public final class SegmentTranslator {
     }
 
     String targetLanguage() {
-        return promptBuilder.targetLanguage();
+        return prompts.targetLanguage();
+    }
+
+    /** How this draft step's requests are made and read. */
+    DraftPrompts prompts() {
+        return prompts;
     }
 
     /** The requests this draft step sends, which a prompt eval builds the same way. */
     public DraftRequests requests() {
         return requests;
-    }
-
-    // Design D3 rule 1: an error the routing table flags at once is the segment's, every other one is the run's.
-    private Result<DraftOutcome> decideModelError(final DraftAttempt attempt, final AppError error) {
-        final Segment segment = attempt.segment();
-        log.debug("Model reply segment={} kind=error code={}", segment.id(), error.code());
-        return switch (PauseDecider.route(error.code())) {
-            case FLAG_AT_ONCE -> DraftOutcomes.flaggedAtOnce(attempt, error, "model-error", "[]");
-            case CANCELLED, PAUSE_OR_FAIL, FAIL -> DraftOutcomes.routed(segment, error, "model-error");
-        };
-    }
-
-    // Design D3 rules 2-4, in their order: blank content, then an abnormal finish, then a reply that is not the JSON
-    // object — so a cut-off reply is flagged at once rather than sent to a structural repair.
-    private Result<DraftOutcome> decideResponse(
-            final DraftAttempt attempt,
-            final ChatResponse response,
-            final boolean structuralRepairUsed,
-            final boolean placeholderRepairUsed) {
-        if (response.content().isBlank() || response.finishReason() != FinishReason.STOP) {
-            return DraftOutcomes.unfinished(attempt, response);
-        }
-        final ParsedReply parsed =
-                replyParser.parse(response.content(), attempt.segment().masked(), promptBuilder.targetLanguage());
-        if (parsed.kind() == ReplyKind.INVALID_STRUCTURED) {
-            return structuralRepairUsed
-                    ? DraftOutcomes.invalidStructuredReply(attempt, response)
-                    : repairStructured(attempt, response.content(), parsed.diagnostic());
-        }
-        final String trimmed = parsed.translation().strip();
-        DraftOutcomes.traceReply(response.content(), trimmed);
-        log.debug(
-                "Model reply segment={} kind={} finish={} empty={} replyLength={} placeholderRepair={}",
-                attempt.segment().id(),
-                parsed.kind(),
-                response.finishReason(),
-                trimmed.isEmpty(),
-                trimmed.length(),
-                placeholderRepairUsed);
-        return trimmed.isEmpty()
-                ? DraftOutcomes.unfinished(attempt, response)
-                : restore(attempt, trimmed, placeholderRepairUsed);
-    }
-
-    private Result<DraftOutcome> repairStructured(
-            final DraftAttempt attempt, final String rejectedReply, final String diagnostic) {
-        final Segment segment = attempt.segment();
-        log.warn("Repairing invalid structured model reply segmentId={}", segment.id());
-        return send(attempt, DraftStep.STRUCTURAL_REPAIR, rejectedReply, diagnostic);
-    }
-
-    private Result<DraftOutcome> restore(
-            final DraftAttempt attempt, final String trimmed, final boolean placeholderRepairUsed) {
-        final Segment segment = attempt.segment();
-        log.debug("Restoring segment id={} format={} trimmedLength={}", segment.id(), format, trimmed.length());
-        final String restoredWhitespace = WhitespaceRestoration.restore(segment.masked(), trimmed);
-        logTraceRestoration(restoredWhitespace);
-        return switch (gate.restore(segment, restoredWhitespace)) {
-            case GateResult.Restored restored -> DraftOutcomes.drafted(attempt, restoredWhitespace, restored);
-            case GateResult.GateFailed failed -> recover(attempt, restoredWhitespace, failed, placeholderRepairUsed);
-            case GateResult.StepError stepError -> {
-                log.debug(
-                        "Gate completed segmentId={} result=StepError code={}",
-                        segment.id(),
-                        stepError.error().code());
-                yield DraftOutcomes.routed(segment, stepError.error(), "unmask");
-            }
-        };
-    }
-
-    // The order for a reply the placeholder gate refused: put back what it lost without a call; then one model repair
-    // told exactly which tokens are wrong; on that repair's reply, the same deterministic repair and then every token
-    // placed again by position; only then the quality loop's directed fix, and failing that the source is kept.
-    private Result<DraftOutcome> recover(
-            final DraftAttempt attempt,
-            final String rejected,
-            final GateResult.GateFailed failed,
-            final boolean placeholderRepairUsed) {
-        final Segment segment = attempt.segment();
-        log.debug(
-                "Gate completed segmentId={} result=GateFailed code={} placeholderRepairUsed={}",
-                segment.id(),
-                failed.error().code(),
-                placeholderRepairUsed);
-        if (gate.restoreRepairing(segment, rejected, PlaceholderRepair.RESTORE_MISSING)
-                instanceof GateResult.Restored restored) {
-            return DraftOutcomes.drafted(attempt, rejected, restored);
-        }
-        if (!placeholderRepairUsed) {
-            return repairPlaceholder(attempt, rejected, failed);
-        }
-        if (gate.restoreRepairing(segment, rejected, PlaceholderRepair.REWRAP_ALL)
-                instanceof GateResult.Restored restored) {
-            return DraftOutcomes.drafted(attempt, rejected, restored);
-        }
-        return DraftOutcomes.stillFailingTheGate(attempt, rejected, failed);
-    }
-
-    // A repair whose own reply is unusable leaves the draft's reply, which the gate refused only for its markup: its
-    // words are kept and every token is placed again by position before the segment is given up.
-    private Result<DraftOutcome> repairPlaceholder(
-            final DraftAttempt attempt, final String rejectedTarget, final GateResult.GateFailed failed) {
-        final Segment segment = attempt.segment();
-        final String note = DraftRequests.placeholderNote(attempt, rejectedTarget, failed);
-        log.warn("Repairing placeholder mismatch segmentId={}", segment.id());
-        final Result<DraftOutcome> repaired = send(attempt, DraftStep.PLACEHOLDER_REPAIR, rejectedTarget, note);
-        if (repaired.isOk()
-                && repaired.data() instanceof DraftOutcome.FlaggedAtOnce
-                && gate.restoreRepairing(segment, rejectedTarget, PlaceholderRepair.REWRAP_ALL)
-                        instanceof GateResult.Restored restored) {
-            log.info("Placeholder repair reply unusable; draft kept with re-placed tokens segmentId={}", segment.id());
-            return DraftOutcomes.drafted(attempt, rejectedTarget, restored);
-        }
-        return repaired;
-    }
-
-    private static void logTraceRestoration(final String restored) {
-        if (log.isTraceEnabled()) {
-            log.trace("Segment reply restored={}", restored);
-        }
     }
 }

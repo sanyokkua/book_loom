@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.persistence.GlossaryIndex;
 import ua.bookloom.util.text.GlossaryKeys;
 
 /**
@@ -30,51 +31,60 @@ public record GlossaryDocument(List<GlossaryEntry> entries, List<String> removed
         return new GlossaryDocument(List.of(), List.of());
     }
 
+    /** The entry whose lemma has the key, else the first that lists it as a form ({@link GlossaryIndex}). */
     Optional<GlossaryEntry> findByKey(final String key) {
-        return entries.stream()
-                .filter(entry -> GlossaryKeys.of(entry.term()).equals(key))
-                .findFirst();
+        return GlossaryIndex.of(entries).find(key);
+    }
+
+    /** The held entry an incoming entry's lemma or one of its forms names. */
+    Optional<GlossaryEntry> holderOf(final GlossaryEntry entry) {
+        return GlossaryIndex.of(entries).holderOf(entry);
     }
 
     boolean wasRemoved(final String key) {
         return removed.contains(key);
     }
 
-    /** Appends an entry and forgets that its term was removed. */
+    /** Appends an entry and forgets that its term and forms were removed. */
     GlossaryDocument added(final GlossaryEntry entry) {
         final List<GlossaryEntry> next = new ArrayList<>(entries);
         next.add(entry);
         final Set<String> stillRemoved = new LinkedHashSet<>(removed);
-        stillRemoved.remove(GlossaryKeys.of(entry.term()));
+        GlossaryIndex.keysOf(entry).forEach(stillRemoved::remove);
         return new GlossaryDocument(next, List.copyOf(stillRemoved));
     }
 
     /**
-     * Puts many entries at once: one whose id is held replaces it in place, any other is appended and its term is no
-     * longer remembered as removed. Indexed once, so thousands of entries cost one pass, not one pass each.
+     * Puts many entries at once: one whose id is held replaces it in place, any other is appended and its term and
+     * forms are no longer remembered as removed. Indexed once, so thousands of entries cost one pass, not one pass
+     * each.
      *
-     * @return the new document, or empty when an entry's term is held under another id
+     * @return the new document, or empty when an entry's term or one of its forms is held under another id, as a lemma
+     *     or a form
      */
     Optional<GlossaryDocument> putAll(final List<GlossaryEntry> puts) {
         final Map<String, Integer> positionById = new HashMap<>();
         final Map<String, String> idByKey = new HashMap<>();
         final List<GlossaryEntry> next = new ArrayList<>(entries);
         for (int at = 0; at < next.size(); at++) {
-            positionById.put(next.get(at).id(), at);
-            idByKey.put(GlossaryKeys.of(next.get(at).term()), next.get(at).id());
+            final GlossaryEntry held = next.get(at);
+            positionById.put(held.id(), at);
+            GlossaryIndex.keysOf(held).forEach(key -> idByKey.putIfAbsent(key, held.id()));
         }
         final Set<String> stillRemoved = new LinkedHashSet<>(removed);
         for (final GlossaryEntry entry : puts) {
-            final String key = GlossaryKeys.of(entry.term());
-            final String holder = idByKey.putIfAbsent(key, entry.id());
-            if (holder != null && !holder.equals(entry.id())) {
+            final List<String> keys = GlossaryIndex.keysOf(entry);
+            if (keys.stream()
+                    .map(key -> idByKey.getOrDefault(key, entry.id()))
+                    .anyMatch(id -> !id.equals(entry.id()))) {
                 return Optional.empty();
             }
+            keys.forEach(key -> idByKey.putIfAbsent(key, entry.id()));
             final Integer at = positionById.get(entry.id());
             if (at == null) {
                 positionById.put(entry.id(), next.size());
                 next.add(entry);
-                stillRemoved.remove(key);
+                keys.forEach(stillRemoved::remove);
             } else {
                 next.set(at, entry);
             }
@@ -90,13 +100,22 @@ public record GlossaryDocument(List<GlossaryEntry> entries, List<String> removed
         return new GlossaryDocument(next, removed);
     }
 
-    /** Drops the entry with the id and remembers its term as removed. */
+    /** Drops the entry with the id and remembers its term and forms as removed. */
     GlossaryDocument without(final GlossaryEntry entry) {
         final List<GlossaryEntry> next =
                 entries.stream().filter(held -> !held.id().equals(entry.id())).toList();
         final Set<String> nowRemoved = new LinkedHashSet<>(removed);
-        nowRemoved.add(GlossaryKeys.of(entry.term()));
+        nowRemoved.addAll(GlossaryIndex.keysOf(entry));
         return new GlossaryDocument(next, List.copyOf(nowRemoved));
+    }
+
+    /** Drops the folded entry and replaces the kept one, remembering nothing as removed. */
+    GlossaryDocument folded(final String foldedId, final GlossaryEntry kept) {
+        final List<GlossaryEntry> next = entries.stream()
+                .filter(held -> !held.id().equals(foldedId))
+                .map(held -> held.id().equals(kept.id()) ? kept : held)
+                .toList();
+        return new GlossaryDocument(next, removed);
     }
 
     Optional<GlossaryEntry> findById(final String entryId) {

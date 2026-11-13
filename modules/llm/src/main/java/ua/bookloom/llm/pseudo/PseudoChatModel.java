@@ -24,23 +24,32 @@ import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.FinishReason;
 
 /**
- * Deterministic offline chat model that upper-cases a delimited block — a draft's {@code <Text>}, else a rewrite's
- * {@code <Translation>} — or else the last user message.
+ * Deterministic offline chat model that upper-cases a draft's delimited {@code <Text>} block, or else the last user
+ * message.
  */
 @Slf4j
 public final class PseudoChatModel implements ChatModel {
 
+    private static final String GENDER = "gender";
+    private static final String OTHER = "other";
+    private static final String TARGET = "target";
+    private static final String UNKNOWN = "unknown";
+
     private static final Pattern PROTECTED_REFERENCE =
-            Pattern.compile("⟦g\\d+⟧|&(?:#(?:x|X)[0-9A-Fa-f]+|#\\d+|[A-Za-z][A-Za-z0-9]+);");
+            Pattern.compile("⟦g\\d+⟧|&(?:#[xX][0-9A-Fa-f]+|#\\d+|[A-Za-z][A-Za-z0-9]+);");
     private static final Pattern CAPITALIZED_WORD = Pattern.compile("\\p{Lu}\\p{L}*");
 
-    private static final String FORMAT_REVIEWER = "reviewer";
     private static final String FORMAT_PRESCAN = "prescan";
-    private static final String FORMAT_SUMMARY = "summary";
+    private static final String FORMAT_CHAPTER_SUMMARY = "chapter_summary";
+    private static final String FORMAT_PROOFREAD = "proofread";
+    // The offline model cannot proofread: every window it is shown stays as it is.
+    private static final String PROOFREAD_REPLY = "{\"unchanged\":true}";
     private static final String FORMAT_DRAFT_BATCH = "draft-batch-json";
     private static final String FORMAT_REVIEW_TERMS = "review-terms";
     private static final String FORMAT_SUGGEST_TARGETS = "suggest-targets";
     private static final String FORMAT_TERM_READING = "term-reading";
+    private static final String FORMAT_TERM_CHOICE = "term-choice";
+    private static final String TERM_CHOICE_REPLY = "{\"terms\":[]}";
     // One numbered item of a batch draft: <s id="3">text</s>, inside the <Items> block of the user message.
     private static final Pattern BATCH_ITEM = Pattern.compile("<s id=\"([^\"]+)\">(.*?)</s>", Pattern.DOTALL);
     // One listed term of a glossary review: "- <term> — <count>× — ...".
@@ -49,9 +58,6 @@ public final class PseudoChatModel implements ChatModel {
     private static final Pattern SUGGEST_LINE = Pattern.compile("(?m)^- (.+?) — ");
     // One numbered window of a term reading: "[<number>] <text>".
     private static final Pattern READING_WINDOW = Pattern.compile("(?m)^\\[(\\d{1,6})] ");
-
-    private static final String REVIEWER_REPLY = "{\"results\":[]}";
-    private static final String SUMMARY_REPLY = "{\"summary\":{\"source\":\"\",\"target\":\"\"},\"facts\":[]}";
 
     private final ObjectMapper mapper;
 
@@ -81,7 +87,7 @@ public final class PseudoChatModel implements ChatModel {
             final String reply = structuredReply(request, source, translation);
             logTrace(userMessage, reply);
             return Result.ok(new ChatResponse(reply, FinishReason.STOP));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -97,7 +103,7 @@ public final class PseudoChatModel implements ChatModel {
     }
 
     private Optional<String> delimitedDraftSource(String userMessage) {
-        return delimited(userMessage, "Text").or(() -> delimited(userMessage, "Translation"));
+        return delimited(userMessage, "Text");
     }
 
     private static Optional<String> delimited(String userMessage, String tag) {
@@ -115,12 +121,13 @@ public final class PseudoChatModel implements ChatModel {
         }
         final String formatName = request.responseFormat().name();
         return switch (formatName) {
-            case FORMAT_REVIEWER -> REVIEWER_REPLY;
             case FORMAT_PRESCAN -> prescanReply(source);
-            case FORMAT_SUMMARY -> SUMMARY_REPLY;
+            case FORMAT_CHAPTER_SUMMARY -> writeValue(Map.of("summary", translation));
+            case FORMAT_PROOFREAD -> PROOFREAD_REPLY;
             case FORMAT_REVIEW_TERMS -> reviewReply(source);
             case FORMAT_SUGGEST_TARGETS -> suggestReply(source);
             case FORMAT_TERM_READING -> readingReply(source);
+            case FORMAT_TERM_CHOICE -> TERM_CHOICE_REPLY;
             case FORMAT_DRAFT_BATCH -> batchReply(source);
             default -> targetReply(translation);
         };
@@ -134,7 +141,7 @@ public final class PseudoChatModel implements ChatModel {
         while (matcher.find()) {
             final Map<String, String> item = new LinkedHashMap<>();
             item.put("id", matcher.group(1));
-            item.put("target", uppercasePreservingReferences(matcher.group(2)));
+            item.put(TARGET, uppercasePreservingReferences(matcher.group(2)));
             items.add(item);
         }
         log.debug("Pseudo batch draft answered {} items", items.size());
@@ -142,7 +149,7 @@ public final class PseudoChatModel implements ChatModel {
     }
 
     private String targetReply(String translation) {
-        return writeValue(Map.of("target", translation));
+        return writeValue(Map.of(TARGET, translation));
     }
 
     private String prescanReply(String source) {
@@ -159,8 +166,8 @@ public final class PseudoChatModel implements ChatModel {
             final Map<String, String> verdict = new LinkedHashMap<>();
             verdict.put("term", matcher.group(1));
             verdict.put("verdict", "name");
-            verdict.put("type", "other");
-            verdict.put("gender", "unknown");
+            verdict.put("type", OTHER);
+            verdict.put(GENDER, UNKNOWN);
             verdicts.add(verdict);
         }
         log.debug("Pseudo glossary review judged {} terms names", verdicts.size());
@@ -174,8 +181,8 @@ public final class PseudoChatModel implements ChatModel {
         while (matcher.find()) {
             final Map<String, String> suggestion = new LinkedHashMap<>();
             suggestion.put("term", matcher.group(1));
-            suggestion.put("target", "");
-            suggestion.put("gender", "unknown");
+            suggestion.put(TARGET, "");
+            suggestion.put(GENDER, UNKNOWN);
             suggestions.add(suggestion);
         }
         log.debug("Pseudo glossary suggestion answered {} terms with no suggestion", suggestions.size());
@@ -191,8 +198,8 @@ public final class PseudoChatModel implements ChatModel {
             window.put("window", Integer.parseInt(matcher.group(1)));
             window.put("quote", "none");
             window.put("usage", "name");
-            window.put("kind", "other");
-            window.put("gender", "none");
+            window.put("kind", OTHER);
+            window.put(GENDER, "none");
             windows.add(window);
         }
         log.debug("Pseudo term reading answered {} windows with no pronoun", windows.size());
@@ -206,8 +213,8 @@ public final class PseudoChatModel implements ChatModel {
     private static Map<String, String> termEntry(String term) {
         final Map<String, String> entry = new LinkedHashMap<>();
         entry.put("term", term);
-        entry.put("type", "other");
-        entry.put("gender", "unknown");
+        entry.put("type", OTHER);
+        entry.put(GENDER, UNKNOWN);
         return entry;
     }
 

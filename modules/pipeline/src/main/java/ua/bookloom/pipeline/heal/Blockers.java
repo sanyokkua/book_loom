@@ -11,7 +11,7 @@ import ua.bookloom.pipeline.qa.QaResult;
 
 /**
  * The deterministic blockers of one evaluated candidate, named by the check that raised each: a failed hard gate —
- * which includes every blocking text check — or a soft check that failed outright. A reviewer edit may keep or shrink
+ * which includes every blocking text check — or a soft check that failed outright. A repair may keep or shrink
  * this set but never grow it.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")

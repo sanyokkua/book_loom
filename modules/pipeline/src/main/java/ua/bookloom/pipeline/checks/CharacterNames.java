@@ -39,7 +39,7 @@ public final class CharacterNames {
     }
 
     /**
-     * The characters whose gender the sheet only calls {@value #LIKELY}, which the reviewer may not enforce by an edit.
+     * The characters whose gender the sheet only calls {@value #LIKELY}, which no repair may enforce.
      *
      * @param sheet the non-null {@code name — likely gender} lines
      * @param pairs the non-null {@code term → target} lines of the chunk's unlocked glossary renderings

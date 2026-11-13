@@ -33,9 +33,10 @@ import ua.bookloom.ui.BackgroundExecutor;
 public final class TranslationRunner {
 
     private static final double MILLIS_PER_SECOND = 1000.0;
+    private static final String STOPPED_BY_ERROR = "The run stopped because of an unexpected error.";
 
     /** The run the runner is busy with; the job is kept beside its session so a control reaches both. */
-    private record ActiveRun(TranslationJob job, RunSession session, RunContext context) {}
+    private record ActiveRun(TranslationJob job, RunSession session, RunContext context, long ledgerMark) {}
 
     private final StateMirror mirror;
     private final ExecutorService executor;
@@ -43,6 +44,7 @@ public final class TranslationRunner {
     private final ReviewDesk desk;
     private final Clock clock;
     private final RunSpeedSink speeds;
+    private final MeasuredCalls measuredCalls;
     private final AtomicReference<@Nullable ActiveRun> active = new AtomicReference<>();
 
     /**
@@ -52,20 +54,23 @@ public final class TranslationRunner {
      * @param executor the daemon executor a job runs on, never the FX thread
      * @param desk the review desk the run reads its flagged queue and kept-as-source count from
      * @param speeds where the speed a run measured on its model is kept when the run ends
+     * @param measuredCalls where the seconds per call of each kind a run measured are kept when it ends
      */
     @Inject
     public TranslationRunner(
             final StateMirror mirror,
             @BackgroundExecutor final ExecutorService executor,
             final ReviewDesk desk,
-            final ModelSpeedRecorder speeds) {
+            final ModelSpeedRecorder speeds,
+            final MeasuredCalls measuredCalls) {
         this(
                 mirror,
                 executor,
                 new FixedRateTicks(),
                 desk,
                 Clock.system(ZoneId.systemDefault()),
-                RunSpeedSink.storingIn(speeds));
+                RunSpeedSink.storingIn(speeds),
+                measuredCalls);
     }
 
     TranslationRunner(
@@ -90,6 +95,18 @@ public final class TranslationRunner {
             final ReviewDesk desk,
             final Clock clock,
             final RunSpeedSink speeds) {
+        this(mirror, executor, ticks, desk, clock, speeds, MeasuredCalls.none());
+    }
+
+    TranslationRunner(
+            final StateMirror mirror,
+            final ExecutorService executor,
+            final TickSource ticks,
+            final ReviewDesk desk,
+            final Clock clock,
+            final RunSpeedSink speeds,
+            final MeasuredCalls measuredCalls) {
+        this.measuredCalls = Objects.requireNonNull(measuredCalls, "measuredCalls");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.ticks = Objects.requireNonNull(ticks, "ticks");
@@ -111,7 +128,8 @@ public final class TranslationRunner {
     public boolean start(final TranslationJob job, final RunContext context) {
         Objects.requireNonNull(job, "job");
         Objects.requireNonNull(context, "context");
-        final ActiveRun run = new ActiveRun(job, new RunSession(mirror, clock, context, desk, executor), context);
+        final ActiveRun run = new ActiveRun(
+                job, new RunSession(mirror, clock, context, desk, executor), context, measuredCalls.mark());
         if (!active.compareAndSet(null, run)) {
             log.warn("refusing to start a run: another run is active");
             return false;
@@ -123,12 +141,19 @@ public final class TranslationRunner {
                 context.reviewMode(),
                 context.selection().providerId(),
                 context.selection().modelId());
+        boolean launched = false;
         try {
             mirror.publishRunStarted(
                     context.projectId(), context.fileName(), new RunMode(context.dial(), context.reviewMode()));
-            return launch(run);
-        } catch (Throwable cause) {
+            launched = launch(run);
+            return launched;
+        } catch (Exception cause) {
             return abandon(run, cause);
+        } finally {
+            if (!launched && Objects.equals(active.get(), run)) {
+                // Only an Error reaches here: it is not caught, so the run is closed before it travels on.
+                abandon(run, new IllegalStateException("the run start was cut short by an error"));
+            }
         }
     }
 
@@ -189,28 +214,46 @@ public final class TranslationRunner {
 
     private boolean launch(final ActiveRun run) {
         final Subscription subscription = run.job().subscribe(run.session());
+        boolean submitted = false;
         try {
             final Runnable stopTicks = ticks.start(run.session()::tick);
-            return submit(run, stopTicks, subscription);
-        } catch (Throwable cause) {
-            subscription.unsubscribe();
-            throw cause;
+            submitted = submit(run, stopTicks, subscription);
+            return submitted;
+        } finally {
+            if (!submitted) {
+                subscription.unsubscribe();
+            }
         }
     }
 
     private boolean submit(final ActiveRun run, final Runnable stopTicks, final Subscription subscription) {
+        boolean submitted = false;
         try {
             executor.execute(() -> execute(run, stopTicks, subscription));
+            submitted = true;
             return true;
-        } catch (Throwable cause) {
-            stopTicks.run();
-            throw cause;
+        } finally {
+            if (!submitted) {
+                stopTicks.run();
+            }
         }
     }
 
     private void execute(final ActiveRun run, final Runnable stopTicks, final Subscription subscription) {
         log.debug("run executing on {}", Thread.currentThread().getName());
-        final Result<JobReport> result = runGuarded(run.job());
+        Result<JobReport> result = Result.err(AppErrors.unexpected(STOPPED_BY_ERROR, null));
+        try {
+            result = runGuarded(run.job());
+        } finally {
+            finishRun(run, stopTicks, subscription, result);
+        }
+    }
+
+    private void finishRun(
+            final ActiveRun run,
+            final Runnable stopTicks,
+            final Subscription subscription,
+            final Result<JobReport> result) {
         try {
             stopTicks.run();
         } catch (RuntimeException failure) {
@@ -235,6 +278,7 @@ public final class TranslationRunner {
         try {
             run.session().finish(result, () -> release(run));
             keepSpeed(run);
+            measuredCalls.keep(run.context().selection(), run.ledgerMark(), "run");
         } finally {
             release(run);
         }
@@ -262,9 +306,9 @@ public final class TranslationRunner {
     private static Result<JobReport> runGuarded(final TranslationJob job) {
         try {
             return job.run();
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             log.error("the job threw instead of returning a result", thrown);
-            return Result.err(AppErrors.unexpected("The run stopped because of an unexpected error.", thrown));
+            return Result.err(AppErrors.unexpected(STOPPED_BY_ERROR, thrown));
         }
     }
 
@@ -277,9 +321,6 @@ public final class TranslationRunner {
             log.warn("the failed start could not be published", failure);
         } finally {
             release(run);
-        }
-        if (cause instanceof Error fatal) {
-            throw fatal;
         }
         return false;
     }

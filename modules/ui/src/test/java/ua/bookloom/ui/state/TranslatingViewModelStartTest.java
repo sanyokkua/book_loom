@@ -167,6 +167,21 @@ class TranslatingViewModelStartTest extends TranslatingViewModelTestBase {
         assertThat(toasts.raised()).containsExactly(new Raised("info", MessageKey.TOAST_RUN_STARTED, List.of()));
     }
 
+    // LM Studio loads a model that is not in memory with its own defaults: the person hears it, and the run goes on.
+    @Test
+    void start_lmStudioModelNotLoaded_saysItLoadsWithItsOwnSettingsAndStarts() throws Exception {
+        modelLoadsWithOwnSettings = true;
+        openBookAndChooseModel();
+        buildViewModel();
+
+        startAndPrepare();
+
+        assertThat(toasts.raised())
+                .containsExactly(
+                        new Raised("info", MessageKey.TOAST_RUN_STARTED, List.of()),
+                        new Raised("info", MessageKey.TOAST_MODEL_LOADS_OWN_SETTINGS, List.of()));
+    }
+
     // IF a missing book started something anyway, THEN a run would be built from nothing; the message that names what
     // is missing is asserted in TranslatingViewModelRoutingTest.
     @Test

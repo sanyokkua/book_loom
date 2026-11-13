@@ -168,20 +168,4 @@ class LiveCallStateTest {
         assertThat(state.view(START).recent())
                 .isSameAs(state.view(START.plusSeconds(1)).recent());
     }
-
-    // IF a summary refresh did not raise the version, THEN the scene summary line would never read the new text.
-    @Test
-    void memory_summaryUpdate_setsTheSummaryVersion() {
-        state.memory(new ua.bookloom.api.pipeline.MemoryUpdated(ua.bookloom.api.pipeline.MemoryKind.SUMMARY, "3"));
-
-        assertThat(state.view(START).summaryVersion()).isEqualTo(3);
-    }
-
-    // IF a glossary change moved the summary version, THEN the card would re-read a summary that did not change.
-    @Test
-    void memory_glossaryUpdate_leavesTheSummaryVersion() {
-        state.memory(new ua.bookloom.api.pipeline.MemoryUpdated(ua.bookloom.api.pipeline.MemoryKind.GLOSSARY, "+2"));
-
-        assertThat(state.view(START).summaryVersion()).isZero();
-    }
 }

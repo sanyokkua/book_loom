@@ -18,12 +18,11 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.Project;
-import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -38,10 +37,16 @@ import ua.bookloom.pipeline.review.ReviewFixtures.Desk;
 class SetupAssistantRecheckNarratorTest {
 
     private static final String QUOTE = "Hold on tight, Brindle";
-    private static final String ADDRESSED = "\"" + QUOTE + ",\" Danny said, and I laughed at him for a while.\n\n"
-            + "The rain had not stopped for three days, and I was beginning to think the city had forgotten the sun.\n";
-    private static final String SPOKEN_BY_NARRATOR = "\"Mind the step, Brindle,\" I said, and she stepped carefully"
-            + " over the loose board.\n\nThe rain had not stopped for three days.\n";
+    private static final String ADDRESSED = """
+            "%s," Danny said, and I laughed at him for a while.
+
+            The rain had not stopped for three days, and I was beginning to think the city had forgotten the sun.
+            """.formatted(QUOTE);
+    private static final String SPOKEN_BY_NARRATOR = """
+            "Mind the step, Brindle," I said, and she stepped carefully over the loose board.
+
+            The rain had not stopped for three days.
+            """;
     private static final Narrator PENDING =
             new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN, Narrator.GenderOrigin.NONE, List.of(QUOTE));
 
@@ -86,29 +91,19 @@ class SetupAssistantRecheckNarratorTest {
         assertThat(desk.glossary().add(entry).isOk()).isTrue();
     }
 
-    private GlossaryEntry brindle(final Gender gender, final GenderOrigin origin) {
-        return new GlossaryEntry(
-                "brindle",
-                desk.projectId(),
-                "Brindle",
-                null,
-                TermType.CHARACTER,
-                gender,
-                false,
-                TargetOrigin.PERSON,
-                origin,
-                false,
-                List.of());
+    private GlossaryEntry brindle(final Gender gender, final Origin origin) {
+        return GlossaryEntry.of("brindle", desk.projectId(), "Brindle", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                .withGenderFrom(gender, origin);
     }
 
     // IF the stored vocative were never looked at again, THEN a narrator addressed as Brindle would be asked about at
     // Start although the names pass has since confirmed Brindle is a woman.
     @ParameterizedTest
     @EnumSource(
-            value = GenderOrigin.class,
-            names = {"PERSON", "VERIFIED"})
+            value = Origin.class,
+            names = {"USER", "BOOK"})
     void recheckNarrator_pendingVocativeAndGlossaryPersonNowConfirmedFemale_narratorIsFemaleVerified(
-            final GenderOrigin origin) {
+            final Origin origin) {
         narratorIs(PENDING);
         glossaryHolds(brindle(Gender.FEMALE, origin));
 
@@ -123,7 +118,7 @@ class SetupAssistantRecheckNarratorTest {
     @Test
     void recheckNarrator_glossaryPersonOnlySuggested_leavesTheNarratorUnknown() {
         narratorIs(PENDING);
-        glossaryHolds(brindle(Gender.FEMALE, GenderOrigin.SUGGESTED));
+        glossaryHolds(brindle(Gender.FEMALE, Origin.LIKELY));
 
         assertThat(assistant.recheckNarrator(desk.projectId()).data()).isEqualTo(PENDING);
     }
@@ -138,7 +133,7 @@ class SetupAssistantRecheckNarratorTest {
     @Test
     void recheckNarrator_glossaryPersonOfUnknownGender_leavesTheNarratorUnchanged() {
         narratorIs(PENDING);
-        glossaryHolds(brindle(Gender.UNKNOWN, GenderOrigin.PERSON));
+        glossaryHolds(brindle(Gender.UNKNOWN, Origin.USER));
 
         assertThat(assistant.recheckNarrator(desk.projectId()).data()).isEqualTo(PENDING);
     }
@@ -146,7 +141,7 @@ class SetupAssistantRecheckNarratorTest {
     @Test
     void recheckNarrator_noQuotesStored_leavesTheNarratorUnchanged() {
         narratorIs(new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN));
-        glossaryHolds(brindle(Gender.FEMALE, GenderOrigin.PERSON));
+        glossaryHolds(brindle(Gender.FEMALE, Origin.USER));
 
         assertThat(assistant.recheckNarrator(desk.projectId()).data())
                 .isEqualTo(new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN));
@@ -160,7 +155,7 @@ class SetupAssistantRecheckNarratorTest {
         final Narrator pending = new Narrator(
                 NarratorPerson.FIRST, Gender.UNKNOWN, Narrator.GenderOrigin.NONE, List.of("Mind the step, Brindle"));
         narratorIs(pending);
-        glossaryHolds(brindle(Gender.FEMALE, GenderOrigin.PERSON));
+        glossaryHolds(brindle(Gender.FEMALE, Origin.USER));
 
         assertThat(assistant.recheckNarrator(desk.projectId()).data()).isEqualTo(pending);
     }
@@ -169,7 +164,7 @@ class SetupAssistantRecheckNarratorTest {
     void recheckNarrator_personAlreadyChoseTheGender_neverChangesIt() {
         final Narrator chosen = new Narrator(NarratorPerson.FIRST, Gender.MALE);
         narratorIs(chosen);
-        glossaryHolds(brindle(Gender.FEMALE, GenderOrigin.PERSON));
+        glossaryHolds(brindle(Gender.FEMALE, Origin.USER));
 
         assertThat(assistant.recheckNarrator(desk.projectId()).data()).isEqualTo(chosen);
     }
@@ -179,7 +174,7 @@ class SetupAssistantRecheckNarratorTest {
         final Narrator third =
                 new Narrator(NarratorPerson.THIRD, Gender.UNKNOWN, Narrator.GenderOrigin.NONE, List.of(QUOTE));
         narratorIs(third);
-        glossaryHolds(brindle(Gender.FEMALE, GenderOrigin.PERSON));
+        glossaryHolds(brindle(Gender.FEMALE, Origin.USER));
 
         assertThat(assistant.recheckNarrator(desk.projectId()).data()).isEqualTo(third);
     }
@@ -189,7 +184,7 @@ class SetupAssistantRecheckNarratorTest {
     @Test
     void recheckNarrator_verified_writesNothingToTheStoredBrief() {
         narratorIs(PENDING);
-        glossaryHolds(brindle(Gender.FEMALE, GenderOrigin.PERSON));
+        glossaryHolds(brindle(Gender.FEMALE, Origin.USER));
 
         assistant.recheckNarrator(desk.projectId());
 

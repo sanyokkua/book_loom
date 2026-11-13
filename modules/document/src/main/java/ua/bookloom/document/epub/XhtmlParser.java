@@ -30,41 +30,7 @@ final class XhtmlParser {
     private static final int PROLOG_PROBE_BYTES = 200;
     private static final Pattern ENCODING_DECLARATION = Pattern.compile("encoding=[\"']([^\"']+)[\"']");
 
-    private static final Pattern START_TAG = Pattern.compile("<[a-zA-Z][a-zA-Z0-9:-]*(?:\"[^\"]*\"|'[^']*'|[^\"'>])*>");
-
     private static final Pattern QUOTED_VALUE = Pattern.compile("\"[^\"]*\"|'[^']*'");
-
-    /**
-     * Matches any element written in XML self-closing form — {@code <name .../>} — for any tag name. Originally
-     * (task 4.1) this pattern's tag-name group was the fixed alternation {@code (script|style|noscript)}; task
-     * 5.1 generalizes it to any name and moves the decision of which matches actually get rewritten to {@link
-     * #isKnownNonVoidTag(String)}, evaluated per match. That decision is jsoup's own public API, not a
-     * hand-maintained list, and it happens to subsume the original three: {@code script}/{@code style}/
-     * {@code noscript} are known and non-void, so they are still rewritten, for the reason task 4.1 measured —
-     * their HTML content model is raw text, so only a literal {@code </script>} (etc.) ends one, not a
-     * self-closing {@code />}, and jsoup's HTML tree builder swallows the rest of the document as that element's
-     * text. Task 5.1 measured the same failure mode on ordinary non-void elements — {@code <a/>}, {@code <span/>}
-     * — which stay open and pull a following sibling inside them instead of swallowing raw text, but the
-     * mechanism jsoup applies is the same: a self-close is <em>ignored</em> on a known non-void tag. jsoup instead
-     * <em>honours</em> a self-close on an unknown tag (an unrecognized or custom element closes cleanly and round
-     * trips) and on a void tag (e.g. {@code <img/>}, {@code <br/>}, which is correctly always self-closing) — both
-     * are left alone by {@link #isKnownNonVoidTag(String)}, so repairing them would be inert at best. Foreign
-     * content (SVG, MathML) is not registered under jsoup's HTML namespace, so {@code Tag.isKnownTag} reports it
-     * unknown and it too is left alone. The attribute-value alternation ({@code "[^"]*"} / {@code '[^']*'})
-     * consumes a quoted value such as {@code src="js/book.js"} as one unit so an embedded {@code >} or {@code /}
-     * cannot end the match early, and the reluctant quantifier then finds the first genuinely unquoted {@code />}
-     * — an already-paired element such as {@code <script type="text/javascript">...</script>} never matches,
-     * since it closes with a bare {@code >}. {@code \b} after the tag name rejects a different element name
-     * sharing the prefix, e.g. {@code <scriptfoo/>}.
-     *
-     * <p>{@code EpubCanonicalAssert} in the test source set carries a byte-for-byte duplicate of this pattern and
-     * of {@link #isKnownNonVoidTag(String)}, applied to both sides of the golden comparison (design.md D2) instead
-     * of sharing it with this package-private class — the test harness must not reach across the module's
-     * internal package boundary for production regex state. Keep the two definitions textually identical if
-     * either ever changes.
-     */
-    private static final Pattern SELF_CLOSED_ELEMENT =
-            Pattern.compile("<([a-zA-Z][a-zA-Z0-9-]*)\\b((?:\"[^\"]*\"|'[^']*'|[^\"'>])*?)/>");
 
     /**
      * Parses a spine document's bytes, pinning output settings for a whitespace-faithful round trip.
@@ -92,16 +58,23 @@ final class XhtmlParser {
      * character can still be told apart from a reference such as a decimal line-feed reference, which is left for jsoup to decode.
      */
     private static String normalizeAttributeWhitespace(String xhtml) {
-        final Matcher tags = START_TAG.matcher(xhtml);
+        final TagScanner scanner = new TagScanner(xhtml);
         final StringBuilder normalized = new StringBuilder();
-        while (tags.find()) {
-            final Matcher values = QUOTED_VALUE.matcher(tags.group());
-            final String tag = values.replaceAll(value ->
-                    Matcher.quoteReplacement(value.group().replace("\r\n", " ").replaceAll("[\\n\\r\\t]", " ")));
-            tags.appendReplacement(normalized, Matcher.quoteReplacement(tag));
+        int copied = 0;
+        int open = scanner.nextTag(0);
+        while (open >= 0) {
+            final int end = scanner.startTagEnd(open);
+            if (end >= 0) {
+                final String tag = QUOTED_VALUE
+                        .matcher(xhtml.substring(open, end))
+                        .replaceAll(value -> Matcher.quoteReplacement(
+                                value.group().replace("\r\n", " ").replaceAll("[\\n\\r\\t]", " ")));
+                normalized.append(xhtml, copied, open).append(tag);
+                copied = end;
+            }
+            open = scanner.nextTag(end >= 0 ? end : open + 1);
         }
-        tags.appendTail(normalized);
-        return normalized.toString();
+        return normalized.append(xhtml, copied, xhtml.length()).toString();
     }
 
     /**
@@ -128,17 +101,29 @@ final class XhtmlParser {
      *     an explicit open/close pair; unaffected otherwise
      */
     private static String expandSelfClosedNonVoidElement(String xhtml) {
-        final Matcher matcher = SELF_CLOSED_ELEMENT.matcher(xhtml);
+        final TagScanner scanner = new TagScanner(xhtml);
         final StringBuilder expanded = new StringBuilder();
-        while (matcher.find()) {
-            final String tagName = matcher.group(1);
-            final String replacement = isKnownNonVoidTag(tagName)
-                    ? "<" + tagName + matcher.group(2) + "></" + tagName + ">"
-                    : matcher.group();
-            matcher.appendReplacement(expanded, Matcher.quoteReplacement(replacement));
+        int copied = 0;
+        int open = scanner.nextTag(0);
+        while (open >= 0) {
+            final TagScanner.SelfClosed element = scanner.selfClosedAt(open);
+            int resume = open + 1;
+            if (element != null) {
+                resume = element.end();
+                if (isKnownNonVoidTag(element.name())) {
+                    expanded.append(xhtml, copied, open)
+                            .append('<')
+                            .append(element.name())
+                            .append(element.attributes())
+                            .append("></")
+                            .append(element.name())
+                            .append('>');
+                    copied = resume;
+                }
+            }
+            open = scanner.nextTag(resume);
         }
-        matcher.appendTail(expanded);
-        return expanded.toString();
+        return expanded.append(xhtml, copied, xhtml.length()).toString();
     }
 
     /**
@@ -185,7 +170,7 @@ final class XhtmlParser {
         }
         try {
             return Charset.forName(matcher.group(1));
-        } catch (IllegalCharsetNameException | UnsupportedCharsetException e) {
+        } catch (IllegalCharsetNameException | UnsupportedCharsetException _) {
             return DEFAULT_CHARSET;
         }
     }

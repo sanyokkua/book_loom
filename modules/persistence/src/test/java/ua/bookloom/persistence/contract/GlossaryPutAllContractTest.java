@@ -4,12 +4,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 import java.util.List;
+import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.MeaningChoice;
+import ua.bookloom.api.project.Origin;
+import ua.bookloom.api.project.PlaceKind;
+import ua.bookloom.api.project.TargetState;
 import ua.bookloom.api.project.TermType;
 
 /**
@@ -53,7 +58,50 @@ public abstract class GlossaryPutAllContractTest extends ProjectFindersContractT
                 .containsExactly("Гейл");
     }
 
+    // Proves the lemma entry's forms, origins, target state and place kind survive the store in both adapters.
+    @Test
+    void put_entryWithFormsOriginAndState_roundTrips() {
+        givenProjects("p1");
+        final GlossaryRepository repository = glossaryRepository();
+        final GlossaryEntry lemma = lemma();
+
+        final Result<List<GlossaryEntry>> put = repository.putAll("p1", List.of(lemma));
+
+        assertThat(put.isOk()).as("%s", put.error()).isTrue();
+        assertThat(repository.all("p1").data()).containsExactly(lemma);
+        final GlossaryEntry stored =
+                Objects.requireNonNull(repository.all("p1").data()).getFirst();
+        assertThat(stored.forms()).containsExactly("Велемира", "Велемиру");
+        assertThat(stored.targetOrigin()).isEqualTo(Origin.BOOK);
+        assertThat(stored.placeKind()).isEqualTo(PlaceKind.RIVER);
+        assertThat(stored.meaning()).isEqualTo("a note");
+        assertThat(stored.meaningChoice()).isEqualTo(MeaningChoice.PENDING);
+    }
+
+    private static GlossaryEntry lemma() {
+        return new GlossaryEntry(
+                "e1",
+                "p1",
+                "Велемир",
+                List.of("Велемира", "Велемиру"),
+                true,
+                "Велемир",
+                TargetState.PINNED,
+                Origin.BOOK,
+                TermType.PLACE,
+                PlaceKind.RIVER,
+                Origin.RULE,
+                Gender.MALE,
+                Origin.LIKELY,
+                true,
+                false,
+                "a note",
+                MeaningChoice.PENDING,
+                null,
+                0);
+    }
+
     private static GlossaryEntry entry(final String id, final String term, final String target) {
-        return new GlossaryEntry(id, "p1", term, target, TermType.CHARACTER, Gender.UNKNOWN, false);
+        return GlossaryEntry.of(id, "p1", term, target, TermType.CHARACTER, Gender.UNKNOWN, false);
     }
 }

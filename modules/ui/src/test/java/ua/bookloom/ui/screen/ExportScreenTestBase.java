@@ -8,15 +8,16 @@ import java.util.concurrent.TimeoutException;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.ProjectRepository;
-import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.RecordingProjectRepository;
 import ua.bookloom.ui.ScriptedExportService;
+import ua.bookloom.ui.ScriptedProofreadProgress;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.ExportViewModel;
@@ -29,6 +30,7 @@ import ua.bookloom.ui.state.ExportViewModel;
 abstract class ExportScreenTestBase extends TranslatingScreenTestBase {
 
     final MemorySettings stored = new MemorySettings();
+    final ScriptedProofreadProgress proofread = new ScriptedProofreadProgress();
 
     @Override
     protected Injector createInjector(final Locale locale) {
@@ -36,6 +38,7 @@ abstract class ExportScreenTestBase extends TranslatingScreenTestBase {
                 .projects(projects)
                 .models(models)
                 .engine(engine)
+                .proofread(proofread)
                 .glossary(glossary)
                 .lexicon(lexicon)
                 .namesPass(namesPass)
@@ -73,7 +76,7 @@ abstract class ExportScreenTestBase extends TranslatingScreenTestBase {
         return new ReviewCounts(142, 50, 0, 0, 6, pending, 0, 0, 0);
     }
 
-    static ExportReport report(final Path destination, final List<Path> sideFiles, final ConsistencySummary summary) {
+    static ExportReport report(final Path destination, final List<Path> sideFiles, final ProofreadSummary summary) {
         return new ExportReport(destination, 10, 0, 0, 0, 10, 0, sideFiles, 10, summary, 0);
     }
 }

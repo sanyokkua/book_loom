@@ -157,8 +157,9 @@ public final class NameClusters {
             log.debug("Name clusters have no book index: no pronouns for entry {}", entry.id());
             return pooled;
         }
+        final List<String> texts = index.visibleTexts(ordinals);
         for (final GlossaryEntry member : membersOf(entry)) {
-            pooled = pooled.and(PronounGender.of(member.term(), index, ordinals, languageTag));
+            pooled = pooled.and(PronounGender.of(member, texts, languageTag));
         }
         return pooled;
     }

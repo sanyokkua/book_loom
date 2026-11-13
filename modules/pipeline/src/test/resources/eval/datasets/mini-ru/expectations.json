@@ -1,0 +1,227 @@
+{
+ "every": [
+  {
+   "id": "every-usable",
+   "defect": "flagged",
+   "check": "NOT_FLAGGED",
+   "args": []
+  },
+  {
+   "id": "every-no-russian-letters",
+   "defect": "russian-letter",
+   "check": "NO_RUSSIAN_LETTERS",
+   "args": []
+  },
+  {
+   "id": "every-no-stress-mark",
+   "defect": "stress-mark",
+   "check": "NO_STRESS_MARK",
+   "args": []
+  },
+  {
+   "id": "every-target-alphabet",
+   "defect": "russian-letter",
+   "check": "TARGET_ALPHABET",
+   "args": [
+    "uk"
+   ]
+  },
+  {
+   "id": "every-no-foreign-script",
+   "defect": "foreign-script",
+   "check": "FOREIGN_SCRIPT",
+   "args": []
+  }
+ ],
+ "segments": [
+  {
+   "id": "heading-number-4",
+   "defect": "heading-number",
+   "segment": "ch01.md:1",
+   "check": "HEADING_NUMBER",
+   "args": [
+    "4."
+   ]
+  },
+  {
+   "id": "heading-number-5",
+   "defect": "heading-number",
+   "segment": "ch02.md:2",
+   "check": "HEADING_NUMBER",
+   "args": [
+    "5."
+   ]
+  },
+  {
+   "id": "narrator-woman",
+   "defect": "narrator-gender-past",
+   "segment": "ch01.md:3",
+   "check": "NARRATOR_GENDER",
+   "args": [
+    "повернулася",
+    "повернулась",
+    "!повернувся"
+   ]
+  },
+  {
+   "id": "velemyr-one-entry",
+   "defect": "inflected-form-as-new-name",
+   "check": "GLOSSARY_ONE_ENTRY",
+   "args": [
+    "Велемир",
+    "Велемира"
+   ]
+  },
+  {
+   "id": "velemyr-male",
+   "defect": "genitive-with-own-gender",
+   "check": "GLOSSARY_GENDER",
+   "args": [
+    "Велемир",
+    "Велемира",
+    "MALE"
+   ]
+  },
+  {
+   "id": "velemyr-one-spelling",
+   "defect": "inflected-form-as-new-name",
+   "group": [
+    "ch01.md:5",
+    "ch01.md:7"
+   ],
+   "check": "ONE_SPELLING_PER_LEMMA",
+   "args": [
+    "Велемир",
+    "Велимир"
+   ]
+  },
+  {
+   "id": "dash-kept",
+   "defect": "lost-dash",
+   "segment": "ch01.md:9",
+   "check": "DIALOGUE_DASH",
+   "args": []
+  },
+  {
+   "id": "russian-line-translated",
+   "defect": "russian-line",
+   "segment": "ch01.md:11",
+   "check": "NO_SOURCE_LINE",
+   "args": []
+  },
+  {
+   "id": "source-only-words-13",
+   "defect": "source-only-words",
+   "segment": "ch01.md:13",
+   "check": "SOURCE_ONLY_WORDS",
+   "args": [
+    "что",
+    "это",
+    "только"
+   ]
+  },
+  {
+   "id": "stress-mark-castle",
+   "defect": "stress-mark",
+   "segment": "ch01.md:15",
+   "check": "NO_STRESS_MARK",
+   "args": []
+  },
+  {
+   "id": "double-negation",
+   "defect": "double-negation",
+   "segment": "ch01.md:17",
+   "check": "NEGATION_KEPT",
+   "args": [
+    "не",
+    "1"
+   ]
+  },
+  {
+   "id": "address-same-4",
+   "defect": "address-mix",
+   "group": [
+    "ch02.md:4"
+   ],
+   "check": "ADDRESS_SAME",
+   "args": []
+  },
+  {
+   "id": "seed-no-stress-mark",
+   "defect": "stress-mark-seed",
+   "segment": "ch02.md:6",
+   "check": "NO_STRESS_MARK",
+   "args": []
+  },
+  {
+   "id": "three-speakers-sentences",
+   "defect": "three-speakers",
+   "segment": "ch02.md:8",
+   "check": "NO_FINDING",
+   "args": [
+    "sentence-count"
+   ]
+  },
+  {
+   "id": "three-speakers-dash",
+   "defect": "three-speakers",
+   "segment": "ch02.md:8",
+   "check": "DIALOGUE_DASH",
+   "args": []
+  },
+  {
+   "id": "weak-da-absent",
+   "defect": "weak-word-da",
+   "segment": "ch02.md:10",
+   "check": "ABSENT",
+   "args": [
+    "(?<![\\p{L}])[Дд]а(?![\\p{L}])"
+   ]
+  },
+  {
+   "id": "rudakova-one-entry",
+   "defect": "female-surname-forms",
+   "check": "GLOSSARY_ONE_ENTRY",
+   "args": [
+    "Рудакова",
+    "Рудаковой"
+   ]
+  },
+  {
+   "id": "rudakova-female",
+   "defect": "female-surname-forms",
+   "check": "GLOSSARY_GENDER",
+   "args": [
+    "Рудакова",
+    "Рудаковой",
+    "FEMALE"
+   ]
+  },
+  {
+   "id": "proofread-source-only-14",
+   "defect": "proofread-trap",
+   "segment": "ch02.md:14",
+   "check": "SOURCE_ONLY_WORDS",
+   "args": [
+    "что"
+   ]
+  },
+  {
+   "id": "ivar-source-only-16",
+   "defect": "gender-after-run",
+   "segment": "ch02.md:16",
+   "check": "SOURCE_ONLY_WORDS",
+   "args": [
+    "что"
+   ]
+  },
+  {
+   "id": "ivar-not-source-line",
+   "defect": "gender-after-run",
+   "segment": "ch02.md:16",
+   "check": "NO_SOURCE_LINE",
+   "args": []
+  }
+ ],
+ "glossary": []
+}

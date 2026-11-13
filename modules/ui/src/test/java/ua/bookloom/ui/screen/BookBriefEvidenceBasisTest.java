@@ -90,6 +90,25 @@ class BookBriefEvidenceBasisTest extends BookBriefScreenTestBase {
         assertThat(((Label) required("brief-evidence-genre")).getText()).isEqualTo("1 of 4 passages");
     }
 
+    // IF a best guess were worded as "n of K passages agree", THEN it would read as a majority the code never found.
+    @Test
+    void evidenceLine_likelyField_saysItIsTheModelsBestGuessAndExplainsItOnHover() throws TimeoutException {
+        suggestWithGenreEvidence(new FieldEvidence(Basis.LIKELY, List.of(), 1, 4));
+
+        assertThat(((Label) required("brief-evidence-genre")).getText()).isEqualTo("The model's best guess");
+        assertThat(isShown("brief-evidence-genre-uncertain")).isFalse();
+        assertThat(TooltipProbe.tipText(required("brief-evidence-genre"))).contains("best guess");
+    }
+
+    @Test
+    void evidenceLine_likelyFieldUnderUkrainian_isWordedInUkrainian() throws TimeoutException {
+        useLocale(Locale.forLanguageTag("uk"));
+
+        suggestWithGenreEvidence(new FieldEvidence(Basis.LIKELY, List.of(), 1, 4));
+
+        assertThat(((Label) required("brief-evidence-genre")).getText()).isEqualTo("Найкраще припущення моделі");
+    }
+
     // IF the chip had no explanation, THEN "uncertain" would not say the field was left as it was.
     @Test
     void uncertainChip_shown_explainsItselfOnHover() throws TimeoutException {

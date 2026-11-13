@@ -9,6 +9,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallSegment;
 import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.CallState;
@@ -22,7 +23,9 @@ import ua.bookloom.ui.state.SectionMemory;
 /**
  * The detail of the row selected in the live card. Simple shows its marker and location, why a flagged one waits, its
  * source beside its translation, and what the model works on now. Detailed shows the same head and texts, then the
- * call the row was sent in (its prompt and reply), or that it has not been sent yet.
+ * call the row was sent in (its prompt and reply), or that it has not been sent yet. A kept chapter summary's row shows
+ * its text alone, in place of the two columns: it has no source, and later drafts are told exactly this text. A
+ * proofread window's row shows each segment it read with its verdict and its text before and after.
  *
  * <p>It is rebuilt only when what it shows changed — the row, its marker, its call, the call in flight or the view —
  * so a tick that only moves a clock changes nothing here. Showing logs nothing, as it runs on every publication.
@@ -39,6 +42,9 @@ public final class LiveRowDetail extends VBox {
     private final Label why = new Label();
     private final Label source = new Label();
     private final Label target = new Label();
+    private final Label summary = Wrapped.wholeLines(new Label());
+    private final GridPane texts;
+    private final WindowDetail window;
     private final VBox inFlight = new VBox(4);
     private final Label notSent = new Label();
     private final LiveCallView call;
@@ -80,7 +86,11 @@ public final class LiveRowDetail extends VBox {
         notSent.setWrapText(true);
         inFlight.setId("translating-live-inflight");
         inFlight.getStyleClass().add("live-inflight");
-        getChildren().addAll(head, texts(sourceName, targetName), inFlight, notSent, call);
+        summary.setId("translating-live-detail-summary");
+        summary.getStyleClass().add("live-detail-text");
+        texts = texts(sourceName, targetName);
+        window = new WindowDetail(messages);
+        getChildren().addAll(head, texts, summary, window, inFlight, notSent, call);
         show(null, null, LiveCalls.EMPTY, false);
     }
 
@@ -126,11 +136,18 @@ public final class LiveRowDetail extends VBox {
         }
         shown = next;
         showHead(row, marker);
+        final boolean isSummary = row != null && LiveRowWords.isSummary(row);
+        final boolean isWindow = row != null && LiveRowWords.isWindow(row);
+        Visibility.show(texts, !isSummary && !isWindow);
+        Visibility.show(window, isWindow);
+        window.show(row != null && isWindow ? row.proofread() : List.of());
+        Visibility.show(summary, isSummary);
+        summary.setText(row != null && isSummary ? LiveRowWords.text(row) : "");
         showTexts(row, marker);
         Visibility.show(inFlight, !detailed);
         showInFlight(waiting);
         final boolean sent = next.call() != null;
-        Visibility.show(notSent, detailed && row != null && !sent);
+        Visibility.show(notSent, detailed && row != null && !sent && !isSummary && !isWindow);
         call.show(detailed ? next.call() : null);
     }
 
@@ -139,7 +156,7 @@ public final class LiveRowDetail extends VBox {
             head.getChildren().clear();
             return;
         }
-        locator.setText(row.locator());
+        locator.setText(LiveRowWords.locator(row, messages));
         final boolean toReview = marker == RowMarker.TO_REVIEW;
         why.setText(toReview ? messages.get(MessageKey.LIVE_DETAIL_WHY, reasonOf(row, marker)) : "");
         Visibility.show(why, toReview);
@@ -183,7 +200,10 @@ public final class LiveRowDetail extends VBox {
     }
 
     private void showInFlight(final @Nullable CallSnapshot waiting) {
-        final Label heading = new Label(messages.get(MessageKey.LIVE_DETAIL_IN_FLIGHT));
+        // A Proofread window re-reads decided text; calling it "being translated" would name the wrong stage.
+        final boolean proofread = waiting != null && waiting.kind() == CallKind.PROOFREAD;
+        final Label heading = new Label(messages.get(
+                proofread ? MessageKey.LIVE_DETAIL_IN_FLIGHT_PROOFREAD : MessageKey.LIVE_DETAIL_IN_FLIGHT));
         heading.getStyleClass().add("stat-caption");
         inFlight.getChildren().setAll(heading);
         if (waiting == null || waiting.segments().isEmpty()) {

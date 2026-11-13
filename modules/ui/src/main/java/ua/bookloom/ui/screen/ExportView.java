@@ -26,9 +26,6 @@ import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ExportFigures;
 import ua.bookloom.ui.state.ExportOutcome;
 import ua.bookloom.ui.state.ExportViewModel;
-import ua.bookloom.ui.state.FileChooserPort;
-import ua.bookloom.ui.state.FileRevealer;
-import ua.bookloom.ui.state.HiddenWork;
 import ua.bookloom.ui.state.OpenedBook;
 import ua.bookloom.ui.state.Tone;
 import ua.bookloom.ui.state.TranslatingViewModel;
@@ -58,7 +55,6 @@ final class ExportView {
     private final ExportSideFilesColumn sideFiles;
     private final ExportResult result;
     private final ExportBanners banners;
-    private final HiddenWork hidden;
     private final VBox statement = new VBox(LINE_SPACING);
     private final ListChangeListener<String> onStatement = change -> showStatement();
     private final ChangeListener<@Nullable ExportFigures> onFigures = (observed, was, now) -> showFigures(now);
@@ -71,13 +67,11 @@ final class ExportView {
     ExportView(
             final ExportViewModel viewModel,
             final BookTitleViewModel titleModel,
-            final CurrentProject project,
-            final Messages messages,
-            final Navigator navigator,
-            final FileChooserPort chooser,
-            final FileRevealer revealer,
-            final TranslatingViewModel translating,
-            final HiddenWork hidden) {
+            final ScreenContext context,
+            final FilePicker files,
+            final TranslatingViewModel translating) {
+        final Messages words = Objects.requireNonNull(context, "context").messages();
+        final Navigator nav = context.navigator();
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.titleModel = Objects.requireNonNull(titleModel, "titleModel");
         this.onTitleEdited = (observed, was, now) -> {
@@ -85,15 +79,15 @@ final class ExportView {
             viewModel.nameSuggestion.afterTitleEdit();
         };
         this.weakTitleEdited = new WeakChangeListener<>(onTitleEdited);
-        this.project = Objects.requireNonNull(project, "project");
-        this.messages = Objects.requireNonNull(messages, "messages");
-        this.navigator = Objects.requireNonNull(navigator, "navigator");
-        this.titles = new ExportTitleCard(titleModel, messages);
-        this.destination = new ExportDestinationCard(viewModel, messages, chooser);
-        this.sideFiles = new ExportSideFilesColumn(viewModel, messages);
-        this.result = new ExportResult(messages, revealer, navigator);
-        this.hidden = Objects.requireNonNull(hidden, "hidden");
-        this.banners = new ExportBanners(viewModel, translating, hidden, messages);
+        this.project = context.project();
+        this.messages = words;
+        this.navigator = nav;
+        this.titles = new ExportTitleCard(titleModel, words);
+        this.destination = new ExportDestinationCard(
+                viewModel, words, Objects.requireNonNull(files, "files").chooser());
+        this.sideFiles = new ExportSideFilesColumn(viewModel, words);
+        this.result = new ExportResult(words, files.revealer(), nav);
+        this.banners = new ExportBanners(viewModel, translating, words);
         viewModel.figures().addListener(new WeakChangeListener<>(onFigures));
         viewModel.blockReason().addListener(new WeakChangeListener<>(onReason));
         viewModel.runNote().addListener(new WeakChangeListener<>(onReason));
@@ -120,8 +114,6 @@ final class ExportView {
         // The side files stack under the main cards in a window too narrow for both, rather than cutting either.
         final TwoColumns columns = TwoColumns.withSideColumn(left, sideFiles.build(), LayoutClass.Width.REGULAR);
         columns.setId("export-columns");
-        // Work in the background writes this book: its choices wait until it ends.
-        columns.disableProperty().bind(hidden.freezes(ViewNames.EXPORT));
         showOutcome(viewModel.outcome().get());
         showFigures(viewModel.figures().get());
         viewModel.refreshStatement();

@@ -1,5 +1,7 @@
 package ua.bookloom.ui.state;
 
+import static ua.bookloom.util.contract.ArgNames.FILE_NAME;
+
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
@@ -24,7 +26,7 @@ public sealed interface ImportState {
 
         /** Rejects a missing file name. */
         public Opening {
-            Objects.requireNonNull(fileName, "fileName");
+            Objects.requireNonNull(fileName, FILE_NAME);
         }
     }
 
@@ -52,7 +54,7 @@ public sealed interface ImportState {
 
         /** Rejects a missing file name. */
         public DrmBlocked {
-            Objects.requireNonNull(fileName, "fileName");
+            Objects.requireNonNull(fileName, FILE_NAME);
         }
     }
 
@@ -67,7 +69,7 @@ public sealed interface ImportState {
 
         /** Rejects a missing file name. */
         public Unsupported {
-            Objects.requireNonNull(fileName, "fileName");
+            Objects.requireNonNull(fileName, FILE_NAME);
         }
     }
 
@@ -80,7 +82,7 @@ public sealed interface ImportState {
 
         /** Rejects a missing file name. */
         public NoText {
-            Objects.requireNonNull(fileName, "fileName");
+            Objects.requireNonNull(fileName, FILE_NAME);
         }
     }
 
@@ -94,7 +96,7 @@ public sealed interface ImportState {
 
         /** Rejects a missing file name or error. */
         public Refused {
-            Objects.requireNonNull(fileName, "fileName");
+            Objects.requireNonNull(fileName, FILE_NAME);
             Objects.requireNonNull(error, "error");
         }
     }
@@ -113,7 +115,7 @@ public sealed interface ImportState {
 
         /** Rejects a missing part and copies the names, so the state cannot change after it is shown. */
         public AlreadyInProjects {
-            Objects.requireNonNull(fileName, "fileName");
+            Objects.requireNonNull(fileName, FILE_NAME);
             Objects.requireNonNull(source, "source");
             projectNames = List.copyOf(projectNames);
             Objects.requireNonNull(bookTitle, "bookTitle");

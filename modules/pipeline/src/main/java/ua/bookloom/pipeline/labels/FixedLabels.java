@@ -13,6 +13,7 @@ import java.util.Properties;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.util.text.Edges;
 
 /**
  * The words a book's navigation and cover use for the same few things in every book — "Cover", "Contents", "About" —
@@ -27,7 +28,7 @@ public final class FixedLabels {
 
     private static final String DIRECTORY = "/ua/bookloom/pipeline/labels/";
     private static final Pattern WHITESPACE = Pattern.compile("\\s+");
-    private static final Pattern EDGE_PUNCTUATION = Pattern.compile("^[\\p{Punct}\\s]+|[\\p{Punct}\\s]+$");
+    private static final String ASCII_PUNCTUATION = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ \t\n\u000B\f\r";
     private static final FixedLabels EMPTY = new FixedLabels(Map.of(), Locale.ROOT);
 
     private final Map<String, String> table;
@@ -67,7 +68,7 @@ public final class FixedLabels {
         if (table.isEmpty()) {
             return Optional.empty();
         }
-        final String stripped = EDGE_PUNCTUATION.matcher(text).replaceAll("");
+        final String stripped = Edges.strip(text, ASCII_PUNCTUATION);
         final String key = WHITESPACE.matcher(stripped).replaceAll(" ").toLowerCase(Locale.ROOT);
         final String found = table.get(key);
         if (found == null) {

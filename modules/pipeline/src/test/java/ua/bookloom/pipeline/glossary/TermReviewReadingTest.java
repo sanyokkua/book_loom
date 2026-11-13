@@ -26,9 +26,9 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
@@ -73,7 +73,7 @@ class TermReviewReadingTest {
     }
 
     private static GlossaryEntry entry(final String term, final TermType type) {
-        return new GlossaryEntry(PROJECT + ":" + term, PROJECT, term, null, type, Gender.UNKNOWN, false);
+        return GlossaryEntry.of(PROJECT + ":" + term, PROJECT, term, null, type, Gender.UNKNOWN, false);
     }
 
     /** The lines, each opened by its own day so no two paragraphs read alike. */
@@ -193,7 +193,9 @@ class TermReviewReadingTest {
     @org.junit.jupiter.params.provider.CsvSource({"name,place,PLACE", "title,other,TITLE", "name,thing,TERM"})
     void review_seededCharacterTheReadingsTypeOtherwise_takesTheirTypeAndNoGender(
             final String usage, final String kind, final TermType type) {
-        glossary.add(entry("Varnholt", TermType.CHARACTER).withSuggestedGender(Gender.MALE));
+        glossary.add(entry("Varnholt", TermType.CHARACTER)
+                .withType(TermType.CHARACTER, Origin.LIKELY)
+                .withSuggestedGender(Gender.MALE));
         final BookSlice book = GlossaryTestSegments.of(days(repeated("Varnholt stood there. He waited.", 4)));
 
         review.review(
@@ -228,7 +230,7 @@ class TermReviewReadingTest {
         assertThat(glossary.all(PROJECT).data())
                 .extracting(
                         GlossaryEntry::term, GlossaryEntry::type, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(tuple("Brann", TermType.CHARACTER, Gender.MALE, GenderOrigin.SUGGESTED));
+                .containsExactly(tuple("Brann", TermType.CHARACTER, Gender.MALE, Origin.LIKELY));
     }
 
     // Fast reads only a likely character (typed, or with a gender already); an untyped name goes to the batch.
@@ -292,7 +294,7 @@ class TermReviewReadingTest {
         assertThat(formats).contains(READING);
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(tuple("Brann", Gender.FEMALE, GenderOrigin.SUGGESTED));
+                .containsExactly(tuple("Brann", Gender.FEMALE, Origin.LIKELY));
     }
 
     // The person's gender is never re-decided: the same tie costs no call and the person's "male" stays.
@@ -310,6 +312,6 @@ class TermReviewReadingTest {
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(tuple("Brann", Gender.MALE, GenderOrigin.PERSON));
+                .containsExactly(tuple("Brann", Gender.MALE, Origin.USER));
     }
 }

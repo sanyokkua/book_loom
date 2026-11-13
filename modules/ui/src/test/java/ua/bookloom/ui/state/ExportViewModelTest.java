@@ -14,7 +14,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.testfx.util.WaitForAsyncUtils;
-import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.ui.BookFixtures;
 
@@ -120,18 +119,6 @@ class ExportViewModelTest extends ExportViewModelTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(statement()).isEqualTo(List.of(expected.split("\\|")));
-    }
-
-    @ParameterizedTest
-    @CsvSource({"MAX, true", "BALANCED, false", "FAST, false"})
-    void lastCheckShown_noStoredChoice_followsTheDial(final QualityDial dial, final boolean expected) {
-        onFx(() -> {
-            brief.setDial(dial);
-            return null;
-        });
-        WaitForAsyncUtils.waitForFxEvents();
-
-        assertThat(onFx(() -> exports.lastCheckShown().get())).isEqualTo(expected);
     }
 
     private void publish(final RunState state) {

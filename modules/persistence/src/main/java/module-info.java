@@ -5,7 +5,7 @@
  *
  * <p>The only module permitted to import {@code java.sql}. Note it does NOT own the process single-instance lock —
  * that is acquired pre-injector by {@code :app} using the path resolved by {@code ua.bookloom.util.paths}
- * (docs/implementation_plan/01_MODULE_INVENTORY.md#lock-ownership).
+ * (docs/spec_baseline/implementation_plan/01_MODULE_INVENTORY.md#lock-ownership).
  */
 module ua.bookloom.persistence {
     // Compile-time only: JSpecify supplies the `@NullMarked` package markers that switch

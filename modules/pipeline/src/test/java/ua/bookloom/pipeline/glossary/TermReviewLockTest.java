@@ -27,7 +27,7 @@ import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
-import ua.bookloom.api.project.TargetOrigin;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
@@ -87,8 +87,9 @@ class TermReviewLockTest {
                 model(readingReply("organisation", false, true), NO_SUGGESTIONS));
 
         assertThat(glossary.all(PROJECT).data())
-                .extracting(GlossaryEntry::term, GlossaryEntry::target, GlossaryEntry::locked, GlossaryEntry::origin)
-                .containsExactly(tuple(brand, brand, true, TargetOrigin.PERSON));
+                .extracting(
+                        GlossaryEntry::term, GlossaryEntry::target, GlossaryEntry::locked, GlossaryEntry::targetOrigin)
+                .containsExactly(tuple(brand, brand, true, Origin.RULE));
     }
 
     // IF a brand were locked to its Latin source under Transliterate, THEN the Ukrainian text would hold Latin words
@@ -129,8 +130,8 @@ class TermReviewLockTest {
                         "{\"suggestions\":[{\"term\":\"Harbour Guild\",\"target\":\"Гавань Гільдія\"}]}"));
 
         assertThat(glossary.all(PROJECT).data())
-                .extracting(GlossaryEntry::target, GlossaryEntry::locked, GlossaryEntry::origin)
-                .containsExactly(tuple("Гавань Гільдія", false, TargetOrigin.SUGGESTED));
+                .extracting(GlossaryEntry::target, GlossaryEntry::locked, GlossaryEntry::targetOrigin)
+                .containsExactly(tuple("Гавань Гільдія", false, Origin.LIKELY));
     }
 
     // IF a title the policy keeps in Latin stayed unlocked, THEN the paragraph that holds it would ship only when the
@@ -210,8 +211,8 @@ class TermReviewLockTest {
                         "{\"suggestions\":[{\"term\":\"Venn\",\"target\":\"Венн\"}]}"));
 
         assertThat(glossary.all(PROJECT).data())
-                .extracting(GlossaryEntry::target, GlossaryEntry::locked, GlossaryEntry::origin)
-                .containsExactly(tuple("Венн", false, TargetOrigin.SUGGESTED));
+                .extracting(GlossaryEntry::target, GlossaryEntry::locked, GlossaryEntry::targetOrigin)
+                .containsExactly(tuple("Венн", false, Origin.LIKELY));
     }
 
     // A speaking name is translated for its meaning, so no rule locks its rendering.
@@ -283,7 +284,7 @@ class TermReviewLockTest {
     }
 
     private static GlossaryEntry entry(final String term, final TermType type) {
-        return new GlossaryEntry(PROJECT + ":" + term, PROJECT, term, null, type, Gender.UNKNOWN, false);
+        return GlossaryEntry.of(PROJECT + ":" + term, PROJECT, term, null, type, Gender.UNKNOWN, false);
     }
 
     /** The term in {@value #MENTIONS} paragraphs, each opened by its own day so no two read alike. */

@@ -322,7 +322,7 @@ class NameTriageTest {
                 .data();
 
         assertThat(entries)
-                .extracting(GlossaryEntry::term, GlossaryEntry::aliases)
+                .extracting(GlossaryEntry::term, GlossaryEntry::forms)
                 .containsExactly(tuple("Kessel Optik", List.of("KESSEL OPTIK")));
     }
 }

@@ -5,11 +5,9 @@ import java.net.URISyntaxException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -45,6 +43,7 @@ import ua.bookloom.ui.i18n.MessageKey;
  * @param model the model typed for this provider; blank for none
  * @param headers the extra header rows
  * @param customModels model names added to the listing
+ * @param engine what is known of the program behind the address, written back on Save
  */
 @With
 public record ProviderDraft(
@@ -60,7 +59,8 @@ public record ProviderDraft(
         String requestSeconds,
         String model,
         List<HeaderRow> headers,
-        List<String> customModels) {
+        List<String> customModels,
+        DraftEngine engine) {
 
     /** The key header an API-key sign-in starts with. */
     public static final String DEFAULT_KEY_HEADER = "X-Api-Key";
@@ -142,6 +142,7 @@ public record ProviderDraft(
         Objects.requireNonNull(model, "model");
         headers = List.copyOf(Objects.requireNonNull(headers, "headers"));
         customModels = List.copyOf(Objects.requireNonNull(customModels, "customModels"));
+        Objects.requireNonNull(engine, "engine");
     }
 
     /**
@@ -165,7 +166,8 @@ public record ProviderDraft(
                 Long.toString(ProviderConfig.DEFAULT_REQUEST_TIMEOUT.toSeconds()),
                 "",
                 List.of(),
-                List.of());
+                List.of(),
+                DraftEngine.forKind(kind));
     }
 
     /**
@@ -195,12 +197,14 @@ public record ProviderDraft(
                 Long.toString(config.requestTimeout().toSeconds()),
                 model,
                 rows,
-                config.customModels());
+                config.customModels(),
+                DraftEngine.of(config));
     }
 
     /**
      * Switches the dialect: the overrides belong to the old one and are cleared, and a preset address follows the
-     * kind while an address the person wrote stays.
+     * kind while an address the person wrote stays. A changed kind also drops the detected engine, which described the
+     * old dialect, back to the kind's starting engine.
      *
      * @param newKind the dialect to switch to
      * @return the changed draft
@@ -221,7 +225,8 @@ public record ProviderDraft(
                 requestSeconds,
                 model,
                 headers,
-                customModels);
+                customModels,
+                newKind == kind ? engine : DraftEngine.forKind(newKind));
     }
 
     /**
@@ -315,22 +320,7 @@ public record ProviderDraft(
                 .map(ProviderFindings::mapped)
                 .filter(finding -> uri != null || finding.field() != Field.ADDRESS)
                 .forEach(found::add);
-        found.addAll(headerFindings());
-        return found;
-    }
-
-    private List<FormFinding> headerFindings() {
-        final List<FormFinding> found = new ArrayList<>();
-        final Set<String> seen = new HashSet<>();
-        for (final HeaderRow row : headers) {
-            final String header = row.name().strip().toLowerCase(Locale.ROOT);
-            if (header.isEmpty() && !row.value().isBlank()) {
-                found.add(ProviderFindings.blocking(MessageKey.SETTINGS_ERROR_HEADER_NAME_MISSING, Field.HEADERS));
-            } else if (!header.isEmpty() && !seen.add(header)) {
-                found.add(new FormFinding(
-                        MessageKey.SETTINGS_ERROR_HEADER_DUPLICATE, List.of(header), Field.HEADERS, true));
-            }
-        }
+        found.addAll(ProviderFindings.headers(headers));
         return found;
     }
 
@@ -355,11 +345,19 @@ public record ProviderDraft(
                 nullIfBlank(modelsPath),
                 nullIfBlank(chatPath),
                 extra,
-                customModels.stream()
-                        .map(String::strip)
-                        .filter(value -> !value.isEmpty())
-                        .distinct()
-                        .toList());
+                cleanedCustomModels(),
+                engine.detected(),
+                engine.choice(),
+                engine.version(),
+                engine.offerDeclined());
+    }
+
+    private List<String> cleanedCustomModels() {
+        return customModels.stream()
+                .map(String::strip)
+                .filter(value -> !value.isEmpty())
+                .distinct()
+                .toList();
     }
 
     private @Nullable URI parseAddress() {
@@ -369,7 +367,7 @@ public record ProviderDraft(
         }
         try {
             return new URI(text);
-        } catch (URISyntaxException ignored) {
+        } catch (URISyntaxException _) {
             return null;
         }
     }

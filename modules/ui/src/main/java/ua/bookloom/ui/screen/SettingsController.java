@@ -21,8 +21,10 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.ui.MemorySource;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.dialog.ConfirmPrompt;
 import ua.bookloom.ui.dialog.ProviderTestDialog;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -30,6 +32,7 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.ProviderDraft;
+import ua.bookloom.ui.state.ProviderEngine;
 import ua.bookloom.ui.state.ProviderForm;
 import ua.bookloom.ui.state.ProviderInUse;
 import ua.bookloom.ui.state.ProviderRow;
@@ -49,6 +52,7 @@ public final class SettingsController {
 
     private final SettingsViewModel viewModel;
     private final ProviderForm form;
+    private final ProviderEngine engine;
     private final Messages messages;
     private final ConfirmPrompt confirm;
     private final ProviderTestDialog testDialog;
@@ -65,6 +69,7 @@ public final class SettingsController {
 
     // Set while this controller moves the tab selection itself, so the change is not taken for a person's click.
     private boolean movingTab;
+    private final MemorySource memory;
     private ProviderFormView formView;
 
     @FXML
@@ -122,46 +127,44 @@ public final class SettingsController {
      * Receives the collaborators the injector owns.
      *
      * @param viewModel the state this screen shows
-     * @param form what the open provider's form holds, saves and deletes
+     * @param parts what the open provider's form holds, saves and deletes, the engine found at its address, and the
+     *     card that shows what a test sent and got back
      * @param messages the catalogue the built rows are worded from
      * @param confirm the question asked before a provider is deleted
-     * @param testDialog the card that shows what a test sent and got back
-     * @param providerSwitch what Use this one does
      * @param activities the model work under way, which keeps the provider in use from being deleted
-     * @param guard asks before a move would drop typing
-     * @param tabEntries what entering a tab reads again
-     * @param inUse whether the open provider is the one the translation run uses
+     * @param guards what Use this one does, what asks before a move would drop typing, what entering a tab reads
+     *     again, and whether the open provider is the one the translation run uses
+     * @param memory this computer's memory, which the model advice under the Model entry is read from
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
     @Inject
     public SettingsController(
             final SettingsViewModel viewModel,
-            final ProviderForm form,
+            final ProviderParts parts,
             final Messages messages,
             final ConfirmPrompt confirm,
-            final ProviderTestDialog testDialog,
-            final ProviderSwitch providerSwitch,
             final ActivityTracker activities,
-            final SettingsTabGuard guard,
-            final SettingsTabEntries tabEntries,
-            final ProviderInUse inUse) {
+            final ProviderGuards guards,
+            final MemorySource memory) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
-        this.form = Objects.requireNonNull(form, "form");
+        this.form = Objects.requireNonNull(parts, "parts").form();
+        this.engine = parts.engine();
         this.messages = Objects.requireNonNull(messages, "messages");
         this.confirm = Objects.requireNonNull(confirm, "confirm");
-        this.testDialog = Objects.requireNonNull(testDialog, "testDialog");
-        this.providerSwitch = Objects.requireNonNull(providerSwitch, "providerSwitch");
+        this.testDialog = parts.testDialog();
+        this.providerSwitch = Objects.requireNonNull(guards, "guards").providerSwitch();
         this.activities = Objects.requireNonNull(activities, "activities");
-        this.guard = Objects.requireNonNull(guard, "guard");
-        this.tabEntries = Objects.requireNonNull(tabEntries, "tabEntries");
-        this.inUse = Objects.requireNonNull(inUse, "inUse");
+        this.guard = guards.guard();
+        this.tabEntries = guards.tabEntries();
+        this.inUse = guards.inUse();
+        this.memory = Objects.requireNonNull(memory, "memory");
     }
 
     @FXML
     void initialize() {
         log.debug("building the settings screen");
-        formView = new ProviderFormView(viewModel, form, messages, testDialog);
+        formView = new ProviderFormView(viewModel, form, engine, messages, testDialog, memory);
         rowList = new ProviderRowList(viewModel, messages, providerList, this::open);
         formBody.getChildren().setAll(formView.node());
         installTips();
@@ -264,6 +267,8 @@ public final class SettingsController {
         // A disabled button shows no hover text, so the reason is a line beside it.
         deleteReason.visibleProperty().bind(busy);
         deleteReason.managedProperty().bind(busy);
+        // The form scrolls under it; the card's height must never squeeze the reason to "…".
+        Wrapped.wholeLines(deleteReason);
     }
 
     // Model work is under way and the open provider is the one it uses, or a run, even a paused one, uses it.
@@ -366,7 +371,7 @@ public final class SettingsController {
                 final double top = target.localToScene(target.getBoundsInLocal())
                                 .getMinY()
                         - content.localToScene(content.getBoundsInLocal()).getMinY();
-                formScroll.setVvalue(Math.min(1, Math.max(0, top / (height - view))));
+                formScroll.setVvalue(Math.clamp(top / (height - view), 0, 1));
             }
         });
     }

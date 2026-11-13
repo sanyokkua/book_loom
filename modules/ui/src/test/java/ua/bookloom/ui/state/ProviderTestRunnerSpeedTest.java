@@ -13,11 +13,13 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.MeasuredFrom;
+import ua.bookloom.api.llm.MeasuredSpeed;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 
 /** A passing inference test of a saved provider keeps the seconds one segment took; nothing else does. */
@@ -59,8 +61,10 @@ class ProviderTestRunnerSpeedTest extends ProviderFormTestBase {
         WaitForAsyncUtils.waitFor(
                 5, TimeUnit.SECONDS, () -> onFx(() -> speeds.revision().get()) > before);
 
-        assertThat(storedFor("ollama", "qwen3:8b").measuredSecondsPerSegment()).isEqualTo(1.2);
-        assertThat(storedFor("ollama", "qwen3:8b").measuredFrom()).isEqualTo(MeasuredFrom.TEST);
+        assertThat(storedFor("ollama", "qwen3:8b").speedOf(CallKind.DRAFT).map(MeasuredSpeed::seconds))
+                .hasValue(1.2);
+        assertThat(storedFor("ollama", "qwen3:8b").speedOf(CallKind.DRAFT).map(MeasuredSpeed::from))
+                .hasValue(MeasuredFrom.TEST);
     }
 
     // IF a failed inference stored a speed, THEN the estimate would be built on an answer the model never gave.

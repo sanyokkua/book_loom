@@ -28,6 +28,7 @@ import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.CallLedgerTestModule;
 import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.project.OpenProjects;
@@ -83,7 +84,8 @@ final class NamesPassFixture {
                 Modules.override(new InMemoryPersistenceModule()).with(stores),
                 Modules.override(new PipelineModule())
                         .with(binder -> binder.bind(Clock.class).toInstance(clock)),
-                new ReviewModeTestModule());
+                new ReviewModeTestModule(),
+                new CallLedgerTestModule());
         glossary = injector.getInstance(GlossaryRepository.class);
         lexicon = injector.getInstance(LexiconRepository.class);
     }
@@ -125,7 +127,7 @@ final class NamesPassFixture {
     }
 
     static GlossaryEntry untyped(final String term) {
-        return new GlossaryEntry(
+        return GlossaryEntry.of(
                 GlossaryIds.of(PROJECT, term), PROJECT, term, null, TermType.OTHER, Gender.UNKNOWN, false);
     }
 
@@ -138,9 +140,9 @@ final class NamesPassFixture {
 
     /** The person's own work: a woman's gender, a locked office and a street with a target. */
     NamesPassFixture seedPersonsEntries() {
-        glossary.add(new GlossaryEntry(
+        glossary.add(GlossaryEntry.of(
                 GlossaryIds.of(PROJECT, "Wren"), PROJECT, "Wren", null, TermType.CHARACTER, Gender.FEMALE, false));
-        glossary.add(new GlossaryEntry(
+        glossary.add(GlossaryEntry.of(
                 GlossaryIds.of(PROJECT, "Gatewarden"),
                 PROJECT,
                 "Gatewarden",
@@ -148,7 +150,7 @@ final class NamesPassFixture {
                 TermType.TERM,
                 Gender.UNKNOWN,
                 true));
-        glossary.add(new GlossaryEntry(
+        glossary.add(GlossaryEntry.of(
                 GlossaryIds.of(PROJECT, "Marrow Lane"),
                 PROJECT,
                 "Marrow Lane",

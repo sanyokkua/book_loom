@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import java.time.Duration;
 import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.pipeline.CallKind;
 
 /** Takes the speed a run measured on its model when the run ends. */
 @FunctionalInterface
@@ -27,6 +28,6 @@ interface RunSpeedSink {
      */
     static RunSpeedSink storingIn(final ModelSpeedRecorder recorder) {
         return (model, perSegment) ->
-                recorder.record(model.providerId(), model.modelId(), perSegment, MeasuredFrom.RUN);
+                recorder.record(model.providerId(), model.modelId(), CallKind.DRAFT, perSegment, MeasuredFrom.RUN);
     }
 }

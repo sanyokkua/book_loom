@@ -1,12 +1,12 @@
 # CI — the merge gate.
 #
-# Spec: docs/specification/04_Build_and_Release/04_CI_CD.md#quality-job
-#       docs/specification/04_Build_and_Release/02_QUALITY_GATES.md#ci-gates
-# Design: openspec/changes/bootstrap-gradle-and-quality-toolchain/design.md#d8
+# Spec: docs/spec_baseline/specification/04_Build_and_Release/04_CI_CD.md#quality-job
+#       docs/spec_baseline/specification/04_Build_and_Release/02_QUALITY_GATES.md#ci-gates
+# Design: openspec/changes/archive/2026-08-03-bootstrap-gradle-and-quality-toolchain/design.md#d8
 #
-# This is one of the three workflows of `04_CI_CD.md`. `build.yml` (snapshot packaging on `master`) and
-# `release.yml` (tag -> GitHub Release) arrive with the packaging change; on a pull request, this quality job IS
-# the whole workflow — packaging deliberately does not run, keeping the merge gate fast.
+# This is the only workflow in the repository. `04_CI_CD.md` also describes `build.yml` (snapshot packaging on
+# `master`) and `release.yml` (tag -> GitHub Release); neither was built. The `packaging` job below runs after the
+# quality job on every trigger and proves the jpackage image launches on each OS.
 #
 # ---------------------------------------------------------------------------------------------------------------
 # The one invariant this file exists to preserve (design D8)
@@ -41,8 +41,8 @@ on:
     branches: [master]
 
   # Pushes to any branch except the default one, per the `04_CI_CD.md` trigger table: a contributor pushing a
-  # work-in-progress branch gets the gate before opening the PR. `master` is excluded because pushes there are
-  # `build.yml`'s job (quality + snapshot packaging), not this workflow's.
+  # work-in-progress branch gets the gate before opening the PR. `master` is excluded because `master` is
+  # protected and changes reach it through a reviewed pull request, which this workflow already gated.
   push:
     branches-ignore: [master]
 
@@ -52,8 +52,7 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# The gate reads code and writes nothing. `create-release` in `release.yml` is the only job in the pipeline that
-# ever needs `contents: write` (`04_CI_CD.md#no-secrets`).
+# The gate reads code and writes nothing, so the token is read-only (`04_CI_CD.md#no-secrets`).
 permissions:
   contents: read
 
@@ -139,9 +138,8 @@ jobs:
       # THE shared gate. Identical to `.lefthook/pre-push/quality-gate.sh`. See the D8 block at the top of this
       # file before changing so much as a flag here.
       #
-      # Covers: Spotless, Checkstyle, Error Prone + NullAway, SpotBugs + FindSecBugs, the nine ArchUnit boundary
-      # rules, the JaCoCo branch-coverage gate, every test tier that can run on a runner, and the `build-logic`
-      # functional tests that prove each of those fails red on a seeded canary.
+      # Covers: Spotless, Checkstyle, Error Prone + NullAway, SpotBugs + FindSecBugs, the ArchUnit boundary
+      # rules, the JaCoCo branch-coverage gate, and every test tier that can run on a runner.
       - name: Quality gate
         run: ./gradlew clean build check spotlessCheck
 
@@ -193,11 +191,8 @@ jobs:
   # jlinks a runtime from the JDK doing the building. One leg per target is therefore the minimum honest matrix, not
   # a redundancy (03_PACKAGING_JPACKAGE.md#no-cross-compile).
   #
-  # **This job has never been observed running.** CI is not exercised until the application is feature-complete — the
-  # standing project decision recorded under change 1's task 7.7 — so this ships as DOCUMENTED DEBT: written from the
-  # spec's matrix, with the scripts themselves verified locally on macOS (app-image + dmg built, launch smoke passed
-  # against the real image). Anything below that has never been run is a claim, not evidence, and is labelled as such
-  # rather than presented as a working gate.
+  # The matrix has run green on every leg (the pull-request run of 2026-10-27, for one). It is the only place the
+  # packaged image is launched on each OS, so it stays after the quality job.
   packaging:
     name: Package (${{ matrix.target }})
     needs: quality

@@ -45,7 +45,9 @@ class HashUtilTest {
 
     @Test
     void sha256HexOfFile_missingFile_throwsUncheckedIoWithTheCause(@TempDir final Path dir) {
-        assertThatThrownBy(() -> HashUtil.sha256HexOfFile(dir.resolve("missing.epub")))
+        final Path missing = dir.resolve("missing.epub");
+
+        assertThatThrownBy(() -> HashUtil.sha256HexOfFile(missing))
                 .isInstanceOf(UncheckedIOException.class)
                 .hasCauseInstanceOf(IOException.class);
     }

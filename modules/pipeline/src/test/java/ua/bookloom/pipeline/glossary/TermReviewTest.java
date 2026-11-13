@@ -16,7 +16,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
@@ -28,14 +27,14 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
-import ua.bookloom.api.project.TargetOrigin;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.llm.pseudo.PseudoChatModel;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -68,7 +67,7 @@ class TermReviewTest {
     void review_verdicts_removeTheCommonWordFillTypeAndGenderAndLeaveThePersonsWork() {
         heldGlossary();
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(VERDICTS)).answer(reply(NO_SUGGESTIONS));
+                ReviewModels.scripted().answer(reply(VERDICTS)).answer(reply(NO_SUGGESTIONS));
 
         final Result<GlossaryReviewReport> report = reviewed(calls(model));
 
@@ -79,6 +78,7 @@ class TermReviewTest {
         assertThat(glossary.all(PROJECT).data())
                 .containsExactly(
                         entry("p1:hale", "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                                .withType(TermType.CHARACTER, Origin.LIKELY)
                                 .withSuggestedGender(Gender.MALE),
                         entry("p1:moreau", "Moreau", null, TermType.CHARACTER, Gender.UNKNOWN, false)
                                 .withSuggestedGender(Gender.FEMALE),
@@ -100,7 +100,7 @@ class TermReviewTest {
         final String reply = "{\"verdicts\":[{\"term\":\"Well\",\"verdict\":\"not-a-name\",\"type\":\"other\","
                 + "\"gender\":\"unknown\",\"evidence\":\"" + evidence + "\"}]}";
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(reply)).answer(reply(NO_SUGGESTIONS));
+                ReviewModels.scripted().answer(reply(reply)).answer(reply(NO_SUGGESTIONS));
 
         final Result<GlossaryReviewReport> report = reviewed(calls(model));
 
@@ -115,7 +115,7 @@ class TermReviewTest {
         final String reply = "{\"verdicts\":[{\"term\":\"Well\",\"verdict\":\"not-a-name\",\"type\":\"other\","
                 + "\"gender\":\"unknown\",\"evidence\":\"“HE knew it well…”\"}]}";
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(reply)).answer(reply(NO_SUGGESTIONS));
+                ReviewModels.scripted().answer(reply(reply)).answer(reply(NO_SUGGESTIONS));
 
         reviewed(calls(model));
 
@@ -125,7 +125,7 @@ class TermReviewTest {
     @Test
     void review_request_listsOnlyOpenTermsWithCountPronounsAndNumberedWindows() {
         heldGlossary();
-        final ScriptedChatModel model = new ScriptedChatModel().answer(reply("{\"verdicts\":[]}"));
+        final ScriptedChatModel model = ReviewModels.scripted().answer(reply("{\"verdicts\":[]}"));
 
         reviewed(calls(model));
 
@@ -166,7 +166,7 @@ class TermReviewTest {
                         glossary.add(entry("p1:x" + index, "Xa" + index, null, TermType.OTHER, Gender.UNKNOWN, false)));
         final List<GlossaryEntry> before = glossary.all(PROJECT).data();
         final AppError failure = AppError.of(ErrorCode.unreachable, "Offline", "The provider is unreachable.");
-        final ScriptedChatModel model = new ScriptedChatModel()
+        final ScriptedChatModel model = ReviewModels.scripted()
                 .answer(reply("{\"verdicts\":[{\"term\":\"Xa0\",\"verdict\":\"not-a-name\",\"type\":\"other\","
                         + "\"gender\":\"unknown\"}]}"))
                 .answer(Result.err(failure));
@@ -181,7 +181,7 @@ class TermReviewTest {
     @Test
     void review_nothingOpen_makesNoCall() {
         glossary.add(entry("p1:milton", "Milton", "Мілтон", TermType.OTHER, Gender.UNKNOWN, true));
-        final ScriptedChatModel model = new ScriptedChatModel();
+        final ScriptedChatModel model = ReviewModels.scripted();
 
         final Result<GlossaryReviewReport> report = reviewed(calls(model));
 
@@ -204,7 +204,7 @@ class TermReviewTest {
     void review_suggestions_fillTheOpenTargetsAsSuggestionsAndCountThem() {
         heldGlossary();
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(VERDICTS)).answer(reply(SUGGESTIONS));
+                ReviewModels.scripted().answer(reply(VERDICTS)).answer(reply(SUGGESTIONS));
 
         final Result<GlossaryReviewReport> report = reviewed(calls(model));
 
@@ -215,6 +215,7 @@ class TermReviewTest {
         assertThat(glossary.all(PROJECT).data())
                 .containsExactly(
                         suggested("p1:hale", "Hale", "Гейл", TermType.CHARACTER, Gender.UNKNOWN)
+                                .withType(TermType.CHARACTER, Origin.LIKELY)
                                 .withSuggestedGender(Gender.MALE),
                         suggested("p1:moreau", "Moreau", "Моро", TermType.CHARACTER, Gender.UNKNOWN)
                                 .withSuggestedGender(Gender.FEMALE),
@@ -226,7 +227,7 @@ class TermReviewTest {
     void review_suggestionRequest_listsTheSurvivorsWithTheirVerdictsTypeAndTwoSentences() {
         heldGlossary();
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(VERDICTS)).answer(reply(NO_SUGGESTIONS));
+                ReviewModels.scripted().answer(reply(VERDICTS)).answer(reply(NO_SUGGESTIONS));
 
         reviewed(calls(model));
 
@@ -254,7 +255,7 @@ class TermReviewTest {
         glossary.add(suggested("p1:hale", "Hale", "Хейл", TermType.CHARACTER, Gender.MALE));
         glossary.add(entry("p1:moreau", "Moreau", "Мору", TermType.CHARACTER, Gender.FEMALE, false));
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply("{\"verdicts\":[]}")).answer(reply(SUGGESTIONS));
+                ReviewModels.scripted().answer(reply("{\"verdicts\":[]}")).answer(reply(SUGGESTIONS));
 
         final Result<GlossaryReviewReport> report = reviewed(calls(model));
 
@@ -271,7 +272,7 @@ class TermReviewTest {
         final List<GlossaryEntry> before = glossary.all(PROJECT).data();
         final AppError failure = AppError.of(ErrorCode.timeout, "Too slow", "The provider did not answer in time.");
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(VERDICTS)).answer(Result.err(failure));
+                ReviewModels.scripted().answer(reply(VERDICTS)).answer(Result.err(failure));
 
         final Result<GlossaryReviewReport> report = reviewed(calls(model));
 
@@ -287,7 +288,7 @@ class TermReviewTest {
                 + "{\"term\":\"Victoria Station\",\"verdict\":\"name\",\"type\":\"place\",\"gender\":\"unknown\"},"
                 + "{\"term\":\"Florence\",\"verdict\":\"name\",\"type\":\"place\",\"gender\":\"unknown\"}]}";
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(verdicts)).answer(reply(NO_SUGGESTIONS));
+                ReviewModels.scripted().answer(reply(verdicts)).answer(reply(NO_SUGGESTIONS));
 
         reviewed(calls(model));
 
@@ -308,15 +309,13 @@ class TermReviewTest {
                 + "{\"term\":\"John\",\"verdict\":\"name\",\"type\":\"person\",\"gender\":\"male\"},"
                 + "{\"term\":\"Mary\",\"verdict\":\"name\",\"type\":\"person\",\"gender\":\"female\"}]}";
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(verdicts)).answer(reply(NO_SUGGESTIONS));
+                ReviewModels.scripted().answer(reply(verdicts)).answer(reply(NO_SUGGESTIONS));
 
         reviewed(calls(model));
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(
-                        tuple("John", Gender.MALE, GenderOrigin.SUGGESTED),
-                        tuple("Mary", Gender.MALE, GenderOrigin.PERSON));
+                .containsExactly(tuple("John", Gender.MALE, Origin.LIKELY), tuple("Mary", Gender.MALE, Origin.USER));
     }
 
     private static final String NO_SUGGESTIONS = "{\"suggestions\":[]}";
@@ -349,7 +348,7 @@ class TermReviewTest {
             final TermType type,
             final Gender gender,
             final boolean locked) {
-        return new GlossaryEntry(id, PROJECT, term, target, type, gender, locked);
+        return GlossaryEntry.of(id, PROJECT, term, target, type, gender, locked);
     }
 
     /** Answers the verdicts, then stores {@code edit} as the person would while the suggestion call is out. */
@@ -365,13 +364,13 @@ class TermReviewTest {
 
     private static GlossaryEntry suggested(
             final String id, final String term, final String target, final TermType type, final Gender gender) {
-        return new GlossaryEntry(id, PROJECT, term, target, type, gender, false, TargetOrigin.SUGGESTED);
+        return GlossaryEntry.of(id, PROJECT, term, null, type, gender, false).withSuggestedTarget(target);
     }
 
     private static List<String> blockLines(final ChatRequest request) {
         return request.messages().stream()
                 .filter(message -> message.role() == ChatRole.USER)
-                .map(ChatMessage::content)
+                .map(message -> AnalysisData.of(message.content()))
                 .flatMap(String::lines)
                 .filter(line -> line.startsWith("- ") || line.startsWith("  ["))
                 .toList();
@@ -380,7 +379,7 @@ class TermReviewTest {
     private static List<String> termLines(final ChatRequest request) {
         return request.messages().stream()
                 .filter(message -> message.role() == ChatRole.USER)
-                .map(ChatMessage::content)
+                .map(message -> AnalysisData.of(message.content()))
                 .flatMap(String::lines)
                 .filter(line -> line.startsWith("- "))
                 .toList();

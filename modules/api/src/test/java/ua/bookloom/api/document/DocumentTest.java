@@ -21,15 +21,16 @@ class DocumentTest {
     void units_returned_isUnmodifiable() {
         final Document document = epub();
 
-        assertThatThrownBy(() -> document.units().add(null)).isInstanceOf(UnsupportedOperationException.class);
+        final var target = document.units();
+        assertThatThrownBy(() -> target.add(null)).isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
     void metadata_returned_isUnmodifiable() {
         final Document document = epub();
 
-        assertThatThrownBy(() -> document.metadata().put("title", "New Title"))
-                .isInstanceOf(UnsupportedOperationException.class);
+        final var target = document.metadata();
+        assertThatThrownBy(() -> target.put("title", "New Title")).isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test

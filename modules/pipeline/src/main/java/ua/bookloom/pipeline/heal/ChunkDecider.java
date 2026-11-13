@@ -5,13 +5,12 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.pipeline.qa.QaResult;
-import ua.bookloom.pipeline.reviewer.ReviewVerdict;
 
 /**
  * Decides a chunk's segments one at a time, in document order — a {@link DraftOutcome.FlaggedAtOnce} outcome
@@ -28,18 +27,13 @@ public final class ChunkDecider {
 
     private final List<DraftOutcome> outcomes;
     private final Map<Integer, QaResult> initialQa;
-    private final @Nullable ReviewVerdict verdict;
     private final SegmentHealer healer;
     private int index;
 
     ChunkDecider(
-            final List<DraftOutcome> outcomes,
-            final Map<Integer, QaResult> initialQa,
-            @Nullable final ReviewVerdict verdict,
-            final SegmentHealer healer) {
+            final List<DraftOutcome> outcomes, final Map<Integer, QaResult> initialQa, final SegmentHealer healer) {
         this.outcomes = List.copyOf(Objects.requireNonNull(outcomes, "outcomes"));
         this.initialQa = Map.copyOf(Objects.requireNonNull(initialQa, "initialQa"));
-        this.verdict = verdict;
         this.healer = Objects.requireNonNull(healer, "healer");
     }
 
@@ -73,7 +67,7 @@ public final class ChunkDecider {
                     case DraftOutcome.Reused reused -> Result.ok(reusedOutcome(reused));
                     case DraftOutcome.Verbatim verbatim -> Result.ok(verbatimOutcome(verbatim));
                     case DraftOutcome.Drafted drafted ->
-                        healer.decide(drafted, Objects.requireNonNull(initialQa.get(index)), verdict);
+                        healer.decide(drafted, Objects.requireNonNull(initialQa.get(index)));
                 };
         if (decision.isOk()) {
             index++;
@@ -106,7 +100,7 @@ public final class ChunkDecider {
         return flagged;
     }
 
-    // Checked in full when the run found it, so it is accepted as it stands, with no review and no round.
+    // Checked in full when the run found it, so it is accepted as it stands, with no repair.
     private static SegmentOutcome reusedOutcome(final DraftOutcome.Reused reused) {
         log.debug(
                 "Segment {} accepted from memory confidence={}",
@@ -121,7 +115,6 @@ public final class ChunkDecider {
                 null,
                 reused.qa().findings(),
                 SegmentPath.TM_REUSE,
-                0,
                 null);
     }
 
@@ -137,15 +130,15 @@ public final class ChunkDecider {
                 null,
                 List.of(),
                 SegmentPath.VERBATIM,
-                0,
                 null);
     }
 
     private static SegmentOutcome flaggedOutcome(final DraftOutcome.FlaggedAtOnce flaggedAtOnce) {
         log.warn(
-                "Segment {} flagged at once code={}",
+                "Segment {} flagged at once code={} reason={}",
                 flaggedAtOnce.segment().id(),
-                flaggedAtOnce.error().code());
+                flaggedAtOnce.error().code(),
+                FailureReason.tokenIn(flaggedAtOnce.error().details()));
         return new SegmentOutcome(
                 flaggedAtOnce.segment().id(),
                 SegmentStatus.FLAGGED,
@@ -155,7 +148,6 @@ public final class ChunkDecider {
                 null,
                 List.of(),
                 SegmentPath.DRAFT,
-                0,
                 flaggedAtOnce.error());
     }
 }

@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -39,11 +41,14 @@ final class JobBoundaries implements RunBoundaries {
     private final UnattendedRecovery recovery;
 
     /**
-     * Creates the boundaries of one run.
+     * What a pause is handled with.
      *
      * @param skipRequested set by the job's skip action while paused, cleared as each pause begins and taken once
      * @param recovery waits through a pause on an error the run recovers from by itself
      */
+    record PauseHandling(AtomicBoolean skipRequested, UnattendedRecovery recovery) {}
+
+    /** Creates the boundaries of one run. */
     JobBoundaries(
             final JobControl control,
             final PendingCommit pending,
@@ -51,16 +56,15 @@ final class JobBoundaries implements RunBoundaries {
             final Consumer<JobEvent> emit,
             final SegmentRepository segments,
             final String projectId,
-            final AtomicBoolean skipRequested,
-            final UnattendedRecovery recovery) {
+            final PauseHandling handling) {
         this.control = Objects.requireNonNull(control, "control");
         this.pending = Objects.requireNonNull(pending, "pending");
         this.recorder = Objects.requireNonNull(recorder, "recorder");
         this.emit = Objects.requireNonNull(emit, "emit");
         this.segments = Objects.requireNonNull(segments, "segments");
         this.projectId = Objects.requireNonNull(projectId, "projectId");
-        this.skipRequested = Objects.requireNonNull(skipRequested, "skipRequested");
-        this.recovery = Objects.requireNonNull(recovery, "recovery");
+        this.skipRequested = Objects.requireNonNull(handling, "handling").skipRequested();
+        this.recovery = handling.recovery();
     }
 
     @Override
@@ -80,6 +84,13 @@ final class JobBoundaries implements RunBoundaries {
         final boolean taken = skipRequested.getAndSet(false);
         log.debug("Took the skip request taken={}", taken);
         return taken;
+    }
+
+    @Override
+    public boolean isStopRequested() {
+        final boolean stop = control.isCancellationRequested();
+        log.debug("Checked for a stop between steps stop={}", stop);
+        return stop;
     }
 
     @Override
@@ -104,7 +115,7 @@ final class JobBoundaries implements RunBoundaries {
 
     @Override
     public Optional<RunEnd> afterRoutedError(final AppError error, final JobProgress progress, final FailingStep step) {
-        Objects.requireNonNull(error, "error");
+        Objects.requireNonNull(error, ERROR);
         Objects.requireNonNull(step, "step");
         forgetSkip();
         final BoundaryDecision decision = control.failureBoundary(error);
@@ -163,7 +174,7 @@ final class JobBoundaries implements RunBoundaries {
         final String segmentId = paused.error() == null ? paused.segmentId() : null;
         final Result<Integer> flushed = pending.flush();
         if (flushed.isErr()) {
-            return Optional.of(new RunEnd(JobState.FAILED, Objects.requireNonNull(flushed.error(), "error")));
+            return Optional.of(new RunEnd(JobState.FAILED, Objects.requireNonNull(flushed.error(), ERROR)));
         }
         recorder.paused();
         emit.accept(paused);
@@ -185,7 +196,7 @@ final class JobBoundaries implements RunBoundaries {
     private Optional<RunEnd> reread(final String segmentId) {
         final Result<Optional<SegmentRecord>> read = segments.find(projectId, segmentId);
         if (read.isErr()) {
-            return Optional.of(new RunEnd(JobState.FAILED, Objects.requireNonNull(read.error(), "error")));
+            return Optional.of(new RunEnd(JobState.FAILED, Objects.requireNonNull(read.error(), ERROR)));
         }
         final Optional<SegmentRecord> record = Objects.requireNonNull(read.data(), "record");
         log.debug(

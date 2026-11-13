@@ -51,20 +51,8 @@ public record AppSetting<T>(
     /** The default quality of a new project. */
     public static final AppSetting<QualityDial> DEFAULT_DIAL = ofEnum("run.defaultDial", QualityDial.BALANCED);
 
-    /** Thinking before answering. */
-    public static final AppSetting<ReasoningSetting> REASONING = ofEnum("run.reasoning", ReasoningSetting.OFF);
-
-    /** Which sampling a call sends. */
-    public static final AppSetting<SamplingSetting> SAMPLING = ofEnum("run.sampling", SamplingSetting.PROGRAM_DEFAULTS);
-
     /** Whether the review desk opens when a translation ends with segments to review. */
     public static final AppSetting<Boolean> OPEN_REVIEW_DESK = ofBoolean("automation.openReviewDesk", true);
-
-    /**
-     * Whether the last check runs before saving by default. Absent until the person writes it, then Export shows the
-     * switch off for a book below Max quality unless this says otherwise; Automation writes it explicitly.
-     */
-    public static final AppSetting<Boolean> LAST_CHECK = ofBoolean("automation.lastCheck", false);
 
     /** Whether the computer is kept awake during a run. */
     public static final AppSetting<Boolean> KEEP_AWAKE = ofBoolean("automation.keepAwake", true);
@@ -105,6 +93,22 @@ public record AppSetting<T>(
     }
 
     /**
+     * The model last chosen on one provider, kept apart from {@link #CURRENT_MODEL} so a provider that stops being the
+     * current one keeps its model for when it is made current again.
+     *
+     * @param providerId the non-null provider id
+     * @return the setting, absent until a model is chosen on the provider; a blank text reads as absent
+     */
+    public static AppSetting<String> providerModel(final String providerId) {
+        Objects.requireNonNull(providerId, "providerId");
+        return new AppSetting<>(
+                "model.ofProvider." + providerId,
+                null,
+                raw -> Optional.of(raw.strip()).filter(s -> !s.isEmpty()),
+                Function.identity());
+    }
+
+    /**
      * Reads a stored text.
      *
      * @param raw the stored text, or {@code null} when nothing is stored
@@ -118,7 +122,7 @@ public record AppSetting<T>(
         try {
             final Optional<T> parsed = parser.apply(raw);
             return parsed.isPresent() ? parsed.get() : defaultValue;
-        } catch (RuntimeException unreadable) {
+        } catch (RuntimeException _) {
             return defaultValue;
         }
     }
@@ -149,7 +153,10 @@ public record AppSetting<T>(
 
     private static Optional<Boolean> readBoolean(final String raw) {
         final String text = raw.strip().toLowerCase(Locale.ROOT);
-        return TRUE.equals(text) ? Optional.of(true) : FALSE.equals(text) ? Optional.of(false) : Optional.empty();
+        if (TRUE.equals(text)) {
+            return Optional.of(true);
+        }
+        return FALSE.equals(text) ? Optional.of(false) : Optional.empty();
     }
 
     private static String writeBoolean(final Boolean value) {

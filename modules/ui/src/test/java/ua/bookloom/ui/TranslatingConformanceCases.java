@@ -34,8 +34,26 @@ final class TranslatingConformanceCases {
                             STRIP_EDGE,
                             new Part("#translating-ready-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#translating-ready-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
+            // The model row's quant chip: a good quant draws in the ok role, the same chip the pickers show.
+            new Screen(
+                    "TRANSLATING_QUANT_CHIP",
+                    ViewNames.TRANSLATING,
+                    Preparation.READY_QUANT_CHIP,
+                    Overlay.NONE,
+                    List.of(
+                            new Part("#quant-chip", Kind.BACKGROUND, "ok-bg", "#e7efe8", "#2b3a33"),
+                            new Part("#quant-chip", Kind.BORDER, "ok-bd", "#bcd4c1", "#3f5a49"),
+                            new Part("#quant-chip", Kind.TEXT, "ok-fg", "#4a6c54", "#b0d0b7"))),
+            // The ready card's language line under the model row: a model whose list leaves the target out draws its
+            // warning in the warning text role.
+            new Screen(
+                    "TRANSLATING_LANGUAGE_WARNING",
+                    ViewNames.TRANSLATING,
+                    Preparation.READY_LANGUAGE_WARNING,
+                    Overlay.NONE,
+                    List.of(new Part("#translating-ready-language-line", Kind.TEXT, "warn-fg", "#835d27", "#e6c086"))),
             // Running, with no banner: the strip's bar track surface-2 and its fill the primary, the full-height live
-            // card, a segment being translated in the info-toned working marker, and the scene summary line.
+            // card, and a segment being translated in the info-toned working marker.
             new Screen(
                     "TRANSLATING_RUNNING",
                     ViewNames.TRANSLATING,
@@ -59,9 +77,10 @@ final class TranslatingConformanceCases {
                                     "info-bg",
                                     "#e5edf0",
                                     "#293940"),
-                            // The scene summary is the mockup's info banner (ui-mockup.html: .banner).
-                            new Part("#translating-live-summary", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
-                            new Part("#translating-live-summary", Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"))),
+                            // The stage in work on the strip in the info tone, the others neutral.
+                            new Part("#translating-stage-proofread", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
+                            new Part("#translating-stage-prep", Kind.BACKGROUND, "surface-2", "#f6f1e8", "#2e3b41"),
+                            new Part("#shell-run-stage", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"))),
             // A finished run: the strip carries the outcome, so there is no outcome card any more.
             new Screen(
                     "TRANSLATING_COMPLETED",

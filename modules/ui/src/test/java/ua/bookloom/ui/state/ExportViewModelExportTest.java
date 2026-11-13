@@ -3,7 +3,6 @@ package ua.bookloom.ui.state;
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Set;
@@ -22,7 +21,6 @@ import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.ui.BookFixtures;
-import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -36,7 +34,7 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
     private ExecutorService worker;
 
     @BeforeEach
-    void openTheBook() throws IOException {
+    void openTheBook() {
         openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
         destination = dir.resolve("Frankenstein.uk.epub");
         exportService.writeFiles(true);
@@ -83,52 +81,20 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
 
         assertThat(exportService.requests())
                 .containsExactly(new ExportRequest(
-                        "p1", destination, false, Set.of(SideFile.GLOSSARY_CSV, SideFile.QUALITY_REPORT), false));
-        assertThat(exportService.models()).containsOnlyNulls();
+                        "p1", destination, false, Set.of(SideFile.GLOSSARY_CSV, SideFile.QUALITY_REPORT)));
     }
 
+    // IF a model were created for the export, THEN a loaded model would be asked for a book that needs none.
     @Test
-    void export_maxDialWithAModelChosen_passesAModelCreatedOffTheFxThread() throws TimeoutException {
+    void export_maxDialWithAModelChosen_createsNoModel() {
         onFx(() -> {
             brief.setDial(QualityDial.MAX);
             settings.model().set("gemma3:12b");
             return null;
         });
-        useWorker();
-
-        export();
-        awaitOutcome();
-
-        assertThat(exportService.requests().getFirst().consistencyPass()).isTrue();
-        assertThat(exportService.models().getFirst()).isNotNull();
-        assertThat(models.selections()).hasSize(1);
-        assertThat(models.askedOnFxThread()).containsExactly(false);
-    }
-
-    @Test
-    void export_maxDialWithNoModelChosen_passesNoModel() {
-        onFx(() -> {
-            brief.setDial(QualityDial.MAX);
-            return null;
-        });
 
         export();
 
-        assertThat(exportService.requests().getFirst().consistencyPass()).isTrue();
-        assertThat(exportService.models()).containsOnlyNulls();
-        assertThat(models.selections()).isEmpty();
-    }
-
-    @Test
-    void export_balancedDialWithAModelChosen_passesNoModel() {
-        onFx(() -> {
-            settings.model().set("gemma3:12b");
-            return null;
-        });
-
-        export();
-
-        assertThat(exportService.models()).containsOnlyNulls();
         assertThat(models.selections()).isEmpty();
     }
 
@@ -201,31 +167,10 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
         assertThat(exportService.ranOnFxThread()).containsExactly(false);
     }
 
-    // IF a model that cannot be created failed the whole export, THEN a provider that is down would block a book
-    // that needs no model to be written.
-    @Test
-    void export_modelCannotBeCreated_writesTheBookWithNoModel() {
-        models = ScriptedChatModelFactory.failing(
-                AppError.of(ErrorCode.unreachable, "Provider down", "The provider is not reachable."));
-        exports = onFx(() -> newExports(new DirectExecutor()));
-        onFx(() -> {
-            brief.setDial(QualityDial.MAX);
-            settings.model().set("gemma3:12b");
-            return null;
-        });
-        export();
-
-        assertThat(models.selections()).hasSize(1);
-        assertThat(exportService.models()).containsOnlyNulls();
-        assertThat(exportService.requests().getFirst().consistencyPass()).isTrue();
-        assertThat(onFx(() -> exports.outcome().get())).isNotNull();
-        assertThat(onFx(() -> exports.failure().get())).isEmpty();
-    }
-
     // IF the file just written were said as an error, THEN a red line would sit beside the green checks of an export
     // that went well; IF it blocked Export, THEN asking before replacing would never be reached.
     @Test
-    void export_success_holdsTheFileJustWrittenWithANeutralNoteNotARefusal() throws IOException {
+    void export_success_holdsTheFileJustWrittenWithANeutralNoteNotARefusal() {
         refresh();
 
         export();
@@ -253,18 +198,6 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
 
         onFx(() -> {
             exports.setSideFile(SideFile.BILINGUAL_HTML, true);
-            return null;
-        });
-
-        assertThat(onFx(() -> exports.outcome().get())).isNull();
-    }
-
-    @Test
-    void export_thenConsistencySwitched_forgetsTheOutcome() {
-        exportedOnce();
-
-        onFx(() -> {
-            exports.setConsistencyPass(true);
             return null;
         });
 

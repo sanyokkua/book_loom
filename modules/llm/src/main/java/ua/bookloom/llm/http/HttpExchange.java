@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +18,8 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ProviderConfig;
+import ua.bookloom.util.paths.NameLookup;
+import ua.bookloom.util.text.Slashes;
 
 /** Sends one JSON request per call; the provider client owns response decoding and HTTP-purpose decisions. */
 @Slf4j
@@ -26,7 +27,7 @@ public final class HttpExchange {
 
     private final HttpClients clients;
     private final LongSupplier nanoTime;
-    private final Function<String, @Nullable String> env;
+    private final NameLookup env;
 
     /**
      * Shares the configured client holder while keeping each request's timeout independent. A streamed reply's waits
@@ -43,7 +44,7 @@ public final class HttpExchange {
     }
 
     /** Also takes the lookup that resolves a credential or header variable, so a test never changes the real environment. */
-    public HttpExchange(HttpClients clients, LongSupplier nanoTime, Function<String, @Nullable String> env) {
+    public HttpExchange(HttpClients clients, LongSupplier nanoTime, NameLookup env) {
         this.clients = Objects.requireNonNull(clients, "clients");
         this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
         this.env = Objects.requireNonNull(env, "env");
@@ -138,18 +139,18 @@ public final class HttpExchange {
             CompletableFuture<HttpResponse<Void>> exchange,
             AtomicReference<HttpResponse.@Nullable ResponseInfo> head) {
         return switch (outcome) {
-            case StreamedLines.Outcome.Collected collected ->
-                Result.ok(received(head, endpoint, collected.body(), false));
-            case StreamedLines.Outcome.Cut cut -> {
+            case StreamedLines.Outcome.Collected(String collected) ->
+                Result.ok(received(head, endpoint, collected, false));
+            case StreamedLines.Outcome.Cut(String cut) -> {
                 lines.cancel();
                 exchange.cancel(true);
-                yield Result.ok(received(head, endpoint, cut.body(), true));
+                yield Result.ok(received(head, endpoint, cut, true));
             }
-            case StreamedLines.Outcome.Failed failed -> {
+            case StreamedLines.Outcome.Failed(Throwable failure, Duration timeout) -> {
                 lines.cancel();
                 exchange.cancel(true);
-                final ProviderConfig broken = config.withRequestTimeout(failed.timeout());
-                yield Result.err(HttpErrorMapper.map(failed.failure(), broken, null, "POST", endpoint.getPath()));
+                final ProviderConfig broken = config.withRequestTimeout(timeout);
+                yield Result.err(HttpErrorMapper.map(failure, broken, null, "POST", endpoint.getPath()));
             }
         };
     }
@@ -195,6 +196,7 @@ public final class HttpExchange {
             logResponse(method, host, endpoint, reply);
             return Result.ok(reply);
         } catch (InterruptedException failure) {
+            Thread.currentThread().interrupt();
             return Result.err(HttpErrorMapper.map(failure, config, null, method, endpoint.getPath()));
         } catch (IOException | RuntimeException failure) {
             final AppError error = HttpErrorMapper.map(failure, config, null, method, endpoint.getPath());
@@ -245,9 +247,12 @@ public final class HttpExchange {
 
     private static URI endpoint(URI baseUrl, String path) {
         log.debug("Joining provider endpoint host={} routePath={}", baseUrl.getHost(), path);
-        final String basePath =
-                baseUrl.getPath() == null ? "" : baseUrl.getPath().replaceFirst("/+$", "");
-        final String routePath = path.replaceFirst("^/+", "");
+        final String basePath = baseUrl.getPath() == null ? "" : Slashes.trimTrailing(baseUrl.getPath());
+        final String route = Slashes.trimLeading(path);
+        // A route may carry a query (llama-server's /props?model=<id>); the URI encodes each part on its own.
+        final int queryStart = route.indexOf('?');
+        final String routePath = queryStart < 0 ? route : route.substring(0, queryStart);
+        final String query = queryStart < 0 ? null : route.substring(queryStart + 1);
         try {
             return new URI(
                     baseUrl.getScheme(),
@@ -255,7 +260,7 @@ public final class HttpExchange {
                     baseUrl.getHost(),
                     baseUrl.getPort(),
                     basePath + "/" + routePath,
-                    null,
+                    query,
                     null);
         } catch (URISyntaxException failure) {
             throw new IllegalArgumentException("Provider endpoint path is invalid.", failure);

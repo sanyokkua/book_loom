@@ -158,7 +158,7 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
             throws Exception {
         useLocale(Locale.forLanguageTag(tag));
         resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
-        onFx(() -> ua.bookloom.ui.state.OpenBookForTest.open(
+        onFx(() -> ua.bookloom.ui.state.OpenedBookFixture.open(
                 injector.getInstance(ua.bookloom.ui.state.CurrentProject.class), "en", "uk"));
         showListing(exported("p1", name));
         WaitForAsyncUtils.waitForFxEvents();
@@ -215,7 +215,7 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
     // IF the project that is on screen offered Continue, THEN pressing it would reopen what is already open.
     @Test
     void list_openProject_carriesTheOpenChip() throws Exception {
-        onFx(() -> ua.bookloom.ui.state.OpenBookForTest.open(
+        onFx(() -> ua.bookloom.ui.state.OpenedBookFixture.open(
                 injector.getInstance(ua.bookloom.ui.state.CurrentProject.class), "en", "uk"));
         showListing(openProjectRow());
 
@@ -262,7 +262,7 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
 
         assertThat(textOf("projects-no-match")).contains("No project matches 'xyz'.");
         assertThat(isPresent("projects-row-" + EARTH_ID)).isFalse();
-        onFx(() -> ((Hyperlink) node("projects-clear-search")).fire());
+        onFx(((Hyperlink) node("projects-clear-search"))::fire);
         assertThat(isPresent("projects-no-match")).isFalse();
         assertThat(isPresent("projects-row-" + EARTH_ID)).isTrue();
         assertThat(isPresent("projects-row-" + TIDE_ID)).isTrue();
@@ -340,7 +340,7 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
         showEmptyListing();
 
         assertThat(textOf("projects-empty-card"))
-                .contains("Translate a book on your own computer")
+                .contains("Translate a book. Private when you use a local AI model.")
                 .contains("Choose a book (EPUB, FB2, Markdown or plain text).")
                 .contains("Check the languages. The rest is filled in for you.")
                 .contains("Let it translate. A book takes hours; you can stop and continue at any time.")

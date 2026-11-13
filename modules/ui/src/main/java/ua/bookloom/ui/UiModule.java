@@ -7,6 +7,7 @@ import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import ua.bookloom.api.AppRestart;
 import ua.bookloom.api.EnvironmentVariables;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelCatalog;
@@ -20,10 +21,10 @@ import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.NamesPass;
 import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ProofreadProgress;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
-import ua.bookloom.api.settings.GenerationOverrides;
 import ua.bookloom.api.settings.ReviewModeChoice;
 import ua.bookloom.ui.control.RunStatusBar;
 import ua.bookloom.ui.dialog.ConfirmDialog;
@@ -72,7 +73,6 @@ import ua.bookloom.ui.state.ExportAnnouncer;
 import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.FileChooserPort;
 import ua.bookloom.ui.state.FileRevealer;
-import ua.bookloom.ui.state.GenerationSettings;
 import ua.bookloom.ui.state.HiddenResultsAnnouncer;
 import ua.bookloom.ui.state.ImportGuard;
 import ua.bookloom.ui.state.ImportViewModel;
@@ -183,7 +183,6 @@ public final class UiModule extends AbstractModule {
         bind(SettingWriter.class);
         bind(StoredPreferences.class);
         bind(AppLanguage.class);
-        bind(GenerationSettings.class);
         bind(KeepAwakeGate.class);
         bind(AutomationSettings.class);
         bind(StorageSettings.class);
@@ -274,6 +273,7 @@ public final class UiModule extends AbstractModule {
         requireBinding(ModelCapabilities.class);
         requireBinding(TranslationEngine.class);
         requireBinding(ProjectService.class);
+        requireBinding(ProofreadProgress.class);
         requireBinding(GlossaryService.class);
         requireBinding(LexiconService.class);
         requireBinding(NamesPass.class);
@@ -281,10 +281,10 @@ public final class UiModule extends AbstractModule {
         requireBinding(ExportService.class);
         requireBinding(ReviewMode.class);
         requireBinding(AppRestart.class);
-        requireBinding(GenerationOverrides.class);
         requireBinding(StorageInfo.class);
         requireBinding(ReviewModeChoice.class);
         requireBinding(DialProfiles.class);
         requireBinding(SummaryRepository.class);
+        requireBinding(CallLedger.class);
     }
 }

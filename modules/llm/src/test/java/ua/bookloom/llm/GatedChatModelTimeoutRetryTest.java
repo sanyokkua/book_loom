@@ -80,9 +80,13 @@ class GatedChatModelTimeoutRetryTest {
 
         assertThat(result.data()).extracting(ChatResponse::content).isEqualTo("translated");
         final List<String> bodies = bodies();
-        assertThat(bodies).hasSize(2);
-        assertThat(bodies.get(0)).contains("\"max_tokens\":400").doesNotContain("\"seed\"");
-        assertThat(bodies.get(1)).contains("\"max_tokens\":300", "\"seed\":2");
+        // WireMock journals the delayed first request only once its delay ends, which can be after the retry, so the
+        // two bodies are matched in either order.
+        assertThat(bodies)
+                .hasSize(2)
+                .anySatisfy(first ->
+                        assertThat(first).contains("\"max_tokens\":400").doesNotContain("\"seed\""))
+                .anySatisfy(retry -> assertThat(retry).contains("\"max_tokens\":300", "\"seed\":2"));
     }
 
     @Test
@@ -135,9 +139,11 @@ class GatedChatModelTimeoutRetryTest {
 
         assertThat(result.data()).extracting(ChatResponse::content).isEqualTo("translated");
         final List<String> bodies = bodies(OLLAMA_CHAT_PATH);
-        assertThat(bodies).hasSize(2);
-        assertThat(bodies.get(0)).contains("\"num_predict\":400").doesNotContain("\"seed\"");
-        assertThat(bodies.get(1)).contains("\"num_predict\":300", "\"seed\":2");
+        assertThat(bodies)
+                .hasSize(2)
+                .anySatisfy(first ->
+                        assertThat(first).contains("\"num_predict\":400").doesNotContain("\"seed\""))
+                .anySatisfy(retry -> assertThat(retry).contains("\"num_predict\":300", "\"seed\":2"));
     }
 
     private List<String> bodies() {

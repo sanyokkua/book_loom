@@ -16,7 +16,7 @@ import ua.bookloom.pipeline.batch.BatchDrafter;
  * rates and the output tokens, in {@code build/reports/promptEval/<model>-batch.json} and {@code .txt}. Local-only:
  * {@code scripts/eval-matrix.sh --suite batch}, or {@code BOOKLOOM_EVAL_SUITE=batch ./gradlew :pipeline:promptEval}
  * with {@code BOOKLOOM_EVAL_URL} and optionally {@code BOOKLOOM_EVAL_PROVIDER}, {@code BOOKLOOM_EVAL_MODEL} and
- * {@code BOOKLOOM_EVAL_BATCH_SIZES} (a comma list such as {@code 4,8,12,16} for the fixed sweep; unset, the batch size is
+ * {@code BOOKLOOM_EVAL_BATCH_SIZES} (a comma list such as {@code 4,8} for the fixed sweep; unset, the batch size is
  * adapted as a job adapts it, starting at {@link BatchDrafter#DEFAULT_INITIAL_SIZE}). It measures; the batch
  * size is chosen by reading the table, so it asserts no floor.
  */

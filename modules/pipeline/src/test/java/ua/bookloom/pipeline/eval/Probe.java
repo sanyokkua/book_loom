@@ -25,8 +25,8 @@ import ua.bookloom.pipeline.run.JobModelCalls;
  * and every call goes through {@link JobModelCalls}, so what is printed is what the suite would send.
  *
  * <pre>
- * --case &lt;id&gt;            a prompt case, a defects.json id or a realrun case id
- * --list [suite]          the case ids (prompt, defects or realrun)
+ * --case &lt;id&gt;            a prompt case or a realrun case id
+ * --list [suite]          the case ids (prompt or realrun)
  * --repeat N              send the case N times (default 1)
  * --dry                   build and print the request, make no call
  * --provider ollama|lmstudio|pseudo   (default ollama; pseudo answers locally, for tests)
@@ -79,7 +79,7 @@ public final class Probe {
     }
 
     private static int list(final String suite, final PrintStream out, final PrintStream err) {
-        final List<String> suites = List.of(ProbeCases.PROMPT, ProbeCases.DEFECTS, ProbeCases.REALRUN);
+        final List<String> suites = List.of(ProbeCases.PROMPT, ProbeCases.REALRUN);
         if (suite != null && !suites.contains(suite)) {
             err.println("probe: unknown suite '" + suite + "', one of " + suites);
             return USAGE_ERROR;
@@ -97,7 +97,8 @@ public final class Probe {
         final boolean dry = args.dry();
         final ProbeModel model = new ProbeModel(dry ? null : chatModel(args));
         final JobModelCalls calls = new JobModelCalls(
-                onSent -> model, event -> {}, Clock.systemUTC(), PromptEvalCases.TARGET_LANGUAGE, args.window());
+                        onSent -> model, event -> {}, Clock.systemUTC(), PromptEvalCases.TARGET_LANGUAGE, args.window())
+                .inRun();
         final Path workDir = temporaryDirectory();
         try {
             out.println("probe case=" + probeCase.id() + " suite=" + probeCase.suite() + " provider=" + args.provider()

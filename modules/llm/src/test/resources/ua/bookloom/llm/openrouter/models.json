@@ -1,0 +1,35 @@
+{
+  "data": [
+    {
+      "id": "example/off-by-effort",
+      "name": "Example: Off By Effort",
+      "context_length": 131072,
+      "top_provider": {"context_length": 131072, "max_completion_tokens": 16384, "is_moderated": false},
+      "supported_parameters": ["max_tokens", "temperature", "top_p", "seed", "reasoning", "response_format", "structured_outputs"],
+      "reasoning": {"mandatory": false, "default_effort": "medium", "supported_efforts": ["high", "medium", "low", "none"]}
+    },
+    {
+      "id": "example/off-by-switch",
+      "name": "Example: Off By Switch",
+      "context_length": 131072,
+      "top_provider": {"context_length": 131072, "max_completion_tokens": 16384, "is_moderated": false},
+      "supported_parameters": ["max_tokens", "temperature", "reasoning", "include_reasoning", "response_format"],
+      "reasoning": {"default_enabled": true, "mandatory": false}
+    },
+    {
+      "id": "example/always-reasons",
+      "name": "Example: Always Reasons",
+      "context_length": 131072,
+      "top_provider": {"context_length": 131072, "max_completion_tokens": 16384, "is_moderated": false},
+      "supported_parameters": ["max_tokens", "temperature", "reasoning", "reasoning_effort", "response_format"],
+      "reasoning": {"mandatory": true, "default_effort": "high", "supported_efforts": ["high", "medium", "low"]}
+    },
+    {
+      "id": "example/plain",
+      "name": "Example: Plain",
+      "context_length": 131072,
+      "top_provider": {"context_length": 131072, "max_completion_tokens": 16384, "is_moderated": false},
+      "supported_parameters": ["max_tokens", "temperature", "top_p", "repetition_penalty", "response_format"]
+    }
+  ]
+}

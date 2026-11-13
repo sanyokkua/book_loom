@@ -85,7 +85,7 @@ final class WriteExecutor implements AutoCloseable {
             while (true) {
                 try {
                     return future.get();
-                } catch (InterruptedException e) {
+                } catch (InterruptedException _) {
                     log.debug("Write caller interrupted while waiting; waiting on for the commit");
                     interrupted = true;
                 }
@@ -117,7 +117,7 @@ final class WriteExecutor implements AutoCloseable {
             if (!executor.awaitTermination(CLOSE_WAIT_SECONDS, TimeUnit.SECONDS)) {
                 log.warn("Write executor still busy {} s after closing", CLOSE_WAIT_SECONDS);
             }
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
         }
     }

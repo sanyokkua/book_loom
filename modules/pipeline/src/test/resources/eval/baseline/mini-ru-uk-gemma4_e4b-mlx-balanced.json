@@ -1,0 +1,2974 @@
+{
+ "provenance": {
+  "timestamp": "2026-10-28T21:14:51Z",
+  "gitSha": "c9d21950",
+  "gitDirty": true,
+  "promptHash": "3ad83406309d",
+  "version": 2,
+  "pipelineCommit": "c9d219509167cb3563492e7a453bf1cb1df4d3f3",
+  "baselineOf": "79ffede6",
+  "model": {
+   "id": "gemma4:e4b-mlx",
+   "provider": "ollama",
+   "server": null,
+   "serverVersion": null,
+   "quantisation": "nvfp4",
+   "contextWindow": 16384,
+   "profileId": null,
+   "thinking": "off",
+   "sampling": null,
+   "seedPolicy": "base+repeat",
+   "seeds": [
+    1000,
+    1001,
+    1002
+   ]
+  },
+  "label": "ru-uk-balanced-TRANSLITERATE",
+  "provider": "ollama",
+  "window": 16384,
+  "dial": "BALANCED",
+  "brief": "names=transliterate",
+  "suite": "mini",
+  "reasoning": "off",
+  "batchNotes": "off",
+  "dataset": {
+   "id": "mini-ru",
+   "version": 1,
+   "rootHash": "f2f9fce5f46e08637a1c8ed1ee6d417ebb040fdd9872be9caa5b3b65f3221002",
+   "pair": "ru-uk",
+   "ownerData": false,
+   "labelsHash": "69a4fc56a534259514eaf915ac4358a0e81b54a18a469881cda0a683410cb4f2"
+  },
+  "judge": {
+   "mode": "none"
+  },
+  "repeats": {
+   "seeds": [
+    1000,
+    1001,
+    1002
+   ],
+   "k": 3
+  },
+  "aggregates": [
+   0.8076923076923077,
+   0.8076923076923077,
+   0.8076923076923077
+  ],
+  "noiseBand": 0.0,
+  "comparison": null
+ },
+ "aggregates": [
+  0.8076923076923077,
+  0.8076923076923077,
+  0.8076923076923077
+ ],
+ "noiseBand": 0.0,
+ "cases": [
+  {
+   "caseId": "ch02.md:16",
+   "repeat": 0,
+   "seed": 1000,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "ivar-source-only-16",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "ivar-not-source-line",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 23004,
+    "promptRead": 8552,
+    "ttft": null,
+    "generation": 14452
+   },
+   "tokens": {
+    "prompt": 4675,
+    "completion": 433,
+    "cached": 574
+   },
+   "replyRef": "calls/ch02.md_16-0.json"
+  },
+  {
+   "caseId": "ch02.md:14",
+   "repeat": 0,
+   "seed": 1000,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": false
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "proofread-source-only-14",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 19093,
+    "promptRead": 6720,
+    "ttft": null,
+    "generation": 12373
+   },
+   "tokens": {
+    "prompt": 4425,
+    "completion": 353,
+    "cached": 1203
+   },
+   "replyRef": "calls/ch02.md_14-0.json"
+  },
+  {
+   "caseId": "ch02.md:12",
+   "repeat": 0,
+   "seed": 1000,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 26004,
+    "promptRead": 10102,
+    "ttft": null,
+    "generation": 15902
+   },
+   "tokens": {
+    "prompt": 5468,
+    "completion": 439,
+    "cached": 579
+   },
+   "replyRef": "calls/ch02.md_12-0.json"
+  },
+  {
+   "caseId": "ch02.md:10",
+   "repeat": 0,
+   "seed": 1000,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "weak-da-absent",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 30501,
+    "promptRead": 12549,
+    "ttft": null,
+    "generation": 17952
+   },
+   "tokens": {
+    "prompt": 6193,
+    "completion": 485,
+    "cached": 31
+   },
+   "replyRef": "calls/ch02.md_10-0.json"
+  },
+  {
+   "caseId": "ch01.md:17",
+   "repeat": 0,
+   "seed": 1000,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "double-negation",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 17895,
+    "promptRead": 6669,
+    "ttft": null,
+    "generation": 11226
+   },
+   "tokens": {
+    "prompt": 3160,
+    "completion": 203,
+    "cached": 15
+   },
+   "replyRef": "calls/ch01.md_17-0.json"
+  },
+  {
+   "caseId": "ch01.md:15",
+   "repeat": 0,
+   "seed": 1000,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "stress-mark-castle",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 16428,
+    "promptRead": 5548,
+    "ttft": null,
+    "generation": 10880
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 10
+   },
+   "replyRef": "calls/ch01.md_15-0.json"
+  },
+  {
+   "caseId": "ch01.md:9",
+   "repeat": 0,
+   "seed": 1000,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "dash-kept",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 16428,
+    "promptRead": 5548,
+    "ttft": null,
+    "generation": 10880
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 10
+   },
+   "replyRef": "calls/ch01.md_9-0.json"
+  },
+  {
+   "caseId": "ch01.md:13",
+   "repeat": 0,
+   "seed": 1000,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "source-only-words-13",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 16428,
+    "promptRead": 5548,
+    "ttft": null,
+    "generation": 10880
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 10
+   },
+   "replyRef": "calls/ch01.md_13-0.json"
+  },
+  {
+   "caseId": "ch01.md:7",
+   "repeat": 0,
+   "seed": 1000,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "velemyr-one-spelling",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 16428,
+    "promptRead": 5548,
+    "ttft": null,
+    "generation": 10880
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 10
+   },
+   "replyRef": "calls/ch01.md_7-0.json"
+  },
+  {
+   "caseId": "ch01.md:11",
+   "repeat": 0,
+   "seed": 1000,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "russian-line-translated",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 16428,
+    "promptRead": 5548,
+    "ttft": null,
+    "generation": 10880
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 10
+   },
+   "replyRef": "calls/ch01.md_11-0.json"
+  },
+  {
+   "caseId": "ch01.md:5",
+   "repeat": 0,
+   "seed": 1000,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "velemyr-one-spelling",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 16428,
+    "promptRead": 5548,
+    "ttft": null,
+    "generation": 10880
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 10
+   },
+   "replyRef": "calls/ch01.md_5-0.json"
+  },
+  {
+   "caseId": "ch02.md:8",
+   "repeat": 0,
+   "seed": 1000,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "three-speakers-sentences",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "three-speakers-dash",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 28553,
+    "promptRead": 11270,
+    "ttft": null,
+    "generation": 17283
+   },
+   "tokens": {
+    "prompt": 5523,
+    "completion": 464,
+    "cached": 26
+   },
+   "replyRef": "calls/ch02.md_8-0.json"
+  },
+  {
+   "caseId": "ch01.md:3",
+   "repeat": 0,
+   "seed": 1000,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "narrator-woman",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 16428,
+    "promptRead": 5548,
+    "ttft": null,
+    "generation": 10880
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 10
+   },
+   "replyRef": "calls/ch01.md_3-0.json"
+  },
+  {
+   "caseId": "ch02.md:6",
+   "repeat": 0,
+   "seed": 1000,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "seed-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 25553,
+    "promptRead": 9720,
+    "ttft": null,
+    "generation": 15833
+   },
+   "tokens": {
+    "prompt": 4730,
+    "completion": 458,
+    "cached": 21
+   },
+   "replyRef": "calls/ch02.md_6-0.json"
+  },
+  {
+   "caseId": "ch01.md:1",
+   "repeat": 0,
+   "seed": 1000,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "heading-number-4",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 10750,
+    "promptRead": 2703,
+    "ttft": null,
+    "generation": 8047
+   },
+   "tokens": {
+    "prompt": 3185,
+    "completion": 209,
+    "cached": 1916
+   },
+   "replyRef": "calls/ch01.md_1-0.json"
+  },
+  {
+   "caseId": "ch02.md:4",
+   "repeat": 0,
+   "seed": 1000,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "address-same-4",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 21832,
+    "promptRead": 8134,
+    "ttft": null,
+    "generation": 13698
+   },
+   "tokens": {
+    "prompt": 3944,
+    "completion": 415,
+    "cached": 16
+   },
+   "replyRef": "calls/ch02.md_4-0.json"
+  },
+  {
+   "caseId": "ch02.md:2",
+   "repeat": 0,
+   "seed": 1000,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "heading-number-5",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 12820,
+    "promptRead": 2890,
+    "ttft": null,
+    "generation": 9930
+   },
+   "tokens": {
+    "prompt": 3245,
+    "completion": 261,
+    "cached": 1923
+   },
+   "replyRef": "calls/ch02.md_2-0.json"
+  },
+  {
+   "caseId": "glossary",
+   "repeat": 0,
+   "seed": 1000,
+   "graders": [
+    {
+     "id": "velemyr-one-entry",
+     "level": "SOFT",
+     "passed": false
+    },
+    {
+     "id": "velemyr-male",
+     "level": "SOFT",
+     "passed": false
+    },
+    {
+     "id": "rudakova-one-entry",
+     "level": "SOFT",
+     "passed": false
+    },
+    {
+     "id": "rudakova-female",
+     "level": "SOFT",
+     "passed": false
+    }
+   ],
+   "time": {
+    "total": null,
+    "promptRead": null,
+    "ttft": null,
+    "generation": null
+   },
+   "tokens": {
+    "prompt": null,
+    "completion": null,
+    "cached": null
+   },
+   "replyRef": "calls/glossary-0.json"
+  },
+  {
+   "caseId": "ch02.md:16",
+   "repeat": 1,
+   "seed": 1001,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "ivar-source-only-16",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "ivar-not-source-line",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 11779,
+    "promptRead": 1138,
+    "ttft": null,
+    "generation": 10641
+   },
+   "tokens": {
+    "prompt": 4675,
+    "completion": 375,
+    "cached": 4169
+   },
+   "replyRef": "calls/ch02.md_16-1.json"
+  },
+  {
+   "caseId": "ch02.md:14",
+   "repeat": 1,
+   "seed": 1001,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": false
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "proofread-source-only-14",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 10730,
+    "promptRead": 592,
+    "ttft": null,
+    "generation": 10138
+   },
+   "tokens": {
+    "prompt": 4425,
+    "completion": 353,
+    "cached": 4184
+   },
+   "replyRef": "calls/ch02.md_14-1.json"
+  },
+  {
+   "caseId": "ch02.md:12",
+   "repeat": 1,
+   "seed": 1001,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 11779,
+    "promptRead": 1138,
+    "ttft": null,
+    "generation": 10641
+   },
+   "tokens": {
+    "prompt": 4675,
+    "completion": 375,
+    "cached": 4169
+   },
+   "replyRef": "calls/ch02.md_12-1.json"
+  },
+  {
+   "caseId": "ch02.md:10",
+   "repeat": 1,
+   "seed": 1001,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "weak-da-absent",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 11239,
+    "promptRead": 1113,
+    "ttft": null,
+    "generation": 10126
+   },
+   "tokens": {
+    "prompt": 3944,
+    "completion": 357,
+    "cached": 3442
+   },
+   "replyRef": "calls/ch02.md_10-1.json"
+  },
+  {
+   "caseId": "ch01.md:17",
+   "repeat": 1,
+   "seed": 1001,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "double-negation",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 5953,
+    "promptRead": 76,
+    "ttft": null,
+    "generation": 5877
+   },
+   "tokens": {
+    "prompt": 3160,
+    "completion": 203,
+    "cached": 3148
+   },
+   "replyRef": "calls/ch01.md_17-1.json"
+  },
+  {
+   "caseId": "ch01.md:15",
+   "repeat": 1,
+   "seed": 1001,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "stress-mark-castle",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 6323,
+    "promptRead": 54,
+    "ttft": null,
+    "generation": 6269
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 2683
+   },
+   "replyRef": "calls/ch01.md_15-1.json"
+  },
+  {
+   "caseId": "ch01.md:9",
+   "repeat": 1,
+   "seed": 1001,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "dash-kept",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 6323,
+    "promptRead": 54,
+    "ttft": null,
+    "generation": 6269
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 2683
+   },
+   "replyRef": "calls/ch01.md_9-1.json"
+  },
+  {
+   "caseId": "ch01.md:13",
+   "repeat": 1,
+   "seed": 1001,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "source-only-words-13",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 6323,
+    "promptRead": 54,
+    "ttft": null,
+    "generation": 6269
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 2683
+   },
+   "replyRef": "calls/ch01.md_13-1.json"
+  },
+  {
+   "caseId": "ch01.md:7",
+   "repeat": 1,
+   "seed": 1001,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "velemyr-one-spelling",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 6323,
+    "promptRead": 54,
+    "ttft": null,
+    "generation": 6269
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 2683
+   },
+   "replyRef": "calls/ch01.md_7-1.json"
+  },
+  {
+   "caseId": "ch01.md:11",
+   "repeat": 1,
+   "seed": 1001,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "russian-line-translated",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 6323,
+    "promptRead": 54,
+    "ttft": null,
+    "generation": 6269
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 2683
+   },
+   "replyRef": "calls/ch01.md_11-1.json"
+  },
+  {
+   "caseId": "ch01.md:5",
+   "repeat": 1,
+   "seed": 1001,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "velemyr-one-spelling",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 6323,
+    "promptRead": 54,
+    "ttft": null,
+    "generation": 6269
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 2683
+   },
+   "replyRef": "calls/ch01.md_5-1.json"
+  },
+  {
+   "caseId": "ch02.md:8",
+   "repeat": 1,
+   "seed": 1001,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "three-speakers-sentences",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "three-speakers-dash",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 11239,
+    "promptRead": 1113,
+    "ttft": null,
+    "generation": 10126
+   },
+   "tokens": {
+    "prompt": 3944,
+    "completion": 357,
+    "cached": 3442
+   },
+   "replyRef": "calls/ch02.md_8-1.json"
+  },
+  {
+   "caseId": "ch01.md:3",
+   "repeat": 1,
+   "seed": 1001,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "narrator-woman",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 6323,
+    "promptRead": 54,
+    "ttft": null,
+    "generation": 6269
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 2683
+   },
+   "replyRef": "calls/ch01.md_3-1.json"
+  },
+  {
+   "caseId": "ch02.md:6",
+   "repeat": 1,
+   "seed": 1001,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "seed-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 11239,
+    "promptRead": 1113,
+    "ttft": null,
+    "generation": 10126
+   },
+   "tokens": {
+    "prompt": 3944,
+    "completion": 357,
+    "cached": 3442
+   },
+   "replyRef": "calls/ch02.md_6-1.json"
+  },
+  {
+   "caseId": "ch01.md:1",
+   "repeat": 1,
+   "seed": 1001,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "heading-number-4",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 6049,
+    "promptRead": 80,
+    "ttft": null,
+    "generation": 5969
+   },
+   "tokens": {
+    "prompt": 3185,
+    "completion": 209,
+    "cached": 3173
+   },
+   "replyRef": "calls/ch01.md_1-1.json"
+  },
+  {
+   "caseId": "ch02.md:4",
+   "repeat": 1,
+   "seed": 1001,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "address-same-4",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 11239,
+    "promptRead": 1113,
+    "ttft": null,
+    "generation": 10126
+   },
+   "tokens": {
+    "prompt": 3944,
+    "completion": 357,
+    "cached": 3442
+   },
+   "replyRef": "calls/ch02.md_4-1.json"
+  },
+  {
+   "caseId": "ch02.md:2",
+   "repeat": 1,
+   "seed": 1001,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "heading-number-5",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 7945,
+    "promptRead": 86,
+    "ttft": null,
+    "generation": 7859
+   },
+   "tokens": {
+    "prompt": 3245,
+    "completion": 261,
+    "cached": 3233
+   },
+   "replyRef": "calls/ch02.md_2-1.json"
+  },
+  {
+   "caseId": "glossary",
+   "repeat": 1,
+   "seed": 1001,
+   "graders": [
+    {
+     "id": "velemyr-one-entry",
+     "level": "SOFT",
+     "passed": false
+    },
+    {
+     "id": "velemyr-male",
+     "level": "SOFT",
+     "passed": false
+    },
+    {
+     "id": "rudakova-one-entry",
+     "level": "SOFT",
+     "passed": false
+    },
+    {
+     "id": "rudakova-female",
+     "level": "SOFT",
+     "passed": false
+    }
+   ],
+   "time": {
+    "total": null,
+    "promptRead": null,
+    "ttft": null,
+    "generation": null
+   },
+   "tokens": {
+    "prompt": null,
+    "completion": null,
+    "cached": null
+   },
+   "replyRef": "calls/glossary-1.json"
+  },
+  {
+   "caseId": "ch02.md:16",
+   "repeat": 2,
+   "seed": 1002,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "ivar-source-only-16",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "ivar-not-source-line",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 12568,
+    "promptRead": 1023,
+    "ttft": null,
+    "generation": 11545
+   },
+   "tokens": {
+    "prompt": 4677,
+    "completion": 406,
+    "cached": 4175
+   },
+   "replyRef": "calls/ch02.md_16-2.json"
+  },
+  {
+   "caseId": "ch02.md:14",
+   "repeat": 2,
+   "seed": 1002,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": false
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "proofread-source-only-14",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 10657,
+    "promptRead": 565,
+    "ttft": null,
+    "generation": 10092
+   },
+   "tokens": {
+    "prompt": 4426,
+    "completion": 355,
+    "cached": 4190
+   },
+   "replyRef": "calls/ch02.md_14-2.json"
+  },
+  {
+   "caseId": "ch02.md:12",
+   "repeat": 2,
+   "seed": 1002,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 12568,
+    "promptRead": 1023,
+    "ttft": null,
+    "generation": 11545
+   },
+   "tokens": {
+    "prompt": 4677,
+    "completion": 406,
+    "cached": 4175
+   },
+   "replyRef": "calls/ch02.md_12-2.json"
+  },
+  {
+   "caseId": "ch02.md:10",
+   "repeat": 2,
+   "seed": 1002,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "weak-da-absent",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 12024,
+    "promptRead": 1023,
+    "ttft": null,
+    "generation": 11001
+   },
+   "tokens": {
+    "prompt": 3946,
+    "completion": 388,
+    "cached": 3445
+   },
+   "replyRef": "calls/ch02.md_10-2.json"
+  },
+  {
+   "caseId": "ch01.md:17",
+   "repeat": 2,
+   "seed": 1002,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "double-negation",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 5859,
+    "promptRead": 81,
+    "ttft": null,
+    "generation": 5778
+   },
+   "tokens": {
+    "prompt": 3160,
+    "completion": 203,
+    "cached": 3148
+   },
+   "replyRef": "calls/ch01.md_17-2.json"
+  },
+  {
+   "caseId": "ch01.md:15",
+   "repeat": 2,
+   "seed": 1002,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "stress-mark-castle",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 6863,
+    "promptRead": 52,
+    "ttft": null,
+    "generation": 6811
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 2683
+   },
+   "replyRef": "calls/ch01.md_15-2.json"
+  },
+  {
+   "caseId": "ch01.md:9",
+   "repeat": 2,
+   "seed": 1002,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "dash-kept",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 6863,
+    "promptRead": 52,
+    "ttft": null,
+    "generation": 6811
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 2683
+   },
+   "replyRef": "calls/ch01.md_9-2.json"
+  },
+  {
+   "caseId": "ch01.md:13",
+   "repeat": 2,
+   "seed": 1002,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "source-only-words-13",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 6863,
+    "promptRead": 52,
+    "ttft": null,
+    "generation": 6811
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 2683
+   },
+   "replyRef": "calls/ch01.md_13-2.json"
+  },
+  {
+   "caseId": "ch01.md:7",
+   "repeat": 2,
+   "seed": 1002,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "velemyr-one-spelling",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 6863,
+    "promptRead": 52,
+    "ttft": null,
+    "generation": 6811
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 2683
+   },
+   "replyRef": "calls/ch01.md_7-2.json"
+  },
+  {
+   "caseId": "ch01.md:11",
+   "repeat": 2,
+   "seed": 1002,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "russian-line-translated",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 6863,
+    "promptRead": 52,
+    "ttft": null,
+    "generation": 6811
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 2683
+   },
+   "replyRef": "calls/ch01.md_11-2.json"
+  },
+  {
+   "caseId": "ch01.md:5",
+   "repeat": 2,
+   "seed": 1002,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "velemyr-one-spelling",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 6863,
+    "promptRead": 52,
+    "ttft": null,
+    "generation": 6811
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 2683
+   },
+   "replyRef": "calls/ch01.md_5-2.json"
+  },
+  {
+   "caseId": "ch02.md:8",
+   "repeat": 2,
+   "seed": 1002,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "three-speakers-sentences",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "three-speakers-dash",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 12024,
+    "promptRead": 1023,
+    "ttft": null,
+    "generation": 11001
+   },
+   "tokens": {
+    "prompt": 3946,
+    "completion": 388,
+    "cached": 3445
+   },
+   "replyRef": "calls/ch02.md_8-2.json"
+  },
+  {
+   "caseId": "ch01.md:3",
+   "repeat": 2,
+   "seed": 1002,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "narrator-woman",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 6863,
+    "promptRead": 52,
+    "ttft": null,
+    "generation": 6811
+   },
+   "tokens": {
+    "prompt": 2691,
+    "completion": 244,
+    "cached": 2683
+   },
+   "replyRef": "calls/ch01.md_3-2.json"
+  },
+  {
+   "caseId": "ch02.md:6",
+   "repeat": 2,
+   "seed": 1002,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "seed-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 12024,
+    "promptRead": 1023,
+    "ttft": null,
+    "generation": 11001
+   },
+   "tokens": {
+    "prompt": 3946,
+    "completion": 388,
+    "cached": 3445
+   },
+   "replyRef": "calls/ch02.md_6-2.json"
+  },
+  {
+   "caseId": "ch01.md:1",
+   "repeat": 2,
+   "seed": 1002,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "heading-number-4",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 5928,
+    "promptRead": 25,
+    "ttft": null,
+    "generation": 5903
+   },
+   "tokens": {
+    "prompt": 3185,
+    "completion": 209,
+    "cached": 3179
+   },
+   "replyRef": "calls/ch01.md_1-2.json"
+  },
+  {
+   "caseId": "ch02.md:4",
+   "repeat": 2,
+   "seed": 1002,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "address-same-4",
+     "level": "SOFT",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 12024,
+    "promptRead": 1023,
+    "ttft": null,
+    "generation": 11001
+   },
+   "tokens": {
+    "prompt": 3946,
+    "completion": 388,
+    "cached": 3445
+   },
+   "replyRef": "calls/ch02.md_4-2.json"
+  },
+  {
+   "caseId": "ch02.md:2",
+   "repeat": 2,
+   "seed": 1002,
+   "graders": [
+    {
+     "id": "every-usable",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-russian-letters",
+     "level": "SOFT",
+     "passed": true
+    },
+    {
+     "id": "every-no-stress-mark",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-target-alphabet",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "every-no-foreign-script",
+     "level": "HARD",
+     "passed": true
+    },
+    {
+     "id": "heading-number-5",
+     "level": "HARD",
+     "passed": true
+    }
+   ],
+   "time": {
+    "total": 7515,
+    "promptRead": 0,
+    "ttft": null,
+    "generation": 7515
+   },
+   "tokens": {
+    "prompt": 3245,
+    "completion": 263,
+    "cached": 3242
+   },
+   "replyRef": "calls/ch02.md_2-2.json"
+  },
+  {
+   "caseId": "glossary",
+   "repeat": 2,
+   "seed": 1002,
+   "graders": [
+    {
+     "id": "velemyr-one-entry",
+     "level": "SOFT",
+     "passed": false
+    },
+    {
+     "id": "velemyr-male",
+     "level": "SOFT",
+     "passed": false
+    },
+    {
+     "id": "rudakova-one-entry",
+     "level": "SOFT",
+     "passed": false
+    },
+    {
+     "id": "rudakova-female",
+     "level": "SOFT",
+     "passed": false
+    }
+   ],
+   "time": {
+    "total": null,
+    "promptRead": null,
+    "ttft": null,
+    "generation": null
+   },
+   "tokens": {
+    "prompt": null,
+    "completion": null,
+    "cached": null
+   },
+   "replyRef": "calls/glossary-2.json"
+  }
+ ],
+ "outputs": {
+  "ch02.md:16": "Івар сказав, що повернеться.",
+  "ch02.md:14": "Мирена кивнула і сказала, що ключ у Тарна.",
+  "ch02.md:12": "Лист Рудакової знайшли вранці. Сама Рудакова ще спала.",
+  "ch02.md:10": "— Так! — крикнула Мирена і відчинила вікно.",
+  "ch01.md:17": "Ніхто не прийшов.",
+  "ch01.md:15": "На воротах висів старий замок, і ніхто не пам’ятав, де ключ.",
+  "ch01.md:9": "— Двері були відчинені, — тихо сказав він, — і світло горіло до ранку.",
+  "ch01.md:13": "Вона сказала, що це лише початок, і більше нічого не додала.",
+  "ch01.md:7": "Ключ Велемира лежав на столі. Велемир повернувся пізно.",
+  "ch01.md:11": "Ні, не сьогодні.",
+  "ch01.md:5": "— Поклич Велемира, — сказала вона.",
+  "ch02.md:8": "— Хто тут? — запитав Тарн. — Це я, — відповіла Мирена. — А я просто минав, — буркнув Ігнат.",
+  "ch01.md:3": "Я повернулася пізно.",
+  "ch02.md:6": "Олексій поклав ключ на підвіконня і пішов.",
+  "ch01.md:1": "4. Нічний перевал",
+  "ch02.md:4": "— Ти запізнився, — сказав Тарн. — Дорогу закрили, ти ж знаєш, — відповів Ігнат. — Я чекав тебе цілу годину.",
+  "ch02.md:2": "5. Ранкова інспекція"
+ },
+ "report": {
+  "suite": "mini",
+  "model": "gemma4:e4b-mlx",
+  "dial": "BALANCED",
+  "names": "TRANSLITERATE",
+  "end": "COMPLETED",
+  "expectations": 26,
+  "passed": 21,
+  "passRate": 0.8076923076923077,
+  "segments": 17,
+  "flagged": 1,
+  "calls": 19,
+  "namesCalls": 2,
+  "translationCalls": 13,
+  "consistencyCalls": 4,
+  "seconds": 78.149,
+  "errors": [],
+  "byDefect": {
+   "flagged": {
+    "passed": 0,
+    "total": 1
+   },
+   "russian-letter": {
+    "passed": 2,
+    "total": 2
+   },
+   "stress-mark": {
+    "passed": 2,
+    "total": 2
+   },
+   "foreign-script": {
+    "passed": 1,
+    "total": 1
+   },
+   "heading-number": {
+    "passed": 2,
+    "total": 2
+   },
+   "narrator-gender-past": {
+    "passed": 1,
+    "total": 1
+   },
+   "inflected-form-as-new-name": {
+    "passed": 1,
+    "total": 2
+   },
+   "genitive-with-own-gender": {
+    "passed": 0,
+    "total": 1
+   },
+   "lost-dash": {
+    "passed": 1,
+    "total": 1
+   },
+   "russian-line": {
+    "passed": 1,
+    "total": 1
+   },
+   "source-only-words": {
+    "passed": 1,
+    "total": 1
+   },
+   "double-negation": {
+    "passed": 1,
+    "total": 1
+   },
+   "address-mix": {
+    "passed": 1,
+    "total": 1
+   },
+   "stress-mark-seed": {
+    "passed": 1,
+    "total": 1
+   },
+   "three-speakers": {
+    "passed": 2,
+    "total": 2
+   },
+   "weak-word-da": {
+    "passed": 1,
+    "total": 1
+   },
+   "female-surname-forms": {
+    "passed": 0,
+    "total": 2
+   },
+   "proofread-trap": {
+    "passed": 1,
+    "total": 1
+   },
+   "gender-after-run": {
+    "passed": 2,
+    "total": 2
+   }
+  },
+  "results": [
+   {
+    "id": "every-usable",
+    "defect": "flagged",
+    "passed": false,
+    "detail": "failing: ch02.md:14"
+   },
+   {
+    "id": "every-no-russian-letters",
+    "defect": "russian-letter",
+    "passed": true,
+    "detail": "all 17 segments"
+   },
+   {
+    "id": "every-no-stress-mark",
+    "defect": "stress-mark",
+    "passed": true,
+    "detail": "all 17 segments"
+   },
+   {
+    "id": "every-target-alphabet",
+    "defect": "russian-letter",
+    "passed": true,
+    "detail": "all 17 segments"
+   },
+   {
+    "id": "every-no-foreign-script",
+    "defect": "foreign-script",
+    "passed": true,
+    "detail": "all 17 segments"
+   },
+   {
+    "id": "heading-number-4",
+    "defect": "heading-number",
+    "passed": true,
+    "detail": "starts with 4."
+   },
+   {
+    "id": "heading-number-5",
+    "defect": "heading-number",
+    "passed": true,
+    "detail": "starts with 5."
+   },
+   {
+    "id": "narrator-woman",
+    "defect": "narrator-gender-past",
+    "passed": true,
+    "detail": "narrator form agrees"
+   },
+   {
+    "id": "velemyr-one-entry",
+    "defect": "inflected-form-as-new-name",
+    "passed": false,
+    "detail": "0 entries for [Велемир, Велемира]"
+   },
+   {
+    "id": "velemyr-male",
+    "defect": "genitive-with-own-gender",
+    "passed": false,
+    "detail": "no entry for [Велемир, Велемира]"
+   },
+   {
+    "id": "velemyr-one-spelling",
+    "defect": "inflected-form-as-new-name",
+    "passed": true,
+    "detail": "spellings [Велемир]"
+   },
+   {
+    "id": "dash-kept",
+    "defect": "lost-dash",
+    "passed": true,
+    "detail": "dash kept"
+   },
+   {
+    "id": "russian-line-translated",
+    "defect": "russian-line",
+    "passed": true,
+    "detail": "differs"
+   },
+   {
+    "id": "source-only-words-13",
+    "defect": "source-only-words",
+    "passed": true,
+    "detail": "none of [что, это, только]"
+   },
+   {
+    "id": "stress-mark-castle",
+    "defect": "stress-mark",
+    "passed": true,
+    "detail": "none"
+   },
+   {
+    "id": "double-negation",
+    "defect": "double-negation",
+    "passed": true,
+    "detail": "1 x не"
+   },
+   {
+    "id": "address-same-4",
+    "defect": "address-mix",
+    "passed": true,
+    "detail": "ти"
+   },
+   {
+    "id": "seed-no-stress-mark",
+    "defect": "stress-mark-seed",
+    "passed": true,
+    "detail": "none"
+   },
+   {
+    "id": "three-speakers-sentences",
+    "defect": "three-speakers",
+    "passed": true,
+    "detail": "none of [sentence-count]"
+   },
+   {
+    "id": "three-speakers-dash",
+    "defect": "three-speakers",
+    "passed": true,
+    "detail": "dash kept"
+   },
+   {
+    "id": "weak-da-absent",
+    "defect": "weak-word-da",
+    "passed": true,
+    "detail": "absent"
+   },
+   {
+    "id": "rudakova-one-entry",
+    "defect": "female-surname-forms",
+    "passed": false,
+    "detail": "0 entries for [Рудакова, Рудаковой]"
+   },
+   {
+    "id": "rudakova-female",
+    "defect": "female-surname-forms",
+    "passed": false,
+    "detail": "no entry for [Рудакова, Рудаковой]"
+   },
+   {
+    "id": "proofread-source-only-14",
+    "defect": "proofread-trap",
+    "passed": true,
+    "detail": "none of [что]"
+   },
+   {
+    "id": "ivar-source-only-16",
+    "defect": "gender-after-run",
+    "passed": true,
+    "detail": "none of [что]"
+   },
+   {
+    "id": "ivar-not-source-line",
+    "defect": "gender-after-run",
+    "passed": true,
+    "detail": "differs"
+   }
+  ]
+ }
+}
