@@ -48,7 +48,7 @@ Motivation and scope are in `proposal.md`. This document holds only the decision
   for a special model (TranslateGemma, Qwen, Hunyuan-MT); no test of MamayLM 27B or gemma4:31b.
 - No language-specific option row in the window; no cross-provider model chooser.
 - No database migration: stored shapes change and the database is set aside (ADR-0043).
-- No signing, no notarisation, no installer type (`.dmg`, `.deb`, `.msi`) and no test suite in the release workflow.
+- No signing, no notarisation, no installer type (`.dmg`, `.deb`, `.msi`), and no test suite and no launch check in the release workflow.
 - Not acted on, with the review's reasons (`research/review-digest.md#not-acted-on`): the weight and contradictions of
   the translate request (F6), non-spaced scripts and other alphabets (F9), sampling differences on the LM Studio path
   (F10), new models (F18), ти/ви tracking for English sources.
@@ -73,7 +73,7 @@ D23–D29 a path with no prefix (`state/…`, `screen/…`, `control/…`, `dial
 `modules/ui/src/main/resources/ua/bookloom/ui/theme.css`, and "the bundles" are the two `MSG` files. A class marked
 "new" does not exist yet; every other class named was read on the working tree on 2026-11-14. Decisions are numbered in
 the order of the task groups that build them: D1–D5 groups 1 and 2, D6–D9 group 3, D10–D15 group 4, D16–D19 group 5,
-D20–D21 group 6, D22 group 7, D23–D28 group 8, D29 group 9, D30–D35 group 10, D36–D43 group 11, D44 group 12.
+D20–D21 group 6, D22 group 7, D23–D28 group 8, D29 group 9, D30–D35 group 10, D36–D43 group 11, D44 group 12. D45 (group 11) and D46 (the verdicts on this change's own new pieces) were added on 2026-11-15 with the owner's answers and are numbered last, so that no anchor of an earlier decision moves.
 
 ### D1 — A fixed real-book blind panel, built from the existing harness
 
@@ -106,10 +106,14 @@ A score compares only inside one sheet (noise band 0.3), so both arms must be on
 
 **Readers.** Reading is not done inside the JVM. A sheet is read by two reader families, the two the review used
 (`research/review-digest.md#method-and-limits`): an agent session of a Claude model and an agent session of an OpenAI
-model, each given only `docs/evaluation/panel.md` and the sheet, never the key; and by the owner on a 20-paragraph
-subsample (`eval-score.py blind … --only @subsample.txt`). The owner starts each reading session, or tells the agent
-in the session to start it: a sheet holds real-book paragraphs, and the harness never sends book text anywhere by
-itself. Each reader writes one scores file,
+model, each given only `docs/evaluation/panel.md` and the sheet, never the key. These two families decide every
+gate of this change; no gate waits for a person's reading. A sheet holds real-book paragraphs, and the harness
+never sends book text anywhere by itself: a reading session is started by the owner or, on the owner's word, by the
+implementing session — the owner's answer of 2026-11-15 to this point is that word for the sheets of this change,
+so a measuring task starts its two reader sessions itself. The owner reads too, once and at the very end: a
+20-paragraph subsample of the last panel sheet (`eval-score.py blind … --only @subsample.txt`, the `app` arm of
+task 6.12 against `plain`), listed in the owner checklist of task 12.4 and recorded on the results page as a final
+confirmation; it changes no gate. Each reader writes one scores file,
 `.temporary_context/eval-artifacts/panel/scores/<sheet>-<reader>.json`. A reader that runs on this machine is started
 only after the translating model is unloaded (one model resident at a time). Every measuring task names its sheet,
 its readers and its scores files in the results page.
@@ -138,11 +142,11 @@ the changed-only sheet. Every measurement of this change therefore uses a comple
 The changed-only behaviour of `blind` without `--complete` stays for the suites that use it today.
 
 **Preparation path.** Until group 6 the `app` arm prepares a book as `BookRunner` does today: it asks for the brief,
-accepts it, runs the names pass with the model scan and rechecks the narrator before it starts the job. The baseline
+accepts it, runs the names pass and rechecks the narrator before it starts the job. The baseline
 (task 1.7) and the lean run (task 4.9) are both taken that way, so they compare like with like, and the results page
 labels them "harness preparation". Task 6.4 deletes those manual steps: `BookRunner` starts the job on a new project
-with defaults and the run's own Prepare stage does the work (no model scan), which is the path the window and the
-command line take. Task 6.12 measures that path once on the panel against the lean run and labels the difference in
+with defaults and the run's own Prepare stage does the work, which is the path the window and the command line
+take. Task 6.12 measures that path once on the panel against the lean run and labels the difference in
 preparation; every later measurement (group 7) uses it.
 
 **Validity gate (task 1.7).** The panel is trusted only if it separates a known-better arm from a known-worse one
@@ -153,7 +157,7 @@ by more than 0.3 with both readers ranking them the same way.
 person's action). Replaying logged requests (`--suite replay`): a logged request cannot show a change of the request.
 Reference translations with an overlap metric: none exist and the review showed overlap does not follow quality.
 
-**Risks.** Readers are a model and one person; the human subsample is 20 paragraphs. The panel is two slices; a change
+**Risks.** The gates rest on two model reader families; the one human reading is 20 paragraphs at the end. The panel is two slices; a change
 that only helps other books is not seen.
 
 ### D2 — One baseline run, measured by the tool that measures the result
@@ -534,7 +538,6 @@ rows of `project_docs`, told apart by `S/sqlite/DocKind` (`LEXICON`, `CHAPTER_SU
 | `GlossaryDocument` → `GlossaryEntry` | `genderSeedTried` and `meaningChoice` removed | D6, D21 |
 | `Project` | gains `PrepareState prepare` (`briefDone`, `namesDone`) | D20 |
 | `Project` → `BookBrief` | gains `dialByModel` | D21 |
-| `RunRecord` | gains `RenderingReport` (null until a run's Proofread stage ended) | D19 |
 | `ModelSettings` (measured seconds per `CallKind`) | `CallKind.TERM_CHOICE` removed; `MERGE` added only if 7.1 passes | D7, D22 |
 | settings table (not a shape) | `brief.lastTarget` added; `run.defaultDial` absent by default | D21 |
 | `Project` → `BookBrief` | `apostrophe`, `quoteStyle`, `defaultAddress`, `conventions` removed with `Address`, `AddressForm`, `QuoteStyle` | D26 |
@@ -600,11 +603,18 @@ and `P/qa/NeverWorse.java` unchanged in what they judge: they still get a curren
 
 **Changes.** `P/prompt/ProofreadSchema.java` (`edits` required); the two reply lines of
 `modules/pipeline/src/main/resources/ua/bookloom/pipeline/prompt/proofread.user.prompt`; `P/proofread/ProofreadCall.java`
-(`Answer.changes` becomes the ordered edits per id; applying is a new package-private `P/proofread/EditApplier.java`);
+(`Answer.changes` becomes the ordered edits per id; applying one edit is the package-private static
+`ProofreadCall.applied(current, find, replace)`, which takes the place of the private `changed` — no new class);
 `P/proofread/WindowReader.java` loops over a segment's edits; `P/qa/NeverWorse.java` `byScore` uses `isSmallRewrite`
 for every focus; `L/pseudo/PseudoChatModel.java` answers `{"edits":[]}`; the proofread prompt's version in
 `P/proofread/WindowFingerprint.java` rises, so stored verdicts of the old shape are read again.
 The output cap stays as it is (`OutputLimit.forBatch` over the items read): it is now an upper bound never reached.
+
+**This is the minimum, and it stays the minimum** (owner, 2026-11-15: "do not overcomplicate"). One reply shape; an
+edit is applied by an exact find-and-replace inside its paragraph; each edit is judged by the gate that already
+judges a proofread rewrite. There is no second reply format to fall back to, no fuzzy or case-insensitive matching,
+no merging or reordering of edits, no edit model beyond the three strings, and no new class. An edit that does not
+apply is dropped.
 
 **Rejected.** Keeping `{"unchanged":true}` beside the list: two ways to say one thing, and the model never used it.
 Short ids in the reply (est. −22 s): an edit list names an id only for a change. Salvaging edits from a cut reply: a
@@ -794,7 +804,7 @@ built from named parts, each with one job, so no class does five things:
 | `P/proofread/RenderingAgreement` (new, pure) | from a tally: which rows agree, which are pinned or filled, which paragraphs hold a minority rendering |
 | `P/proofread/TermSweep`, `CodeSweep` (existing) | replace a minority rendering form by form and store through `RevisionWriter` |
 | `P/proofread/DialogueSweep` (new) over `P/typography/DialogueStyle` (new, pure) | one dialogue style per book (D18) |
-| `P/proofread/ConsistencyPass` (new) | the orchestrator only: calls the parts in order, honours a stop between them, returns the report |
+| `P/proofread/ConsistencyPass` (new) | the orchestrator only: calls the parts in order, honours a stop between them, returns how many paragraphs it fixed and left |
 
 **Where it runs.** In `P/proofread/ProofreadStage.run`, after the flush of the Translate stage and before
 `RunAudit.run`: flush → `ConsistencyPass` → flush → `RunAudit.run` → `StageStarted(PROOFREAD)` → `codePart`. The
@@ -828,7 +838,8 @@ pass again; with every row already agreed and swept it changes nothing.
    deferral whose previous rendering is the minority word (`DeferralRegister`), then run the term sweep: it replaces
    form by form through `PinnedForms.renamings`, restores through the document gate, stores through `RevisionWriter`
    (a person-edited paragraph gets a proposal). `TermSweep.notSwept` needs no change: the rows are pinned by then.
-4. Dialogue style (D18), then the report, counted again from the stored texts (D19).
+4. Dialogue style (D18). The pass builds no report: the rendering report is counted when the Proofread stage ends
+   and when the Export screen reads its figures (D19).
 
 **Why.** `research/review-digest.md#f14--consistency-is-followed-but-not-enforced-or-checked-over-the-whole-book`, `research/review-digest.md#consistency-numbers`. Right rows sit at 98–100 %; the undecided ones at 52–58 % and 75 %; 85 %
 and 87 % are the cases a reader would call decided. 80 % separates them. Five paragraphs is one more than the
@@ -884,28 +895,28 @@ inflected forms (`PinnedForms`). Two base spellings that the fold makes equal �
 so a `Бренс` the sweep could not replace keeps the row `SPLIT`. So 19 `Гейл` and 1 `Хейл` pins the name and, if the sweep could not replace the one paragraph or a person
 edits it back, still reads `SPLIT` with "19 · 1"; the summary's "the same all through" counts `AGREED` rows only.
 
-**Freshness.** A report is always a recount of the stored texts at a stated moment; the tally the pass took before
-its sweep is never reused for it.
+**Freshness: the report is never stored.** A report is always a count of the stored texts at the moment somebody
+reads it; no copy is kept anywhere, so none can go stale.
 
 | Moment | Who counts | Where it goes |
 |---|---|---|
-| The consistency pass ends (after its sweep and its dialogue rewrite) | `ConsistencyPass`, a second `RenderingTally` | the pass's INFO line and its result |
-| The Proofread stage ends (after its last stored change: a proofread edit, a merge) | `ProofreadStage`, a `RenderingTally` | `RunRecord.renderingReport` and `JobReport`; this is the run's snapshot, printed by `C/RunReport` and read by the eval harness as its names metric |
-| The Export screen reads its figures (a project opens, a run ends, a review-desk action is stored, a book is exported) | `ExportService.openWork`, a `RenderingTally` over the stored records | `ExportOpenWork.renderings`, shown in the fold; the stored snapshot is not shown there |
+| The Proofread stage of a run ends (after its last stored change: a proofread edit, a merge) | `ProofreadStage`, a `RenderingTally` | `JobReport.renderingReport`, the run's result: `C/RunReport` prints it, the eval harness reads it as its names metric, and one INFO line carries its counts |
+| The Export screen reads its figures (a project opens, a run ends, a review-desk action is stored, a book is exported) | `ExportService.openWork`, a `RenderingTally` over the stored records | `ExportOpenWork.renderings`, shown in the fold |
 
 So a row the sweep corrected reads agreed, a row left split keeps its counts, and a paragraph the person edits after
-the run is in the next reading of the Export screen. `fixedParagraphs` and `notFixedParagraphs` are the pass's own
-counts and are carried into the snapshot; the Export recount shows names and speech only.
+the run is in the next reading of the Export screen. `fixedParagraphs` and `notFixedParagraphs` are the consistency
+pass's own counts and are carried into the run's report; the Export recount shows names and speech only.
 
 **Why.** `research/review-digest.md#f14--consistency-is-followed-but-not-enforced-or-checked-over-the-whole-book` option (a), first in the review's order of value; `research/review-digest.md#f7--the-evals-cannot-see-translation-quality`:
 a consistently wrong term scored 100 % on the old figure.
-**Reuses.** `RenderingTally` (the one counting rule); `RunRecord`; `ExportService.openWork` and `ExportOpenWork` (the
+**Reuses.** `RenderingTally` (the one counting rule); `JobReport`; `ExportService.openWork` and `ExportOpenWork` (the
 read the Export screen already makes before anything is written, D5); `ExportReportLines` (the Export screen's line
 builder).
-**Rejected.** A separate audit class: the tally is the count. Showing the stored snapshot on Export: a review-desk
-edit after the run would leave it stale, with nothing to invalidate it. Showing it on Names & style: the
+**Rejected.** A separate audit class: the tally is the count. Storing the report on `RunRecord` and counting a third
+time when the consistency pass ends (the first draft): the stored copy had no reader — the window counts again and
+the command line and the harness read the run's result — and a review-desk edit would leave it stale (D46). Showing it on Names & style: the
 person decides on Export whether the book is ready; one link from a split row to the glossary is enough.
-**Risks.** `RunRecord` grows by a few hundred rows; it is one JSON document per run. The Export recount reads every
+**Risks.** The Export recount reads every
 decided body paragraph on each refresh; it shares the read and the time budget of D5.
 
 ### D20 — Prepare steps inside the run
@@ -916,9 +927,10 @@ decided body paragraph on each refresh; it shares the read and the time budget o
   audience; `Register.NEUTRAL`; `Narrator.unspecified()`; `likely` empty), call `SetupAssistant.suggestBrief(projectId,
   model, detectedContext, emit)`, merge the answer into the brief with `BriefMerge.apply` (below) and save the project
   with `briefDone` set, in one `ProjectRepository.save`. Otherwise mark the step done with no call.
-- **Names**: when `Project.prepare().namesDone()` is false, call `NamesPass.run(projectId, model, detectedContext,
-  emit)` with the model scan off (a new `NamesPass.Options(boolean modelScan)`; the window button passes `true`),
-  then `SetupAssistant.recheckNarrator`. The pass's result and the mark are one write (below).
+- **Names**: when `Project.prepare().namesDone()` is false, call the existing `NamesPass.run(projectId, model,
+  detectedContext, emit)`, then `SetupAssistant.recheckNarrator`. The pass's result and the mark are one write
+  (below). The pass is called as it is: it has no option, and it never sends the model name scan (`PRESCAN`), which
+  only `GlossaryService.prescan` behind the Names & style button sends.
 Both steps run through the job's own model (so `InferenceGate`, cancellation and the call ledger apply) and announce
 themselves with the existing `StageStarted`, `StepsPlanned`, `StepChanged`, `ModelCallStarted`/`Finished` events.
 Outcomes: success → result and mark in one write; `cancelled` → the job stops or pauses, nothing written;
@@ -938,6 +950,22 @@ it false, so every test that builds a request directly keeps the run it had; the
 the command line (`C/TranslateCommand`) pass true, as do the eval harness's `BookRunner` (task 6.4) and the new
 tests; `C/RunOptionsParser` maps `--code-prepare` to false;
 `--review-names` and `C/NameReview` are deleted.
+
+**The names step filters the code's candidates with the model** (owner decision of 2026-11-15: the code finds
+candidates; the model, in one call or several depending on how many there are, filters out the junk before the names
+are used). The pass the run calls already does this, so nothing is added: its second step
+(`NamesPassStage.NAMES`, `P/glossary/TermReview.decide`) takes every open candidate the deterministic scan left
+after the code's own triage (`CandidateTriage`). The candidates the dial's `NamesPlan` picks — written at least 3
+times, 5 at Fast, at most 80 — are read in context, one `TERM_READING` call each, and decided by the code from the
+readings. Every other candidate is sent for a verdict through the existing `REVIEW_TERMS` prompt in batches of at
+most `TermReview.BATCH_SIZE = 40` candidates and `INPUT_BUDGET_TOKENS = 5000` input tokens (`ReviewBatches`), so
+240 candidates of which 80 are read give 80 reading calls and 4 verdict calls. A candidate judged not a name is
+removed when its type and gender were never set, before the step that asks for renderings. A failed call ends the
+pass with nothing written, and the run then goes on with the code scan's rows (the outcomes above); no per-batch
+partial result is added, because the pass writes once or not at all. No prompt kind is added. What the step is
+called on the screen changes, so that the person sees it: `progress.names.step.names` reads "Check which
+candidates are names" («Перевірити, які кандидати є іменами») instead of "Decide the names" (task 6.6).
+"Names" here means names, places and titles: the recurring common words are removed by D7.
 
 **One rule for applying a suggestion.** The production rule is `U/state/SuggestionMerge.withSuggestion` (with
 `likelyAfter`, `registerFor`, `narratorFor`): it keeps what the person wrote where the model said nothing, never
@@ -985,6 +1013,18 @@ The Book Brief is read-only while a translation is at work, so the stored brief 
 takes nothing when another book is open. The Book Brief then shows the run's fields with their likely marks, and a
 later edit saves on top of them.
 
+**No edit can fall between the reading and the replacement.** The reading is asynchronous, and today the Book Brief
+becomes editable the moment the run leaves "at work" (`U/state/BriefLock.readOnly` is bound to
+`RunStateSource.view().isAtWork()`), so an edit made before a delayed reading arrives would be undone by the whole-
+brief replacement and the next save would store that. The rule: the Book Brief stays read-only until the stored
+brief has been adopted. `StoredBriefFollower` holds one FX-thread boolean property, `adopting`: it is set in the
+same listener call that starts a reading — the follower listens to the `RunStateSource.view()` the lock reads, so
+the lock never opens in between — and cleared when the reading is delivered on the FX thread, adopted, refused
+(another book is open) or failed. `BriefLock.readOnly` becomes "at work or adopting". A pause during the Translate
+stage is covered the same way: the reading started at the end of Prepare keeps the brief read-only until it
+arrives. Rejected: dropping a delayed result when the brief was edited meanwhile and reading again — it needs an
+edit counter on `CurrentProject` and a retry path, where the existing lock needs one more term.
+
 While the names step runs, Names & style is read-only exactly as under a hidden names pass (the `app-shell`
 requirement "Make the screen that hidden work writes to read-only"; task 6.6).
 
@@ -1001,7 +1041,9 @@ repository calls: a framework for one use. Persisting a half-run pass for resume
 writes once; storing the staging is a new store for a six-minute step. Deriving "names prepared" from the glossary's
 content: the per-chunk spelling hint writes targets during the run, so the content cannot tell. Running the model
 name scan inside the run: the glossary requirement "Run the model scan only when the person asks for it" stays true
-and the run stays shorter. A new kind of event for Prepare progress: the existing ones carry it.
+and the run stays shorter. An option on `NamesPass.run` that switches a model scan on or off (the first draft): the
+pass holds no model scan once D7 removed the recurring-term steps, so the option would have no reader (D46). A new
+review step with its own batching in the run: the pass's second step already is that review. A new kind of event for Prepare progress: the existing ones carry it.
 **Risks.** Pausing during a step throws the step's calls away (up to about 3 minutes after D7). The first
 start-to-first-paragraph time grows by the two steps; the Translating screen must show the step (events) — task 6.10
 checks it in the running app.
@@ -1015,9 +1057,9 @@ checks it in the running app.
   `GlossaryEntry.meaningChoice` are deleted with their message keys. The questions stay answerable where the data
   lives: "Who narrates?" on the Book Brief, the Gender and Translation columns on Names & style.
 - **Target language.** New `AppSetting.LAST_TARGET_LANGUAGE` (`brief.lastTarget`), written by `P/run/RunStart` when
-  a run starts; `P/project/NewBookBrief.of` pre-fills it unless it equals the source. With no target, Start asks in
-  the small dialog of D23 (`U/dialog/TargetLanguageDialog`); the run that then starts stores the answer as the last used
-  target.
+  a run starts; `P/project/NewBookBrief.of` pre-fills it unless it equals the source. With no target, the
+  automatic translation on Import asks in the small dialog of D23 (`U/dialog/TargetLanguageDialog`); the run that
+  then starts stores the answer as the last used target.
 - **Quality.** `AppSetting.DEFAULT_DIAL` has no default: it is declared with a null default value, as
   `AppSetting.LANGUAGE` and `LAST_PROJECT` are (the record's `defaultValue` is nullable), and an absent key means "by
   the model". `BookBrief` gains `dialByModel`; `NewBookBrief` sets it when the setting is absent. At run start, when
@@ -1027,17 +1069,30 @@ checks it in the running app.
   takes the saved dial through `StoredBriefFollower` (D20). `Tier` is the existing class
   (`L/profile/IdentityPattern.LARGE_FROM_B = 14.0`; an unknown model is `SMALL`). Choosing a dial on the Book Brief
   clears the flag.
-- **Recommendation.** `U/state/ModelRecommendation`: every text names the recommended model `gemma4:26b` (new constant
-  `LARGE_NAME`); its pull tag stays the data value `LARGE` (today `gemma4:26b-a4b`) and is shown only inside the
-  `ollama pull` command; `OPT_IN`, `OPT_IN_FROM_GB`, `optInTag`
-  and `optIn()` are deleted; `LARGE_FROM_GB = 24` stays. The texts name what the small model costs.
+- **Recommendation** (owner decision of 2026-11-15). The app recommends any large model the computer can run and
+  only suggests one by name. The one line all three places show (`U/control/RecommendationLine`, used by the
+  provider form's `U/screen/ModelField`, `U/dialog/ModelPickDialog` and `U/screen/ProjectsEmptyView`) says: choose
+  the largest model this computer can run; a larger model translates better; which one is best depends on the
+  languages; and then one suggestion from `U/state/ModelRecommendation` — from `LARGE_FROM_GB = 24` gemma4:26b, "a
+  suggestion that did well for Ukrainian", shown under the new constant `LARGE_NAME = "gemma4:26b"` with its pull
+  tag `LARGE` (today `gemma4:26b-a4b`) only inside the `ollama pull` command; under 24 GB `gemma4:e4b`, "a
+  suggestion that fits", with the note that gemma4:26b needs 24 GB. `OPT_IN`, `OPT_IN_FROM_GB`, `optInTag`,
+  `optIn()` and the key `model.recommend.optin` are deleted: gemma4:31b is not offered. No table of models by
+  language is built: the review measured Ukrainian targets only, so there is no data for one. The quality default by
+  model size (below, "Quality") is unchanged.
 - **Special models.** None: no profile row, prompt, format or reader is added for TranslateGemma, Qwen or
   Hunyuan-MT (`inference` "Build the same requests for every model").
-- **One action from Import.** The Import toolbar offers Start translation (`specs/book-import/spec.md`), wired to the same
-  START command as Names & style, and like it (`NamesStyleView.startRun`) it opens the Translating screen, so a refused
-  start or a provider error is shown there by its banner. With no AI model it is disabled with the tooltip that names
-  the model and Import shows no banner (D23). With no target language it is disabled with the Book Brief tooltip until
-  task 8.4 makes every Start ask for the language.
+- **One action from Import: the automatic translation** (owner decision of 2026-11-15). The Import toolbar offers
+  `Translate automatically` («Перекласти автоматично») as its main action beside Continue
+  (`specs/book-import/spec.md`), with the explanation "BookLoom fills in the Book Brief, finds and prepares the
+  names, translates and proofreads the book by itself. You can review everything afterwards." It is offered exactly while the run
+  controls offer a start (`U/state/Controls`, read through `RunRow` as the Translating toolbar reads them), so a
+  paused or stopped run — one paused in Prepare at 0 % too — gets Go to Translating instead. It is wired to the
+  same START command as Names & style, and like it (`NamesStyleView.startRun`) it opens the Translating screen, so a
+  refused start or a provider error is shown there by its banner. "Automatic" is not a second kind of run: every
+  run does the Prepare steps of D20 for what the person left undone, so the action skips the screens, never the
+  work. With no AI model it is disabled with the tooltip that names the model and Import shows no banner (D23).
+  With no target language it is disabled with the Book Brief tooltip until task 8.4 makes it ask for the language.
 - **Readers of the removed Start plumbing**, beyond the classes above: `U/screen/TranslatingTools`,
   `U/screen/NamesDialogs`, `P/glossary/NamesTranslation`, `GlossaryService.unknownGenders` with
   `A/pipeline/UnknownGender` and `P/glossary/CharacterMentions` (they exist only for the gender card).
@@ -1125,59 +1180,67 @@ books cannot give 60, the experiment fails by rule (a) and is removed.
 
 ### D23 — Where the cannot-start notice shows, and the question at Start
 
-**Decision.** The "Cannot start yet" banner is shown only on Names & style and Translating. It is never raised for a
-missing target language: a brief without one raises no notice, `Start translation` stays enabled, and a press opens a
+**Decision.** The "Cannot start yet" banner is shown only on Names & style and Translating. Both steps stay locked
+while the brief has no usable language pair (owner decision of 2026-11-15: no step that needs the language opens
+before it is chosen), so the banner can never be about a missing target language and that case of it is removed. A
+missing target is asked for in one place besides the Book Brief: `Translate automatically` on Import (D21) opens a
 new small dialog, "Translate into which language?", that stores the target in the brief and goes on with the start.
-Translating is unlocked in the navigation while only the target language is missing; Names & style stays locked.
 
-**Rule for the other missing inputs.**
+**Rule for the missing inputs.**
 
 | Missing | Before a press | At a press | Where the banner shows |
 |---|---|---|---|
 | Book | nothing (no project is open, so no run banner exists and the five steps are locked) | unreachable | nowhere |
-| Target language | nothing; Book Brief marks its target box "Required…"; Names & style is locked with its reason | the dialog | never |
-| AI model | title-bar chip `No AI model` and the red navigation footer, on every screen; Start disabled with the tooltip naming it | unreachable (Start is disabled) | Names & style, Translating |
+| Target language | nothing; Book Brief marks its target box "Required…"; Names & style and Translating are locked with their reason | on Import, `Translate automatically` opens the dialog; the two `Start translation` buttons are on locked screens | never |
+| AI model | title-bar chip `No AI model` and the red navigation footer, on every screen; every start action disabled with the tooltip naming it | unreachable (the action is disabled) | Names & style, Translating |
 | A refused start or a failed preparation (`RunNotice.Refused`, `RunNotice.ProviderError`) | — | the banner in its own words | Names & style, Translating |
 
+**Which starts are reachable without a target (read in the code).** `state/StepAvailability.reasonFor` locks
+`NAMES_STYLE` and `TRANSLATING` while `BriefLanguages.isUsable` is false; that is unchanged. The start actions are
+`Start translation` on the toolbars of those two screens (`state/RunToolbar.start`) and the new
+`Translate automatically` on Import. The title bar holds Pause, Resume and Stop only, and Continue on Projects opens
+a project that has a run, hence a target. So the Import action is the dialog's one caller, and the missing-target
+case of the banner has no screen left to show on.
+
 **Why.** `research/ui-audit-shell-dialogs.md#defects` D-06: the banner is 120 pt tall on screens where nothing can be
-done about it. Code: `state/MissingInputNotice.briefChanged` raises the notice as soon as a brief has no target;
-`control/RunBanner.refresh` pins it on every screen; `state/StepAvailability.reasonFor` locks both screens that hold
-Start, so today a Start press without a target language is impossible and the banner is the only signal.
+done about it. Code: `state/MissingInputNotice.briefChanged` raises the notice as soon as a brief has no target and
+`control/RunBanner.refresh` pins it on every screen.
 
 **Reuses.** `state/RunStateView.BannerView` (its `translatingOnly` flag becomes a place: everywhere, Translating only,
 start screens only); `control/RunBanner.refresh`; `dialog/FormCard`, `dialog/ModalCard.Size.DIALOG`;
 `control/SearchableCombo.parsed` with `i18n/LanguageNames` exactly as `dialog/TranslateIntoDialog.languageBox` builds
 it; `state/BookBriefViewModel.setTargetLanguage` (it replaces the brief synchronously through
-`CurrentProject.replaceBrief`, renames an automatic project name and saves).
+`CurrentProject.replaceBrief`, renames an automatic project name and saves); `state/StepAvailability`, unchanged.
 
 **Changes.** `state/RunStateView` (`BannerView.where`), `state/RunBanners` (`cannotStartBanner` → start screens; the
 `TARGET_LANGUAGE` arm of `fixFor` and `RunStateView.GO_BRIEF` are deleted), `control/RunBanner` (`DESTINATIONS`,
 `commands`, `actionsOf` lose `GO_BRIEF`), `state/MissingInputNotice.briefChanged` (only withdraws),
-`state/RunToolbar.start` (no `noTarget` branch), `state/StepAvailability.reasonFor` (Translating: locked only for no
-book or for two equal languages), new `dialog/TargetLanguageDialog` and `dialog/TargetLanguagePrompt` (the interface
-the Translating view calls to ask, so a test answers with a recording double, as `dialog/TranslateIntoPrompt` is for
-the other dialog), the language box
+`state/RunToolbar.start` (no `noTarget` branch: its two screens are locked without a target), new
+`dialog/TargetLanguageDialog` and `dialog/TargetLanguagePrompt` (the interface the Import view calls to ask, so a
+test answers with a recording double, as `dialog/TranslateIntoPrompt` is for the other dialog), the language box
 moved from `TranslateIntoDialog.languageBox` into a package-private `dialog/LanguageBoxes.targets(...)` used by both
-dialogs, `screen/TranslatingView.runCommands` (the START command asks first), `screen/TranslatingDialogs`. Bundle keys
-removed: `run.action.goBrief`, `run.action.goBrief.tip`; and the `target` arm of the two `select` messages
-`run.banner.cannotStart` and `translating.missingText` (both keys stay: their `book`, `model` and `other` arms are
-still used). `RunNotice.Input.TARGET_LANGUAGE` stays: `Input.firstMissing` still answers it, and
-`MissingInputNotice.refuseIfMissing` then returns empty without publishing a notice, so a start that reaches the view
-model without a target (a path that skipped the dialog) starts nothing. Keys added:
+dialogs, and the Import toolbar's action of task 6.10 (target present → start; absent → the prompt, then
+`setTargetLanguage`, then start). Bundle keys removed: `run.action.goBrief`, `run.action.goBrief.tip`; and the
+`target` arm of the two `select` messages `run.banner.cannotStart` and `translating.missingText` (both keys stay:
+their `book`, `model` and `other` arms are still used). `RunNotice.Input.TARGET_LANGUAGE` stays: `Input.firstMissing`
+still answers it, and `MissingInputNotice.refuseIfMissing` then returns empty without publishing a notice, so a start
+that reaches the view model without a target (a path that skipped the dialog) starts nothing. Keys added:
 `dialog.targetLanguage.title`, `.body`, `.start`, `.start.tip`, `.used`.
 
 **Rejected.**
+- Unlock Translating while only the target is missing, so that its Start can ask (the first draft of this
+  decision) — the owner decided that no step that needs the language opens without it.
 - Reuse `dialog/TranslateIntoDialog` as is — it creates a *new project* from a `BookGroup` (name field, "Start from"
-  lines, "Create and open the brief"); it cannot set the open brief's target.
+  lines, "Create and open the brief"); it cannot set the open brief's target. No other small language dialog
+  exists (`dialog/NoTargetDialog` asks about glossary rows without a rendering).
 - A mode flag on `TranslateIntoDialog` — two different jobs in one card, half of its nodes hidden per mode.
-- Keep Translating locked — then no Start exists to press and the owner's "a popup at Start" is unreachable.
+- Disable `Translate automatically` without a target and send the person to the Book Brief — the first book of
+  every person would then need the screen the action exists to skip.
 - Hide the banner per screen in `RunBanner` by a list of screens — the place belongs to the banner's row, where
   `translatingOnly` already lives.
 
 **Risks.** The chain of Start questions (`dialog/NarratorDialog.startAfterAsking`) is deleted by task 6.7 (D21) before
-this group, so the target question is the only thing a Start may ask. The Import toolbar's Start (task 6.10) uses the
-same START command, opens the Translating screen and asks the same question; with no AI model it is disabled with the
-tooltip, and Import still shows no banner. A language the same book already uses is
+this group, so the target question is the only thing a start may ask. A language the same book already uses is
 not confirmed in this dialog (the name question lives on the Book Brief, `state/BriefPairGuard`); the dialog says so.
 
 ### D24 — About this book opens with the book
@@ -1424,7 +1487,7 @@ and 9.10 (W-24 only).
 W-09, W-10 (table inside page scroll, empty space under few rows — "note only" in the audit), W-14 (Copy button row),
 W-16 (chip position on "This run"), W-25 (two form styles in "Where to save"), W-26 and D-21 (text glyphs in buttons —
 needs an icon decision per button), W-29 (slider legend), W-30 ("change" link), W-35 (Projects bar x), W-37 (back-quotes
-in the first-launch hint — that sentence is rewritten with the recommended model by task 6.11),
+in the first-launch hint — that sentence is rewritten with the model advice by task 6.11),
 S-11, S-25 (scroll-bar gutters inside cards), S-12 (Details link position), S-13 (four filled Test buttons — the audit
 calls it the owner's taste), S-19 (test dialog's stage switch, hand), S-20 (Storage cards' heights, path breaks),
 S-22 and D-27 (focus ring after a synthetic click, hand), D-12 (dialog position — consistent, "possibly intended"),
@@ -1453,16 +1516,16 @@ under `.temporary_context/ui-audit-2026-11-14/after/` with the audit's shot numb
   duplication.
 - **Jobs.**
   - `build.yml`: `on: push: branches: ['**']` (a branch filter alone never matches a tag push). Jobs `detect` and
-    `build` (D33). `build` runs `scripts/ci-verify.sh build`. Timeout 15 min.
+    `build` (D33). `build` runs the `build` command of D31. Timeout 15 min.
   - `verify.yml`: `on: pull_request: branches: [master]`. Jobs `static`, `test-core`, `test-ui`, `package`
     (`uses: ./.github/workflows/package.yml`, version `dev`, retention 14 days) and `verified`
     (`needs` all four, `if: always()`, fails unless every needed result is `success`). All four start together;
     nothing waits for `static`. Timeouts 20 / 30 / 30 / 30 min.
-  - `static` steps: strict lock check (both builds, without `--no-daemon`), `scripts/ci-verify.sh static`,
-    `scripts/ci-verify.sh --check-parity`, `python3 scripts/sync-agent-files.py --check`,
+  - `static` steps: strict lock check (both builds, without `--no-daemon`), the `static` command of D31,
+    `python3 scripts/sync-agent-files.py --check`,
     `python3 -m unittest discover -s scripts/tests`, `python3 scripts/check-docs.py` (D40), `./gradlew checkLicense`.
-  - `test-core` and `test-ui`: Xvfb as today (`ci.yml:103-118`), then `scripts/ci-verify.sh test-core` /
-    `test-ui`; test reports uploaded on failure as today.
+  - `test-core` and `test-ui`: Xvfb as today (`ci.yml:103-118`), then the `test-core` / `test-ui` command of
+    D31; test reports uploaded on failure as today.
   - Concurrency `${{ github.workflow }}-${{ github.ref }}`, cancel in progress, for `build.yml` and `verify.yml`;
     `release.yml` never cancels. Workflow permission `contents: read` everywhere; only `detect` adds
     `pull-requests: read` and only `publish` has `contents: write`. No secret is used.
@@ -1474,35 +1537,43 @@ under `.temporary_context/ui-audit-2026-11-14/after/` with the audit's shot numb
 - **Rejected.** One job with the gate command (30 min; keeps the old identity rule, loses the speed).
   `paths-ignore` for document-only changes: a skipped workflow leaves the required `verified` check pending, and the
   document check of D40 must run on exactly those changes. `workflow_run` chaining: it shares no compiled output.
-  Skipping the branch build while a pull request is open: the owner accepted the duplicate (decision 13).
+  Building a branch push while its pull request is open: the owner asked on 2026-11-15 to prevent that duplicate
+  where possible, so `detect` skips it (D33).
 - **Risks.** A direct commit to `master` is only compiled, never tested (owner decision 3); the documents say so.
   The estimate of 15–18 min wall clock is unmeasured; task 10.9 measures it.
 
-### D31 — The gate after the split: one script holds the job commands, and a parity check proves they add up
+### D31 — The gate after the split: three job commands that together are the gate command
 
 - **Decision.** The pre-push hook stays one command, `./gradlew clean build check spotlessCheck`
   (`.lefthook/pre-push/quality-gate.sh`, unchanged). The rule "CI runs the pre-push command character for character"
-  becomes "the pull-request jobs together run exactly the tasks of the gate command". `scripts/ci-verify.sh` is the
-  one place that holds the commands:
+  becomes "the pull-request jobs together run exactly the tasks of the gate command". Each command is written once,
+  as one line of the workflow job that runs it, and nowhere else:
 
-  | Mode | Command |
+  | Job | Command |
   |---|---|
-  | `build` | `./gradlew assemble testClasses :app:archTestClasses --build-cache` |
+  | `build` (`build.yml`) | `./gradlew assemble testClasses :app:archTestClasses --build-cache` |
   | `static` | `./gradlew build check spotlessCheck -x test -x jacocoTestCoverageVerification --build-cache` |
   | `test-core` | `./gradlew test jacocoTestCoverageVerification -x :ui:test --build-cache` |
   | `test-ui` | `./gradlew :ui:test --build-cache` |
-  | `--check-parity` | dry-runs the gate command and the three verify modes; fails unless the gate's task set, without the `clean` tasks, equals the union of the three |
 
-- **Why.** `research/ci-and-release.md#open-decisions-for-the-owner` decision 1. A written mapping in a comment goes
-  stale silently; `--dry-run` task lists compare in under a minute and fail the `static` job when a new task joins
-  `check` and no job runs it. `-x test` must travel with `-x jacocoTestCoverageVerification`: the coverage task
+  The three pull-request commands add up to the gate by how they are written: `static` is the gate command minus two
+  named tasks, and `test-core` plus `test-ui` are exactly those two tasks. A task that later joins `check` runs in
+  `static` with no edit.
+- **Why.** `research/ci-and-release.md#open-decisions-for-the-owner` decision 1 (its default: keep the hook, restate
+  the rule, list the mapping). `-x test` must travel with `-x jacocoTestCoverageVerification`: the coverage task
   depends on `test` and fails a module at 0 % without execution data
   (`modules/build-logic/src/main/kotlin/bookloom.coverage-conventions.gradle.kts`, checked; applied by `:api`,
   `:util`, `:document`, `:llm`, `:persistence`, `:pipeline`, not by `:ui` or `:app`).
-- **Changes.** New `scripts/ci-verify.sh`; the header comments of the workflows and `lefthook.yml`; the "one rule"
-  section of `docs/project/ci-and-hooks.md`.
-- **Rejected.** Changing the hook to the split commands (three Gradle starts locally for no gain). Dropping `clean`
-  from the hook (it is what makes the local gate independent of incremental state).
+- **Proof, once.** Task 10.2 dry-runs the gate command and the three job commands, drops the `clean` tasks, compares
+  the two sorted task lists and records the result in its commit message. The comparison is three shell lines in the
+  task, not a script that is kept.
+- **Changes.** The workflow files; the header comments of `lefthook.yml`; the "one rule" section of
+  `docs/project/ci-and-hooks.md`, which holds the table above.
+- **Rejected.** A script `scripts/ci-verify.sh` that holds the four commands with a `--check-parity` mode run by the
+  `static` job (the first draft of this design): four one-line commands with one caller each need no wrapper, and
+  the union can only drift when somebody adds an `-x` to a workflow line, which is a one-line diff under review
+  (D46). Changing the hook to the split commands (three Gradle starts locally for no gain). Dropping `clean` from the
+  hook (it is what makes the local gate independent of incremental state).
 - **Risks.** `:app:archTest` runs in `static` without the tests before it (`shouldRunAfter` only, checked); it reads
   compiled classes, so the order does not matter.
 
@@ -1519,7 +1590,7 @@ under `.temporary_context/ui-audit-2026-11-14/after/` with the audit's shot numb
 - **What `doNotCacheIf` does and does not do.** It stops the build cache from storing or serving a `Test` task's
   outputs. It does not switch off Gradle's ordinary up-to-date check: a second local `:ui:test` with unchanged inputs
   and its outputs still on disk reports `UP-TO-DATE`, and that local behaviour is kept. The guarantee to prove is the
-  CI one — a runner has no test outputs, only a restored build cache. The check: run `scripts/ci-verify.sh test-ui`
+  CI one — a runner has no test outputs, only a restored build cache. The check: run the `test-ui` command of D31
   once, delete the test outputs (`modules/ui/build/test-results`, `modules/ui/build/reports/tests`,
   `modules/ui/build/jacoco`) while keeping `.gradle/build-cache`, run it again, and require `:ui:test` to execute
   (its line carries neither `FROM-CACHE` nor `UP-TO-DATE`).
@@ -1531,9 +1602,9 @@ under `.temporary_context/ui-audit-2026-11-14/after/` with the audit's shot numb
   `basic`. Undeclared test inputs (the platform font the fit tests measure with) are the reason tests are never
   loaded from a cache.
 - **Promise, in the documents' words.** A pull-request job can load, for every module whose inputs are unchanged,
-  what an earlier job of the same kind stored: compile outputs from the branch push's `build` job (which runs no
-  analysis task), and analysis outputs only from an earlier `static` job of the same pull request; tests always
-  run. A restored cache entry alone proves nothing, so task 10.9 reads the task outcomes (`FROM-CACHE` on compile
+  what an earlier job stored: compile outputs from a `build` job of the branch (it runs only for pushes made before
+  the pull request was opened, D33) or from an earlier job of the same pull request, and analysis outputs only from
+  an earlier `static` job of the same pull request; tests always run. A restored cache entry alone proves nothing, so task 10.9 reads the task outcomes (`FROM-CACHE` on compile
   and analysis tasks, none on a `Test` task) beside the "Cache restored from key" line. Whether a pull-request run can restore the entry written by the branch
   push (GitHub's cache scope) is confirmed in task 10.9 from the "Cache restored from key" line. If it cannot, the
   documents say that the first run of a pull request compiles once per job and later pushes reuse it; no workflow
@@ -1547,55 +1618,83 @@ under `.temporary_context/ui-audit-2026-11-14/after/` with the audit's shot numb
 - **Risks.** One entry per commit and job counts against the 10 GB repository limit; GitHub evicts the least
   recently used. Local builds are unchanged: without `--build-cache` the directory setting does nothing.
 
-### D33 — A push to master builds only when the commit did not come from a merged pull request
+### D33 — A push builds only when no pull request already covers the commit
 
-- **Decision.** `build.yml` has a `detect` job. On `refs/heads/master` it runs
-  `gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq 'map(select(.merged_at != null)) | length'` and
-  sets `from_pr=true` when the number is above 0. On any other branch, and when the call fails, `from_pr=false`.
-  `build` has `needs: detect` and `if: needs.detect.outputs.from_pr != 'true'`.
+- **Decision.** `build.yml` has a `detect` job with one `gh api` call and one output, `covered`:
+  - On `refs/heads/master` it runs
+    `gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq 'map(select(.merged_at != null)) | length'`
+    and sets `covered=true` when the number is above 0: the commit came from a merged pull request, which verified
+    it.
+  - On any other branch it runs
+    `gh api -X GET "repos/$GITHUB_REPOSITORY/pulls" -f state=open -f base=master -f head="$GITHUB_REPOSITORY_OWNER:$GITHUB_REF_NAME" --jq length`
+    and sets `covered=true` when the number is above 0: an open pull request to `master` exists for the branch, so
+    `verify.yml` builds and verifies the same commit.
+  - When the call fails, `covered=false`: the push is built.
+
+  `build` has `needs: detect` and `if: needs.detect.outputs.covered != 'true'`.
 - **Why.** `research/ci-and-release.md#a3-push-to-master-nothing-after-a-merged-pr-a-build-after-a-direct-commit`:
-  the endpoint was checked on this repository (squash commit `8d507357` → PR 4; `79ffede6`, whose title has no
-  `(#N)`, → PR 3; a direct commit → empty list). A commit-message test is wrong in both directions.
-- **Honest wording.** After a merged pull request a run still appears, with `build` skipped and one job of about 10
-  seconds. "No additional build" is true; "no run" is not possible.
-- **Rejected.** `pull_request: closed` (says nothing to a `push` run). A retry loop: added only if task 10.6's check
-  shows the association missing at push time.
-- **Risks.** The `merged_at` filter matters: an open pull request that contains the commit is also returned.
+  the first endpoint was checked on this repository (squash commit `8d507357` → PR 4; `79ffede6`, whose title has no
+  `(#N)`, → PR 3; a direct commit → empty list). A commit-message test is wrong in both directions. The second
+  lookup is the "one more API lookup" of `research/ci-and-release.md#open-decisions-for-the-owner` decision 13; the
+  owner asked on 2026-11-15 to prevent the duplicate build where possible. It reuses the same job, token and
+  permission (`pull-requests: read`).
+- **Why the open pull request is found by branch name.** The commit endpoint answers for a commit GitHub has already
+  tied to a pull request; a push to a pull-request branch is handled while the pull request is being updated, so
+  that tie can be missing at that moment. The list of open pull requests by head branch does not depend on it.
+- **What follows.** The first push of a branch, made before its pull request exists, is built; every later push is
+  skipped while the pull request is open and built again once it is closed without a merge.
+- **Honest wording.** After a merged pull request, and for a push to a branch with an open pull request, a run
+  still appears, with `build` skipped and one job of about 10 seconds. "No additional build" is true; "no run" is
+  not possible.
+- **Rejected.** `pull_request: closed` (says nothing to a `push` run). Failing the run when the lookup fails (the
+  safe side is to build). A retry loop: added only if task 10.6's check shows the association of a merged commit
+  missing at push time.
+- **Risks.** The `merged_at` filter matters on `master`: an open pull request that contains the commit is also
+  returned by the commit endpoint. GitHub starts no `pull_request` run for a pull request with a merge conflict, so
+  such a push is neither built nor verified until the conflict is solved; the pull request then shows the conflict
+  and no `verified` check, so nothing unverified can be merged.
 
-### D34 — Release: a tag on master builds five archives and publishes them; no tests, one launch check
+### D34 — Release: a tag on master builds five archives and publishes them; no tests and no launch check
 
 - **Decision.** `release.yml` starts on a push of a tag matching `v[0-9]+.[0-9]+.[0-9]+`,
   `v[0-9]+.[0-9]+.[0-9]+-alpha[0-9]+`, `…-beta[0-9]+` or `…-RC[0-9]+`. Jobs:
-  1. `check-tag`: `scripts/release-version.sh "$GITHUB_REF_NAME"` repeats the check with the regular expression
-     `^v[1-9][0-9]*\.[0-9]+\.[0-9]+(-(alpha|beta|RC)[0-9]+)?$` (so `v0.*` is refused), prints `full` (the tag without
-     `v`) and `prerelease` (`true` when the tag holds `-`); then, with `fetch-depth: 0`,
+  1. `check-tag`: one shell step repeats the check with the regular expression
+     `^v[1-9][0-9]*\.[0-9]+\.[0-9]+(-(alpha|beta|RC)[0-9]+)?$` (so `v0.*` is refused) and sets the outputs `full`
+     (the tag without `v`) and `prerelease` (`true` when the tag holds `-`); then, with `fetch-depth: 0`,
      `git merge-base --is-ancestor "$GITHUB_SHA" origin/master` must succeed.
-  2. `package`: `package.yml` with `version: <full>`, retention 1 day. Each leg runs
-     `./gradlew :app:collectDist -PappVersion=<full>`, the packaging script with `APP_VERSION=<full>`, and on the four
-     POSIX legs `scripts/launch-smoke.sh` with `SMOKE_EXPECT_VERSION=<full>`.
+  2. `package`: `package.yml` with `version: <full>`, `smoke: false`, retention 1 day. Each leg runs
+     `./gradlew :app:collectDist -PappVersion=<full>` and the packaging script with `APP_VERSION=<full>`. No image
+     is started.
   3. `publish` (`contents: write`): downloads the five archives, checks the five expected names, writes `SHA256SUMS`,
      `gh release create "$GITHUB_REF_NAME" --draft --verify-tag --generate-notes [--prerelease]` with a notes file
      holding the first-launch steps, uploads the six files, then `gh release edit --draft=false`.
-- **"No tests".** The release compiles and packs; it runs no `test`, `check` or analysis task. The launch smoke stays
-  on the POSIX legs: it starts the built image once and reads four log lines (`scripts/launch-smoke.sh:82-87`,
-  checked). It is a launch check of the file about to be published, not a test suite, and it is the only proof that
-  file starts. The Windows archive is published unlaunched, as today; `docs/known-limits.md` says so.
+- **"No tests and no launch check"** (owner decision of 2026-11-15). The release compiles and packs; it runs no
+  `test`, `check` or analysis task and starts no image on any leg. The launch smoke stays where it is today, on the
+  pull request: `verify.yml` calls `package.yml` with `smoke: true`, so every commit that reaches `master` through a
+  pull request had its five archives built by the same scripts and its four POSIX images started. What a release
+  therefore does not prove is that the images of the tagged build start and carry the tagged version;
+  `docs/known-limits.md` says so, and the owner checklist holds one start of a downloaded archive of the first
+  pre-release.
 - **Dry run.** Two more triggers put the same workflow into dry-run mode: `workflow_dispatch` with an input `version`
   (default `1.0.0-RC0`), and `pull_request` to `master` limited by `paths` to `.github/workflows/release.yml`,
-  `.github/workflows/package.yml`, `scripts/package-*`, `scripts/jpackage-common.sh`, `scripts/launch-smoke.sh` and
-  `scripts/release-version.sh`. In dry-run mode `check-tag` validates `v<version>` with the same script and skips the
-  ancestor check, `package` runs unchanged, and `publish` checks the names, writes `SHA256SUMS`, uploads the six files
-  as one workflow artifact `release-dry-run` and prints the `gh release create` line instead of running it. The
-  publishing steps carry `if: github.event_name == 'push'`.
-- **Why.** `research/ci-and-release.md#a4-release-on-a-semver-tag-on-master`, decisions 8, 9 and 12. A release runs a
-  few times a year; without the pull-request trigger a change to a packaging script would first fail on a real tag.
-  The dry run needs no tag, so nothing misleading is ever published. The first real pre-release, `v1.0.0-alpha1`, is
-  an owner action after the merge.
+  `.github/workflows/package.yml`, `scripts/package-*` and `scripts/jpackage-common.sh`. In dry-run mode `check-tag`
+  validates `v<version>` with the same step and skips the ancestor check, `package` runs unchanged, and `publish`
+  checks the names, writes `SHA256SUMS`, uploads the six files as one workflow artifact `release-dry-run` and prints
+  the `gh release create` line instead of running it. The publishing steps carry `if: github.event_name == 'push'`.
+- **Why.** `research/ci-and-release.md#a4-release-on-a-semver-tag-on-master`, decisions 8, 9 and 12; decision 8's
+  default (a launch smoke on the POSIX legs) was overruled by the owner. A release runs a few times a year; without
+  the pull-request trigger a change to a packaging script would first fail on a real tag. The dry run needs no tag,
+  so nothing misleading is ever published. The first real pre-release, `v1.0.0-alpha1`, is an owner action after the
+  merge.
 - **Reuses.** `gh` on the runner with the built-in token; no release action.
-- **Rejected.** Testing on a throwaway tag (a tag push is irreversible in effect: a release page and a notification).
-  A third-party release action (one more pin for nothing). Making the dry-run workflow a required check (it is
-  path-filtered; `verified` stays the only required check).
-- **Risks.** Two pre-releases of one version carry the same OS-level number `1.0.0`; harmless for portable archives.
+- **Rejected.** A script `scripts/release-version.sh` for the tag check and an expected-version switch in
+  `scripts/launch-smoke.sh` (the first draft of this design): the check is one regular expression with one caller,
+  written in the workflow step, and with no launch in the release nothing would read the switch (D46). Testing on a
+  throwaway tag (a tag push is irreversible in effect: a release page and a notification). A third-party release
+  action (one more pin for nothing). Making the dry-run workflow a required check (it is path-filtered; `verified`
+  stays the only required check).
+- **Risks.** A published archive was never started by the run that built it. Two pre-releases of one version carry
+  the same OS-level number `1.0.0`; harmless for portable archives.
 
 ### D35 — Packaging scripts: five portable archives, one name pattern, no installer types
 
@@ -1613,11 +1712,9 @@ under `.temporary_context/ui-audit-2026-11-14/after/` with the audit's shot numb
   - A version whose first number is `0` is refused by `jpackage-common.sh` and the `.bat` with a message naming
     jpackage's rule; today it silently becomes the placeholder `1.0.0` (`jpackage-common.sh`, `numeric_version`,
     checked). `dev` keeps the placeholder.
-  - `scripts/launch-smoke.sh` reads `SMOKE_EXPECT_VERSION`; when set, the `app started version=` line must hold
-    exactly that version. An environment variable, like the existing `SMOKE_TIMEOUT_SECONDS`, because the one
-    positional argument is already the image path.
-  - `scripts/launch-smoke-readonly-db.sh`, which nothing runs today, becomes a step of `package.yml` on the POSIX
-    legs when the caller passes `extra-smoke: true`; `verify.yml` does, `release.yml` does not.
+  - `scripts/launch-smoke.sh` is unchanged. `package.yml` has one input for starting images, `smoke`: when it is
+    true the four POSIX legs run `scripts/launch-smoke.sh` and `scripts/launch-smoke-readonly-db.sh` (which nothing
+    runs today); `verify.yml` passes true, `release.yml` passes false (D34).
   - `package.yml` also lists the Linux archive and requires `BookLoom/lib/BookLoom.png` (the icon as a file,
     decision 7), requires `BookLoom.app/Contents/Resources/BookLoom.icns` on the two macOS legs and checks that its
     bytes equal the committed `BookLoom.icns` — the workflow holds no icon path of its own: it compares with the path
@@ -1703,7 +1800,7 @@ under `.temporary_context/ui-audit-2026-11-14/after/` with the audit's shot numb
   | `specification/mockups`, `assets/icon` | moved (D37, D36) |
   | `implementation_plan/01_MODULE_INVENTORY.md` | the module and package map not already in `docs/project/repository-map.md` is folded there; the rest dropped |
   | `implementation_plan/notes-corpus-verification.md` | moved to `docs/evaluation/corpus-verification.md` (three Javadoc comments cite its measurements) |
-  | `implementation_plan/CHANGE_BACKLOG.md` | open rows D4, D6, D9, D11, D13, D15, D16, D18 → a section "Document engine" of `docs/known-limits.md`; D20–D25 are already there in words and keep their text until task 11.17 removes what groups 1–9 fixed; everything else dropped |
+  | `implementation_plan/CHANGE_BACKLOG.md` | open rows D4, D6, D9, D11, D13, D15, D16, D18 → a section "Document engine" of `docs/known-limits.md`; D20–D25 are already there in words and keep their text until task 11.24 removes what groups 1–9 fixed; everything else dropped |
   | `implementation_plan/04_ADR_FORMAT.md`, `07_ROADMAP.md` | dropped |
 
 - **Ids.** `ADR-00NN` is cited in 438 files outside the tree (378 under `modules/`), `DD-NN` in 82, `FR-`/`NFR-`/`EC-`
@@ -1819,7 +1916,7 @@ under `.temporary_context/ui-audit-2026-11-14/after/` with the audit's shot numb
 | `.claude/rules/gradle-build-and-quality.md` | body checked against `modules/build-logic` and the five archives of D35 | its `paths:` already say `modules/build-logic/**` (checked) |
 
 The private agent memory index (`~/.claude/projects/-Users-ok-Development-GitHub-book-loom/memory/MEMORY.md`) lies
-outside the repository: task 11.17 lists the entries that describe finished groups and the owner removes or confirms
+outside the repository: task 11.24 lists the entries that describe finished groups and the owner removes or confirms
 them.
 
 ### D43 — Static-analysis leftovers: a verdict for each
@@ -1835,16 +1932,107 @@ them.
 
 ### D44 — The final group: gate, Sonar, hand run from a fresh folder, release dry run, owner checklist
 
-- **Decision.** Group 12 runs, in order: the gate from clean and the strict lock check; the Sonar scan
+- **Decision.** Group 12 runs, in order: the gate from clean and the strict lock check, with the one-off dead-code
+  check of D45; the Sonar scan
   (`export SONAR_HOST_URL=http://localhost:9000`, `export SONAR_TOKEN=…`, `./gradlew sonar -PsonarLocal`,
   `SONAR_PROJECT_KEY=local:bookloom sonar-local report`, from `docs/development/quality-and-ci.md:19-44`; the owner
   starts the server); the window walked by hand on a real book with `BOOKLOOM_DATA_DIR` set to an empty folder, once
-  in English and once in Ukrainian, recording clicks, decisions asked, wall time, flagged count and the number of
+  in English and once in Ukrainian, each run started from Import with `Translate automatically`, recording clicks, decisions asked, wall time, flagged count and the number of
   paragraphs left in the source language (must be 0) in `hand-run.md` of the change; the pull request's `verified`
   check and the dry-run `release.yml` run green, with the five names and `SHA256SUMS` in the `release-dry-run`
-  artifact; `openspec validate finish-app-for-release --strict`; `owner-checklist.md` in the change.
+  artifact; `openspec validate finish-app-for-release --strict`; `owner-checklist.md` in the change, which holds the owner's
+  own reading of 20 panel paragraphs (D1) — a final confirmation that no earlier group waited for.
 - **Why.** The project rule (final group = gate and hand run) and the Definition of Done in `AGENTS.md`.
 - **Rejected.** A release dry run on a tag (D34).
+
+### D45 — Simplification of the existing code: a verdict for each inventory item
+
+- **Decision.** `research/simplification-inventory.md` lists what the code carries today outside this change's own
+  removals: dead classes, methods and constants, code only tests reach, and over-built pieces. Each item gets one
+  verdict here and is carried out by tasks 11.16–11.22, after the removals of groups 1–9 (so a class those groups
+  delete is not touched twice) and before the documents are refreshed. Every item below was read in the code on
+  2026-11-15; the inventory's own evidence is bytecode of 2026-11-12, so each task proves its list again by a
+  `grep` and by compiling every module with its tests.
+
+| Inventory item (section) | Verdict | Task |
+|---|---|---|
+| Classes nothing references (1.1): `SnapshotRendering`, `SnapshotTerm` (with `SnapshotTermTest`), `SnapshotTmHit` in `:api`; `OllamaErrorBody`, `OpenAiErrorBody`, `GgufMetadata`, `GgufIdentity`, `ArchitectureAliases` (with `ArchitectureAliasesTest`), `PipelineTags` in `:llm` — 9 classes; the tenth, `DictionaryWordValidator`, goes with its seam | deleted | 11.16, 11.20 |
+| Methods with no caller (1.2, Appendix A: 45 rows), the port method `ReviewDesk.audit` with `ReviewDeskImpl.audit` (its requirement "Run the audit again on demand" is removed in `specs/review-queue/spec.md`) and the `fold` visitor of `P/run/Step` among them | deleted, except a row whose class groups 1–9 removed or rebuilt (`ReadingCounts`, `SearchableCombo`) and a row that gained a caller in groups 1–9 | 11.16 |
+| Enum constants nothing refers to (1.3): `ModelProfile.Quirk.NO_KNOWLEDGE_HINT`, `CheckedModelId.Verdict.NOT_LISTED`, `RevisionWriter.Change.NEIGHBOUR` | deleted | 11.16 |
+| Stored enums (1.3): `DeferralReason.NAME_UNRESOLVED` and `api/project/BriefField.{FOREIGN_PASSAGES, FOOTNOTES, UNITS, BALANCE, ALSO_TRANSLATE}` | deleted: no code names them outside their declaration, so nothing can write one, and the database is new at this release (D9), so no stored document can hold one. A stored enum constant that any code writes is never removed by this change | 11.16 |
+| `MessageKey` constants nothing refers to (1.4, Appendix D: 7) and the always-false `unused` flag of `BriefCards.card` with `BRIEF_SOON` (3.4) | `ACTIVITY_DETAIL_SEGMENTS`, `REVIEW_RETRY` and `BRIEF_SOON` deleted with their English and Ukrainian lines, and the flag with them. The five others — `SETTINGS_MODEL_LABEL`, `EXPORT_BOOK_TITLE`, `EXPORT_BOOK_AUTHOR`, `DIALOG_SAME_PAIR_KEEP`, `LIVE_MODE` — stay: each is the label key of a `.tip` key the window shows, and `TipKeysTest` holds that a tip extends a key that exists | 11.17 |
+| Three keys of `PR/prompt/languages/ru.properties` nothing reads — `honorifics`, `clippedVocative`, `femSurnameMap` — and `LanguageRules.batchExamples` with `BATCH_EXAMPLE` (1.4) | deleted | 11.17 |
+| Experiment leftovers: `BookIndex.sharing` with `BookIndexSharingTest` (T8); `LongParagraph`, `LongParagraphsTest` and `long-paragraphs.json` (X3) (1.4, 5) | deleted | 11.18 |
+| Repository port methods only the contract tests call (2): `ProjectRepository.findByNameKey`, `.findByPair`, `SegmentRepository.byUnit`, `.firstPending` | deleted from the port, both adapters and the contract tests | 11.19 |
+| `TmRepository.put`, `PromptFrameRepository.all` (2) | kept: `put` is how the contract tests of the three read methods production calls get their entries (writing them through the checkpoint would test the checkpoint instead), and `all` is how two job tests prove that a fixed prompt part is stored once | — |
+| The `WordValidator` seam (3.1): the interface, `NoWordValidator`, `DictionaryWordValidator`, the parameter threaded through 15 main files, `CheckName.UNKNOWN_WORD`, `FindingKind.UNKNOWN_WORD` | removed. Production always binds the no-op, and no word dictionary is bundled or planned (owner decision recorded in `AGENTS.md`) | 11.20 |
+| Name facts only tests read (3.2): 25 components of `L/profile/NameFacts`, 8 of `L/profile/NameOrigin`, and the parser code that fills only them | removed; every component the model settings, the model facts block and the recommendation read stays | 11.21 |
+| Methods only tests call (2, Appendix B: 147 rows outside this change's removals) | by one rule (below) | 11.22 |
+| Three undocumented switches (1.4): `BOOKLOOM_WINDOW`, `bookloom.smoothScroll`, `bookloom.log.scroll` | kept and documented in `docs/development/running.md`; smooth scrolling stays (owner) | 11.24 |
+| Stale baselines `eval/baseline/*.json` (5) | decided by task 1.7, which writes the new baseline | 1.7 |
+
+- **The rule for a method only tests call (task 11.22).** (a) Its tests assert nothing but the method itself: the
+  method and those tests are deleted. (b) A test proves real behaviour through it and production reaches the same
+  behaviour through another entry — the second entry points of `SegmentTranslator`, `BatchDrafter`, `QaEvaluator`,
+  `BookExporter`, `PromptRequests`, `DraftReplyParser`, `ContextBuilder`, `RetryDraft` and `ReviewDesk.retry`: the
+  test is pointed at the production entry and the method is deleted. (c) A test proves real behaviour that no
+  production entry exposes — a probe of held state such as `RunSummaryLogger.heldCallTimes`, or a record wither
+  tests use to build their fixtures (`ProviderConfig.with…`, `ModelFacts.withLanguages`,
+  `SegmentRecord.withRejectedTarget`, `SafeDetails.withAttempt`, `ChatRequest.withSource`,
+  `ModelSettings.withoutRefusal`): the method stays, with the one-line comment `test seam: <what it shows>`. The
+  withers are not moved into a shared test-fixtures source set: that is a build change for no visible gain.
+- **Not in this change, with the reason, so that the choice is visible.**
+  - Splitting or merging the single-user classes the 400-line cap produced (inventory 4.2: 741 classes). A policy
+    question about the cap itself, not a list of deletions; undoing it by hand risks every package for no behaviour.
+  - Restructuring `ui/state` into sub-packages (4.1: 365 classes). A mechanical move that touches every `:ui` import
+    while this change edits the same files; it belongs in a change of its own.
+  - Replacing the 118 hand-written `setWrapText(true)` calls by `Wrapped.*` (3.5). A layout risk on two font
+    platforms with no visible gain; a control a group 9 task already touches is brought under `Wrapped` there.
+  - Single-implementation interfaces that are `:api` ports or have a test fake (3.3: they are what the tests stand
+    on); the five without a fake (`DraftPrompts`, `ModelFormProperties`, `DeleteDataPrompt`, `ExportAnnouncer`,
+    `OpenDocumentRegistry`) are small and left: folding them saves about 250 lines and is not worth a task.
+  - Unread record components outside `L/profile` (3.6, Appendix C), same-named types (3.5) and generating
+    `MessageKey` (4.4): each is a case-by-case or build-logic decision with no dead behaviour behind it.
+- **The inventory's scripts are not kept.** The inventory was made with one-off scripts in the session's scratch
+  folder (`simplify/bc.py`, `an.py` and seven helpers) that read `javap` output. A dead-code checker kept under
+  `scripts/` would be a tool to maintain and to keep in step with the compiler, for a job done once. The final
+  proof is a one-off check written in task 12.1: every symbol this decision marks deleted is found by no `git grep`
+  under `modules/`, and a loop over the top-level classes under `modules/*/src/main/java` finds none that no
+  other main file, `module-info.java` or resource names, apart from the classes that hold a `main` method.
+- **Why.** The owner (2026-11-15): anything in the app that can become stale, any dead code, any over-engineering
+  and unnecessary complexity is fixed and simplified. The inventory's reading: about 1.3 % of the main lines are
+  removable, and the larger simplification is structural, which is why the structural items are named and left.
+- **Risks.** A deletion the bytecode pass called safe is reached by reflection (Guice, FXML, Jackson, `valueOf`): the
+  inventory checked those by `grep`, and each task compiles every module with its tests and runs the module checks.
+
+### D46 — The change's own new pieces: what was cut and what earns its place
+
+The owner's rules for this change (the tasks preamble, "How to implement") were applied to the plan itself on
+2026-11-15. Each new class, script, flag or option was asked: does it have more than one caller in this change, or
+does it guard data, a boundary or something the owner asked for?
+
+| Piece | Verdict | Reason in one line |
+|---|---|---|
+| `scripts/ci-verify.sh` with `--check-parity` | cut | four one-line commands with one caller each; the split adds up by how the commands are written (D31) |
+| `scripts/release-version.sh` and its test | cut | one regular expression with one caller, written in the workflow step (D34) |
+| `SMOKE_EXPECT_VERSION` in `scripts/launch-smoke.sh` | cut | the release starts no image, so nothing would set it (D34) |
+| `package.yml` input `extra-smoke` | merged into one input, `smoke` | one switch says whether images are started (D35) |
+| `NamesPass.Options(boolean modelScan)` | cut | the pass holds no model scan once the recurring-term steps are gone (D20) |
+| `P/proofread/EditApplier` | cut; a static method of `ProofreadCall` | one call site, ten lines (D11) |
+| `RunRecord.renderingReport` and the count when the consistency pass ends | cut | a stored copy with no reader that would go stale (D19) |
+| `.github/workflows/package.yml` | kept | two callers (`verify.yml`, `release.yml`) of a 110-line matrix (D30) |
+| `scripts/check-docs.py` | kept | the mechanical guard against stale documents after 265 files are rewritten; a `grep` cannot check links and headings later (D40) |
+| `U/dialog/TargetLanguageDialog`, `TargetLanguagePrompt`, `LanguageBoxes` | kept | no existing dialog sets the open brief's target; the prompt interface has a recording test double, as the nine other dialog prompts do; the box is built once for two dialogs (D23) |
+| `P/run/PrepModelSteps` | kept | two steps with four outcomes each, tested alone; `TranslationJobImpl` stays the orchestrator (D20) |
+| `RunRequest.modelPrepare` | kept | 25 pipeline test files read the model's requests by position and keep their run (D20) |
+| `--code-prepare` | kept | it has a caller in this change, `scripts/e2e-fixture.sh` (D20) |
+| `ConsistencyPass`, `RenderingTally`, `RenderingAgreement`, `DialogueSweep`, `DialogueStyle` | kept | the tally has three callers; the agreement and the dialogue style are pure rules with their own tests; the sweep stores; the orchestrator keeps `ProofreadStage` to one job (D17) |
+| `eval-score.py blind --complete` and `panel` | kept | a changed-only sheet overstates a gain tenfold in D1's example; every gate is counted over a fixed list of ids (D1) |
+| `A/pipeline/BriefMerge` | kept | it replaces two copies of one rule (D20) |
+| `CheckpointPort.commitNames` with `NamesCommit` | kept | it prevents half a glossary after a crash (D20) |
+
+No class named `…Manager`, `…Coordinator`, `…Registry` or `…Factory` is added by this change (checked by a search of
+`tasks.md` and this file).
 
 ## Risks / Trade-offs
 
@@ -1875,14 +2063,21 @@ them.
 - [The combo box's filter order is observed behaviour of the toolkit, not documented API] → research tests 6–13 pin
   it, row clicks are tested with the robot and with a fired press and release, and one hand check on macOS is part of
   task 8.2 (D25).
-- [A direct commit to `master` is compiled and never tested; the Windows archive is published unlaunched] → the
-  owner's ruleset forbids direct pushes, and `docs/known-limits.md` states both (D30, D34).
+- [A direct commit to `master` is compiled and never tested; no published archive is started by the release run]
+  → the owner's ruleset forbids direct pushes, the pull request that brought a commit to `master` started its four
+  POSIX images, and `docs/known-limits.md` states both (D30, D34).
 - [The cache claim and the pull-request wall time are estimates] → task 10.9 reads both from the first runs and
   corrects the documents (D30, D32).
 - [Folding `docs/spec_baseline` loses valid text] → the fold ledger gives one verdict per file of the frozen manifest and
   `scripts/check-docs.py` fails on a dead path, link or ADR id (D38, D40).
-- [The panel's readers are two model families and one person on 20 paragraphs] → the validity gate of task 1.7 must
-  separate a known-better arm from a known-worse one before any later claim rests on the panel (D1).
+- [The panel's gates rest on two model reader families; the owner reads 20 paragraphs only at the end] → the
+  validity gate of task 1.7 must separate a known-better arm from a known-worse one before any later claim rests on
+  the panel, and the owner's reading is recorded as a final confirmation (D1).
+- [A deletion of code the inventory called dead breaks a path reached by reflection] → each simplification task
+  proves its list by a `grep`, compiles every module with its tests and runs the module checks; a stored enum
+  constant that any code writes is never removed (D45).
+- [A push to a branch whose pull request has a merge conflict is neither built nor verified] → the pull request
+  shows the conflict and no `verified` check, so it cannot be merged in that state (D33).
 
 ## Migration Plan
 
@@ -1894,13 +2089,13 @@ models runs once more (ADR-0044). The command line stores nothing and is unaffec
 sets the new file aside in the same way.
 
 **Build order.** The preamble of `tasks.md` holds the one statement of the order: the groups run serially in number
-order, and only group 10 may run beside groups 1–9.
+order, 1 to 12, with no parallel work.
 
 **Release order.** (1) The pull request of this change runs `verify.yml` and the dry run of `release.yml` (tasks
 10.9 and 12.4). (2) The owner applies the repository settings listed below. (3) The owner merges with a squash; the
 `build` run on `master` shows its build job skipped. (4) The owner starts the dry run once more on `master`, then
-pushes the tag `v1.0.0-alpha1`; `release.yml` builds, launches the four POSIX archives, and publishes five archives
-with `SHA256SUMS` as a pre-release. A failed release run publishes nothing: the release is created as a draft and
+pushes the tag `v1.0.0-alpha1`; `release.yml` builds and publishes five archives with `SHA256SUMS` as a
+pre-release, starting none of them (D34). A failed release run publishes nothing: the release is created as a draft and
 made public only after the six files are uploaded. A bad tag is deleted by the owner with its draft.
 
 ## Owner actions outside the repository
@@ -1913,85 +2108,113 @@ Not tasks; nothing in the repository can do them.
 3. A ruleset for tags `v*`: only the owner may create or delete them.
 4. After the merge: look at the `build` run on `master` — `build` must show as skipped (D33).
 5. After the merge: `gh workflow run release.yml -f version=1.0.0-alpha1` (dry run), then push the tag
-   `v1.0.0-alpha1` as the first real pre-release.
-6. Prune the private agent memory entries listed by task 11.17.
+   `v1.0.0-alpha1` as the first real pre-release, and start one downloaded archive once (the release run starts
+   none, D34).
+6. Prune the private agent memory entries listed by task 11.24.
+7. Read the 20-paragraph subsample of the last panel sheet and write its scores file (D1); the result is recorded
+   on the results page as a final confirmation.
 
-## Decisions taken by default that the owner may overrule
+## Decided by the owner on 2026-11-15
 
-One line each: the question, then the default this change builds.
+The owner read the 36 defaults of the first draft and answered each. One line each, as now settled.
 
-1. The recommended model's name and pull tag — default: every text says `gemma4:26b`; the `ollama pull` command shows
-   the tag the app holds today, `gemma4:26b-a4b`; gemma4:31b is no longer offered (D21).
-2. Start with no target language — default: a new small dialog "Translate into which language?", not the existing
-   "Translate into another language" dialog; a language pair the book already has is not started there (D23).
-3. Which steps open without a target language — default: Translating opens, Names & style stays locked (D23).
-4. The "Cannot start yet" banner — default: only on Names & style and Translating, never on Import although Import
-   offers Start; a missing model disables Start on Import with a tooltip (D21, D23).
-5. Start translation on the Import toolbar — default: offered as the main action beside Continue; it opens the
-   Translating screen (D21).
-6. The target language of a new book — default: the last one used, never the operating system's language (D21).
-7. The quality of a new book — default: "By the AI model": Fast on a small model (under 14 billion parameters, and
-   every unknown model), Balanced otherwise, chosen at the first start; the person's choice is never changed (D21).
-8. A Prepare step that fails — default: the run goes on with the code scan's result and the step is not tried again;
+1. Recommended model — changed: the app recommends any large model the computer can run and names `gemma4:26b` only
+   as a suggestion that did well for Ukrainian; which model is best depends on the languages; no table of models by
+   language is built (no data for one); gemma4:31b is not offered (D21).
+2. Start with no target language — stands: the small dialog "Translate into which language?" (D23).
+3. Steps without a target language — changed: Names & style and Translating both stay locked; the dialog is reached
+   only from the automatic translation on Import (D23).
+4. The "Cannot start yet" banner — stands: only on Names & style and Translating, never on Import; with both locked
+   without a target, its missing-target case is removed; a missing model disables the Import action with a tooltip
+   (D21, D23).
+5. The Import action — changed: it is `Translate automatically` («Перекласти автоматично»), one press after which
+   the run fills the brief, prepares the names, translates and proofreads with no further question except a missing
+   target language; it skips the screens, not the run's Prepare steps; Continue is the step-by-step path (D21).
+6. The target language of a new book — stands: the last one used, never the operating system's language (D21).
+7. The quality of a new book — stands: "By the AI model", Fast on a small model (under 14 billion parameters and
+   every unknown model), Balanced otherwise; the person's choice is never changed (D21).
+8. A Prepare step that fails — stands: the run goes on with the code scan's result and the step is not tried again;
    an unreachable or timed-out provider is waited for (D20).
-9. A Prepare step that is paused or interrupted — default: it runs again from its first call; nothing partial is
+9. A Prepare step that is paused or interrupted — stands: it runs again from its first call; nothing partial is
    stored (D20).
-10. The brief the run suggests — default: written without an Apply press, every filled field marked likely and
-    editable; pressing Start is the consent (D20).
-11. The model name scan — default: never sent from a run; only from the Names & style button (D20).
-12. Names & style during the run's names step — default: read-only, as under a hidden names pass (D20).
-13. Consistency thresholds — default: a row agrees at 5 paragraphs and 80 %; an empty one-word row is filled at 10
-    paragraphs; only character, place and title rows are swept; task 5.8 confirms them (D17).
-14. The dialogue style of a book — default: the style most of its paragraphs use; on a tie or under 10 speech
-    paragraphs the dash where the language's typography file sets `dialogue-dash`, quotation marks elsewhere (D18).
-15. Where the rendering report is shown — default: a closed fold on the Export screen, counted again from the stored
-    texts each time the screen reads its figures, with a link from a split row to Names & style (D19).
-16. Chapter summaries — default: removed whole, with the Book Brief switch and the Story shape field, not switched
-    off (D13).
-17. The context of a translate request — default: name rows, previous pairs, the next paragraph and a reminder of at
-    most two lines; the earlier-chapters block, the recently-present card, recurring-term rows and the dialogue
-    reminder are removed; task 4.9 decides whether this stands (D12).
-18. The reply format — default: the enforced JSON reply stays, with the runaway reply recovered in the parser;
-    numbered lines are not adopted (D14).
-19. The last draft — default: built only if a replay of the recorded cases recovers at least half of them (task
-    2.2); then one more single draft per paragraph with no translation, and a real translation that still fails a
-    check such as the sentence count is kept, flagged and exported. Otherwise not built (D4).
-20. What "no translation" counts — default: the paragraphs export would write in the source language for want of a
-    usable translation; a refused reply export will write is not counted, a translation whose formatting marks
-    cannot be restored is (D5).
-21. A proofread edit at an equal score — default: a small edit is kept for a marked paragraph only if task 4.9 finds
-    more such edits better than worse; a tie or no case removes the rule (D11).
-22. The proofread reply as a list of edits — default: built as a change of reply form for time, measured as its own
-    step; a missed figure is reported before group 5 (D11, D15).
-23. The missing-name-form mark and titles — default: a title row is skipped by the mark, because a translation may
-    rightly drop a title and all 17 false items of the traced run were titles (D10).
-24. The merge at Max — default: drafts differ by seed and temperature only (0.2 and 0.4, merge at 0.2), on a large
-    model only, for marked paragraphs only; removed in this change unless task 7.1 passes the gate of D22 (at least
-    60 marked paragraphs read, a mean gain of at least +0.3 with twice as many better as worse, at most 15 % more
-    whole-run time). The gate is stricter than the owner's sentence in one case: a clear gain that costs more than
-    15 % fails and is reported with its numbers (D22).
-25. The hard g — default: no suggestion is refused for writing ґ or г; the two letters count as one when forms are
-    compared (D26).
-26. The "About this book" fold — default: open with every book; the person's collapse is remembered until another
-    book is opened and is not stored (D24).
-27. The model facts — default: shown under the provider's model picker for a saved provider only (D27).
-28. Polish scope — default: every High and Medium audit item and 16 Low items; the Low items listed in D29 are left.
-29. Where measurements are recorded — default: one page, `docs/evaluation/results-finish-release.md`, for groups 1–7,
-    because `docs/DEVELOPMENT.md` is deleted (D2, D42).
-30. Who reads a blind sheet — default: an agent session of a Claude model and one of an OpenAI model, started by the
-    owner, and the owner on 20 paragraphs; book text leaves the machine only by that action (D1).
-31. A direct commit to `master` — default: compiled, not tested; a branch push and its pull request both build
-    (D30, D33).
-32. The release — default: no test suite; one launch check per POSIX archive; the Windows archive published
-    unlaunched; a tag `v0.*` refused; `.dmg` and `.deb` outputs removed from the packaging scripts (D34, D35).
-33. The mockup — default: kept, moved to `modules/ui/src/test/mockup/`, no longer the binding visual reference (D37).
-34. Decision ids — default: `ADR-00NN`, `DD-NN`, `FR-`, `NFR-` and `EC-` ids stay in code and specs as labels and
-    resolve in `docs/architecture/decisions.md` and `docs/README.md`; no separate ADR file is written from now on
-    (D38, D39).
-35. Long legacy requirements — default: not split; `openspec validate --specs --strict` fails on 109 of them today,
-    so the non-strict run is the check for the main specs and the strict run for this change (D39, D41).
-36. Stale scenario titles — default: left as listed below until the change is archived, then renamed in the main
-    specs.
+10. The brief the run suggests — stands: written without an Apply press, every filled field marked likely and
+    editable (D20).
+11. The names the code found — changed: the model checks them before they are used, in one call or several by their
+    number. The run's names step already does this (its second step: reading calls for the most-written candidates,
+    verdict calls of at most 40 for the rest), so it is stated, named on the screen and held by a scenario; nothing
+    is added. The model scan that looks for more names stays behind its button (D20).
+12. Names & style during the run's names step — stands: read-only (D20).
+13. Consistency thresholds — stands: 5 paragraphs and 80 %; an empty one-word row is filled at 10 paragraphs; task
+    5.8 confirms them (D17).
+14. The dialogue style of a book — stands: the style most of its paragraphs use; the language's default on a tie
+    or under 10 speech paragraphs (D18).
+15. The rendering report — stands: a closed fold on the Export screen, counted again at each reading (D19).
+16. Chapter summaries — stands: removed whole; and the pipeline pages of the documents say that they are not used
+    and why, as they do for every other removed piece (D13, task 11.24).
+17. The context of a translate request — stands (D12).
+18. The reply format — stands: enforced JSON, with the runaway reply recovered in the parser (D14).
+19. The last draft — stands: built only if the replay of task 2.2 recovers at least half of the recorded cases (D4).
+20. What "no translation" counts — stands (D5).
+21. A proofread edit at an equal score — stands: kept only if task 4.9 finds more such edits better than worse (D11).
+22. The proofread reply as a list of edits — stands, kept to the minimum: one reply shape, exact find-and-replace
+    inside the paragraph, each edit judged by the existing gate; no fallback format, no edit merging, no new class
+    (D11).
+23. The missing-name-form mark and titles — stands (D10).
+24. The merge at Max — stands: an experiment first, removed unless task 7.1 passes the gate of D22.
+25. The hard g — stands (D26).
+26. The "About this book" fold — stands (D24).
+27. The model facts — stands: under the provider's model picker, for a saved provider only (D27).
+28. Polish scope — stands (D29).
+29. Where measurements are recorded — stands: `docs/evaluation/results-finish-release.md` (D2, D42).
+30. Who reads a blind sheet — stands: two model reader families decide every gate; the owner reads 20 paragraphs
+    once, at the very end, as a final confirmation in the owner checklist (D1, D44).
+31. A direct commit to `master` — stands: compiled, not tested; and a branch push is not built while an open pull
+    request to `master` exists for the branch (the pull request builds it); if the lookup fails, it is built (D33).
+32. The release — changed: no launch check on any leg, as well as no test suite; five archives and `SHA256SUMS`, a
+    tag `v0.*` refused, `.dmg` and `.deb` removed; the launch smoke stays on pull requests (D34, D35).
+33. The mockup — stands: kept, moved beside its test, no longer binding (D37).
+34. Decision ids — stands (D38, D39).
+35. Long legacy requirements — stands: not split (D39, D41).
+36. Stale scenario titles — stands: left as listed below until the change is archived.
+
+The owner also asked that the existing app be simplified (D45) and that the plan and the work follow DRY, KISS, YAGNI
+and SOLID with the smallest complete change (the tasks preamble, "How to implement"; the plan's own cuts are D46).
+
+## Defaults still open
+
+Defaults taken while the answers were applied. One line each: the default, then the alternative.
+
+1. The action's words — default: "Translate automatically" / «Перекласти автоматично» with the explanation
+   "BookLoom fills in the Book Brief, finds and prepares the names, translates and proofreads the book by itself.
+   You can review everything afterwards." Alternative: other words; the behaviour does not depend on them (D21).
+2. The names step's label — default: "Check which candidates are names" («Перевірити, які кандидати є іменами»)
+   instead of "Decide the names". Alternative: keep the old label (D20).
+3. A failed verdict call in the names step — default: the pass writes once or not at all, so a failed call fails the
+   step and the run goes on with the code scan's rows. Alternative: keep the verdicts of the batches that answered,
+   which needs new partial-result code in the pass (D20).
+4. Who starts a reading session — default: the implementing session starts the two model readers for each sheet of
+   this change, on the owner's answer to point 30. Alternative: the owner starts each session; the gates then wait
+   for that start, never for his own reading (D1).
+5. What the owner reads at the end — default: 20 paragraphs of the last English panel sheet (the `app` arm of task
+   6.12 against `plain`). Alternative: another sheet or more paragraphs (D1).
+6. How an open pull request is found — default: by branch name, for pull requests to `master`; a push whose pull
+   request has a merge conflict is then neither built nor verified until the conflict is solved. Alternative: always
+   build branch pushes, as before (D33).
+7. Proof that a published archive starts — default: none in the release run; the owner starts one downloaded
+   archive of the first pre-release. Alternative: none at all (D34).
+8. The gate's split — default: the three job commands are written in the workflows and proved equal to the gate
+   once, in task 10.2; no script and no recurring parity check. Alternative: the script with a parity step in the
+   `static` job (D31).
+9. The rendering report — default: never stored; counted when a run ends and whenever the Export screen reads it.
+   Alternative: also stored on the run record, with no reader today (D19).
+10. BookLoom's verdict on one model — default: the word "recommended" in the model facts block
+    (`settings.models.verdict`, read from the bundled model table) stays; it is a fact about that model, not the
+    advice on which model to get. Alternative: reword that verdict too.
+11. Simplification of existing code — defaults: two of the six test-only port methods stay (`TmRepository.put`,
+    `PromptFrameRepository.all`) because tests prove real behaviour through them; five of the seven unused message
+    keys stay because each is the label key of a shown tip; six stored-enum constants no code writes are deleted;
+    test-only record withers stay; five small interfaces without a fake stay. Alternative for
+    each: the opposite verdict in D45.
 
 ## Scenario titles left stale by the validator
 

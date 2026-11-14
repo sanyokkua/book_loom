@@ -25,7 +25,7 @@ The Book Brief SHALL show the same cards, rows and choices whatever the source a
 
 WHEN a book is imported and a target language was used before, the application SHALL set the new brief's target language to the one last used, unless it equals the book's source language, in which case the target SHALL stay empty.
 
-**Source**: `research/review-digest.md#f11--the-windows-short-path-skips-the-models-brief-and-names-work`, `research/review-digest.md#f16--defaults-work-against-the-goal`, `design.md#d21--defaults-instead-of-questions`. In plain words: the target language was the one decision the shortest path forced on the person for every book. Most people translate into one language, so the second book starts with it filled in; the very first book still asks once, when Start is pressed, in the dialog "Translate into which language?" of the `app-shell` capability, and that answer is the last used target from then on.
+**Source**: `research/review-digest.md#f11--the-windows-short-path-skips-the-models-brief-and-names-work`, `research/review-digest.md#f16--defaults-work-against-the-goal`, `design.md#d21--defaults-instead-of-questions`. In plain words: the target language was the one decision the shortest path forced on the person for every book. Most people translate into one language, so the second book starts with it filled in; the very first book still asks once — on the Book Brief, or in the dialog "Translate into which language?" of the `app-shell` capability when the automatic translation is started on Import —, and that answer is the last used target from then on.
 
 #### Scenario: The second book has its target filled in
 
@@ -65,9 +65,9 @@ WHILE a brief's quality is marked "by the model", the Book Brief SHALL show unde
 
 ### Requirement: Fill the brief from the run's own suggestion
 
-WHEN a run's Prepare stage has written a brief suggestion, the application SHALL have written it by the same rule that writes a suggestion applied from the Book Brief's own button, and the Book Brief of the open window SHALL show each field the suggestion filled with the "likely" mark and its evidence once the run has left its Prepare stage; a later edit on the Book Brief SHALL keep every field the run wrote that the edit does not change.
+WHEN a run's Prepare stage has written a brief suggestion by the rule of the Book Brief's own Apply button, the Book Brief of the open window SHALL show each field it filled with the "likely" mark and its evidence once the run has left its Prepare stage, SHALL stay read-only until the window has taken the stored brief, and a later edit SHALL keep every field the run wrote that the edit does not change.
 
-**Source**: `research/review-digest.md#f11--the-windows-short-path-skips-the-models-brief-and-names-work`, `design.md#d20--prepare-steps-inside-the-run`. In plain words: the suggestion now also arrives without a button press. One rule writes it in both cases, so a field the model left empty keeps the person's value, an uncertain register is not applied, and every field the model filled carries the likely mark. The window holds its own copy of the brief, so it takes the stored brief when the run leaves Prepare and again when the run ends; without that, the first edit after the run would save the old copy over what the run wrote. The person who opens the Book Brief sees which values the model put there and why, and can change any of them for the paragraphs not translated yet.
+**Source**: `research/review-digest.md#f11--the-windows-short-path-skips-the-models-brief-and-names-work`, `design.md#d20--prepare-steps-inside-the-run`. In plain words: the suggestion now also arrives without a button press. One rule writes it in both cases, so a field the model left empty keeps the person's value, an uncertain register is not applied, and every field the model filled carries the likely mark. The window holds its own copy of the brief, so it takes the stored brief when the run leaves Prepare and again when the run ends; without that, the first edit after the run would save the old copy over what the run wrote. The stored brief is read in the background, so the Book Brief opens for editing only when that reading has been taken (or has failed): no edit can fall between the reading and the replacement and be undone by it. The person who opens the Book Brief sees which values the model put there and why, and can change any of them for the paragraphs not translated yet.
 
 #### Scenario: The fields a run filled are marked
 
@@ -83,6 +83,11 @@ WHEN a run's Prepare stage has written a brief suggestion, the application SHALL
 
 - **WHEN** the run's suggestion decides the register and leaves the genre empty, and the brief held no genre
 - **THEN** the brief still holds no genre and the genre carries no "likely" mark
+
+#### Scenario: The Book Brief opens for editing only after the stored brief is taken
+
+- **WHEN** a run ends and the reading of its stored brief has not been delivered to the window yet
+- **THEN** the Book Brief is still read-only; once the reading is delivered it shows the run's fields and can be edited, and the audience `Young adults` set then is saved together with the informal register and the first-person narrator
 
 ### Requirement: Suggest the tone and style from verified readings, one decision for each field
 

@@ -103,7 +103,7 @@ IF a dialogue-style rewrite would add, remove or change any letter, digit or pla
 
 ### Requirement: Build a whole-book rendering report by code
 
-WHEN the consistency pass has stored its rewrites, the application SHALL build, with no model call, a rendering report counted from the stored texts as they then stand: for each glossary row named in at least 3 decided body paragraphs, that number and each rendering with its count; the row's state — split while more than one rendering is found, agreed when exactly one is, without a rendering when none is; the dash and quotation-mark speech counts; and the paragraphs the pass fixed and left.
+The application SHALL build the rendering report with no model call, counted from the stored texts as they stand at the moment it is built: for each glossary row named in at least 3 decided body paragraphs, that number and each rendering with its count; the row's state — split while more than one rendering is found, agreed when exactly one is, without a rendering when none is; the dash and quotation-mark speech counts; and the paragraphs the pass fixed and left.
 
 **Source**: `research/review-digest.md#f14--consistency-is-followed-but-not-enforced-or-checked-over-the-whole-book`, `research/review-digest.md#consistency-numbers`, `design.md#d19--the-rendering-report`. In plain words: a consistently wrong name scored 100 % on the old consistency figure, which was counted over the recurring-term list and never over the names. The report is the table the review built by hand: for each name, how the book actually wrote it. It is what tells the person which names to look at, it is the names metric of the evaluation, and it costs no model call. It is always a count of the texts as stored at that moment, never the count the pass took before it changed them, so a spelling the pass corrected is not reported as a second spelling. A row's state in the report is not the rule that pins a name: a name is pinned when one rendering holds 80 % of at least 5 paragraphs (the `glossary` capability's "Pin a name's rendering once the book agrees on it"), but the report calls a row agreed only when the book writes it one way all through — inflected forms of one rendering count as one — so a single paragraph with the other spelling keeps the row among the split ones, where the person sees it.
 
@@ -154,18 +154,18 @@ WHEN the consistency pass has stored its rewrites, the application SHALL build, 
 
 ### Requirement: Keep the rendering report true to the stored texts
 
-The application SHALL build the rendering report again, by the same count, WHEN the Proofread stage of a run has stored its last change — that report SHALL be the one stored with the run — and each time the Export screen reads the open work of a project, from the texts as they are stored at that moment.
+The application SHALL count the rendering report anew, by the same count, WHEN the Proofread stage of a run has stored its last change — that report SHALL be part of the run's result — and each time the Export screen reads the open work of a project, from the texts as they are stored at that moment; it SHALL store no rendering report.
 
-**Source**: `research/review-digest.md#f14--consistency-is-followed-but-not-enforced-or-checked-over-the-whole-book`, `design.md#d19--the-rendering-report`. In plain words: the Proofread stage and the person both change texts after the consistency pass, so a report taken once would describe a book that no longer exists. The run keeps the count taken after its last change, which the command line prints and the evaluation reads; the Export screen never shows that stored copy and counts again whenever it is read — when a project opens, a run ends, a review-desk action is stored or a book is exported.
+**Source**: `research/review-digest.md#f14--consistency-is-followed-but-not-enforced-or-checked-over-the-whole-book`, `design.md#d19--the-rendering-report`. In plain words: the Proofread stage and the person both change texts after the consistency pass, so a report taken once would describe a book that no longer exists. A kept copy would go stale with nothing to refresh it, so none is kept: the run counts after its last change and hands the report to whoever started it — the command line prints it and the evaluation reads it — and the Export screen counts again whenever it is read: when a project opens, a run ends, a review-desk action is stored or a book is exported.
 
-#### Scenario: The report stored with the run follows the Proofread stage
+#### Scenario: The run's report follows the Proofread stage
 
 - **WHEN** the consistency pass left `Velk` at 15 `Велк` and 11 `Вельк`, and the Proofread stage then stored an edit that turned one `Вельк` into `Велк`
-- **THEN** the report stored with the run lists `Velk` · 26 · `Велк` 16, `Вельк` 10 · split
+- **THEN** the report in the run's result lists `Velk` · 26 · `Велк` 16, `Вельк` 10 · split
 
 #### Scenario: A person's edit back to the minority spelling shows the row split again
 
-- **WHEN** the stored report lists `Hale` · 20 · `Гейл` 20 · agreed, and the person then edits `ch03 · p05` on the review desk so that it reads `Хейл`
+- **WHEN** the run's report listed `Hale` · 20 · `Гейл` 20 · agreed, and the person then edits `ch03 · p05` on the review desk so that it reads `Хейл`
 - **THEN** the Export screen's report lists `Hale` · 20 · `Гейл` 19, `Хейл` 1 · split, although 19 of 20 would still pin the name
 
 ### Requirement: Keep the last draft of a segment with no translation when it is a translation

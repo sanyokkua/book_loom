@@ -54,3 +54,11 @@ WHEN the person chooses Try again or Try again with a note… under the desk's M
 
 - **WHEN** nothing in the glossary or the settings changed since `ch5 · p12` was drafted
 - **THEN** the retry's context equals the one the first draft saw
+
+## REMOVED Requirements
+
+### Requirement: Run the audit again on demand
+
+**Reason**: no screen and no command calls it: the operation `ReviewDesk.audit` has an implementation and no caller in the window, the command line or the tests (`research/simplification-inventory.md`, section 1.2). The audit runs inside every run, after the consistency pass, and its doubts are on the review desk.
+
+**Migration**: none. Nothing a person could do is taken away; a run, or a continued run, audits the book again.

@@ -1,25 +1,25 @@
 ## ADDED Requirements
 
-### Requirement: Ask for the target language when Start is pressed without one
+### Requirement: Ask for the target language when the automatic translation is started without one
 
-WHEN `Start translation` is pressed while the open project's brief has no target language, the application SHALL start nothing and SHALL show the dialog "Translate into which language?" with the brief's language list without the source language, Cancel, and `Start translation`, which stays disabled until a language is chosen. WHEN it is confirmed, the application SHALL store the language as the brief's target and go on with the start as if it had been chosen before.
+WHEN `Translate automatically` is pressed on Import while the open project's brief has no target language, the application SHALL start nothing and SHALL show the dialog "Translate into which language?" with the brief's language list without the source language, Cancel, and `Start translation`, which stays disabled until a language is chosen. WHEN it is confirmed, the application SHALL store the language as the brief's target and go on with the start as if it had been chosen before.
 
-**Source**: `design.md#d23--where-the-cannot-start-notice-shows-and-the-question-at-start`, `research/review-digest.md#f11--the-windows-short-path-skips-the-models-brief-and-names-work`. In plain words: the target language is the one decision a start cannot guess. It is asked at the moment and place the person starts, not announced on screens where nothing can be done about it. The language is normally pre-filled, so this dialog is rare.
+**Source**: `design.md#d23--where-the-cannot-start-notice-shows-and-the-question-at-start`, `research/review-digest.md#f11--the-windows-short-path-skips-the-models-brief-and-names-work`, `design.md#d21--defaults-instead-of-questions`. In plain words: the target language is the one decision an automatic translation cannot guess. It is asked at the moment and place the person starts, not announced on screens where nothing can be done about it. Names & style and Translating stay locked until a target language is chosen, so their own Start buttons cannot be pressed without one: this dialog has one caller, the Import screen's action. The language is normally pre-filled from the last one used, so the dialog is rare.
 
-#### Scenario: The question at Start
+#### Scenario: The question at the automatic translation
 
-- **WHEN** `earth-gravity.epub` (source English) is open with `gemma4:26b` chosen and no target language, and `Start translation` is pressed on Translating
+- **WHEN** `earth-gravity.epub` (source English) is open on Import with `gemma4:26b` chosen and no target language, and `Translate automatically` is pressed
 - **THEN** the dialog "Translate into which language?" is shown, its list holds no `English`, and no run exists
 
 #### Scenario: Confirming starts the run
 
 - **WHEN** `Ukrainian` is chosen in that dialog and its `Start translation` is pressed
-- **THEN** the brief's target is `uk`, the project is named `Earth Gravity · EN → UK`, and the start goes on to a running translation
+- **THEN** the brief's target is `uk`, the project is named `Earth Gravity · EN → UK`, Translating is no longer locked and is shown, and the start goes on to a running translation
 
 #### Scenario: Cancel changes nothing
 
 - **WHEN** Cancel or Escape is used in that dialog
-- **THEN** the brief still has no target language, no run exists and no banner is raised
+- **THEN** the brief still has no target language, no run exists, Import is still shown and no banner is raised
 
 #### Scenario: A language the book already has is not started here
 
@@ -28,19 +28,24 @@ WHEN `Start translation` is pressed while the open project's brief has no target
 
 #### Scenario: A missing model is still named
 
-- **WHEN** no AI model is chosen, the brief has no target language, and `Start translation` is looked at on Translating
+- **WHEN** no AI model is chosen, the brief has no target language, and `Translate automatically` is looked at on Import
 - **THEN** it is disabled with the tooltip "Choose an AI model in Settings › Providers, then start the translation.", and no language dialog can be opened
 
-### Requirement: Keep Translating open and Names & style locked while no target language is chosen
+### Requirement: Keep Names & style and Translating locked while no target language is chosen
 
-WHILE a project is open and its brief has no target language, the application SHALL keep Names & style greyed in the navigation with the tooltip "Choose the languages in Book Brief" and SHALL keep Translating available. WHILE the source and target languages are the same, both steps SHALL stay locked with that tooltip.
+WHILE a project is open and its brief has no target language, or its source and target languages are the same, the application SHALL keep Names & style and Translating greyed in the navigation with the tooltip "Choose the languages in Book Brief". WHEN a target language that differs from the source is chosen — on the Book Brief or in the dialog of the automatic translation — both steps SHALL open.
 
-**Source**: `design.md#d23--where-the-cannot-start-notice-shows-and-the-question-at-start`. In plain words: names cannot be given a spelling in a language nobody chose, so that step waits. Translating must be reachable, because its Start button is where the missing language is asked for.
+**Source**: `design.md#d23--where-the-cannot-start-notice-shows-and-the-question-at-start`. In plain words: no step that needs the language opens before the language is chosen. Names cannot be given a spelling in a language nobody chose, and a translation cannot run into one. So the missing language is asked for where the person is — by the automatic translation on Import, or on the Book Brief — and never by a button on a screen that is locked.
 
 #### Scenario: No target language
 
 - **WHEN** `notes.txt` is open with the source `English` and no target language
-- **THEN** `3 Names & style` is unavailable with the tooltip "Choose the languages in Book Brief" and `4 Translating` can be opened
+- **THEN** `3 Names & style` and `4 Translating` are both unavailable with the tooltip "Choose the languages in Book Brief"
+
+#### Scenario: A language chosen in the dialog opens both steps
+
+- **WHEN** `Ukrainian` is confirmed in the dialog "Translate into which language?" for that book
+- **THEN** `3 Names & style` and `4 Translating` are available and Translating is shown
 
 #### Scenario: The same language twice
 
@@ -275,8 +280,8 @@ WHEN Start translation is pressed for a project that has a target language and a
 
 #### Scenario: A missing target language still asks
 
-- **WHEN** Start translation is pressed with no target language
-- **THEN** the dialog "Translate into which language?" opens ("Ask for the target language when Start is pressed without one"), and the run starts when a language is chosen, with no further question
+- **WHEN** `Translate automatically` is pressed on Import with no target language
+- **THEN** the dialog "Translate into which language?" opens ("Ask for the target language when the automatic translation is started without one"), and the run starts when a language is chosen, with no further question
 
 ### Requirement: Show the application's icon on its windows
 
@@ -306,7 +311,7 @@ The system SHALL give the main window, and the window that reports a failed star
 
 WHILE a banner applies — the AI model is unreachable, a call is stuck, BookLoom gave up, the model is missing, welcome back, finished, or hidden work — the application SHALL show it in a slot between the toolbar and the scrolling content, on every screen, with "Go to Translating" where useful. The "Cannot start yet" banner SHALL be shown only on Names & style and Translating and SHALL never be raised for a missing target language.
 
-**Source**: `design.md#d23--where-the-cannot-start-notice-shows-and-the-question-at-start`, `research/ui-audit-shell-dialogs.md#defects` (D-06). In plain words: a model program that went away matters whichever screen the person is on, and a banner inside a scrolled page can be missed. A start that is not possible yet is announced only on the two screens of the run; on Import, Projects, Settings and Export it took a sixth of the window to say something nobody could act on there.
+**Source**: `design.md#d23--where-the-cannot-start-notice-shows-and-the-question-at-start`, `research/ui-audit-shell-dialogs.md#defects` (D-06). In plain words: a model program that went away matters whichever screen the person is on, and a banner inside a scrolled page can be missed. A start that is not possible yet is announced only on the two screens of the run; on Import, Projects, Settings and Export it took a sixth of the window to say something nobody could act on there. Those two screens are locked while no target language is chosen, so a missing target can never be the reason shown there: that case of the banner is removed, and what is left is the missing AI model and a start the engine refused.
 
 #### Scenario: A banner on another screen
 
@@ -320,8 +325,8 @@ WHILE a banner applies — the AI model is unreachable, a call is stuck, BookLoo
 
 #### Scenario: A missing target language leads to the Book Brief
 
-- **WHEN** `notes.txt` is opened and its brief has no target language, and Import, Book Brief, Translating, Export, Projects and Settings are shown one after another
-- **THEN** none of them shows "Cannot start yet — no target language is chosen."; the Book Brief marks its target box "Required: choose the language to translate into.", and `Start translation` on Translating asks for it
+- **WHEN** `notes.txt` is opened and its brief has no target language, and Import, Book Brief, Export, Projects and Settings are shown one after another (Names & style and Translating are locked)
+- **THEN** none of them shows "Cannot start yet — no target language is chosen."; the Book Brief marks its target box "Required: choose the language to translate into.", and `Translate automatically` on Import asks for it
 
 #### Scenario: A missing AI model is named only where Start is
 
@@ -417,9 +422,9 @@ The application SHALL put a project in exactly one of sixteen run states — Rea
 
 ### Requirement: Move through the five workflow steps and start one run at a time
 
-WHEN a person advances from a workflow screen, the application SHALL move to the next step, and every step SHALL remain reachable from the navigation column at any time once a project is open. WHEN "Start translation" is used on Import, Names & style or Translating while a start is offered, the application SHALL start a run and show Translating, or, IF no AI model is chosen, show Translating naming it and start nothing.
+WHEN a person advances from a workflow screen, the application SHALL move to the next step, and every step SHALL remain reachable from the navigation column at any time once a project is open, except Names & style and Translating while the brief has no usable language pair. WHEN `Translate automatically` on Import, or "Start translation" on Names & style or Translating, is used while a start is offered, the application SHALL start a run and show Translating; WHILE no AI model is chosen, each of these actions SHALL be disabled with a tooltip that names the missing model.
 
-**Source**: `design.md#d21--defaults-instead-of-questions`, `design.md#d23--where-the-cannot-start-notice-shows-and-the-question-at-start`, `research/ui-audit-shell-dialogs.md#defects` (D-06). In plain words: the numbering is a suggested order, not a wizard. While a run can be continued, Start translation only shows Translating, so two runs never begin side by side. A missing target language is asked for at Start instead (see "Ask for the target language when Start is pressed without one").
+**Source**: `design.md#d21--defaults-instead-of-questions`, `design.md#d23--where-the-cannot-start-notice-shows-and-the-question-at-start`, `research/ui-audit-shell-dialogs.md#defects` (D-06). In plain words: the numbering is a suggested order, not a wizard. While a run can be continued, Start translation only shows Translating, so two runs never begin side by side. A missing target language is asked for by the automatic translation on Import (see "Ask for the target language when the automatic translation is started without one"); the two other Start buttons are on screens that stay locked without one.
 
 #### Scenario: Continuing from the book brief shows the next step
 
@@ -433,8 +438,18 @@ WHEN a person advances from a workflow screen, the application SHALL move to the
 
 #### Scenario: Start translation with no model starts nothing
 
-- **WHEN** no AI model is chosen and `Start translation` is used
-- **THEN** Translating is shown with the banner `Cannot start yet — no AI model is chosen.` and no run exists
+- **WHEN** no AI model is chosen and a project with the languages English → Ukrainian is open
+- **THEN** `Translate automatically` on Import and `Start translation` on Names & style and on Translating are disabled with the tooltip "Choose an AI model in Settings › Providers, then start the translation.", a press does nothing, and no run exists
+
+#### Scenario: A start that meets a provider error is shown on Translating
+
+- **WHEN** `gemma3:12b` is chosen, Ollama is not running, and `Start translation` is used on Names & style
+- **THEN** Translating is shown with the provider-error banner in its own words and no segment is drafted
+
+#### Scenario: The steps that need the languages stay locked without them
+
+- **WHEN** `notes.txt` is open with no target language
+- **THEN** Import, Book Brief, Export, Projects and Settings can be opened from the navigation, and Names & style and Translating cannot ("Keep Names & style and Translating locked while no target language is chosen")
 
 #### Scenario: Resuming a paused run continues it in place
 
@@ -464,7 +479,7 @@ WHEN a person advances from a workflow screen, the application SHALL move to the
 #### Scenario: The run is started from the translating screen
 
 - **WHEN** Translating is opened from the navigation with `earth-gravity.epub` open and `gemma3:12b` chosen, and `Start translation` is used on the toolbar
-- **THEN** a run starts, and no workflow screen carries another control that starts one besides `Start translation` on Import and on Names & style
+- **THEN** a run starts, and no workflow screen carries another control that starts one besides `Translate automatically` on Import and `Start translation` on Names & style
 
 #### Scenario: No start is offered while a run can be continued or nothing is pending
 
@@ -608,19 +623,19 @@ WHEN "Translate into another language" is used, the application SHALL ask for th
 
 ### Requirement: Name the recommended model on the empty Projects screen
 
-WHILE no project exists, the Projects screen SHALL show a line naming the model recommended for the computer's memory with its pull command as text, such as "This computer has 32 GB: gemma4:26b is recommended." followed by its pull command, and SHALL NOT run the command.
+WHILE no project exists, the Projects screen SHALL show a line that advises choosing the largest model the computer can run, says that which model is best depends on the languages, and names one model as a suggestion for the computer's memory with its pull command as text; it SHALL NOT run the command.
 
-**Source**: `research/review-digest.md#owner-decisions`, `research/review-digest.md#f1--the-model-sets-the-quality-ceiling`, `design.md#d21--defaults-instead-of-questions`. In plain words: a new person does not know which model fits their computer. The first screen says which one to get and how, and leaves the download to them. Which model fits which memory is the settings capability's rule for the model choice. gemma4:26b is the recommended model; on a smaller computer the line says what the model that fits costs in quality.
+**Source**: `research/review-digest.md#owner-decisions`, `research/review-digest.md#f1--the-model-sets-the-quality-ceiling`, `design.md#d21--defaults-instead-of-questions`. In plain words: a new person does not know which model fits their computer. What was measured is that a larger model translates better; which large model is best depends on the languages — gemma4 did well for Ukrainian, another family may do better for another language — and BookLoom holds no measurements per language, so it gives no table of models by language. The line therefore recommends size, names gemma4:26b only as a suggestion that did well for Ukrainian, and leaves the download to the person. Which memory fits which suggestion is the settings capability's rule.
 
 #### Scenario: A 16 GB computer
 
 - **WHEN** the application starts for the first time on a computer with 16 GB of memory
-- **THEN** the line reads "This computer has 16 GB: gemma4:e4b fits it. gemma4:26b translates clearly better and needs 24 GB. Pull it with `ollama pull gemma4:e4b`."
+- **THEN** the line reads "This computer has 16 GB. Choose the largest model it can run: a larger model translates better, and which one is best depends on the languages. A suggestion that fits: gemma4:e4b (`ollama pull gemma4:e4b`). gemma4:26b did well for Ukrainian and needs 24 GB."
 
 #### Scenario: A 32 GB computer
 
 - **WHEN** the first launch happens on a computer with 32 GB of memory
-- **THEN** the line names `gemma4:26b` as recommended and shows, as text, the `ollama pull` command with the exact tag the recommendation holds for it
+- **THEN** the line reads "This computer has 32 GB. Choose the largest model it can run: a larger model translates better, and which one is best depends on the languages. A suggestion that did well for Ukrainian: gemma4:26b" followed by the `ollama pull` command, as text, with the exact tag the suggestion holds for it
 
 #### Scenario: Nothing is pulled
 

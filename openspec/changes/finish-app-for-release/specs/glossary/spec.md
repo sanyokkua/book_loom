@@ -744,12 +744,9 @@ session, until the person adds that term again through Add term or a CSV import.
 
 ### Requirement: Prepare names in one pass
 
-WHEN the application prepares names in one pass, it SHALL run the steps the Names & style buttons run, in this order,
-on a private copy of the glossary: scan the book for names and titles when the glossary is empty, read and decide the
-names, ask the model's most probable gender and kind for the rest, ask a rendering for each name without one, and check
-the suggestions against the target language's rules. It SHALL write the stored glossary once, after its last step.
+WHEN the application prepares names in one pass, it SHALL run these steps in order on a private copy of the glossary: scan the book for names and titles when the glossary is empty, have the model check the candidates and remove what is not a name, ask the model's most probable gender and kind for the rest, ask a rendering for each name without one, and check the suggestions against the target language's rules. It SHALL write the stored glossary once, after its last step.
 
-**Source**: `research/review-digest.md#f11--the-windows-short-path-skips-the-models-brief-and-names-work`, `research/review-digest.md#f5--wrong-facts-from-prepare-go-into-every-later-call`, `design.md#d7--the-recurring-term-list-is-removed-whole`, `design.md#d20--prepare-steps-inside-the-run`. In plain words: one action — the run's Prepare stage, or the button on Names & style — gets from a book to a prepared glossary, and an answer that arrives half-way, or a Stop, must not leave half of a result behind; what the person fixed by hand stays fixed. The pass no longer reads recurring common words: those calls were a tenth of the traced run and changed nothing. Its renderings stay suggestions unless a lock rule makes one final; a suggestion becomes pinned when the person accepts it or when the book agrees on it after the Translate stage.
+**Source**: `research/review-digest.md#f11--the-windows-short-path-skips-the-models-brief-and-names-work`, `research/review-digest.md#f5--wrong-facts-from-prepare-go-into-every-later-call`, `design.md#d7--the-recurring-term-list-is-removed-whole`, `design.md#d20--prepare-steps-inside-the-run`. In plain words: one action — the run's Prepare stage, or the button on Names & style — gets from a book to a prepared glossary. The code finds the candidates; the model then filters out the junk: the most-written candidates are read in context one call each, every other one is sent for a verdict in batches of at most 40 (fewer when 5,000 input tokens are reached first), and a candidate the model judges not a name is removed, so no rendering is asked for a sentence-opening word or a heading. This check is part of the pass wherever the pass runs, the run included; only the model scan that looks for more names stays behind its button. The pass must also be whole: an answer that arrives half-way, or a Stop, must not leave half of a result behind; what the person fixed by hand stays fixed. The pass no longer reads recurring common words: those calls were a tenth of the traced run and changed nothing. Its renderings stay suggestions unless a lock rule makes one final; a suggestion becomes pinned when the person accepts it or when the book agrees on it after the Translate stage.
 
 #### Scenario: A brand under Keep original is locked, a name in a language that declines names is not
 
@@ -819,6 +816,11 @@ the suggestions against the target language's rules. It SHALL write the stored g
 
 - **WHEN** the pass runs at Balanced over a book that writes `Warden` 3 times and `warden` 9 times
 - **THEN** no call of the pass asks whether `warden` is a term
+
+#### Scenario: The model removes what is not a name before the names are used
+
+- **WHEN** the pass runs at Balanced over an empty glossary, the code scan proposes 240 candidates, the names plan reads the 80 most-written ones in context, and `Perhaps` and `Overhead` are two of the 160 others
+- **THEN** the names step sends one reading call for each of the 80 and sends the 160 others for a verdict in calls of at most 40 candidates each — 4 calls when each batch fits the 5,000-token input budget — and `Perhaps` and `Overhead`, which the model judges not a name, are gone from the glossary before the first rendering is asked
 
 ### Requirement: Apply glossary edits from the next chunk and keep the glossary stored
 
@@ -929,9 +931,9 @@ WHEN a name is made of ordinary words but is used as a proper name, the applicat
 
 ### Requirement: List the six steps of the names pass in its progress dialog
 
-The progress dialog of the names pass SHALL list six steps in order — Find candidates in the book, Decide the names, Ask what the model knows about the names, Suggest translations for names, Check the suggestions, Write the results — each with the number of requests it sent and a done mark once ended, and a figures line that counts those six steps and times them by the requests.
+The progress dialog of the names pass SHALL list six steps in order — Find candidates in the book, Check which candidates are names, Ask what the model knows about the names, Suggest translations for names, Check the suggestions, Write the results — each with the number of requests it sent and a done mark once ended, and a figures line that counts those six steps and times them by the requests.
 
-**Source**: `research/review-digest.md#f13--about-40--of-the-run-time-buys-nothing-in-the-exported-book`, `design.md#d7--the-recurring-term-list-is-removed-whole`. In plain words: the person sees which part of the pass is running and how much is left. The four steps about repeated words are gone with the list they filled. The check step sends no request and accepts nothing: the suggestions stay suggested until the person accepts them or the book agrees on them.
+**Source**: `research/review-digest.md#f13--about-40--of-the-run-time-buys-nothing-in-the-exported-book`, `design.md#d7--the-recurring-term-list-is-removed-whole`. In plain words: the person sees which part of the pass is running and how much is left. The second step is named for what it does: the model checks the candidates the code found and what is not a name is removed (it read "Decide the names"; in Ukrainian it now reads «Перевірити, які кандидати є іменами»). The four steps about repeated words are gone with the list they filled. The check step sends no request and accepts nothing: the suggestions stay suggested until the person accepts them or the book agrees on them.
 
 #### Scenario: The steps are listed with counts
 

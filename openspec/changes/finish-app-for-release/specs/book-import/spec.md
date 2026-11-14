@@ -1,35 +1,61 @@
 ## ADDED Requirements
 
-### Requirement: Offer Start translation on the Import screen
+### Requirement: Offer the automatic translation on the Import screen
 
-WHILE a book is open on the Import screen and its project has no decided segment and no run at work, the screen's toolbar SHALL offer Start translation as its main action beside Continue, and a press SHALL open the Translating screen and start the run with the brief as it stands, exactly as Start translation on Names & style does; WHILE no AI model is chosen it SHALL be disabled with the tooltip that names the missing model, and the Import screen SHALL show no "Cannot start yet" banner.
+WHILE a book is open on Import and the run controls offer a start for its project, the toolbar SHALL offer `Translate automatically` as its main action beside Continue, with an explanation of what it does; WHILE a run is at work or can be resumed or continued, it SHALL offer Go to Translating instead; WHILE no AI model is chosen the action SHALL be disabled with the tooltip that names the missing model, and Import SHALL show no "Cannot start yet" banner.
 
-**Source**: `design.md#d23--where-the-cannot-start-notice-shows-and-the-question-at-start`, `research/review-digest.md#f11--the-windows-short-path-skips-the-models-brief-and-names-work`, `design.md#d21--defaults-instead-of-questions`. In plain words: the shortest path was one drop, seven clicks and one forced decision. With the brief suggestion and the names pass inside the run and no question at Start, nothing on the three screens between Import and Translating is needed for a good default run, so the run can start where the book was dropped. Continue still leads through the Book Brief and Names & style for a person who wants to set things first.
-
-#### Scenario: Drop a book and start
-
-- **WHEN** an English book is dropped on the window, the last used target is Ukrainian, a model is chosen, and Start translation is pressed on Import
-- **THEN** the Translating screen opens and the run is in its Prepare stage, with no dialog in between
-
-#### Scenario: A refused start is shown on Translating
-
-- **WHEN** Start translation is pressed on Import and the provider does not answer
-- **THEN** the Translating screen is open and shows the provider-error banner in its own words, and Import shows none
-
-#### Scenario: The first book asks for its target
-
-- **WHEN** no target language was ever used and Start translation is pressed on Import
-- **THEN** the dialog "Translate into which language?" of the `app-shell` capability opens, and the run starts when a language is chosen
+**Source**: `design.md#d21--defaults-instead-of-questions`, `design.md#d23--where-the-cannot-start-notice-shows-and-the-question-at-start`, `design.md#d20--prepare-steps-inside-the-run`, `research/review-digest.md#f11--the-windows-short-path-skips-the-models-brief-and-names-work`. In plain words: the shortest path was one drop, seven clicks and one forced decision. The run can now start where the book was dropped, with one press. The explanation, shown as the action's tooltip, reads "BookLoom fills in the Book Brief, finds and prepares the names, translates and proofreads the book by itself. You can review everything afterwards." A person who wants to go step by step uses Continue, as before. Whether a start is offered is read from the one table of run controls the Translating toolbar reads, so Import never shows an action whose command is unavailable: a run paused in its Prepare stage has no decided segment and is not at work, yet it is resumed, not started.
 
 #### Scenario: A book with a run offers its run instead
 
 - **WHEN** the open book's translation is paused at 55 %
-- **THEN** the Import toolbar offers Go to Translating and no Start translation
+- **THEN** the Import toolbar offers Go to Translating and no `Translate automatically`
 
 #### Scenario: No model, no banner on Import
 
 - **WHEN** a book is open on Import and no AI model is chosen
-- **THEN** Start translation is disabled with the tooltip "Choose an AI model in Settings › Providers, then start the translation." and Import shows no "Cannot start yet" banner
+- **THEN** `Translate automatically` is disabled with the tooltip "Choose an AI model in Settings › Providers, then start the translation." and Import shows no "Cannot start yet" banner
+
+#### Scenario: The action is named in Ukrainian
+
+- **WHEN** the interface language is Ukrainian and a book is open on Import
+- **THEN** the action reads «Перекласти автоматично» and its explanation reads «BookLoom сам заповнить опис книги, знайде й підготує імена, перекладе та вичитає книгу. Усе можна переглянути потім.»
+
+#### Scenario: A run paused in Prepare at 0 % is resumed, not started again
+
+- **WHEN** `Translate automatically` was pressed, the run was paused during its names step with 0 of 142 segments decided, and Import is opened
+- **THEN** the Import toolbar offers Go to Translating and no `Translate automatically`, and Translating offers `Resume`
+
+### Requirement: Do every remaining step of an automatic translation without a question
+
+WHEN `Translate automatically` is pressed, the application SHALL open the Translating screen and start a run that does every remaining step by itself — the brief suggestion and the names step of its Prepare stage, the Translate stage and the Proofread stage — and SHALL ask nothing except the target language when the brief has none.
+
+**Source**: `design.md#d21--defaults-instead-of-questions`, `design.md#d23--where-the-cannot-start-notice-shows-and-the-question-at-start`, `design.md#d20--prepare-steps-inside-the-run`, `research/review-digest.md#f11--the-windows-short-path-skips-the-models-brief-and-names-work`. In plain words: "automatic" means the person presses once and the app does the rest: it reads the book and fills the brief (genre, style, who narrates), finds the names, lets the model remove what is not a name and suggest a spelling for the rest, translates, and proofreads as the quality setting says. What it skips is the screens — the Book Brief and Names & style are not opened — never the work: the run's own Prepare steps are not skipped. What the person already set is kept: a brief the person filled in is not replaced, and a names pass that already finished is not repeated. The Book Brief and Names & style can be opened at any time afterwards to review what the run wrote.
+
+#### Scenario: Drop a book and translate automatically
+
+- **WHEN** an English book is dropped on the window, the last used target is Ukrainian, a model is chosen, and `Translate automatically` is pressed on Import
+- **THEN** the Translating screen opens and the run is in its Prepare stage, with no dialog in between and without the Book Brief or Names & style having been opened
+
+#### Scenario: The run does the brief, the names, the translation and the proofreading
+
+- **WHEN** that run is left alone on a Balanced project with an untouched brief and an empty glossary
+- **THEN** its Prepare stage suggests the brief and prepares the names, its Translate stage drafts every segment, its Proofread stage reads the marked paragraphs, the run ends Finished, and no question was asked
+
+#### Scenario: What the person set is kept
+
+- **WHEN** the person chose the genre `Fantasy` on the Book Brief and ran "Prepare names automatically" on Names & style, then goes back to Import and presses `Translate automatically`
+- **THEN** the run makes no brief call and no names call, and translates with the brief and the glossary as the person left them
+
+#### Scenario: A refused start is shown on Translating
+
+- **WHEN** `Translate automatically` is pressed on Import and the provider does not answer
+- **THEN** the Translating screen is open and shows the provider-error banner in its own words, and Import shows none
+
+#### Scenario: The first book asks for its target
+
+- **WHEN** no target language was ever used and `Translate automatically` is pressed on Import
+- **THEN** the dialog "Translate into which language?" of the `app-shell` capability opens, and the run starts when a language is chosen
 
 ## MODIFIED Requirements
 

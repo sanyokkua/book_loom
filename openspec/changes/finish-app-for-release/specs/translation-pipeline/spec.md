@@ -308,7 +308,7 @@ WHEN a proofread reply arrives, the system SHALL read it as one JSON object `{"e
 
 #### Scenario: Words that occur twice are not replaced
 
-- **WHEN** the current translation is `Він сказав, що він прийде.` and an edit's `find` is `він`
+- **WHEN** the current translation is `Тоді він сказав, що він прийде.` and an edit's `find` is `він`
 - **THEN** the edit is dropped, because `він` occurs twice, and the segment gets the verdict unchanged
 
 #### Scenario: Words that are not in the text are not replaced
@@ -361,7 +361,7 @@ WHEN a run reaches its Prepare stage, the project's brief step is not finished, 
 
 WHEN a run reaches its Prepare stage and the project's names step is not finished, the application SHALL run the names pass of the glossary capability ("Prepare names in one pass") on the run's model, without the model name scan, and store the pass's result and the mark that the names step is finished in one write that is applied whole or not at all; a names pass that finishes from the Names & style screen SHALL mark the step finished too.
 
-**Source**: `research/review-digest.md#f11--the-windows-short-path-skips-the-models-brief-and-names-work`, `research/review-digest.md#consistency-numbers`, `design.md#d20--prepare-steps-inside-the-run`. In plain words: on the shortest path names had no rendering, so the first spelling the model happened to write became a hint only; the consistency the review measured (a row followed in 99 % of uses) exists only when the rows have renderings before the first paragraph is drafted. The pass never overwrites what the person typed, pinned, locked or removed, so running it over a glossary the person started is safe; it runs once per project. The result and the mark are one write, so a crash or a storage failure can never leave half of the pass's rows without the mark, or the mark without the rows.
+**Source**: `research/review-digest.md#f11--the-windows-short-path-skips-the-models-brief-and-names-work`, `research/review-digest.md#consistency-numbers`, `design.md#d20--prepare-steps-inside-the-run`. In plain words: on the shortest path names had no rendering, so the first spelling the model happened to write became a hint only; the consistency the review measured (a row followed in 99 % of uses) exists only when the rows have renderings before the first paragraph is drafted. The pass is the whole pass, the model's check of the code's candidates included: the code scan finds candidates, the model says which are names in one call or several depending on how many there are, and what is not a name is removed before a rendering is asked (the `glossary` capability's "Prepare names in one pass"). The pass never overwrites what the person typed, pinned, locked or removed, so running it over a glossary the person started is safe; it runs once per project. The result and the mark are one write, so a crash or a storage failure can never leave half of the pass's rows without the mark, or the mark without the rows.
 
 #### Scenario: A run prepares the names before its first draft
 
@@ -387,6 +387,11 @@ WHEN a run reaches its Prepare stage and the project's names step is not finishe
 
 - **WHEN** a Max run prepares a book whose deterministic scan proposes 4 names
 - **THEN** the Prepare stage sends no model name scan call
+
+#### Scenario: The run's names step lets the model remove what is not a name
+
+- **WHEN** a Balanced run starts on a new project whose code scan proposes 240 candidates, of which the names plan reads 80 in context
+- **THEN** the Prepare stage sends 80 reading calls and the 160 other candidates in verdict calls of at most 40 each, the candidates the model judges not a name are not in the glossary when the first draft call is sent, and the Translating screen shows the step "Check which candidates are names" with its requests so far
 
 ### Requirement: Go on with code defaults when a Prepare step fails
 
@@ -469,14 +474,14 @@ WHEN a run starts on a project whose quality is marked "by the model" and no seg
 
 ### Requirement: Run the consistency pass by code before the Proofread stage builds its marks
 
-WHEN the Translate stage of a run ends, at every quality setting, the application SHALL run the consistency pass — pin the agreed renderings, fill the frequent empty rows, replace other spellings of pinned names, unify the dialogue style, build the rendering report — with no model call, before the final audit and the mark list, SHALL honour a stop between its steps and run it again in a continued run; IF a step ends with a storage error, THEN the run SHALL end failed.
+WHEN the Translate stage of a run ends, at every quality setting, the application SHALL run the consistency pass — pin the agreed renderings, fill the frequent empty rows, replace other spellings of pinned names, unify the dialogue style — with no model call, before the final audit and the mark list, SHALL honour a stop between its steps and run it again in a continued run; IF a step ends with a storage error, THEN the run SHALL end failed.
 
 **Source**: `research/review-digest.md#f14--consistency-is-followed-but-not-enforced-or-checked-over-the-whole-book`, `design.md#d17--the-consistency-pass-agreement-pinning-and-the-sweep`. In plain words: the whole-book checks only reported; nothing put a second spelling or a second dialogue style right. The pass runs once the whole book is decided, because agreement can only be judged then, and before the audit and the marks so that they read the corrected text and a spelling the code already fixed is never sent to the model. The term sweep that replaces spellings runs once, inside the pass, for the changes the person made to the glossary and the pass's own alike. A storage error fails the run as it does in every neighbouring step, and the pass is safe to run again: rows it pinned already agree and a corrected paragraph holds nothing to replace. Its parts are requirements of the `glossary` and `quality-gates` capabilities.
 
 #### Scenario: The pass runs at Fast with no model call
 
 - **WHEN** a Fast run's Translate stage ends with `Бренс` in 14 paragraphs of a book whose pinned row reads `Бренз`
-- **THEN** the 14 paragraphs are corrected, the rendering report is stored with the run, and no model call was made after the last draft
+- **THEN** the 14 paragraphs are corrected, the rendering report in the run's result lists the row as agreed, and no model call was made after the last draft
 
 #### Scenario: The marks are built from the corrected text
 
@@ -496,13 +501,13 @@ WHEN the Translate stage of a run ends, at every quality setting, the applicatio
 #### Scenario: A continued run finds nothing left to change
 
 - **WHEN** a run whose pass corrected 14 paragraphs is continued and reaches the end of its Translate stage again
-- **THEN** the pass changes no paragraph and no glossary row, and builds the rendering report again
+- **THEN** the pass changes no paragraph and no glossary row, and the run's rendering report is counted again when its Proofread stage ends
 
 ### Requirement: Draft a marked paragraph twice more and merge the three at Max on a large model
 
 WHERE the merge at Max is built and the quality is Max and the run's model profile is of the large size class, WHEN the Proofread stage reaches a paragraph that carries a proofread mark, the application SHALL draft it twice more, one paragraph per call, with new seeds, and SHALL send the source and the three drafts to one merge call that writes the final text.
 
-**Source**: `research/review-digest.md#merge-results-on-gemma426b`, `research/review-digest.md#owner-decisions`, `design.md#d22--the-merge-at-max-is-an-experiment-first`. In plain words: almost nothing improves a poor first draft, and the one second pass that did on the recommended model was "several drafts, then merge": about +0.3 on the blind sheet with the bad share roughly halved. It costs about four calls for a paragraph, so it is spent only on paragraphs a check already doubts and only at Max. The merge is built only if it passes the gate stated once in the design anchor — enough marked paragraphs read blind, a gain on them, and a bounded rise of the whole-run time — measured in the app's own harness; otherwise it is removed with its code.
+**Source**: `research/review-digest.md#merge-results-on-gemma426b`, `research/review-digest.md#owner-decisions`, `design.md#d22--the-merge-at-max-is-an-experiment-first`. In plain words: almost nothing improves a poor first draft, and the one second pass that did on gemma4:26b was "several drafts, then merge": about +0.3 on the blind sheet with the bad share roughly halved. It costs about four calls for a paragraph, so it is spent only on paragraphs a check already doubts and only at Max. The merge is built only if it passes the gate stated once in the design anchor — enough marked paragraphs read blind, a gain on them, and a bounded rise of the whole-run time — measured in the app's own harness; otherwise it is removed with its code.
 
 #### Scenario: A marked paragraph is merged
 
@@ -518,7 +523,7 @@ WHERE the merge at Max is built and the quality is Max and the run's model profi
 
 WHERE the merge at Max is built, the application SHALL make no extra draft and no merge call at Fast or Balanced, nor at Max when the run's model profile is of the small size class, where the marked paragraphs SHALL be read in proofread windows.
 
-**Source**: `research/review-digest.md#merge-results-on-gemma426b`, `research/review-digest.md#owner-decisions`, `design.md#d22--the-merge-at-max-is-an-experiment-first`. In plain words: the gain was measured on the recommended large model only; on the smaller models every second pass was level or worse, and one lost 0.6. The owner allows the merge at Max only.
+**Source**: `research/review-digest.md#merge-results-on-gemma426b`, `research/review-digest.md#owner-decisions`, `design.md#d22--the-merge-at-max-is-an-experiment-first`. In plain words: the gain was measured on one large model, gemma4:26b, only; on the smaller models every second pass was level or worse, and one lost 0.6. The owner allows the merge at Max only.
 
 #### Scenario: Balanced never merges
 
@@ -1136,14 +1141,14 @@ WHEN a run writes its summary line, the by-kind call totals SHALL count every mo
 
 ### Requirement: Refuse to start a run with a missing target language or model
 
-A run SHALL NOT start while no project is open, no target language is chosen or no model is chosen: the translating screen SHALL name a missing model and SHALL ask for a missing target language in a dialog (the `app-shell` capability), and the engine SHALL answer a start without a target language with `ErrorCode.validation`; a run SHALL start with no source language chosen (Auto), and its prompts then name the source as "the language of this segment (infer it from its text)" (ADR-0042).
+A run SHALL NOT start while no project is open, no target language is chosen or no model is chosen: the translating screen SHALL name a missing model, the window SHALL offer no start for a project without a target language except the automatic translation on Import, which asks for it in a dialog (the `app-shell` capability), and the engine SHALL answer a start without a target language with `ErrorCode.validation`; a run SHALL start with no source language chosen (Auto), and its prompts then name the source as "the language of this segment (infer it from its text)" (ADR-0042).
 
 **Source**: `design.md#d23--where-the-cannot-start-notice-shows-and-the-question-at-start`, `research/ui-audit-shell-dialogs.md#defects` (D-06). In plain words: a run that cannot work is refused at once with the reason, while a missing source language is not a reason to refuse.
 
 #### Scenario: A missing target language is named
 
-- **WHEN** a project is open with a model chosen and no target language, and `Start translation` is pressed in the window
-- **THEN** no run starts, the dialog "Translate into which language?" is shown, and no refusal banner is raised
+- **WHEN** a project is open with a model chosen and no target language
+- **THEN** Names & style and Translating are locked, so neither `Start translation` can be pressed; `Translate automatically` on Import starts no run, shows the dialog "Translate into which language?", and raises no refusal banner
 
 #### Scenario: The engine still refuses
 

@@ -32,9 +32,11 @@ Translation run (`:pipeline`, `:api`, `:llm`, `:persistence`, `:app`, `:ui`):
   and printed by the command line. No model call.
 - **An autonomous default path.** The model's brief suggestion and the names pass run inside the run's Prepare stage,
   in the window and on the command line, each stored in one all-or-nothing write, and the run translates with the
-  brief as stored after them; the Start questions are replaced by "not stated" defaults; the target
-  language is pre-filled from the last one used; Start is offered on Import; small models start at Fast; gemma4:26b
-  is the recommended model.
+  brief as stored after them; in the names pass the model checks the candidates the code found and removes what is
+  not a name; the Start questions are replaced by "not stated" defaults; the target language is pre-filled from the
+  last one used; Import offers one action, `Translate automatically`, after which the run fills the brief, prepares
+  the names, translates and proofreads with no further question; small models start at Fast; the app recommends the
+  largest model the computer can run and names gemma4:26b only as a suggestion that did well for Ukrainian.
 - **Three drafts, then merge, at Max — test first.** Built only for paragraphs marked risky, on a large model, and
   kept only if an in-app test passes the gate stated in `design.md` (at least 60 marked paragraphs read blind, a
   mean gain of at least +0.3 with twice as many better as worse, at most 15 % more whole-run time); otherwise removed
@@ -43,9 +45,9 @@ Translation run (`:pipeline`, `:api`, `:llm`, `:persistence`, `:app`, `:ui`):
   rendering report as the names metric; eval code for removed stages is deleted.
 
 Window (`:ui`):
-- The "Cannot start yet" banner no longer appears on Import, Projects, Settings and Export. A click on Start with no
-  target language asks for it in a small dialog (not the existing "Translate into another language" dialog), and the
-  Translating step is reachable when only the target language is missing.
+- The "Cannot start yet" banner no longer appears on Import, Projects, Settings and Export. Names & style and
+  Translating stay locked until a target language is chosen; the automatic translation on Import asks for a missing
+  one in a small dialog (not the existing "Translate into another language" dialog).
 - "About this book" opens with the book.
 - The language and genre boxes behave as a standard editable combo box (click selects the text, typing filters, a
   mouse click and Enter both choose); the provider form's model entry is rebuilt on the same control.
@@ -59,18 +61,22 @@ Window (`:ui`):
   `research/ui-audit-settings.md`) are fixed without restyling.
 
 Repository (no spec-level behaviour except the window icon):
-- CI/CD: a branch push builds only; a pull request runs the full verification in parallel jobs; a push to `master` is
-  skipped when it came from a merged pull request and built when direct; a semver tag on `master` builds and publishes
-  one portable archive per OS and architecture with no test suite and one launch check per POSIX archive, no signing
-  and no installers; the Windows archive, which is not produced today, is added, and the `.dmg` and `.deb` outputs
-  are removed from the packaging scripts.
+- CI/CD: a branch push builds only, and not at all while a pull request is open for the branch; a pull request runs
+  the full verification in parallel jobs; a push to `master` is skipped when it came from a merged pull request and
+  built when direct; a semver tag on `master` builds and publishes one portable archive per OS and architecture with
+  no test suite and no launch check, no signing and no installers; the Windows archive, which is not produced today,
+  is added, and the `.dmg` and `.deb` outputs are removed from the packaging scripts.
 - `docs/spec_baseline/` is deleted: decisions and still-valid specification text are folded into `docs/` and
   `openspec/specs/`, the icons move into the build and the window gets its icon, the mockup moves beside the test that
   reads it and stops being the binding visual reference, and every reference is rewritten. README, screenshots, agent
   files and the remaining docs are refreshed; unused scripts, stale suppressions and stale statements are removed.
+- The existing code is simplified by an inventory (`research/simplification-inventory.md`): classes, methods, enum
+  constants and message keys nothing calls, a word-validator seam with no production implementation, model-name facts
+  only tests read and four storage-port methods only contract tests call are removed; the structural items (class
+  splits, the `ui/state` package) are recorded with their reason and left.
 - Every analyser, the local Sonar scan included, is at zero open issues at the end.
 
-Stored record shapes change (brief, glossary, lexicon, chapter summaries, project, run record, model settings), so
+Stored record shapes change (brief, glossary, lexicon, chapter summaries, project, model settings), so
 the database is set aside and started fresh, as before every release (ADR-0043).
 
 ## Capabilities
@@ -96,17 +102,19 @@ None.
 - `book-brief`: the five language-specific options, the chapter-summaries switch and the story shape are removed;
   narrator and quality defaults replace the Start questions; the last used target language; the run writes its own
   suggestion without Apply.
-- `book-import`: "About this book" is open when a book is opened (the fold and the opening report); Start
-  translation on the Import toolbar.
-- `app-shell`: where the cannot-start notice appears (the banner rule), Start with no target language, the shared
+- `book-import`: "About this book" is open when a book is opened (the fold and the opening report); the automatic
+  translation on the Import toolbar and what it does by itself.
+- `app-shell`: where the cannot-start notice appears (the banner rule), the question for a missing target language
+  at the automatic translation and the steps that stay locked without one, the model advice on the empty Projects
+  screen, the shared
   choice box's behaviour, the Finished state's wording, the window icon, polish rules that are observable behaviour.
-- `settings`: the Models tab without a chooser, the model facts under the provider's model picker, the recommended
-  model, the default quality by the model's size.
+- `settings`: the Models tab without a chooser, the model facts under the provider's model picker, the model advice
+  (the largest model the computer can run, one suggestion), the default quality by the model's size.
 - `inference`: the same requests for every model, the merge temperatures, the pseudo model's proofread reply.
 - `resume`: a continued run repeats an unfinished Prepare step and continues the last drafts.
 - `local-storage`: the stored shapes that change and the fresh database.
 - `review-queue`: the context a segment was sent, and a retry's context, hold no chapter summary and no
-  recurring-term rendering.
+  recurring-term rendering; the uncalled "audit again on demand" operation is removed.
 - `theming`: one look for folds, segmented controls, banner marks, and readable edges in both themes.
 
 ## Impact
@@ -114,12 +122,12 @@ None.
 - Modules: `:api` (brief, glossary, project, run and model-settings records), `:pipeline` (run stages, context,
   proofread, glossary, export report, evals), `:ui` (Import, Book Brief, Names & style, Translating, Export, Settings,
   shell, theme), `:app` (command line, window icon, packaging inputs), `:persistence` (the checkpoint port's names
-  commit, two removed document kinds, the stored-shape fingerprint; the schema file does not change), `:llm` (the
+  commit, two removed document kinds, four removed port methods, the stored-shape fingerprint; the schema file does
+  not change), `:document` (uncalled methods only), `:llm` (the
   pseudo model's proofread reply and the readers of removed call kinds).
 - No new dependency.
 - Build and release: `.github/workflows/`, `settings.gradle.kts`, `modules/build-logic`, `scripts/package-*.{sh,bat}`,
-  `scripts/jpackage-common.sh`, `scripts/launch-smoke.sh`, `lefthook.yml`, and the new scripts `scripts/ci-verify.sh`,
-  `scripts/release-version.sh`, `scripts/check-docs.py`.
+  `scripts/jpackage-common.sh`, `lefthook.yml`, and the new script `scripts/check-docs.py`.
 - Documents: `docs/`, `README.md`, `AGENTS.md`, `.claude/rules/`, `.agents/skills/`, `openspec/config.yaml`, the
   `Source` lines of `openspec/specs/`.
 - Owner actions outside the repository (listed in `design.md`): squash-only merges and a ruleset for `master` and

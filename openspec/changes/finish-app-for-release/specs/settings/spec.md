@@ -544,24 +544,24 @@ The application SHALL offer the models the provider being edited reports, SHALL 
 
 ### Requirement: Recommend a model by the computer's memory where models are chosen
 
-WHERE the provider is Ollama's own connection or a server detected as Ollama, the application SHALL mark as recommended, in the note under the provider form's model picker and at Start, `gemma4:26b` from 24 GB of memory, and under 24 GB SHALL name `gemma4:e4b` as the model that fits and say that `gemma4:26b` translates clearly better and needs 24 GB; it SHALL offer the `ollama pull` command as text and never run it, SHALL offer no larger model, and for any other provider it SHALL show no such note.
+WHERE the provider is Ollama's own connection or a server detected as Ollama, the application SHALL show, in the note under the provider form's model picker and on the model-pick card, the advice to choose the largest model the computer can run, with the statement that which model is best depends on the languages, and SHALL name one model as a suggestion — `gemma4:26b` from 24 GB of memory, `gemma4:e4b` under 24 GB — with its `ollama pull` command as text; it SHALL never run the command, SHALL suggest no model larger than `gemma4:26b`, and for any other provider it SHALL show no such note.
 
-**Source**: `design.md#d27--the-models-tab-edits-the-current-model-the-facts-move-to-the-provider-form`, `research/review-digest.md#owner-decisions`, `research/review-digest.md#f1--the-model-sets-the-quality-ceiling`, `research/review-digest.md#model-table`, `design.md#d21--defaults-instead-of-questions`. In plain words: the model sets the quality ceiling: the same request scored about 2.2 of 5 on the small model and about 2.8 on gemma4:26b, which was first on every sheet. So the note says plainly which model to get and what the smaller one costs. The larger 31b model is no longer offered: it is too slow to be tested and was never measured. The pull command is Ollama's, so under LM Studio or another server it would tell the person to run something wrong.
+**Source**: `design.md#d27--the-models-tab-edits-the-current-model-the-facts-move-to-the-provider-form`, `research/review-digest.md#owner-decisions`, `research/review-digest.md#f1--the-model-sets-the-quality-ceiling`, `research/review-digest.md#model-table`, `design.md#d21--defaults-instead-of-questions`. In plain words: the model sets the quality ceiling: the same request scored about 2.2 of 5 on the small model and about 2.8 on gemma4:26b. So the advice is about size — take the largest model this computer can run. Which large model is best depends on the languages of the book: gemma4 did well for Ukrainian, and another family may do better for another language. BookLoom has measurements for Ukrainian only, so it builds no table of models by language and names gemma4:26b as a suggestion, not as the one right model. The larger 31b model is not suggested: it is too slow to be tested and was never measured. The pull command is Ollama's, so under LM Studio or another server it would tell the person to run something wrong.
 
 #### Scenario: A 16 GB computer
 
 - **WHEN** the provider form's model picker is shown on a computer with 16 GB of memory
-- **THEN** the note reads that `gemma4:e4b` fits this computer and that `gemma4:26b` translates clearly better and needs 24 GB, and shows the text `ollama pull gemma4:e4b`
+- **THEN** the note advises the largest model this computer can run, says that the best one depends on the languages, names `gemma4:e4b` as a suggestion that fits with the text `ollama pull gemma4:e4b`, and says that `gemma4:26b` did well for Ukrainian and needs 24 GB
 
 #### Scenario: A 32 GB computer
 
 - **WHEN** the provider form's model picker is shown on a computer with 32 GB of memory
-- **THEN** the note names `gemma4:26b` as recommended and shows, as text, the `ollama pull` command with the exact tag the recommendation holds for it
+- **THEN** the note advises the largest model this computer can run, says that the best one depends on the languages, and names `gemma4:26b` as a suggestion that did well for Ukrainian, with the `ollama pull` command, as text, holding the exact tag the suggestion holds for it
 
 #### Scenario: A 48 GB computer
 
 - **WHEN** the provider form's model picker is shown on a computer with 48 GB of memory
-- **THEN** `gemma4:26b` is recommended and no other model is offered
+- **THEN** the note is the one of a 32 GB computer: `gemma4:26b` is the suggestion and no larger model is named
 
 #### Scenario: Nothing is pulled
 
@@ -571,7 +571,7 @@ WHERE the provider is Ollama's own connection or a server detected as Ollama, th
 #### Scenario: No pull line for LM Studio
 
 - **WHEN** the model-pick card or the provider form's model picker is shown for the provider `lmstudio` on a computer with 16 GB of memory
-- **THEN** no model is marked as recommended and no `ollama pull` text is shown
+- **THEN** no model is suggested and no `ollama pull` text is shown
 
 ### Requirement: Choose how the temperature is sent for a model
 

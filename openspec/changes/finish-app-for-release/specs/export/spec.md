@@ -71,7 +71,7 @@ WHEN the Export screen is shown for a project that holds decided body paragraphs
 
 ### Requirement: Print the rendering report at the end of a command-line run
 
-WHEN a command-line run ends, the application SHALL print the summary line of the rendering report stored with the run, its split rows and its rows without a rendering, and SHALL write the whole report into the run's report file.
+WHEN a command-line run ends, the application SHALL print the summary line of the run's rendering report, its split rows and its rows without a rendering, and SHALL write the whole report into the run's report file.
 
 **Source**: `research/review-digest.md#f14--consistency-is-followed-but-not-enforced-or-checked-over-the-whole-book`, `design.md#d19--the-rendering-report`. In plain words: the command line already printed a consistency figure, but it was counted over the removed recurring-term list and scored a consistently wrong name as perfect. The report counted at the end of the run's Proofread stage replaces it, so a headless run and the evaluation read the names the way a reader would.
 
